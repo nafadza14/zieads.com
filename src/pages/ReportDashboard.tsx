@@ -1,5 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Building2, 
+  BarChart3, 
+  Target, 
+  Cpu, 
+  CheckCircle2, 
+  AlertCircle,
+  LayoutDashboard,
+  Megaphone,
+  TrendingUp,
+  Link,
+  Users,
+  MousePointer2,
+  DollarSign,
+  Download,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Layout,
+  PlayCircle
+} from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { supabase } from '../lib/supabaseClient';
 
@@ -21,10 +43,9 @@ export default function ReportDashboard() {
   useEffect(() => {
     const fetchLatest = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        const token = data?.session?.access_token;
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-        // Try DB first (when authenticated)
         if (token) {
           const res = await fetch('/api/audits/latest', {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -37,14 +58,14 @@ export default function ReportDashboard() {
           }
         }
 
-        // Fallback: use the cached result written by AuditProgress
         const cached = localStorage.getItem('zieads_latest_audit');
         if (cached) {
           setReportData(JSON.parse(cached));
         } else {
           navigate('/clients');
         }
-      } catch {
+      } catch (err) {
+        console.error('Error fetching audit:', err);
         const cached = localStorage.getItem('zieads_latest_audit');
         if (cached) {
           setReportData(JSON.parse(cached));
@@ -58,7 +79,17 @@ export default function ReportDashboard() {
     fetchLatest();
   }, [navigate]);
 
-  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', color: '#64748b' }}>Loading your strategy...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium animate-pulse">Analyzing results...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!reportData) return null;
 
   const { report, agent_results: agentResults, url, business_name: businessName, created_at: generatedAt, audit_type: auditType = 'full' } = reportData;
@@ -66,23 +97,17 @@ export default function ReportDashboard() {
   const isSkillAudit = auditType !== 'full' && auditType !== 'quick';
 
   const getScoreColor = (s: number) => {
-    if (s >= 70) return '#00c9a7'; // Green
-    if (s >= 50) return '#f59e0b'; // Amber
-    return '#dc2626'; // Red
+    if (s >= 80) return '#10b981';
+    if (s >= 60) return '#f59e0b';
+    return '#ef4444';
   };
 
-  const getDimensionScoreColor = (s: number) => {
-    if (s >= 60) return '#00c9a7'; // Green
-    if (s >= 40) return '#f59e0b'; // Amber
-    return '#dc2626'; // Red
+  const toggleFinding = (i: number) => {
+    const newChecked = new Set(checkedFindings);
+    if (newChecked.has(i)) newChecked.delete(i);
+    else newChecked.add(i);
+    setCheckedFindings(newChecked);
   };
-
-  const toggleFinding = (i: number) =>
-    setCheckedFindings(prev => {
-      const s = new Set(prev);
-      s.has(i) ? s.delete(i) : s.add(i);
-      return s;
-    });
 
   const getAgent = (name: string) => agentResults?.find((a: any) => a.agentName === name);
 
@@ -92,60 +117,111 @@ export default function ReportDashboard() {
   };
 
   const renderSkillButton = (skillName: string, label: string) => (
-    <div style={{ marginTop: 16, marginBottom: 8 }}>
-      <button
-        className="btn-get-started"
-        style={{ padding: '9px 18px', fontSize: '0.875rem', width: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}
-        onClick={() => handleRunSkill(skillName)}
-        disabled={runningSkill === skillName}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        {label}
-      </button>
-    </div>
+    <button
+      onClick={() => handleRunSkill(skillName)}
+      disabled={runningSkill === skillName}
+      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50"
+    >
+      <PlayCircle size={16} />
+      {label}
+    </button>
   );
 
-  // Render tab content
   const renderTabContent = () => {
     switch (activeTab) {
       case 'Overview':
         return (
-          <div className="tab-content" id="print-tab-overview">
-            <h3>Executive Summary</h3>
-            <div className="summary-card">
-              <p><strong>Business:</strong> {businessName}</p>
-              <p><strong>URL:</strong> {url}</p>
-              <p><strong>Audit Date:</strong> {new Date(generatedAt).toLocaleDateString()}</p>
-              <p><strong>Overall Score:</strong> {overall}/100 (Grade {grade})</p>
-            </div>
-
-            <h3>Platform Priority</h3>
-            <div className="platform-priority-list">
-              {platformPriority?.map((p: any, i: number) => (
-                <div key={i} className="platform-priority-item">
-                  <span className="pp-rank">#{i + 1}</span>
-                  <div className="pp-info">
-                    <strong>{p.platform}</strong>
-                    <p>{p.reason}</p>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <Building2 className="text-indigo-600" size={20} />
+                  Project Overview
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2 border-b border-slate-50">
+                    <span className="text-slate-500">Business</span>
+                    <span className="font-semibold text-slate-900">{businessName}</span>
                   </div>
-                  <span className="pp-kpi">{p.estimatedCPA}</span>
+                  <div className="flex justify-between py-2 border-b border-slate-50">
+                    <span className="text-slate-500">Website</span>
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline flex items-center gap-1">
+                      {url.replace(/^https?:\/\//, '')} <Link size={12} />
+                    </a>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-50">
+                    <span className="text-slate-500">Audit Date</span>
+                    <span className="text-slate-900">{new Date(generatedAt).toLocaleDateString()}</span>
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <Target className="text-indigo-600" size={20} />
+                  Platform Priority
+                </h3>
+                <div className="space-y-3">
+                  {platformPriority?.slice(0, 3).map((p: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-indigo-600 shadow-sm border border-slate-100">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-bold text-slate-900">{p.platform}</div>
+                        <div className="text-xs text-slate-500 line-clamp-1">{p.reason}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <h3>Action Plan</h3>
-            <div className="action-plan">
-              <div className="ap-section">
-                <h4>Quick Wins (This Week)</h4>
-                <ul>{actionPlan?.quickWins?.map((a: string, i: number) => <li key={i}>{a}</li>)}</ul>
-              </div>
-              <div className="ap-section">
-                <h4>Medium Term (1 to 3 Months)</h4>
-                <ul>{actionPlan?.mediumTerm?.map((a: string, i: number) => <li key={i}>{a}</li>)}</ul>
-              </div>
-              <div className="ap-section">
-                <h4>Strategic (3 to 6 Months)</h4>
-                <ul>{actionPlan?.strategic?.map((a: string, i: number) => <li key={i}>{a}</li>)}</ul>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <TrendingUp className="text-indigo-600" size={20} />
+                Strategic Action Plan
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider">
+                    Quick Wins
+                  </div>
+                  <ul className="space-y-3">
+                    {actionPlan?.quickWins?.map((a: string, i: number) => (
+                      <li key={i} className="flex gap-2 text-sm text-slate-600">
+                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wider">
+                    Medium Term
+                  </div>
+                  <ul className="space-y-3">
+                    {actionPlan?.mediumTerm?.map((a: string, i: number) => (
+                      <li key={i} className="flex gap-2 text-sm text-slate-600">
+                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wider">
+                    Long Term
+                  </div>
+                  <ul className="space-y-3">
+                    {actionPlan?.strategic?.map((a: string, i: number) => (
+                      <li key={i} className="flex gap-2 text-sm text-slate-600">
+                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -155,46 +231,62 @@ export default function ReportDashboard() {
         const creative = getAgent('creative-intelligence');
         const d = creative?.deliverables || {};
         return (
-          <div className="tab-content" id="print-tab-creatives">
-            <h3>Brand Identity</h3>
-            {d.brandIdentity && (
-              <div className="detail-card">
-                <p><strong>Colors:</strong> {d.brandIdentity.colors}</p>
-                <p><strong>Style:</strong> {d.brandIdentity.style}</p>
-                <p><strong>Tone:</strong> {d.brandIdentity.tone}</p>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Core Creative Strategy</h3>
+              <p className="text-slate-600 mb-6">{d.heroOfferAssessment}</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Primary Angle</span>
+                  <p className="text-sm text-slate-900 font-medium">{d.brandIdentity?.tone || "Conversion Focused"}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Color Palette</span>
+                  <p className="text-sm text-slate-900 font-medium">{d.brandIdentity?.colors || "Not found"}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Visual Style</span>
+                  <p className="text-sm text-slate-900 font-medium">{d.brandIdentity?.style || "Modern"}</p>
+                </div>
               </div>
-            )}
-            <h3>Hero Offer Assessment</h3>
-            <p className="detail-text">{d.heroOfferAssessment}</p>
-            <h3>Emotional Triggers</h3>
-            <div className="tag-list">
-              {d.emotionalTriggers?.map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}
             </div>
-            <h3>Creative Concepts — Meta</h3>
-            {d.creativeConceptsMeta?.map((c: any, i: number) => (
-              <div key={i} className="concept-card">
-                <h4>Concept {i + 1}</h4>
-                <p><strong>Hook:</strong> {c.hook}</p>
-                <p><strong>Visual:</strong> {c.visualDirection}</p>
-                <p><strong>Format:</strong> {c.format}</p>
-                <p><strong>Angle:</strong> {c.emotionalAngle}</p>
-                <p><strong>CTA:</strong> {c.cta}</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h4 className="flex items-center gap-2 font-bold text-slate-900 text-lg">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <Megaphone size={18} />
+                  </div>
+                  Meta Creative Concepts
+                </h4>
+                {d.creativeConceptsMeta?.map((c: any, i: number) => (
+                  <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-sm font-bold text-indigo-600 mb-2">{c.format}</div>
+                    <div className="text-sm text-slate-900 font-medium mb-1">“{c.hook}”</div>
+                    <p className="text-xs text-slate-500">{c.visualDirection}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-            <h3>Creative Concepts — TikTok</h3>
-            {d.creativeConceptsTikTok?.map((c: any, i: number) => (
-              <div key={i} className="concept-card">
-                <h4>Concept {i + 1}</h4>
-                <p><strong>Hook:</strong> {c.hook}</p>
-                <p><strong>Visual:</strong> {c.visualDirection}</p>
-                <p><strong>Format:</strong> {c.format}</p>
+              <div className="space-y-4">
+                <h4 className="flex items-center gap-2 font-bold text-slate-900 text-lg">
+                  <div className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-rose-500">
+                    <PlayCircle size={18} />
+                  </div>
+                  TikTok Creative Concepts
+                </h4>
+                {d.creativeConceptsTikTok?.map((c: any, i: number) => (
+                  <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-sm font-bold text-rose-500 mb-2">{c.format}</div>
+                    <div className="text-sm text-slate-900 font-medium mb-1">“{c.hook}”</div>
+                    <p className="text-xs text-slate-500">{c.visualDirection}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-            {d.testingSequence && <><h3>Testing Sequence</h3><p className="detail-text">{d.testingSequence}</p></>}
+            </div>
             
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-               {renderSkillButton('ads-copy', 'Generate Ad Copy (Meta/Google/TikTok)')}
-               {renderSkillButton('ads-creatives', 'Generate Deep Dive Creative Concepts')}
+            <div className="flex flex-wrap gap-4 pt-4">
+               {renderSkillButton('ads-copy', 'Generate Ad Copy')}
+               {renderSkillButton('ads-creatives', 'Advanced Video Mockups')}
             </div>
           </div>
         );
@@ -204,37 +296,57 @@ export default function ReportDashboard() {
         const audience = getAgent('audience-targeting');
         const d = audience?.deliverables || {};
         return (
-          <div className="tab-content" id="print-tab-audiences">
-            <h3>Ideal Customer Profile (ICP)</h3>
-            {d.icp && (
-              <div className="detail-card">
-                <p><strong>Demographics:</strong> {d.icp.demographics}</p>
-                <p><strong>Psychographics:</strong> {d.icp.psychographics}</p>
-                <p><strong>Job to Be Done:</strong> {d.icp.jobToBeDone}</p>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-2">
+                <Users className="text-indigo-600" size={24} />
+                Ideal Customer Persona
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Demographics</label>
+                  <p className="text-slate-700 text-sm leading-relaxed">{d.icp?.demographics}</p>
+                </div>
+                <div className="space-y-2 border-l border-slate-100 md:pl-8">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pain Points</label>
+                  <p className="text-slate-700 text-sm leading-relaxed">{d.icp?.psychographics}</p>
+                </div>
+                <div className="space-y-2 border-l border-slate-100 md:pl-8">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Motivators</label>
+                  <p className="text-slate-700 text-sm leading-relaxed">{d.icp?.jobToBeDone}</p>
+                </div>
               </div>
-            )}
-            <h3>Meta Audiences</h3>
-            {d.metaAudiences && (
-              <div className="audience-tiers">
-                <div className="tier"><h4>Cold Audience</h4><ul>{d.metaAudiences.cold?.map((a: string, i: number) => <li key={i}>{a}</li>)}</ul></div>
-                <div className="tier"><h4>Warm Audience</h4><ul>{d.metaAudiences.warm?.map((a: string, i: number) => <li key={i}>{a}</li>)}</ul></div>
-                <div className="tier"><h4>Hot Audience</h4><ul>{d.metaAudiences.hot?.map((a: string, i: number) => <li key={i}>{a}</li>)}</ul></div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 className="font-bold text-slate-900 mb-4">Meta Targeting Segments</h4>
+                <div className="space-y-4">
+                  {['cold', 'warm', 'hot'].map((tier) => (
+                    <div key={tier} className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <span className="text-[10px] font-bold text-indigo-500 uppercase block mb-1">{tier}</span>
+                      <p className="text-xs text-slate-600">{d.metaAudiences?.[tier]?.join(", ") || "Auto-match broad"}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-            <h3>Google Audiences</h3>
-            {d.googleAudiences && (
-              <div className="detail-card">
-                <p><strong>Search Intent:</strong> {d.googleAudiences.searchIntent?.join(', ')}</p>
-                <p><strong>In-Market:</strong> {d.googleAudiences.inMarket?.join(', ')}</p>
-                <p><strong>Customer Match:</strong> {d.googleAudiences.customerMatch}</p>
+
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 className="font-bold text-slate-900 mb-4">Google Search Intent</h4>
+                <div className="space-y-2">
+                  {d.googleAudiences?.searchIntent?.map((keyword: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2 p-3 bg-indigo-50 rounded-lg text-indigo-700 text-xs font-medium">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                      {keyword}
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-            <h3>Exclusions</h3>
-            <div className="tag-list">{d.exclusions?.map((e: string, i: number) => <span key={i} className="tag tag-red">{e}</span>)}</div>
-            <h3>Lookalike Seeds</h3>
-            <div className="tag-list">{d.lookalikeSeeds?.map((s: string, i: number) => <span key={i} className="tag">{s}</span>)}</div>
+            </div>
             
-            {renderSkillButton('ads-audiences', 'Generate Granular Audience Lists')}
+            <div>
+              {renderSkillButton('ads-audiences', 'Export Detailed Audience Targeting Lists')}
+            </div>
           </div>
         );
       }
@@ -243,43 +355,41 @@ export default function ReportDashboard() {
         const platform = getAgent('platform-budget');
         const d = platform?.deliverables || {};
         return (
-          <div className="tab-content" id="print-tab-platforms">
-            <h3>Platform Ranking</h3>
-            <div className="platform-table">
-              <div className="pt-header">
-                <span>Platform</span><span>Fit Score</span><span>Allocation</span><span>Primary KPI</span>
-              </div>
-              {d.platformRanking?.map((p: any, i: number) => (
-                <div key={i} className="pt-row">
-                  <span className="pt-platform">{p.platform}</span>
-                  <span className="pt-score" style={{ color: getScoreColor(p.fitScore) }}>{p.fitScore}/100</span>
-                  <span>{p.allocation}</span>
-                  <span>{p.primaryKPI}</span>
-                </div>
-              ))}
-            </div>
-            <h3>Bidding Strategy</h3>
-            {d.biddingStrategy?.map((b: any, i: number) => (
-              <div key={i} className="detail-card">
-                <p><strong>{b.platform}:</strong> {b.strategy}</p>
-                <p className="detail-sub">{b.rationale}</p>
-              </div>
-            ))}
-            <h3>Benchmarks</h3>
-            {d.benchmarks && (
-              <div className="benchmarks-grid">
-                <div className="benchmark"><span className="bm-label">Expected CPA</span><span className="bm-value">{d.benchmarks.expectedCPA}</span></div>
-                <div className="benchmark"><span className="bm-label">Expected ROAS</span><span className="bm-value">{d.benchmarks.expectedROAS}</span></div>
-                <div className="benchmark"><span className="bm-label">Expected CTR</span><span className="bm-value">{d.benchmarks.expectedCTR}</span></div>
-              </div>
-            )}
-            
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-               {renderSkillButton('ads-google', 'Deep Dive: Google Ads Strategy')}
-               {renderSkillButton('ads-meta', 'Deep Dive: Meta Ads Strategy')}
-               {renderSkillButton('ads-tiktok', 'Deep Dive: TikTok Ads Strategy')}
-               {renderSkillButton('ads-linkedin', 'Deep Dive: LinkedIn B2B Strategy')}
-            </div>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Platform</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Fit Score</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Allocation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {d.platformRanking?.map((p: any, i: number) => (
+                      <tr key={i}>
+                        <td className="px-6 py-4 font-bold text-slate-900">{p.platform}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold" style={{ color: getScoreColor(p.fitScore) }}>{p.fitScore}%</span>
+                            <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${p.fitScore}%`, backgroundColor: getScoreColor(p.fitScore) }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right font-medium text-slate-600">{p.allocation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renderSkillButton('ads-google', 'Google Ads Plan')}
+                {renderSkillButton('ads-meta', 'Meta Ads Plan')}
+                {renderSkillButton('ads-tiktok', 'TikTok Content Plan')}
+                {renderSkillButton('ads-linkedin', 'LinkedIn B2B Strategy')}
+             </div>
           </div>
         );
       }
@@ -288,43 +398,54 @@ export default function ReportDashboard() {
         const funnel = getAgent('funnel-conversion');
         const d = funnel?.deliverables || {};
         return (
-          <div className="tab-content" id="print-tab-funnel">
-            <h3>Landing Page Scores</h3>
-            {d.landingPageScores && (
-              <div className="lp-scores-grid">
-                {Object.entries(d.landingPageScores).map(([key, val]: [string, any]) => (
-                  <div key={key} className="lp-score-item">
-                    <span className="lps-name">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <div className="lps-bar-track">
-                      <div className="lps-bar-fill" style={{ width: `${val * 10}%`, backgroundColor: getScoreColor(val * 10) }}></div>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
+                <MousePointer2 className="text-indigo-600" size={24} />
+                Conversion Rate Optimization (CRO)
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Object.entries(d.landingPageScores || {}).map(([key, val]: [string, any]) => (
+                  <div key={key} className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-bold text-slate-600">{key.replace(/([A-Z])/g, ' $1')}</span>
+                      <span className="text-sm font-bold text-slate-900">{val}/10</span>
                     </div>
-                    <span className="lps-val">{val}/10</span>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${val * 10}%`, backgroundColor: getScoreColor(val * 10) }} />
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
-            <h3>Headline Rewrites</h3>
-            <ul className="rewrite-list">{d.headlineRewrites?.map((h: string, i: number) => <li key={i}>"{h}"</li>)}</ul>
-            <h3>CTA Rewrites</h3>
-            <ul className="rewrite-list">{d.ctaRewrites?.map((c: string, i: number) => <li key={i}>"{c}"</li>)}</ul>
-            <h3>Funnel Map</h3>
-            {d.funnelMap && (
-              <div className="funnel-map">
-                {['tofu', 'mofu', 'bofu'].map(stage => (
-                  <div key={stage} className="funnel-stage">
-                    <h4>{stage.toUpperCase()}</h4>
-                    <p><strong>Status:</strong> {d.funnelMap[stage]?.status}</p>
-                    <ul>{d.funnelMap[stage]?.gaps?.map((g: string, i: number) => <li key={i}>{g}</li>)}</ul>
-                  </div>
-                ))}
-              </div>
-            )}
-            <h3>Conversion Blockers</h3>
-            <ul>{d.conversionBlockers?.map((b: string, i: number) => <li key={i}>{b}</li>)}</ul>
-            
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-               {renderSkillButton('ads-landing', 'Run Deep Landing Page CRO Audit')}
-               {renderSkillButton('ads-funnel', 'Generate Advanced Funnel Architectures')}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                 <h4 className="font-bold text-slate-900 mb-4 block">Recommended Headline Fixes</h4>
+                 <div className="space-y-3">
+                    {d.headlineRewrites?.map((h: string, i: number) => (
+                      <div key={i} className="p-4 bg-emerald-50 text-emerald-800 rounded-xl text-sm border border-emerald-100 italic">
+                        "{h}"
+                      </div>
+                    ))}
+                 </div>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                 <h4 className="font-bold text-slate-900 mb-4 block">Primary Conversion Killers</h4>
+                 <div className="space-y-3">
+                    {d.conversionBlockers?.map((b: string, i: number) => (
+                      <div key={i} className="flex gap-2 p-3 bg-rose-50 text-rose-800 rounded-xl text-sm border border-rose-100">
+                        <AlertCircle className="shrink-0" size={16} />
+                        {b}
+                      </div>
+                    ))}
+                 </div>
+               </div>
+            </div>
+
+            <div className="flex gap-4">
+               {renderSkillButton('ads-landing', 'Audit High-Performing Landing Pages')}
+               {renderSkillButton('ads-funnel', 'Build Full Customer Journey Map')}
             </div>
           </div>
         );
@@ -334,36 +455,26 @@ export default function ReportDashboard() {
         const comp = getAgent('competitive-intelligence');
         const d = comp?.deliverables || {};
         return (
-          <div className="tab-content" id="print-tab-competitors">
-            <h3>Direct Competitors</h3>
-            {d.directCompetitors?.map((c: any, i: number) => (
-              <div key={i} className="competitor-card">
-                <div className="comp-header">
-                  <strong>{c.name}</strong>
-                  <span className={`spend-badge spend-${c.adSpendTier?.toLowerCase()}`}>{c.adSpendTier} Spend</span>
-                </div>
-                <p><strong>URL:</strong> {c.url}</p>
-                <p><strong>Platforms:</strong> {c.platforms?.join(', ')}</p>
-                <p><strong>Offer:</strong> {c.offer}</p>
-                <p><strong>Creative:</strong> {c.creativeApproach}</p>
-              </div>
-            ))}
-            <h3>Indirect Competitors</h3>
-            {d.indirectCompetitors?.map((c: any, i: number) => (
-              <div key={i} className="detail-card"><strong>{c.name}</strong> — {c.offer}</div>
-            ))}
-            <h3>Competitive Gaps</h3>
-            {d.competitiveGaps && (
-              <div className="gaps-grid">
-                <div className="gap-section"><h4>Platform Gaps</h4><ul>{d.competitiveGaps.platformGaps?.map((g: string, i: number) => <li key={i}>{g}</li>)}</ul></div>
-                <div className="gap-section"><h4>Offer Gaps</h4><ul>{d.competitiveGaps.offerGaps?.map((g: string, i: number) => <li key={i}>{g}</li>)}</ul></div>
-                <div className="gap-section"><h4>Audience Gaps</h4><ul>{d.competitiveGaps.audienceGaps?.map((g: string, i: number) => <li key={i}>{g}</li>)}</ul></div>
-              </div>
-            )}
-            <h3>Positioning Recommendation</h3>
-            <p className="detail-text">{d.positioningRecommendation}</p>
-            
-            {renderSkillButton('ads-competitors', 'Deep Dive: Competitor Funnel Mapping')}
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {d.directCompetitors?.map((c: any, i: number) => (
+                  <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
+                    <div className="flex justify-between items-start mb-4">
+                       <div className="font-black text-slate-900 text-lg uppercase">{c.name}</div>
+                       <span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase">
+                         {c.adSpendTier} Spend
+                       </span>
+                    </div>
+                    <div className="space-y-3">
+                       <p className="text-sm text-slate-600"><span className="font-bold text-slate-400 uppercase text-[10px] mr-2">Strategy</span>{c.creativeApproach}</p>
+                       <p className="text-sm text-slate-600"><span className="font-bold text-slate-400 uppercase text-[10px] mr-2">Core Offer</span>{c.offer}</p>
+                    </div>
+                  </div>
+                ))}
+             </div>
+             <div>
+                {renderSkillButton('ads-competitors', 'Analyze Competitor Ad Libraries')}
+             </div>
           </div>
         );
       }
@@ -372,34 +483,35 @@ export default function ReportDashboard() {
         const platform = getAgent('platform-budget');
         const d = platform?.deliverables || {};
         return (
-          <div className="tab-content" id="print-tab-budget">
-            <h3>Budget Allocation</h3>
-            {d.budgetAllocation && (
-              <div className="budget-split">
-                <div className="bs-item"><span className="bs-stage">TOFU (Awareness)</span><span className="bs-amount">{d.budgetAllocation.tofu}</span></div>
-                <div className="bs-item"><span className="bs-stage">MOFU (Retargeting)</span><span className="bs-amount">{d.budgetAllocation.mofu}</span></div>
-                <div className="bs-item"><span className="bs-stage">BOFU (Conversion)</span><span className="bs-amount">{d.budgetAllocation.bofu}</span></div>
-              </div>
-            )}
-            <h3>Testing Budget</h3>
-            <p className="detail-text">{d.testingBudget}</p>
-            <h3>Scaling Thresholds</h3>
-            <p className="detail-text">{d.scalingThresholds}</p>
-            <h3>Platform Allocation</h3>
-            {d.platformRanking?.map((p: any, i: number) => (
-              <div key={i} className="alloc-bar">
-                <div className="alloc-info">
-                  <span>{p.platform}</span>
-                  <span>{p.allocation}</span>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center">
+              <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Recommended Monthly Investment</h3>
+              <div className="text-5xl font-black text-slate-900 mb-8">{d.benchmarks?.expectedCPA ? "Custom Plan" : "Analyzing..."}</div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-50 p-6 rounded-2xl">
+                  <div className="text-2xl font-bold text-indigo-600 mb-1">{d.budgetAllocation?.tofu || "40%"}</div>
+                  <div className="text-xs font-bold text-slate-500 uppercase">Top of Funnel</div>
                 </div>
-                <div className="alloc-track">
-                  <div className="alloc-fill" style={{ width: p.allocation || '20%' }}></div>
+                <div className="bg-slate-50 p-6 rounded-2xl">
+                  <div className="text-2xl font-bold text-indigo-600 mb-1">{d.budgetAllocation?.mofu || "30%"}</div>
+                  <div className="text-xs font-bold text-slate-500 uppercase">Middle of Funnel</div>
                 </div>
-                <p className="alloc-reason">{p.reason}</p>
+                <div className="bg-slate-50 p-6 rounded-2xl">
+                  <div className="text-2xl font-bold text-indigo-600 mb-1">{d.budgetAllocation?.bofu || "30%"}</div>
+                  <div className="text-xs font-bold text-slate-500 uppercase">Bottom of Funnel</div>
+                </div>
               </div>
-            ))}
+            </div>
             
-            {renderSkillButton('ads-budget', 'Generate 90-Day Budget Projection')}
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+               <h4 className="font-bold text-slate-900 mb-4">Scaling Strategy</h4>
+               <p className="text-slate-600 leading-relaxed text-sm">{d.scalingThresholds || "Focus on stabilizing initial CPA before aggressive scaling."}</p>
+            </div>
+
+            <div>
+               {renderSkillButton('ads-budget', '90-Day Financial Projection')}
+            </div>
           </div>
         );
       }
@@ -410,350 +522,323 @@ export default function ReportDashboard() {
   };
 
   return (
-    <div className="report-page">
+    <div className="min-h-screen bg-slate-50 pb-20">
       {/* Navbar */}
-      <nav className="navbar">
-        <div className="nav-inner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div className="nav-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-              <ZieAdsLogo size={36} />
-              <span className="brand-name">{agencyModel.name}</span>
+      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+                <ZieAdsLogo size={28} />
+                <span className="text-lg font-black tracking-tighter text-slate-900">{agencyModel.name}</span>
+              </div>
+              <div className="h-6 w-px bg-slate-200" />
+              <button 
+                onClick={() => navigate('/clients')}
+                className="text-sm font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
+              >
+                ← Back
+              </button>
             </div>
-            <button 
-              onClick={() => navigate('/clients')}
-              style={{ 
-                background: '#fff', 
-                border: '1px solid #e2e8f0', 
-                borderRadius: 20, 
-                padding: '6px 16px', 
-                fontSize: '0.85rem', 
-                fontWeight: 600, 
-                color: '#64748b', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={e => { e.currentTarget.style.borderColor = '#7B2FBE'; e.currentTarget.style.color = '#7B2FBE'; }}
-              onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}
-            >
-              ← Back to Dashboard
-            </button>
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button className="btn-login" onClick={() => setShowBrandingModal(true)}>
-              White-Label Settings
-            </button>
-            <button className="pdf-cta" onClick={() => window.print()}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download PDF Report
-            </button>
+            
+            <div className="hidden md:flex items-center gap-3">
+              <button 
+                onClick={() => setShowBrandingModal(true)}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+              >
+                Settings
+              </button>
+              <button 
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg shadow-lg shadow-slate-200 hover:bg-slate-800 active:scale-95 transition-all"
+              >
+                <Download size={16} />
+                Download PDF
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* White Label Modal */}
-      {showBrandingModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', padding: 32, borderRadius: 16, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ marginBottom: 16, fontSize: '1.25rem', color: '#1e293b' }}>White-Label Settings</h2>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: 8 }}>Agency Name</label>
-              <input type="text" value={agencyModel.name} onChange={(e) => setAgencyModel({ ...agencyModel, name: e.target.value })} style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '1rem' }} />
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#475569', cursor: 'pointer' }}>
-                <input type="checkbox" checked={agencyModel.includeWatermark} onChange={(e) => setAgencyModel({ ...agencyModel, includeWatermark: e.target.checked })} />
-                Include "Powered by ZieAds" in PDF footer
-              </label>
-            </div>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button style={{ padding: '8px 16px', borderRadius: 8, background: '#f1f5f9', border: 'none', color: '#475569', cursor: 'pointer', fontWeight: 600 }} onClick={() => setShowBrandingModal(false)}>Cancel</button>
-              <button style={{ padding: '8px 16px', borderRadius: 8, background: '#7B2FBE', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600 }} onClick={() => setShowBrandingModal(false)}>Save Branding</button>
+      {/* Hero Section */}
+      <header className="bg-white border-b border-slate-200 py-12 px-4 shadow-sm">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10">
+          <div className="relative">
+            <svg viewBox="0 0 100 100" className="w-40 h-40 transform -rotate-90">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#f1f5f9" strokeWidth="10" />
+              <circle 
+                cx="50" cy="50" r="45" fill="none" stroke={getScoreColor(overall)} 
+                strokeWidth="10" 
+                strokeDasharray={`${overall * 2.82} 282`} 
+                strokeLinecap="round"
+                className="transition-all duration-1000"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-4xl font-black" style={{ color: getScoreColor(overall) }}>{overall}</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400">Score</span>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Print-only White Label Header */}
-      <div className="print-only-branding" style={{ display: 'none', padding: '24px 0', borderBottom: '2px solid #000', marginBottom: 32 }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>{agencyModel.name}</h1>
-        <p style={{ color: '#475569' }}>Strategic Paid Ads Audit Report</p>
-      </div>
-
-      {/* Score Header (Zone A) */}
-      <section className="score-header">
-        <div className="sh-main">
-          <div className="sh-score" style={{ borderColor: getScoreColor(overall) }}>
-            <span className="sh-value" style={{ color: getScoreColor(overall) }}>{overall}</span>
-            <span className="sh-max">/100</span>
-          </div>
-          <div className="sh-info">
-            <h1>Paid Ads Readiness Score</h1>
-            <p className="sh-business">{businessName} · {url}</p>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
-              <span className="sh-grade" style={{ backgroundColor: getScoreColor(overall) }}>Grade {grade}</span>
-              <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4, background: '#d1fae5', padding: '4px 8px', borderRadius: 12 }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                +14 pts since last month
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-3xl font-black text-slate-900 mb-2">Performance Audit Report</h1>
+            <p className="text-slate-500 font-medium mb-6 flex items-center justify-center md:justify-start gap-2">
+              <Building2 size={16} /> {businessName} • {url}
+            </p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-3">
+              <span className="px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-md shadow-emerald-200/50" style={{ backgroundColor: getScoreColor(overall) }}>
+                GRADE {grade}
+              </span>
+              <span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100 uppercase tracking-tight">
+                {auditType} analysis
               </span>
             </div>
           </div>
-          <div className="sh-history" style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>90-Day Trend</span>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 40 }}>
-              {[42, 48, 55, overall].map((s, i) => (
-                <div key={i} style={{ width: 24, height: `${s}%`, backgroundColor: getScoreColor(s), borderRadius: '4px 4px 0 0', opacity: i === 3 ? 1 : 0.4 }} title={`Score: ${s}`}></div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="sh-dimensions">
-          {dimensions?.map((d: any, i: number) => (
-            <div key={i} className="sh-dim">
-              <span className="sh-dim-score" style={{ color: getDimensionScoreColor(d.score) }}>{d.score}</span>
-              <span className="sh-dim-name">{d.name}</span>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Findings Panel (Zone B) */}
-      <section className="findings-section">
-        <div 
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', paddingBottom: findingsOpen ? 16 : 0 }}
-          onClick={() => setFindingsOpen(!findingsOpen)}
-        >
-          <h2 style={{ margin: 0 }}>Critical Findings ({findings?.filter((f: any) => !checkedFindings.has(findings.indexOf(f))).length} remaining)</h2>
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" style={{ transform: findingsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#64748b' }}>
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </div>
-        
-        {findingsOpen && (
-          <div className="findings-list">
-            {findings?.map((f: any, i: number) => (
-            <div key={i} className={`finding-row ${checkedFindings.has(i) ? 'finding-checked' : ''}`}>
-              <label className="finding-check">
-                <input
-                  type="checkbox"
-                  checked={checkedFindings.has(i)}
-                  onChange={() => toggleFinding(i)}
-                />
-                <span className="checkmark"></span>
-              </label>
-              <span className={`finding-sev sev-${f.severity}`}>{f.severity.toUpperCase()}</span>
-              <div className="finding-body">
-                <strong>{f.title}</strong>
-                <p>{f.impact}</p>
-                <p className="finding-fix"><svg viewBox="0 0 24 24" fill="none" stroke="#00c9a7" strokeWidth="2" width="14" height="14" style={{display:'inline',verticalAlign:'middle',marginRight:4}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>{f.recommendation}</p>
+          <div className="hidden lg:grid grid-cols-2 gap-4">
+            {dimensions?.map((d: any, i: number) => (
+              <div key={i} className="flex flex-col items-end">
+                <span className="text-xl font-bold text-slate-900">{d.score}</span>
+                <span className="text-[10px] text-slate-400 uppercase font-bold">{d.name}</span>
               </div>
-            </div>
-          ))}
-        </div>
-        )}
-      </section>
-
-      {/* Tab bar */}
-      {!isSkillAudit && (
-        <div className="tab-nav">
-          <div className="tab-nav-inner">
-            {TABS.map(tab => (
-              <button 
-                key={tab} 
-                className={activeTab === tab ? 'active' : ''} 
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
             ))}
           </div>
         </div>
-      )}
+      </header>
 
-      {/* Main content */}
-      <main className="report-container">
-        {isSkillAudit ? (
-          <div style={{ padding: '0 24px 64px 24px', maxWidth: 1200, margin: '0 auto' }}>
-            <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-               {/* Header */}
-               <div style={{ padding: '32px 40px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: '#fff' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                        <div style={{ display: 'inline-block', padding: '4px 12px', background: 'rgba(123,47,190,0.2)', color: '#d8b4fe', borderRadius: 100, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: 12, border: '1px solid rgba(123,47,190,0.3)' }}>
-                          {auditType} Analysis
-                        </div>
-                        <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 800 }}>{businessName}</h1>
-                        <p style={{ margin: '8px 0 0 0', color: '#94a3b8', fontSize: '1rem' }}>{url}</p>
+      {/* Main Content Area */}
+      <div className="max-w-5xl mx-auto px-4 mt-12 pb-24">
+        
+        {/* Critical Findings Checklist - High Impact */}
+        <section className="bg-rose-50 border border-rose-100 rounded-3xl p-8 mb-12 relative overflow-hidden">
+           <div className="relative z-10">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-rose-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-rose-200">
+                    <AlertCircle size={24} />
+                  </div>
+                  <h2 className="text-2xl font-black text-rose-900">Critical To-Do List</h2>
+                </div>
+                <div className="hidden sm:block text-rose-700 font-bold text-sm bg-rose-100/50 px-4 py-2 rounded-full">
+                  {findings?.filter((f: any) => !checkedFindings.has(findings.indexOf(f))).length} issues remaining
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {findings?.map((f: any, i: number) => (
+                  <div 
+                    key={i} 
+                    className={`group relative flex items-start gap-4 p-5 rounded-2xl transition-all border ${checkedFindings.has(i) ? 'bg-white/40 border-transparent opacity-60 grayscale' : 'bg-white border-rose-100 shadow-sm'}`}
+                  >
+                    <div className="pt-1">
+                      <input 
+                        type="checkbox" 
+                        checked={checkedFindings.has(i)}
+                        onChange={() => toggleFinding(i)}
+                        className="w-5 h-5 rounded-md border-rose-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                      />
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                       <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: 4 }}>Audit Date</div>
-                       <div style={{ fontWeight: 600 }}>{new Date(generatedAt).toLocaleDateString()}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                         <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-sm ${f.severity === 'high' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'}`}>
+                            {f.severity}
+                         </span>
+                         <h3 className="font-bold text-slate-900 leading-tight">{f.title}</h3>
+                      </div>
+                      <p className="text-sm text-slate-600 leading-relaxed mb-3">{f.impact}</p>
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 w-fit px-3 py-1.5 rounded-lg border border-emerald-100">
+                         <CheckCircle2 size={12} />
+                         {f.recommendation}
+                      </div>
                     </div>
                   </div>
-               </div>
+                ))}
+              </div>
+           </div>
+        </section>
 
-               {/* Skill Content */}
-               <div style={{ padding: 40 }}>
-                  {auditType === 'copy' ? (
-                     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                        {/* Analysis Section */}
-                        {report.analysis && (
-                          <div style={{ padding: 24, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                              <span style={{ fontSize: '1.5rem' }}>🎯</span>
-                              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#1e293b' }}>Strategic Analysis</h3>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                               <div>
-                                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>Copy Strategy</label>
-                                  <p style={{ margin: 0, fontSize: '1rem', color: '#334155', lineHeight: 1.6 }}>{report.analysis.strategy}</p>
-                               </div>
-                               <div>
-                                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>Tone of Voice</label>
-                                  <p style={{ margin: 0, fontSize: '1rem', color: '#334155', lineHeight: 1.6 }}>{report.analysis.toneOfVoice}</p>
-                               </div>
-                            </div>
-                            <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                              {report.analysis.keySellingPoints?.map((sp: string, i: number) => (
-                                <span key={i} style={{ fontSize: '0.85rem', background: '#fff', padding: '6px 14px', borderRadius: 100, color: '#475569', border: '1px solid #e2e8f0', fontWeight: 600 }}>
-                                  ✓ {sp}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Platform Tabs & Content */}
-                        <div>
-                          <div style={{ display: 'flex', gap: 12, marginBottom: 20, borderBottom: '1px solid #e2e8f0', paddingBottom: 1 }}>
-                            {['metaAds', 'googleAds', 'tiktokAds', 'linkedinAds'].map(tab => (
-                              <button
-                                key={tab}
-                                onClick={() => setCopyActiveTab(tab)}
-                                style={{
-                                  padding: '12px 24px',
-                                  background: 'transparent',
-                                  border: 'none',
-                                  borderBottom: copyActiveTab === tab ? `3px solid #7B2FBE` : '3px solid transparent',
-                                  color: copyActiveTab === tab ? '#7B2FBE' : '#64748b',
-                                  fontSize: '0.95rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  marginBottom: -1,
-                                  transition: 'all 0.2s'
-                                }}
-                              >
-                                {tab.replace('Ads', '').charAt(0).toUpperCase() + tab.replace('Ads', '').slice(1)}
-                              </button>
-                            ))}
-                          </div>
-
-                          <div style={{ padding: 24, background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0' }}>
-                            {copyActiveTab === 'metaAds' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Primary Text (Long Body)</label>
-                                  <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '1rem', color: '#334155', whiteSpace: 'pre-wrap', border: '1px solid #e2e8f0' }}>
-                                    {report.deliverables?.metaAds?.longBody || report.deliverables?.metaAds?.primaryTexts?.[0]}
-                                  </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                                  <div>
-                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Headlines</label>
-                                    {report.deliverables?.metaAds?.headlines?.map((h: string, i: number) => (
-                                      <div key={i} style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: '0.9rem', color: '#334155', marginBottom: 8, border: '1px solid #e2e8f0' }}>{h}</div>
-                                    ))}
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Short Body</label>
-                                    <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: '0.9rem', color: '#334155', border: '1px solid #e2e8f0' }}>{report.deliverables?.metaAds?.shortBody}</div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {copyActiveTab === 'googleAds' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Search Headlines (15)</label>
-                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                                    {report.deliverables?.googleAds?.headlines?.map((h: string, i: number) => (
-                                      <div key={i} style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: '0.9rem', color: '#334155', border: '1px solid #e2e8f0' }}>{h}</div>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Search Descriptions (4)</label>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    {report.deliverables?.googleAds?.descriptions?.map((d: string, i: number) => (
-                                      <div key={i} style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: '0.9rem', color: '#334155', border: '1px solid #e2e8f0' }}>{d}</div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {copyActiveTab === 'tiktokAds' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                {report.deliverables?.tiktokAds?.scriptOutlines?.map((s: any, i: number) => (
-                                  <div key={i} style={{ padding: 20, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                                    <div style={{ fontWeight: 800, marginBottom: 12, color: '#7B2FBE', fontSize: '1rem' }}>Script Option {i + 1}</div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                      <p style={{ margin: 0, fontSize: '0.95rem' }}><strong>Hook:</strong> {s.hook}</p>
-                                      <p style={{ margin: 0, fontSize: '0.95rem' }}><strong>Body:</strong> {s.body}</p>
-                                      <p style={{ margin: 0, fontSize: '0.95rem' }}><strong>CTA:</strong> {s.cta}</p>
-                                    </div>
-                                  </div>
-                                ))}
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Captions</label>
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                                    {report.deliverables?.tiktokAds?.captions?.map((c: string, i: number) => (
-                                      <div key={i} style={{ padding: '8px 16px', background: '#f8fafc', borderRadius: 100, fontSize: '0.9rem', color: '#334155', border: '1px solid #e2e8f0' }}>{c}</div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {copyActiveTab === 'linkedinAds' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                 {report.deliverables?.linkedinAds?.sponsoredContent?.map((c: any, i: number) => (
-                                   <div key={i} style={{ padding: 20, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                                     <div style={{ fontWeight: 800, marginBottom: 12, color: '#7B2FBE', fontSize: '1rem' }}>Sponsored Content {i + 1}</div>
-                                     <p style={{ margin: '0 0 10px 0', fontSize: '0.95rem' }}><strong>Intro:</strong> {c.intro}</p>
-                                     <p style={{ margin: 0, fontSize: '0.95rem' }}><strong>Headline:</strong> {c.headline}</p>
-                                   </div>
-                                 ))}
-                                 {report.deliverables?.linkedinAds?.messageAds?.map((m: any, i: number) => (
-                                   <div key={i} style={{ padding: 20, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                                     <div style={{ fontWeight: 800, marginBottom: 12, color: '#7B2FBE', fontSize: '1rem' }}>Direct Message {i + 1}</div>
-                                     <p style={{ margin: '0 0 10px 0', fontSize: '0.95rem' }}><strong>Subject:</strong> {m.subject}</p>
-                                     <p style={{ margin: 0, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>{m.body}</p>
-                                   </div>
-                                 ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                     </div>
-                  ) : (
-                    <div>
-                        <h3 style={{ textTransform: 'capitalize' }}>{auditType} Deliverables</h3>
-                        <pre style={{ padding: 24, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'auto', whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>
-                          {JSON.stringify(report.deliverables || report, null, 2)}
-                        </pre>
-                    </div>
-                  )}
-               </div>
+        {/* Dynamic Tab Navigation */}
+        {!isSkillAudit && (
+          <>
+          <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar mb-8">
+              {TABS.map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-200'}`}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
-          </div>
-        ) : (
-          renderTabContent()
+            {renderTabContent()}
+          </>
         )}
-      </main>
+
+        {/* Special Skill Audit View */}
+        {isSkillAudit && (
+           <div className="animate-in zoom-in-95 duration-500">
+              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
+                  <div className="p-8 md:p-12 bg-gradient-to-br from-slate-900 to-indigo-950 text-white">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                          <div>
+                            <div className="inline-block px-4 py-1.5 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-black uppercase tracking-tighter border border-indigo-500/30 mb-6">
+                              {auditType} deep-dive
+                            </div>
+                            <h2 className="text-4xl font-black tracking-tight mb-2 underline decoration-indigo-500 decoration-4 underline-offset-8">{businessName}</h2>
+                            <p className="text-slate-400 font-medium">{url}</p>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="p-8 md:p-12">
+                     {auditType === 'copy' ? (
+                        <div className="space-y-12">
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-3xl border border-slate-200">
+                              <div>
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Copy Master Strategy</label>
+                                 <p className="text-lg text-slate-800 leading-relaxed font-semibold">{report.analysis?.strategy}</p>
+                              </div>
+                              <div className="md:border-l border-slate-200 md:pl-8">
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Audience Resonance</label>
+                                 <div className="flex flex-wrap gap-2">
+                                    {report.analysis?.keySellingPoints?.map((p:string, i:number) => (
+                                      <span key={i} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 font-bold shadow-sm">#{p}</span>
+                                    ))}
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div>
+                              <div className="flex gap-4 mb-8">
+                                 {['metaAds', 'googleAds', 'tiktokAds'].map(p => (
+                                   <button 
+                                      key={p}
+                                      onClick={() => setCopyActiveTab(p)}
+                                      className={`px-6 py-2 rounded-xl text-sm font-black uppercase tracking-tight transition-all ${copyActiveTab === p ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'}`}
+                                   >
+                                     {p.replace('Ads', '')}
+                                   </button>
+                                 ))}
+                              </div>
+
+                              <div className="space-y-6">
+                                 {copyActiveTab === 'metaAds' && (
+                                   <div className="p-8 bg-white border-2 border-slate-100 rounded-3xl shadow-inner">
+                                      <label className="text-[10px] font-black text-indigo-500 uppercase block mb-4">Ad Copy - Option A (High Intent)</label>
+                                      <div className="text-slate-900 leading-relaxed whitespace-pre-wrap font-medium text-lg mb-8">
+                                        {report.deliverables?.metaAds?.longBody || report.deliverables?.metaAds?.primaryTexts?.[0]}
+                                      </div>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {report.deliverables?.metaAds?.headlines?.map((h:string, i:number) => (
+                                          <div key={i} className="bg-slate-50 p-4 rounded-xl border-l-4 border-indigo-500 font-bold text-slate-800 italic">"{h}"</div>
+                                        ))}
+                                      </div>
+                                   </div>
+                                 )}
+
+                                  {copyActiveTab === 'googleAds' && (
+                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      {report.deliverables?.googleAds?.headlines?.map((h:string, i:number) => (
+                                          <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 text-slate-800 font-bold text-sm">
+                                            <span className="text-slate-300 mr-2">H{i+1}:</span> {h}
+                                          </div>
+                                       ))}
+                                   </div>
+                                 )}
+
+                                 {copyActiveTab === 'tiktokAds' && (
+                                   <div className="space-y-4">
+                                      {report.deliverables?.tiktokAds?.scriptOutlines?.map((s:any, i:number) => (
+                                        <div key={i} className="p-6 bg-slate-900 text-white rounded-3xl">
+                                          <div className="text-rose-400 font-black mb-4">HOOK: {s.hook}</div>
+                                          <div className="text-slate-300 leading-tight mb-4">{s.body}</div>
+                                          <div className="text-emerald-400 font-bold">CTA: {s.cta}</div>
+                                        </div>
+                                      ))}
+                                   </div>
+                                 )}
+                              </div>
+                           </div>
+                        </div>
+                     ) : (
+                        <div className="p-8 bg-slate-50 rounded-2xl border border-slate-200 font-mono text-xs overflow-auto">
+                           <pre>{JSON.stringify(report.deliverables || report, null, 2)}</pre>
+                        </div>
+                     )}
+                  </div>
+              </div>
+           </div>
+        )}
+      </div>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showBrandingModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBrandingModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8"
+            >
+              <h2 className="text-2xl font-black text-slate-900 mb-6">White-Label Branding</h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Agency / Business Name</label>
+                  <input 
+                    type="text" 
+                    value={agencyModel.name}
+                    onChange={(e) => setAgencyModel({ ...agencyModel, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-bold text-slate-900"
+                  />
+                </div>
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox"
+                    checked={agencyModel.includeWatermark}
+                    onChange={(e) => setAgencyModel({ ...agencyModel, includeWatermark: e.target.checked })}
+                    className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900 transition-colors">Include "Powered by ZieAds" in footer</span>
+                </label>
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    onClick={() => setShowBrandingModal(false)}
+                    className="flex-1 px-6 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => setShowBrandingModal(false)}
+                    className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <style>{`
+        @media print {
+          .no-print, .navbar, .tab-nav, .btn-get-started { display: none !important; }
+          .print-only-branding { display: block !important; }
+          body { background: white !important; }
+          .report-page { padding: 0 !important; }
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 }

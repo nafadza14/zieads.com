@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import { scrapeUrl } from "./scraper.js";
 import {
@@ -20,6 +21,7 @@ import {
   getUserUsageCount,
 } from "./supabaseServer.js";
 import { publicApiRouter } from "./routes/api-public.js";
+import { adsLibraryRouter } from "./routes/api-ads-library.js";
 
 const app = express();
 app.use(express.json());
@@ -35,6 +37,9 @@ app.use((req, res, next) => {
 
 // ─── Public Webhook API ────────────────────────────────
 app.use("/v1", publicApiRouter);
+
+// ─── Ads Library (Meta Ads Library proxy) ─────────────
+app.use("/api/ads-library", adsLibraryRouter);
 
 // ─── Health Check ──────────────────────────────────────
 app.get("/api/health", (_req, res) => {

@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
+import LiveAdsSection from '../components/LiveAdsSection';
 import { supabase } from '../lib/supabaseClient';
+
+// Skills that should show the live ads section from Meta Ads Library
+const SHOW_LIVE_ADS_FOR = new Set([
+  'ads-copy', 'ads-creatives', 'ads-competitors', 'ads-meta',
+  'ads-tiktok', 'ads-report', 'ads-report-pdf',
+]);
 
 // ─── Platform config ──────────────────────────────────────────────
 const PLATFORM_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -1187,6 +1194,11 @@ export default function SkillReport() {
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px' }}>
         {result && (
           <>
+            {/* Live Ad Creative Analysis */}
+            {SHOW_LIVE_ADS_FOR.has(skillName) && (
+              <LiveAdsSection url={url} businessName={businessName} accentColor={meta.color} skillData={result} />
+            )}
+
             {/* Findings (universal) */}
             {result.findings?.length > 0 && (
               <>
