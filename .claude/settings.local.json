@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(node --import tsx/esm server.ts)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(kill %1)",
+      "Bash(curl -s -X POST http://localhost:3000/api/quick-scan -H 'Content-Type: application/json' -d '{\"url\":\"https://example.com\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -I -X OPTIONS http://localhost:3000/api/quick-scan -H 'Origin: https://zapier.com' -H 'Access-Control-Request-Method: POST')"
+    ]
+  }
+}
