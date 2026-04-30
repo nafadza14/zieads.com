@@ -12,7 +12,9 @@
     "start": "node server.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
     "@google/genai": "^1.29.0",
+    "@iconscout/react-unicons": "^2.2.5",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.101.1",

@@ -167,11 +167,119 @@ export async function getUserUsageCount(userId: string): Promise<number> {
     .from("audits")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId);
-    
+
   const { count: skillCount } = await supabaseAdmin
     .from("skill_results")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId);
-    
+
   return (auditCount || 0) + (skillCount || 0);
+}
+
+// ─── AI Agent Chat ────────────────────────────────────────────────────────────
+
+export async function createConversation(userId: string, title: string, contextUrl?: string) {
+  const { data, error } = await supabaseAdmin
+    .from("agent_conversations")
+    .insert({ user_id: userId, title, context_url: contextUrl || null })
+    .select()
+    .single();
+  if (error) { console.error("[DB] Failed to create conversation:", error.message); return null; }
+  return data;
+}
+
+export async function getConversations(userId: string, limit = 20) {
+  const { data, error } = await supabaseAdmin
+    .from("agent_conversations")
+    .select("id, title, context_url, created_at, updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+  if (error) { console.error("[DB] Failed to fetch conversations:", error.message); return []; }
+  return data || [];
+}
+
+export async function getConversationMessages(conversationId: string, userId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("agent_messages")
+    .select("id, role, content, created_at")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  if (error) { console.error("[DB] Failed to fetch messages:", error.message); return []; }
+  return data || [];
+}
+
+export async function saveMessage(params: {
+  conversationId: string;
+  userId: string;
+  role: "user" | "assistant";
+  content: string;
+}) {
+  const { error } = await supabaseAdmin.from("agent_messages").insert({
+    conversation_id: params.conversationId,
+    user_id: params.userId,
+    role: params.role,
+    content: params.content,
+  });
+  if (error) console.error("[DB] Failed to save message:", error.message);
+
+  // Update conversation updated_at
+  await supabaseAdmin
+    .from("agent_conversations")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", params.conversationId);
+
+  return !error;
+}
+
+export async function deleteConversation(conversationId: string, userId: string) {
+  const { error } = await supabaseAdmin
+    .from("agent_conversations")
+    .delete()
+    .eq("id", conversationId)
+    .eq("user_id", userId);
+  if (error) console.error("[DB] Failed to delete conversation:", error.message);
+  return !error;
+}
+
+export async function getAgentMessageCount(userId: string): Promise<number> {
+  const month = new Date().toISOString().slice(0, 7); // "2026-04"
+  const { data } = await supabaseAdmin
+    .from("agent_usage")
+    .select("count")
+    .eq("user_id", userId)
+    .eq("month", month)
+    .single();
+  return data?.count || 0;
+}
+
+export async function incrementAgentUsage(userId: string): Promise<void> {
+  const month = new Date().toISOString().slice(0, 7);
+  const { error } = await supabaseAdmin.rpc("increment_agent_usage", { p_user_id: userId, p_month: month });
+  if (error) {
+    // Fallback: upsert manually if RPC doesn't exist yet
+    const current = await getAgentMessageCount(userId);
+    await supabaseAdmin
+      .from("agent_usage")
+      .upsert({ user_id: userId, month, count: current + 1 }, { onConflict: "user_id,month" });
+  }
+}
+
+export async function getRecentAuditContext(userId: string): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from("audits")
+    .select("url, business_name, overall_score, grade, findings, report, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  if (!data || data.length === 0) return "No audit history available yet.";
+
+  return data.map((a, i) => {
+    const findings = (a.findings || []).slice(0, 5).map((f: any) => `  - [${f.severity || 'INFO'}] ${f.title || f}`).join("\n");
+    return `Audit ${i + 1}: ${a.business_name || a.url} (${new Date(a.created_at).toDateString()})
+  Score: ${a.overall_score}/100 (Grade ${a.grade})
+  Top findings:\n${findings || "  None"}`;
+  }).join("\n\n");
 }

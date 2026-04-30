@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bot } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { 
+  UilSearchAlt, UilFileAlt, UilPen, UilPalette, UilChartPie, UilHome, UilCrosshairs, UilMoneyBill, UilFacebook, UilVideo, UilLinkedin, UilFilter, UilBullseye, UilGoogle
+} from '@iconscout/react-unicons';
 
 const P = '#7B2FBE';
 const PL = 'rgba(123,47,190,0.08)';
@@ -9,21 +13,21 @@ const D = '#1e293b';
 const B = '#e2e8f0';
 
 const SKILLS = [
-  { id: 'audit', name: 'Full Audit', icon: '▤', color: P, desc: '5 agents · all 6 dimensions scored', cmd: '/ads audit' },
-  { id: 'quick', name: 'Quick Scan', icon: '⚡', color: '#f59e0b', desc: '60-second ads readiness snapshot', cmd: '/ads quick' },
-  { id: 'copy', name: 'Ad Copy', icon: '✎', color: '#f59e0b', desc: 'Google, Meta, TikTok, LinkedIn ready', cmd: '/ads copy' },
-  { id: 'creatives', name: 'Creative Brief', icon: '◻', color: '#00c9a7', desc: '3 concepts per platform', cmd: '/ads creatives' },
-  { id: 'landing', name: 'Landing Page CRO', icon: '▣', color: '#5c8aff', desc: '8-dimension conversion audit', cmd: '/ads landing' },
-  { id: 'audiences', name: 'Audience Targeting', icon: '⊕', color: '#8b5cf6', desc: 'ICP & platform matrices', cmd: '/ads audiences' },
-  { id: 'competitors', name: 'Competitor Intel', icon: '◎', color: '#e8457a', desc: '3-tier intelligence map', cmd: '/ads competitors' },
-  { id: 'funnel', name: 'Funnel Architecture', icon: '▽', color: '#f59e0b', desc: 'TOFU/MOFU/BOFU routing', cmd: '/ads funnel' },
-  { id: 'budget', name: 'Budget Model', icon: '↗', color: '#10b981', desc: 'Platform allocation + KPIs', cmd: '/ads budget' },
-  { id: 'google', name: 'Google Ads', icon: 'G', color: '#4285f4', desc: 'Search, Shopping, Display strategy', cmd: '/ads google' },
-  { id: 'meta', name: 'Meta Ads', icon: 'M', color: '#1877f2', desc: 'Facebook & Instagram strategy', cmd: '/ads meta' },
-  { id: 'tiktok', name: 'TikTok Ads', icon: 'T', color: '#000', desc: 'UGC & spark ads strategy', cmd: '/ads tiktok' },
-  { id: 'linkedin', name: 'LinkedIn Ads', icon: 'L', color: '#0a66c2', desc: 'B2B account-based marketing', cmd: '/ads linkedin' },
-  { id: 'report', name: 'Strategy Report', icon: '📄', color: '#64748b', desc: 'Full markdown strategy export', cmd: '/ads report' },
-  { id: 'report-pdf', name: 'White-Label PDF', icon: '📋', color: P, desc: 'Professional agency deck', cmd: '/ads report-pdf' },
+  { id: 'audit', name: 'Full Audit', icon: <UilSearchAlt size={20} />, color: P, desc: '5 agents · all 6 dimensions scored', cmd: '/ads audit' },
+  { id: 'quick', name: 'Quick Scan', icon: <UilChartPie size={20} />, color: '#f59e0b', desc: '60-second ads readiness snapshot', cmd: '/ads quick' },
+  { id: 'copy', name: 'Ad Copy', icon: <UilPen size={20} />, color: '#f59e0b', desc: 'Google, Meta, TikTok, LinkedIn ready', cmd: '/ads copy' },
+  { id: 'creatives', name: 'Creative Brief', icon: <UilPalette size={20} />, color: '#00c9a7', desc: '3 concepts per platform', cmd: '/ads creatives' },
+  { id: 'landing', name: 'Landing Page CRO', icon: <UilHome size={20} />, color: '#5c8aff', desc: '8-dimension conversion audit', cmd: '/ads landing' },
+  { id: 'audiences', name: 'Audience Targeting', icon: <UilCrosshairs size={20} />, color: '#8b5cf6', desc: 'ICP & platform matrices', cmd: '/ads audiences' },
+  { id: 'competitors', name: 'Competitor Intel', icon: <UilBullseye size={20} />, color: '#e8457a', desc: '3-tier intelligence map', cmd: '/ads competitors' },
+  { id: 'funnel', name: 'Funnel Architecture', icon: <UilFilter size={20} />, color: '#f59e0b', desc: 'TOFU/MOFU/BOFU routing', cmd: '/ads funnel' },
+  { id: 'budget', name: 'Budget Model', icon: <UilMoneyBill size={20} />, color: '#10b981', desc: 'Platform allocation + KPIs', cmd: '/ads budget' },
+  { id: 'google', name: 'Google Ads', icon: <UilGoogle size={20} />, color: '#4285f4', desc: 'Search, Shopping, Display strategy', cmd: '/ads google' },
+  { id: 'meta', name: 'Meta Ads', icon: <UilFacebook size={20} />, color: '#1877f2', desc: 'Facebook & Instagram strategy', cmd: '/ads meta' },
+  { id: 'tiktok', name: 'TikTok Ads', icon: <UilVideo size={20} />, color: '#000', desc: 'UGC & spark ads strategy', cmd: '/ads tiktok' },
+  { id: 'linkedin', name: 'LinkedIn Ads', icon: <UilLinkedin size={20} />, color: '#0a66c2', desc: 'B2B account-based marketing', cmd: '/ads linkedin' },
+  { id: 'report', name: 'Strategy Report', icon: <UilFileAlt size={20} />, color: '#64748b', desc: 'Full markdown strategy export', cmd: '/ads report' },
+  { id: 'report-pdf', name: 'White-Label PDF', icon: <UilFileAlt size={20} />, color: P, desc: 'Professional agency deck', cmd: '/ads report-pdf' },
 ];
 
 const RHYTHM = [
@@ -231,10 +235,10 @@ export default function ClientDashboard({ reportData }: Props) {
               <div style={{ fontSize: '0.7rem', color: G, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: 12 }}>{section === 'home' ? 'MAIN' : 'SKILLS'}</div>
               {section === 'home' ? (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[{k:'home',l:'Home'},{k:'reports',l:'Reports'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
-                    <li key={n.k} onClick={() => setSidebarNav(n.k)} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 4, margin: '0 -12px', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? '#f1f5f9' : 'transparent', color: D, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {[{k:'home',l:'Home'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
+                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 4, margin: '0 -12px', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? '#f1f5f9' : 'transparent', color: n.k === 'agent' ? P : D, display: 'flex', alignItems: 'center', gap: 8 }}>
                       {sidebarNav === n.k && <span style={{ width: 6, height: 6, borderRadius: '50%', background: P }}></span>}
-                      {n.l}
+                      {n.k === 'agent' ? <Bot size={16} /> : ''}{n.l}
                     </li>
                   ))}
                 </ul>

@@ -22,6 +22,7 @@ import {
 } from "./supabaseServer.js";
 import { publicApiRouter } from "./routes/api-public.js";
 import { adsLibraryRouter } from "./routes/api-ads-library.js";
+import { agentRouter } from "./routes/api-agent.js";
 
 const app = express();
 app.use(express.json());
@@ -40,6 +41,9 @@ app.use("/v1", publicApiRouter);
 
 // ─── Ads Library (Meta Ads Library proxy) ─────────────
 app.use("/api/ads-library", adsLibraryRouter);
+
+// ─── AI Agent Chat ─────────────────────────────────────
+app.use("/api/agent", agentRouter);
 
 // ─── Health Check ──────────────────────────────────────
 app.get("/api/health", (_req, res) => {

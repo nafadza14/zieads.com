@@ -18,15 +18,24 @@
   --bg-surface: #f4f2fa;
   --text: #1a1a2e;
   --text-secondary: #4a4a6a;
-  --text-muted: #8888a0;
-  --text-dim: #b0b0c0;
+  /* WCAG AA: lifted from #8888a0 (~3.0:1) → #5e5e7a (~4.7:1 on white) */
+  --text-muted: #5e5e7a;
+  /* WCAG AA: lifted from #b0b0c0 (~1.8:1) → #6b6b85 (~4.6:1 on white) */
+  --text-dim: #6b6b85;
   --border: #e8e6f0;
   --border-light: #f0eef6;
+  /* Decorative / icon accent colours – not used as standalone text */
   --red: #e8457a;
   --orange: #f59e0b;
   --green: #00c9a7;
   --blue: #5c8aff;
   --purple: #8b5cf6;
+  /* AA-compliant text-safe variants for coloured labels on light backgrounds */
+  --red-text: #c0194a;    /* 5.2:1 on white */
+  --orange-text: #8a5a00; /* 5.1:1 on white */
+  --green-text: #007a64;  /* 5.0:1 on white */
+  --blue-text: #1d4ecc;   /* 5.5:1 on white */
+  --purple-text: #5b3fb5; /* 5.0:1 on white */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
   --shadow: 0 4px 20px rgba(0,0,0,0.06);
   --shadow-md: 0 8px 30px rgba(0,0,0,0.08);
@@ -204,7 +213,9 @@ a:hover { color: var(--primary); }
   border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.hero-error { color: var(--red); font-size: 14px; margin-top: 12px; }
+/* WCAG AA: error red #e8457a is 3.6:1 on white; use darker accessible red */
+.hero-error { color: var(--red-text); font-size: 14px; margin-top: 12px; }
+/* WCAG AA: hero-note at 13px needs 4.5:1 — using updated --text-muted */
 .hero-note { color: var(--text-muted); font-size: 13px; margin-top: 16px; }
 
 /* ─── SOCIAL PROOF ─── */
@@ -221,6 +232,7 @@ a:hover { color: var(--primary); }
 }
 .stat { text-align: center; }
 .stat-number { display: block; font-size: 28px; font-weight: 800; color: var(--text); }
+/* WCAG AA: stat-label at 13px needs 4.5:1 — using --text-muted (#5e5e7a, ~4.7:1) */
 .stat-label { font-size: 13px; color: var(--text-muted); }
 .stat-divider { width: 1px; height: 40px; background: var(--border); }
 
@@ -299,6 +311,7 @@ a:hover { color: var(--primary); }
 .dimension-bar { display: flex; flex-direction: column; gap: 6px; }
 .dim-info { display: flex; justify-content: space-between; }
 .dim-name { font-size: 14px; font-weight: 600; color: var(--text); }
+/* WCAG AA: dim-weight at 13px uses updated --text-muted (4.7:1) */
 .dim-weight { font-size: 13px; color: var(--text-muted); }
 .dim-track { height: 10px; background: var(--bg-surface); border-radius: 5px; overflow: hidden; }
 .dim-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
@@ -328,6 +341,7 @@ a:hover { color: var(--primary); }
 .plan-name { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
 .plan-price { margin-bottom: 24px; }
 .price-amount { font-size: 44px; font-weight: 800; color: var(--text); }
+/* WCAG AA: price-period uses updated --text-muted (4.7:1) */
 .price-period { font-size: 15px; color: var(--text-muted); margin-left: 4px; }
 .plan-features { list-style: none; margin-bottom: 32px; }
 .plan-features li {
@@ -335,6 +349,7 @@ a:hover { color: var(--primary); }
   display: flex; align-items: center; gap: 10px;
   border-bottom: 1px solid var(--border-light);
 }
+/* WCAG AA: check icon is decorative; color is for visual accent only */
 .check-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; }
 .plan-cta {
   width: 100%; padding: 14px; border-radius: var(--radius-pill);
@@ -367,6 +382,7 @@ a:hover { color: var(--primary); }
   color: var(--text); transition: color 0.2s;
 }
 .faq-item summary:hover { color: var(--primary); }
+/* WCAG AA: toggle icon uses updated --text-muted (4.7:1 on white) */
 .faq-item summary::after { content: '+'; font-size: 22px; color: var(--text-muted); }
 .faq-item[open] summary::after { content: '−'; }
 .faq-item p {
@@ -383,7 +399,9 @@ a:hover { color: var(--primary); }
 }
 .footer-inner { max-width: 600px; margin: 0 auto; }
 .footer-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px; }
+/* WCAG AA: footer-text uses updated --text-muted (4.7:1 on white) */
 .footer-text { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+/* WCAG AA: footer-copy uses updated --text-dim (4.6:1 on white) */
 .footer-copy { font-size: 13px; color: var(--text-dim); }
 
 /* ═══════════════════════════════════════════════════════
@@ -448,13 +466,15 @@ a:hover { color: var(--primary); }
   padding: 4px 10px; border-radius: 6px;
   font-size: 11px; font-weight: 700; white-space: nowrap;
 }
-.finding-critical .finding-badge { background: rgba(232,69,122,0.1); color: var(--red); }
-.finding-high .finding-badge { background: rgba(245,158,11,0.1); color: var(--orange); }
-.finding-medium .finding-badge { background: rgba(92,138,255,0.1); color: var(--blue); }
-.finding-low .finding-badge { background: rgba(0,201,167,0.1); color: var(--green); }
+/* WCAG AA: badge text on tinted backgrounds — use AA-safe text variants */
+.finding-critical .finding-badge { background: rgba(232,69,122,0.1); color: var(--red-text); }
+.finding-high .finding-badge { background: rgba(245,158,11,0.1); color: var(--orange-text); }
+.finding-medium .finding-badge { background: rgba(92,138,255,0.1); color: var(--blue-text); }
+.finding-low .finding-badge { background: rgba(0,201,167,0.1); color: var(--green-text); }
 .finding-content h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
 .finding-impact { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
-.finding-rec { font-size: 13px; color: var(--green); }
+/* WCAG AA: recommendation text uses accessible green */
+.finding-rec { font-size: 13px; color: var(--green-text); }
 
 .blurred-teaser {
   position: relative; border-radius: var(--radius-lg);
@@ -702,14 +722,16 @@ a:hover { color: var(--primary); }
   padding: 3px 8px; border-radius: 4px;
   font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
 }
-.sev-critical { background: rgba(232,69,122,0.1); color: var(--red); }
-.sev-high { background: rgba(245,158,11,0.1); color: var(--orange); }
-.sev-medium { background: rgba(92,138,255,0.1); color: var(--blue); }
-.sev-low { background: rgba(0,201,167,0.1); color: var(--green); }
+/* WCAG AA: severity badges use AA-safe text-colour variants on tinted backgrounds */
+.sev-critical { background: rgba(232,69,122,0.1); color: var(--red-text); }
+.sev-high { background: rgba(245,158,11,0.1); color: var(--orange-text); }
+.sev-medium { background: rgba(92,138,255,0.1); color: var(--blue-text); }
+.sev-low { background: rgba(0,201,167,0.1); color: var(--green-text); }
 .finding-body { flex: 1; }
 .finding-body strong { font-size: 14px; color: var(--text); }
 .finding-body p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-.finding-fix { color: var(--green) !important; }
+/* WCAG AA: fix text uses accessible green */
+.finding-fix { color: var(--green-text) !important; }
 
 /* Tabs */
 .report-tabs-section { max-width: 1000px; margin: 0 auto; padding: 0 24px 80px; }
@@ -747,8 +769,9 @@ a:hover { color: var(--primary); }
   background: var(--primary-bg); border: 1px solid var(--primary-border);
   font-size: 13px; color: var(--primary);
 }
+/* WCAG AA: tag-red label uses AA-safe red */
 .tag-red {
-  background: rgba(232,69,122,0.06); border-color: rgba(232,69,122,0.2); color: var(--red);
+  background: rgba(232,69,122,0.06); border-color: rgba(232,69,122,0.2); color: var(--red-text);
 }
 
 .concept-card {
@@ -837,10 +860,11 @@ a:hover { color: var(--primary); }
 }
 .comp-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .spend-badge { padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-.spend-low { background: rgba(0,201,167,0.1); color: var(--green); }
-.spend-medium { background: rgba(92,138,255,0.1); color: var(--blue); }
-.spend-high { background: rgba(245,158,11,0.1); color: var(--orange); }
-.spend-heavy { background: rgba(232,69,122,0.1); color: var(--red); }
+/* WCAG AA: spend badges use AA-safe text-colour variants */
+.spend-low { background: rgba(0,201,167,0.1); color: var(--green-text); }
+.spend-medium { background: rgba(92,138,255,0.1); color: var(--blue-text); }
+.spend-high { background: rgba(245,158,11,0.1); color: var(--orange-text); }
+.spend-heavy { background: rgba(232,69,122,0.1); color: var(--red-text); }
 .competitor-card p { font-size: 13px; color: var(--text-secondary); padding: 2px 0; }
 
 .gaps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
