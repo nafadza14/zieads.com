@@ -10,18 +10,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html",
-      "conditions": [
-        {
-          "type": "header",
-          "key": "Accept",
-          "value": "text/html"
-        }
-      ]
+      "destination": "/index.html"
     }
   ]
 }
