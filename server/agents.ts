@@ -716,58 +716,426 @@ RESPOND WITH VALID JSON ONLY:
   }
 }`,
 
-  "ads-meta": (ctx) => `You are the ZieAds Meta Ads Strategist Agent. Build a complete Facebook & Instagram strategy.
+  "ads-meta": (ctx) => `You are the ZieAds Meta Ads Strategist. Build the most complete, actionable Facebook & Instagram paid ads strategy possible — ready to implement in Ads Manager without any additional research.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
+- Business: ${ctx.businessName || ctx.scrapedData.title}
+- Type: ${ctx.businessType || ctx.scrapedData.inferredBusinessType}
 - Goal: ${ctx.primaryGoal}
-- Budget: ${ctx.monthlyBudget}
+- Monthly Budget: ${ctx.monthlyBudget}
+- Hero Offer: ${ctx.scrapedData.heroOffer}
+- Primary CTA: ${ctx.scrapedData.primaryCTA}
+- H1: ${ctx.scrapedData.h1}
+- Meta Description: ${ctx.scrapedData.metaDescription}
+- Key Headings: ${ctx.scrapedData.headings.slice(0, 6).map(h => h.text).join('; ')}
+- E-commerce: ${ctx.scrapedData.businessSignals.hasEcommerce}
+- Has Lead Form: ${ctx.scrapedData.businessSignals.hasLeadForm}
+- Detected Pixels: ${ctx.scrapedData.detectedPixels.join(', ') || 'None'}
+
+DELIVERABLES REQUIRED (be specific to THIS business — no generic filler):
+
+1. ACCOUNT STRUCTURE (3–4 campaigns):
+   For each campaign: name, objective (Awareness/Traffic/Engagement/Leads/Sales/App), daily/monthly budget, optimization event, placement strategy (Advantage+ vs manual), bid strategy
+
+2. AD SET ARCHITECTURE (2–3 ad sets per campaign):
+   For each ad set: name, audience type (Cold/Warm/Hot), detailed targeting (interests, behaviors, demographics), geographic targeting, age/gender breakdown, placement (Feed/Stories/Reels/Messenger), daily budget
+
+3. AUDIENCE STRATEGY:
+   - 3 cold interest-based audiences with specific interest stacks (real Facebook interests, not categories)
+   - 2 warm audiences (video viewers, page engagers, website visitors — with windows)
+   - 2 hot retargeting audiences (cart abandoners, lead form openers, buyer LTV windows)
+   - 3 lookalike seed audiences ranked by quality
+   - Custom audience exclusion strategy
+
+4. AD CREATIVE STRATEGY:
+   - 3 hero creative concepts with: format (image/video/carousel/collection/Stories), hook (first 3 seconds for video), visual direction, copy angle, placement
+   - UGC vs. polished creative split recommendation
+   - Creative testing matrix (which variables to test first)
+
+5. AD COPY (ready to paste):
+   - 3 primary text variants (short 50w / medium 100w / long 150w)
+   - 5 headline options (under 40 chars)
+   - 3 link description options
+   - Call-to-action button recommendation
+
+6. PIXEL & TRACKING SETUP:
+   - Key pixel events to fire and when
+   - Conversion window recommendation
+   - UTM parameter structure
+
+7. BIDDING & BUDGET:
+   - Recommended bid strategy by campaign type
+   - Budget pacing (Advantage+ Budget vs. manual)
+   - ROAS target / CPA target for this business type
+   - When to scale: specific metric thresholds
+
+8. 30-DAY LAUNCH PLAN:
+   - Week 1: launch checklist
+   - Week 2: optimization checkpoints
+   - Week 3–4: scaling decisions
+
+Score Meta Ads readiness for this business 0-100.
 
 RESPOND WITH VALID JSON ONLY:
 {
-  "dimension": "Platform Fit",
+  "dimension": "Meta Ads Strategy",
   "score": number,
+  "findings": [{"severity": "critical"|"high"|"medium"|"low", "title": string, "impact": string, "recommendation": string}],
   "deliverables": {
-    "campaignStructure": [{"campaignName": string, "objective": string, "budgetSplit": string}],
-    "audienceSets": [{"name": string, "targeting": string}],
-    "lookalikeStrategy": string,
-    "biddingStrategy": string
+    "accountStructure": [
+      {
+        "campaignName": string,
+        "objective": string,
+        "optimizationEvent": string,
+        "monthlyBudget": string,
+        "dailyBudget": string,
+        "bidStrategy": string,
+        "placementStrategy": string,
+        "adSets": [
+          {
+            "name": string,
+            "audienceType": "Cold"|"Warm"|"Hot",
+            "audienceDescription": string,
+            "interests": [string],
+            "behaviors": [string],
+            "demographics": string,
+            "placements": [string],
+            "dailyBudget": string
+          }
+        ]
+      }
+    ],
+    "audienceStrategy": {
+      "coldAudiences": [{"name": string, "interestStack": [string], "estimatedReach": string, "rationale": string}],
+      "warmAudiences": [{"name": string, "source": string, "window": string, "size": string}],
+      "hotAudiences": [{"name": string, "trigger": string, "window": string, "messagingAngle": string}],
+      "lookalikeSeeds": [{"seed": string, "quality": "High"|"Medium"|"Low", "reason": string}],
+      "exclusions": [string]
+    },
+    "creativeStrategy": {
+      "heroCreatives": [
+        {
+          "concept": string,
+          "format": string,
+          "placement": string,
+          "hook": string,
+          "visualDirection": string,
+          "copyAngle": string,
+          "emotionalTrigger": string
+        }
+      ],
+      "ugcVsPolishedSplit": string,
+      "testingMatrix": [{"variable": string, "variants": [string], "successMetric": string}]
+    },
+    "adCopy": {
+      "primaryTexts": [
+        {"label": "Short (~50w)", "text": string},
+        {"label": "Medium (~100w)", "text": string},
+        {"label": "Long (~150w)", "text": string}
+      ],
+      "headlines": [string],
+      "linkDescriptions": [string],
+      "ctaButton": string
+    },
+    "pixelTracking": {
+      "keyEvents": [{"event": string, "trigger": string, "value": string}],
+      "conversionWindow": string,
+      "utmStructure": string
+    },
+    "biddingBudget": {
+      "campaignBidStrategies": [{"campaign": string, "strategy": string, "target": string}],
+      "roasTarget": string,
+      "cpaTarget": string,
+      "scaleThresholds": [string]
+    },
+    "launchPlan": [
+      {"week": string, "focus": string, "actions": [string], "checkpoints": [string]}
+    ]
   }
 }`,
 
-  "ads-tiktok": (ctx) => `You are the ZieAds TikTok Ads Strategist. Build a complete TikTok strategy.
+  "ads-tiktok": (ctx) => `You are the ZieAds TikTok Ads Strategist. Build a complete TikTok For Business strategy with UGC scripts, Spark Ads setup, TopView/In-Feed planning, and full creative direction — ready to brief creators and launch campaigns.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
+- Business: ${ctx.businessName || ctx.scrapedData.title}
+- Type: ${ctx.businessType || ctx.scrapedData.inferredBusinessType}
 - Goal: ${ctx.primaryGoal}
-- Budget: ${ctx.monthlyBudget}
+- Monthly Budget: ${ctx.monthlyBudget}
+- Hero Offer: ${ctx.scrapedData.heroOffer}
+- Primary CTA: ${ctx.scrapedData.primaryCTA}
+- H1: ${ctx.scrapedData.h1}
+- Key Headings: ${ctx.scrapedData.headings.slice(0, 5).map(h => h.text).join('; ')}
+- E-commerce: ${ctx.scrapedData.businessSignals.hasEcommerce}
+
+DELIVERABLES REQUIRED:
+
+1. CAMPAIGN ARCHITECTURE (3 campaigns):
+   For each: objective (Awareness/Traffic/Video Views/Lead Gen/App Install/Conversion/Shop), budget split, optimization goal, bidding model (CPM/CPV/CPC/oCPC)
+
+2. AD FORMAT STRATEGY:
+   - In-Feed Ads: placement, targeting, creative specs
+   - Spark Ads: how to source creators, authorization process, boosting strategy
+   - TopView (if budget >$5k): specs, when to use, expected CPM
+   - TikTok Shopping Ads (if e-commerce): LIVE shopping, video shopping, catalog setup
+   - Branded Hashtag Challenge (if brand awareness goal)
+
+3. UGC CREATOR BRIEF — 5 full video script outlines:
+   For each script: hook (first 3 seconds, word-for-word), problem setup (3–5 seconds), solution reveal (5–8 seconds), proof/social proof (3–5 seconds), CTA (2–3 seconds), total length, creator persona to brief, audio direction (trending sound / original / voiceover), text overlay suggestions
+
+4. SPARK ADS STRATEGY:
+   - How to find creators for Spark Ads authorization
+   - Organic-to-paid amplification funnel
+   - Creator tiers (nano/micro/macro) and budget allocation
+   - Spark Ads vs. standard In-Feed comparison for this business
+
+5. TARGETING MATRIX:
+   - Interest categories (TikTok native categories)
+   - Behavioral signals (recent interactions, video engagement)
+   - Custom audiences (website visitors, customer upload, app events)
+   - Lookalike audiences from seed
+   - Age/gender/geography targeting breakdown
+
+6. CREATIVE TESTING FRAMEWORK:
+   - Hook testing: 5 hook variants to A/B test (word-for-word)
+   - Format testing: UGC vs. polished vs. text-on-screen
+   - CTA testing: soft sell vs. hard sell vs. curiosity
+   - Success metrics per test (VTR, CTR, CVR thresholds)
+
+7. TRENDING CONTENT STRATEGY:
+   - Trending audio/sound categories relevant to this niche
+   - Hashtag strategy (niche + trending + branded)
+   - Duet/stitch opportunities for organic amplification
+   - Posting cadence for organic + paid synergy
+
+8. KPI BENCHMARKS:
+   - Expected CPM, CPC, CTR, VTR (video through rate), CPA for this industry
+   - Green/yellow/red thresholds for each metric
+   - When to kill a creative vs. scale it
+
+Score TikTok Ads readiness 0-100.
 
 RESPOND WITH VALID JSON ONLY:
 {
-  "dimension": "Creative & Offer",
+  "dimension": "TikTok Ads Strategy",
   "score": number,
+  "findings": [{"severity": "critical"|"high"|"medium"|"low", "title": string, "impact": string, "recommendation": string}],
   "deliverables": {
-    "campaignStructure": [{"objective": string, "budgetSplit": string}],
-    "targeting": {"interests": [string], "behaviors": [string]},
-    "creativeDirection": {"ugcIdeas": [string], "trendingAudioVibes": [string]}
+    "campaignArchitecture": [
+      {
+        "campaignName": string,
+        "objective": string,
+        "optimizationGoal": string,
+        "biddingModel": string,
+        "budgetSplit": string,
+        "budgetDollars": string
+      }
+    ],
+    "adFormatStrategy": {
+      "inFeedAds": {"specs": string, "placement": string, "bestFor": string},
+      "sparkAds": {"applicable": boolean, "sourcingMethod": string, "authorizationProcess": string, "boostingStrategy": string, "creatorTiers": [{"tier": string, "followerRange": string, "budgetAllocation": string}]},
+      "topView": {"applicable": boolean, "estimatedCPM": string, "bestUseCase": string},
+      "shoppingAds": {"applicable": boolean, "formats": [string], "catalogSetup": string},
+      "brandedHashtag": {"applicable": boolean, "concept": string}
+    },
+    "ugcScripts": [
+      {
+        "scriptNumber": number,
+        "totalLength": string,
+        "creatorPersona": string,
+        "audioDirection": string,
+        "hook": string,
+        "problemSetup": string,
+        "solutionReveal": string,
+        "socialProof": string,
+        "cta": string,
+        "textOverlays": [string],
+        "angle": string
+      }
+    ],
+    "targetingMatrix": {
+      "interestCategories": [string],
+      "behavioralSignals": [string],
+      "customAudiences": [{"type": string, "description": string}],
+      "lookalikeSeeds": [string],
+      "demographics": {"ageRange": string, "gender": string, "geography": string}
+    },
+    "creativeTestingFramework": {
+      "hookVariants": [string],
+      "formatTests": [{"format": string, "hypothesis": string}],
+      "ctaVariants": [string],
+      "killThreshold": string,
+      "scaleThreshold": string
+    },
+    "trendingStrategy": {
+      "audioCategories": [string],
+      "hashtagStrategy": {"niche": [string], "trending": [string], "branded": [string]},
+      "organicPaidSynergy": string,
+      "postingCadence": string
+    },
+    "kpiBenchmarks": {
+      "cpm": string,
+      "cpc": string,
+      "ctr": string,
+      "vtr": string,
+      "cpa": string,
+      "greenThreshold": string,
+      "yellowThreshold": string,
+      "redThreshold": string
+    }
   }
 }`,
 
-  "ads-linkedin": (ctx) => `You are the ZieAds LinkedIn B2B Ad Strategist. Build a complete LinkedIn Ads plan.
+  "ads-linkedin": (ctx) => `You are the ZieAds LinkedIn B2B Ads Strategist. Build a complete Account-Based Marketing (ABM) strategy on LinkedIn — from ICP targeting to full-funnel content offers, ad formats, and pipeline measurement.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
-- Type: ${ctx.businessType}
+- Business: ${ctx.businessName || ctx.scrapedData.title}
+- Type: ${ctx.businessType || ctx.scrapedData.inferredBusinessType}
 - Goal: ${ctx.primaryGoal}
+- Monthly Budget: ${ctx.monthlyBudget}
+- Hero Offer: ${ctx.scrapedData.heroOffer}
+- Primary CTA: ${ctx.scrapedData.primaryCTA}
+- H1: ${ctx.scrapedData.h1}
+- Meta Description: ${ctx.scrapedData.metaDescription}
+- Key Headings: ${ctx.scrapedData.headings.slice(0, 5).map(h => h.text).join('; ')}
+- Has Lead Form: ${ctx.scrapedData.businessSignals.hasLeadForm}
+
+DELIVERABLES REQUIRED:
+
+1. ABM TARGET ACCOUNT STRATEGY:
+   - Ideal company profile (ICP at account level): company size, industry, revenue range, tech stack signals, growth stage
+   - Buying committee map: all stakeholders involved in purchase decision, their roles, their concerns, their content preferences
+   - Account tiers: Tier 1 (strategic, 1:1 ABM), Tier 2 (scalable, 1:few), Tier 3 (programmatic, 1:many)
+
+2. CAMPAIGN ARCHITECTURE (LinkedIn Campaign Manager):
+   - 3–4 campaigns each with: objective, format, audience, budget, bid strategy
+   - Funnel mapping: Awareness → Consideration → Decision → Post-sale
+   - Campaign groups structure recommendation
+
+3. AD FORMAT STRATEGY:
+   - Single Image Sponsored Content: specs, use case for this business
+   - Document Ads (thought leadership PDF): topic, lead gen potential
+   - Video Ads: hook, length, topic for this audience
+   - Conversation Ads / Message Ads: subject lines, body, CTA
+   - Lead Gen Forms: fields to include, incentive to complete
+   - Spotlight Ads / Follower Ads: when to use
+
+4. TARGETING MATRIX (specific LinkedIn targeting parameters):
+   - Job Titles (20+ specific titles for this ICP)
+   - Seniority levels (be specific: VP, Director, C-Suite, Manager)
+   - Company sizes (employee ranges)
+   - Industries (LinkedIn industry taxonomy)
+   - Job Functions
+   - Company growth rate / headcount growth signals
+   - Skills targeting
+   - Group targeting
+   - Matched audiences: retargeting, account list, contact list
+
+5. CONTENT OFFER STRATEGY (lead magnets):
+   - 5 content offers ranked by lead quality (e.g., ROI calculator, benchmark report, case study, webinar, template)
+   - For each: format, title, funnel stage, expected CPL, follow-up sequence
+
+6. CONVERSATION ADS SCRIPTS:
+   - 2 full Conversation Ad scripts with: subject, intro message, 2–3 CTA options, follow-up branch
+
+7. ORGANIC + PAID SYNERGY:
+   - Thought leadership post topics for ICP-relevant organic reach
+   - Employee advocacy strategy
+   - How to use organic impressions to build warm retargeting audiences
+
+8. KPI BENCHMARKS & MEASUREMENT:
+   - Expected CTR, CPL, CPC for this industry
+   - Pipeline attribution model (first touch vs. multi-touch)
+   - MQL → SQL → Deal conversion targets
+   - LinkedIn-specific metrics: engagement rate, lead form fill rate
+
+Score LinkedIn Ads readiness 0-100.
 
 RESPOND WITH VALID JSON ONLY:
 {
-  "dimension": "Platform Fit",
+  "dimension": "LinkedIn B2B Strategy",
   "score": number,
+  "findings": [{"severity": "critical"|"high"|"medium"|"low", "title": string, "impact": string, "recommendation": string}],
   "deliverables": {
-    "campaignStructure": [{"objective": string, "format": string, "budgetSplit": string}],
-    "targetingMatrix": {"jobTitles": [string], "seniority": [string], "industries": [string]},
-    "contentOffers": [string]
+    "abmStrategy": {
+      "idealCompanyProfile": {
+        "companySize": string,
+        "industries": [string],
+        "revenueRange": string,
+        "techStackSignals": [string],
+        "growthStage": string
+      },
+      "buyingCommittee": [
+        {"role": string, "title": string, "concerns": [string], "contentPreferences": [string], "linkedinSeniority": string}
+      ],
+      "accountTiers": [
+        {"tier": string, "approach": string, "budgetAllocation": string, "targetAccounts": string}
+      ]
+    },
+    "campaignArchitecture": [
+      {
+        "campaignName": string,
+        "objective": string,
+        "format": string,
+        "funnelStage": "Awareness"|"Consideration"|"Decision"|"Post-sale",
+        "audience": string,
+        "monthlyBudget": string,
+        "bidStrategy": string,
+        "expectedCPL": string
+      }
+    ],
+    "adFormats": {
+      "sponsoredContent": {"specs": string, "useCases": [string], "copyAngle": string},
+      "documentAds": {"applicable": boolean, "topicIdeas": [string], "leadGenPotential": string},
+      "videoAds": {"hook": string, "recommendedLength": string, "topic": string},
+      "conversationAds": {"applicable": boolean, "bestUseCase": string},
+      "leadGenForms": {"fields": [string], "incentive": string, "expectedFillRate": string},
+      "messageAds": {"applicable": boolean, "sendFrequency": string, "bestUseCase": string}
+    },
+    "targetingMatrix": {
+      "jobTitles": [string],
+      "seniority": [string],
+      "companySizes": [string],
+      "industries": [string],
+      "jobFunctions": [string],
+      "skills": [string],
+      "groupTargeting": [string],
+      "matchedAudiences": [{"type": string, "description": string}]
+    },
+    "contentOffers": [
+      {
+        "title": string,
+        "format": string,
+        "funnelStage": string,
+        "expectedCPL": string,
+        "followUpSequence": string,
+        "whyItWorks": string
+      }
+    ],
+    "conversationAdScripts": [
+      {
+        "subject": string,
+        "introMessage": string,
+        "ctaOptions": [{"text": string, "destination": string}],
+        "followUpBranch": string
+      }
+    ],
+    "organicPaidSynergy": {
+      "thoughtLeadershipTopics": [string],
+      "employeeAdvocacyStrategy": string,
+      "warmRetargetingBuild": string
+    },
+    "kpiBenchmarks": {
+      "expectedCTR": string,
+      "expectedCPL": string,
+      "expectedCPC": string,
+      "engagementRate": string,
+      "leadFormFillRate": string,
+      "mqtToSqlRate": string,
+      "pipelineAttributionModel": string
+    }
   }
 }`,
 
@@ -791,17 +1159,59 @@ RESPOND WITH VALID JSON ONLY:
   "tiktok": (ctx) => AGENT_PROMPTS["ads-tiktok"](ctx),
   "linkedin": (ctx) => AGENT_PROMPTS["ads-linkedin"](ctx),
 
-  // PRD Skill #14: Markdown Strategy Report
-  "ads-report": (ctx) => `You are the ZieAds Strategy Report Writer. Compile a complete markdown strategy report for this business.
+  // PRD Skill #14: Full Strategy Report
+  "ads-report": (ctx) => `You are the ZieAds Senior Strategy Director. Write a complete, detailed paid advertising strategy report for this business — the kind of document a senior media buyer at a top agency would produce after a full account audit.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
 - Business: ${ctx.businessName || ctx.scrapedData.title}
 - Type: ${ctx.businessType || ctx.scrapedData.inferredBusinessType}
 - Goal: ${ctx.primaryGoal}
-- Budget: ${ctx.monthlyBudget}
+- Monthly Budget: ${ctx.monthlyBudget}
+- Hero Offer: ${ctx.scrapedData.heroOffer}
+- Primary CTA: ${ctx.scrapedData.primaryCTA}
+- H1: ${ctx.scrapedData.h1}
+- Meta Description: ${ctx.scrapedData.metaDescription}
+- Key Headings: ${ctx.scrapedData.headings.slice(0, 8).map(h => h.text).join('; ')}
+- E-commerce: ${ctx.scrapedData.businessSignals.hasEcommerce}
+- Has Lead Form: ${ctx.scrapedData.businessSignals.hasLeadForm}
+- Has Blog: ${ctx.scrapedData.businessSignals.hasBlog}
+- Detected Pixels: ${ctx.scrapedData.detectedPixels.join(', ') || 'None'}
 
-Generate a comprehensive paid ads strategy document covering: executive summary, target audience, platform recommendations, creative direction, budget allocation, funnel strategy, and 90-day action plan.
+REPORT SECTIONS REQUIRED (write detailed prose for each — not bullet points):
+
+1. EXECUTIVE SUMMARY (150–200 words):
+   Business overview, current paid ads opportunity, key findings, primary recommendation, expected outcome if strategy is executed.
+
+2. MARKET & COMPETITIVE LANDSCAPE (100–150 words):
+   Industry context, competitive intensity, primary opportunity in the market, main differentiator to exploit.
+
+3. TARGET AUDIENCE & ICP (150 words):
+   Primary customer profile, psychographic profile, buyer journey, key objections, emotional triggers.
+
+4. PLATFORM STRATEGY & RECOMMENDATIONS:
+   Which platforms to use, why, in what priority order, with specific rationale for this business type and goal.
+
+5. CREATIVE DIRECTION (100–150 words):
+   Visual style, tone of voice, creative hooks, format recommendations, production guidance.
+
+6. BUDGET ALLOCATION (detailed):
+   How to split the monthly budget across platforms, funnel stages, and campaign types with dollar amounts.
+
+7. FUNNEL ARCHITECTURE:
+   TOFU/MOFU/BOFU structure, ad-to-landing page flow, retargeting sequences, email nurture integration.
+
+8. CAMPAIGN STRUCTURE OVERVIEW:
+   High-level campaign names, objectives, and relationships across all recommended platforms.
+
+9. KPI FRAMEWORK:
+   Primary KPIs, secondary KPIs, benchmarks by platform, reporting cadence, optimization triggers.
+
+10. 90-DAY ACTION PLAN (detailed week-by-week):
+    Specific actions, who does what, expected outcomes per phase.
+
+11. RISK FACTORS & MITIGATION:
+    3–5 risks that could derail the strategy and how to mitigate each.
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -810,26 +1220,113 @@ RESPOND WITH VALID JSON ONLY:
   "findings": [],
   "deliverables": {
     "executiveSummary": string,
-    "targetAudience": string,
-    "platformStrategy": string,
+    "marketLandscape": string,
+    "targetAudience": {
+      "primaryICP": string,
+      "psychographics": string,
+      "buyerJourney": string,
+      "keyObjections": [string],
+      "emotionalTriggers": [string]
+    },
+    "platformStrategy": {
+      "summary": string,
+      "platforms": [{"platform": string, "priority": number, "rationale": string, "allocation": string}]
+    },
     "creativeDirection": string,
-    "budgetAllocation": string,
-    "funnelStrategy": string,
-    "ninetyDayPlan": [{"week": string, "action": string}]
+    "budgetAllocation": {
+      "summary": string,
+      "breakdown": [{"item": string, "amount": string, "percentage": string, "rationale": string}],
+      "totalMonthly": string
+    },
+    "funnelArchitecture": {
+      "summary": string,
+      "tofu": string,
+      "mofu": string,
+      "bofu": string,
+      "retargetingSequence": string
+    },
+    "campaignOverview": [
+      {"campaignName": string, "platform": string, "objective": string, "audience": string, "budget": string}
+    ],
+    "kpiFramework": {
+      "primaryKPIs": [{"kpi": string, "target": string, "platform": string}],
+      "secondaryKPIs": [{"kpi": string, "benchmark": string}],
+      "reportingCadence": string,
+      "optimizationTriggers": [string]
+    },
+    "ninetyDayPlan": [
+      {"phase": string, "weeks": string, "focus": string, "actions": [string], "expectedOutcome": string}
+    ],
+    "riskFactors": [{"risk": string, "probability": string, "mitigation": string}]
   }
 }`,
   "report": (ctx) => AGENT_PROMPTS["ads-report"](ctx),
 
-  // PRD Skill #15: White-Label PDF Report
-  "ads-report-pdf": (ctx) => `You are the ZieAds White-Label PDF Report Generator. Create structured report data for agency PDF export.
+  // PRD Skill #15: White-Label Agency PDF Report
+  "ads-report-pdf": (ctx) => `You are the ZieAds White-Label Agency Report Generator. Create a premium, fully structured agency deck — the kind sent to clients before a retainer kickoff. Every section must be polished, specific, and client-presentation-ready.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
 - Business: ${ctx.businessName || ctx.scrapedData.title}
 - Type: ${ctx.businessType || ctx.scrapedData.inferredBusinessType}
 - Goal: ${ctx.primaryGoal}
+- Monthly Budget: ${ctx.monthlyBudget}
+- Hero Offer: ${ctx.scrapedData.heroOffer}
+- Primary CTA: ${ctx.scrapedData.primaryCTA}
+- H1: ${ctx.scrapedData.h1}
+- Meta Description: ${ctx.scrapedData.metaDescription}
+- Key Headings: ${ctx.scrapedData.headings.slice(0, 6).map(h => h.text).join('; ')}
+- E-commerce: ${ctx.scrapedData.businessSignals.hasEcommerce}
+- Detected Pixels: ${ctx.scrapedData.detectedPixels.join(', ') || 'None'}
 
-Generate a professional agency-ready report structure with: cover page content, executive summary, score breakdown, top findings, recommendations, and next steps.
+REPORT DECK SECTIONS:
+
+1. COVER PAGE:
+   - Report title (e.g., "Paid Advertising Strategy Audit — [Business Name]")
+   - Subtitle (e.g., "Full-Funnel Growth Strategy & Implementation Roadmap")
+   - Prepared for: business name, URL
+   - Report date
+   - Agency branding placeholder note
+
+2. EXECUTIVE BRIEF (client-facing summary, non-technical):
+   - 3–4 sentences: what we found, what opportunity exists, what we recommend
+   - The single most important thing to fix immediately
+   - Expected outcome in 90 days if recommendations are followed
+
+3. AUDIT SCORES (8 dimensions, each scored 0–100):
+   - Creative & Offer Strength
+   - Audience Clarity
+   - Landing Page Conversion
+   - Funnel Coverage
+   - Platform Fit
+   - Competitive Positioning
+   - Tracking & Measurement
+   - Budget Efficiency
+   For each: score, 2-sentence summary, traffic-light status (green/yellow/red)
+
+4. TOP FINDINGS (5 findings, client-presentation format):
+   For each: severity, title (short), client-friendly description (what it means for revenue), recommended fix, estimated time to implement, expected impact
+
+5. PLATFORM RECOMMENDATIONS (3–4 platforms):
+   For each: platform name, fit score, why it's right for this business, recommended ad format, expected CPA/ROAS, budget allocation
+
+6. CREATIVE BRIEF (3 ad concepts):
+   For each concept: format, hook, visual direction, copy direction, target audience, expected performance range
+
+7. PRIORITISED RECOMMENDATIONS (10 recommendations ranked by ROI impact):
+   For each: priority rank, title, category (Technical/Creative/Audience/Budget/Strategy), action, expected impact, effort level, timeline
+
+8. INVESTMENT SUMMARY:
+   - Monthly ad spend recommendation breakdown by platform
+   - Management fee structure suggestion (if agency presenting)
+   - Expected results at 30/60/90 days
+   - Break-even analysis
+
+9. NEXT STEPS (5-step onboarding sequence):
+   Specific actions for the first 30 days post-engagement
+
+10. APPENDIX — Benchmarks:
+    Industry benchmarks table for all relevant platforms
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -837,12 +1334,81 @@ RESPOND WITH VALID JSON ONLY:
   "score": 100,
   "findings": [],
   "deliverables": {
-    "coverPage": {"title": string, "subtitle": string, "preparedFor": string, "date": string},
-    "executiveSummary": string,
-    "scoreBreakdown": [{"dimension": string, "score": number, "summary": string}],
-    "topFindings": [{"severity": string, "title": string, "description": string, "fix": string}],
-    "recommendations": [{"priority": string, "action": string, "expectedImpact": string}],
-    "nextSteps": [string]
+    "coverPage": {
+      "title": string,
+      "subtitle": string,
+      "preparedFor": string,
+      "url": string,
+      "date": string,
+      "tagline": string
+    },
+    "executiveBrief": {
+      "summary": string,
+      "topPriority": string,
+      "expectedOutcome": string
+    },
+    "auditScores": [
+      {
+        "dimension": string,
+        "score": number,
+        "summary": string,
+        "status": "green"|"yellow"|"red",
+        "topRecommendation": string
+      }
+    ],
+    "topFindings": [
+      {
+        "severity": "Critical"|"High"|"Medium"|"Low",
+        "title": string,
+        "clientDescription": string,
+        "recommendedFix": string,
+        "timeToImplement": string,
+        "expectedImpact": string
+      }
+    ],
+    "platformRecommendations": [
+      {
+        "platform": string,
+        "fitScore": number,
+        "whyItFits": string,
+        "recommendedFormat": string,
+        "expectedCPA": string,
+        "expectedROAS": string,
+        "budgetAllocation": string
+      }
+    ],
+    "creativeBrief": [
+      {
+        "conceptName": string,
+        "format": string,
+        "hook": string,
+        "visualDirection": string,
+        "copyDirection": string,
+        "targetAudience": string,
+        "expectedCTR": string
+      }
+    ],
+    "recommendations": [
+      {
+        "rank": number,
+        "title": string,
+        "category": "Technical"|"Creative"|"Audience"|"Budget"|"Strategy",
+        "action": string,
+        "expectedImpact": string,
+        "effort": "Low"|"Medium"|"High",
+        "timeline": string
+      }
+    ],
+    "investmentSummary": {
+      "monthlyAdSpend": string,
+      "platformBreakdown": [{"platform": string, "amount": string, "percentage": string}],
+      "results30Days": string,
+      "results60Days": string,
+      "results90Days": string,
+      "breakEvenAnalysis": string
+    },
+    "nextSteps": [{"step": number, "action": string, "owner": string, "timeline": string}],
+    "benchmarksAppendix": [{"platform": string, "metric": string, "industryAvg": string, "topPerformer": string}]
   }
 }`,
   "report-pdf": (ctx) => AGENT_PROMPTS["ads-report-pdf"](ctx),

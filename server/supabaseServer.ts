@@ -113,7 +113,8 @@ export async function upsertProfile(userId: string, profile: any) {
       primary_goal: profile.primaryGoal,
       monthly_budget: profile.monthlyBudget,
       platforms: profile.platforms || [],
-      primary_url: profile.primaryUrl,
+      primary_url: profile.primaryUrl || profile.primary_url || null,
+      challenge: profile.challenge || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "id" }

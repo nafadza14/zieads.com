@@ -105,6 +105,25 @@ Output: Pass/Fail checklist, critical blockers (do not launch until fixed), warn
 ## Tone:
 Senior strategist at a top-5 performance agency. Honest, direct, technically precise, focused on ROI. You tell users hard truths when their setup is wrong.`;
 
+// ─── Dynamic business context injected per user ───────────────────────────
+function buildBusinessContext(profile: any): string {
+  if (!profile) return '';
+  const parts: string[] = [];
+  if (profile.business_name)     parts.push(`Business: ${profile.business_name}`);
+  if (profile.business_type)     parts.push(`Industry: ${profile.business_type}`);
+  if (profile.primary_goal)      parts.push(`Primary goal: ${profile.primary_goal}`);
+  if (profile.monthly_budget)    parts.push(`Monthly ads budget: ${profile.monthly_budget}`);
+  if (profile.platforms?.length) parts.push(`Active platforms: ${profile.platforms.join(', ')}`);
+  if (profile.primary_url)       parts.push(`Website: ${profile.primary_url}`);
+  if (profile.challenge)         parts.push(`Stated challenge: ${profile.challenge}`);
+  if (parts.length === 0) return '';
+  return `\n\n## USER'S BUSINESS PROFILE (always reference this first):\n${parts.join('\n')}`;
+}
+
+function buildSystemPrompt(profile: any): string {
+  return SYSTEM_PROMPT + buildBusinessContext(profile);
+}
+
 // ─── Helper: build structured analysis prompt ─────────────────────────────
 function buildAnalysisPrompt(mode: string, data: string, auditContext: string): string {
   const modeMap: Record<string, string> = {
@@ -192,7 +211,7 @@ agentRouter.post("/message", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-6",
       max_tokens: 2048,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(profile),
       messages,
     });
 
@@ -275,7 +294,7 @@ agentRouter.post("/analyze", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-6",
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(profile),
       messages: [{ role: "user", content: prompt }],
     });
 

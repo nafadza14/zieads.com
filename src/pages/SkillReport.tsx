@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Bot, Lightbulb, AlertTriangle, Download } from 'lucide-react';
+import { generateSkillPDF } from '../lib/pdfGenerator';
 import { 
   UilPen, UilPalette, UilSearchAlt, UilGoogle, UilFacebook, UilVideo, UilLinkedin, 
   UilChartPie, UilFileAlt, UilHome, UilFilter, UilCrosshairs, UilMoneyBill
@@ -58,80 +59,39 @@ const SKILL_META: Record<string, { title: string; icon: React.ReactNode; platfor
   'report-pdf':     { title: 'White-Label PDF Report',    icon: <UilFileAlt size={28} />,   platform: 'Agency Export',          color: '#64748b' },
 };
 
-// ─── Simulated Ad Card ────────────────────────────────────────────
-function AdCreativeCard({ platform, headline, body, cta, angle, runningDays, index }: any) {
+// ─── Ad Creative Card ─────────────────────────────────────────────
+function AdCreativeCard({ platform, headline, body, cta, angle, runningDays }: any) {
   const pc = PLATFORM_COLORS[platform?.toLowerCase()] || PLATFORM_COLORS.meta;
-  const gradients = [
-    'linear-gradient(135deg,#667eea,#764ba2)',
-    'linear-gradient(135deg,#f093fb,#f5576c)',
-    'linear-gradient(135deg,#4facfe,#00f2fe)',
-    'linear-gradient(135deg,#43e97b,#38f9d7)',
-    'linear-gradient(135deg,#fa709a,#fee140)',
-    'linear-gradient(135deg,#a18cd1,#fbc2eb)',
-    'linear-gradient(135deg,#ffecd2,#fcb69f)',
-    'linear-gradient(135deg,#a1c4fd,#c2e9fb)',
-  ];
-  const grad = gradients[index % gradients.length];
+  const platformBg = typeof pc.bg === 'string' && pc.bg.startsWith('linear') ? '#000' : pc.bg;
 
   return (
-    <div style={{
-      borderRadius: 16,
-      overflow: 'hidden',
-      background: '#fff',
-      border: '1px solid #f0eef6',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-      transition: 'transform 0.2s, box-shadow 0.2s',
-    }}
-    onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(0,0,0,0.12)'; }}
-    onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)'; }}
-    >
-      {/* Simulated Ad Image */}
-      <div style={{ height: 160, background: grad, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        {/* Platform badge */}
-        <div style={{
-          position: 'absolute',
-          top: 10, left: 10,
-          background: typeof pc.bg === 'string' && pc.bg.startsWith('linear') ? 'rgba(0,0,0,0.8)' : pc.bg,
-          color: '#fff',
-          fontSize: '0.7rem',
-          fontWeight: 700,
-          padding: '3px 10px',
-          borderRadius: 20,
-          letterSpacing: '0.03em',
-        }}>
-          {pc.label}
-        </div>
+    <div style={{ borderRadius: 10, overflow: 'hidden', background: '#fff', border: '1px solid #e2e8f0' }}>
+      {/* Header bar */}
+      <div style={{ background: platformBg, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', opacity: 0.9 }}>{pc.label}</span>
         {runningDays && (
-          <div style={{
-            position: 'absolute',
-            top: 10, right: 10,
-            background: 'rgba(0,0,0,0.55)',
-            color: '#fff',
-            fontSize: '0.7rem',
-            padding: '3px 8px',
-            borderRadius: 20,
-          }}>
-            Running {runningDays}d+
-          </div>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.68rem' }}>Running {runningDays}d+</span>
         )}
-        <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1rem', fontWeight: 700, textAlign: 'center', lineHeight: 1.4, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
-          {headline || 'Ad Creative'}
-        </p>
       </div>
-      {/* Ad Copy */}
-      <div style={{ padding: '12px 14px' }}>
+      {/* Body */}
+      <div style={{ padding: '14px 16px' }}>
         {angle && (
-          <span style={{ display: 'inline-block', background: '#f3e8ff', color: '#7B2FBE', fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, marginBottom: 8, letterSpacing: '0.02em' }}>
+          <span style={{ display: 'inline-block', background: '#f1f5f9', color: '#475569', fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 3, marginBottom: 8, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
             {angle}
           </span>
         )}
+        {headline && (
+          <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.4, marginBottom: 8 }}>
+            {headline}
+          </p>
+        )}
         {body && (
-          <p style={{ fontSize: '0.8rem', color: '#4a4a6a', lineHeight: 1.5, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          <p style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5, marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {body}
           </p>
         )}
         {cta && (
-          <div style={{ display: 'inline-block', background: '#7B2FBE', color: '#fff', fontSize: '0.75rem', fontWeight: 600, padding: '5px 12px', borderRadius: 8 }}>
+          <div style={{ display: 'inline-block', background: '#0f172a', color: '#fff', fontSize: '0.72rem', fontWeight: 600, padding: '5px 12px', borderRadius: 5 }}>
             {cta}
           </div>
         )}
@@ -143,36 +103,48 @@ function AdCreativeCard({ platform, headline, body, cta, angle, runningDays, ind
 // ─── Section Heading ──────────────────────────────────────────────
 function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
-    <div style={{ marginBottom: 20, marginTop: 40 }}>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1a1a2e', letterSpacing: '-0.02em' }}>{children}</h2>
-      {sub && <p style={{ color: '#8888a0', fontSize: '0.875rem', marginTop: 4 }}>{sub}</p>}
+    <div style={{ marginBottom: 24, marginTop: 48, paddingBottom: 14, borderBottom: '1px solid #e2e8f0' }}>
+      <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', margin: 0 }}>{children}</h2>
+      {sub && <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: 5, margin: '5px 0 0' }}>{sub}</p>}
     </div>
   );
 }
 
 // ─── Score Badge ──────────────────────────────────────────────────
 function ScoreBadge({ score, label }: { score: number; label?: string }) {
-  const color = score >= 70 ? '#00c9a7' : score >= 50 ? '#f59e0b' : '#e8457a';
+  const color = score >= 70 ? '#16a34a' : score >= 50 ? '#d97706' : '#dc2626';
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{
-        width: 72, height: 72, borderRadius: '50%',
-        border: `4px solid ${color}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        margin: '0 auto 8px',
-        background: `${color}15`,
+        width: 68, height: 68, borderRadius: 12,
+        border: `2px solid #e2e8f0`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: '#fff',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}>
-        <span style={{ fontSize: '1.4rem', fontWeight: 800, color }}>{score}</span>
+        <span style={{ fontSize: '1.5rem', fontWeight: 800, color, lineHeight: 1 }}>{score}</span>
+        <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>/100</span>
       </div>
-      {label && <p style={{ fontSize: '0.78rem', color: '#8888a0', fontWeight: 600 }}>{label}</p>}
+      {label && <p style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, marginTop: 6 }}>{label}</p>}
     </div>
   );
 }
 
 // ─── Pill Tag ─────────────────────────────────────────────────────
-function Tag({ children, color = '#7B2FBE', bg = '#f3e8ff' }: { children: React.ReactNode; color?: string; bg?: string }) {
+function Tag({ children }: { children: React.ReactNode; color?: string; bg?: string }) {
   return (
-    <span style={{ display: 'inline-block', background: bg, color, fontSize: '0.78rem', fontWeight: 600, padding: '4px 12px', borderRadius: 20, margin: '3px' }}>
+    <span style={{
+      display: 'inline-block',
+      background: '#f1f5f9',
+      color: '#475569',
+      fontSize: '0.72rem',
+      fontWeight: 600,
+      padding: '3px 10px',
+      borderRadius: 4,
+      border: '1px solid #e2e8f0',
+      margin: '3px',
+      letterSpacing: '0.01em',
+    }}>
       {children}
     </span>
   );
@@ -180,23 +152,33 @@ function Tag({ children, color = '#7B2FBE', bg = '#f3e8ff' }: { children: React.
 
 // ─── Finding row ──────────────────────────────────────────────────
 function FindingRow({ severity, title, impact, recommendation }: any) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    critical: { bg: '#fee2e2', text: '#dc2626' },
-    high: { bg: '#fef3c7', text: '#d97706' },
-    medium: { bg: '#e0f2fe', text: '#0284c7' },
-    low: { bg: '#f0fdf4', text: '#16a34a' },
+  const dot: Record<string, string> = {
+    critical: '#dc2626',
+    high: '#d97706',
+    medium: '#2563eb',
+    low: '#16a34a',
   };
-  const c = colors[severity] || colors.medium;
+  const dotColor = dot[(severity || 'medium').toLowerCase()] || dot.medium;
   return (
-    <div style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid #f0eef6', marginBottom: 10, background: '#fff' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <span style={{ background: c.bg, color: c.text, fontSize: '0.7rem', fontWeight: 700, padding: '2px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {severity}
-        </span>
-        <strong style={{ color: '#1a1a2e', fontSize: '0.9rem' }}>{title}</strong>
+    <div style={{ paddingBottom: 18, marginBottom: 18, borderBottom: '1px solid #f1f5f9' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, marginTop: 6, flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+            <strong style={{ color: '#0f172a', fontSize: '0.875rem', fontWeight: 600 }}>{title}</strong>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: dotColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {severity}
+            </span>
+          </div>
+          {impact && <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 6, lineHeight: 1.5 }}>{impact}</p>}
+          {recommendation && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ color: '#7B2FBE', fontWeight: 700, fontSize: '0.8rem', marginTop: 1, flexShrink: 0 }}>→</span>
+              <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>{recommendation}</p>
+            </div>
+          )}
+        </div>
       </div>
-      {impact && <p style={{ fontSize: '0.83rem', color: '#64748b', marginBottom: 6 }}>Impact: {impact}</p>}
-      {recommendation && <p style={{ fontSize: '0.83rem', color: '#475569', background: '#fafafe', padding: '8px 12px', borderRadius: 8 }}>→ {recommendation}</p>}
     </div>
   );
 }
@@ -236,13 +218,13 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="How the AI crafted your copy">Copy Strategy</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16, marginBottom: 24 }}>
               {analysis.strategy && (
-                <div style={{ padding: 20, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6' }}>
+                <div style={{ padding: 20, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0' }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7B2FBE', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Strategy</p>
                   <p style={{ fontSize: '0.9rem', color: '#1a1a2e', lineHeight: 1.6 }}>{analysis.strategy}</p>
                 </div>
               )}
               {analysis.toneOfVoice && (
-                <div style={{ padding: 20, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6' }}>
+                <div style={{ padding: 20, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0' }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e8457a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tone of Voice</p>
                   <p style={{ fontSize: '0.9rem', color: '#1a1a2e', lineHeight: 1.6 }}>{analysis.toneOfVoice}</p>
                 </div>
@@ -273,8 +255,8 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {google.headlines?.length > 0 && (
           <>
             <SectionTitle sub="Ready to paste into Google Ads Manager">Google Ads Copy</SectionTitle>
-            <div style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, padding: 24, marginBottom: 24 }}>
-              <div style={{ borderBottom: '1px solid #f0eef6', paddingBottom: 16, marginBottom: 16 }}>
+            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 24 }}>
+              <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: 16, marginBottom: 16 }}>
                 <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4285F4', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Headlines</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {google.headlines.map((h: string, i: number) => (
@@ -287,7 +269,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               <div>
                 <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4285F4', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Descriptions</p>
                 {google.descriptions?.map((desc: string, i: number) => (
-                  <p key={i} style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.6, marginBottom: 6, padding: '8px 12px', background: '#fafafe', borderRadius: 8 }}>{desc}</p>
+                  <p key={i} style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.6, marginBottom: 6, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>{desc}</p>
                 ))}
               </div>
               {google.sitelinks?.length > 0 && (
@@ -295,7 +277,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4285F4', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sitelinks</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 8 }}>
                     {google.sitelinks.map((s: any, i: number) => (
-                      <div key={i} style={{ padding: '8px 12px', background: '#f0f7ff', borderRadius: 8, border: '1px solid #dbeafe' }}>
+                      <div key={i} style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
                         <p style={{ fontWeight: 700, fontSize: '0.83rem', color: '#1d4ed8' }}>{s.text}</p>
                         <p style={{ fontSize: '0.78rem', color: '#64748b' }}>{s.description}</p>
                       </div>
@@ -313,7 +295,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Primary text variations for Meta Ads Manager">Meta Ad Copy</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16, marginBottom: 24 }}>
               {[['Short', meta.shortBody], ['Medium', meta.mediumBody], ['Long', meta.longBody]].filter(([, v]) => v).map(([label, body]) => (
-                <div key={label as string} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, padding: 20 }}>
+                <div key={label as string} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 20 }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1877F2', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label as string} Version</p>
                   <p style={{ fontSize: '0.875rem', color: '#1a1a2e', lineHeight: 1.65 }}>{body as string}</p>
                 </div>
@@ -328,7 +310,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Native video script outlines for TikTok creators">TikTok Scripts</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 24 }}>
               {tiktok.scriptOutlines.map((s: any, i: number) => (
-                <div key={i} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden' }}>
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ background: '#000', padding: '10px 16px' }}>
                     <p style={{ color: '#fff', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Script {i + 1}</p>
                   </div>
@@ -351,7 +333,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           <>
             <SectionTitle sub="B2B sponsored content and InMail messages">LinkedIn Ad Copy</SectionTitle>
             {linkedin.sponsoredContent.map((c: any, i: number) => (
-              <div key={i} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, padding: 20, marginBottom: 12 }}>
+              <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 20, marginBottom: 12 }}>
                 <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0077B5', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sponsored Content {i + 1}</p>
                 <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: 8 }}>{c.intro}</p>
                 <p style={{ fontWeight: 700, color: '#1a1a2e' }}>{c.headline}</p>
@@ -378,7 +360,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Brand signals extracted from your website">Brand Identity</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 32 }}>
               {[['Colors', d.brandIdentity.colors], ['Style', d.brandIdentity.style], ['Tone', d.brandIdentity.tone]].map(([k, v]) => (
-                <div key={k as string} style={{ padding: 20, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6' }}>
+                <div key={k as string} style={{ padding: 20, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0' }}>
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7B2FBE', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{k as string}</p>
                   <p style={{ fontSize: '0.9rem', color: '#1a1a2e' }}>{v as string}</p>
                 </div>
@@ -390,7 +372,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.heroOfferAssessment && (
           <>
             <SectionTitle sub="Offer clarity and competitive differentiation">Hero Offer Assessment</SectionTitle>
-            <div style={{ padding: 20, background: '#f0fdf4', borderRadius: 14, border: '1px solid #bbf7d0', marginBottom: 32 }}>
+            <div style={{ padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', marginBottom: 32 }}>
               <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.65 }}>{d.heroOfferAssessment}</p>
             </div>
           </>
@@ -417,7 +399,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.testingSequence && (
           <>
             <SectionTitle sub="Recommended order for launching and testing creatives">Testing Sequence</SectionTitle>
-            <div style={{ padding: 20, background: '#f8f7fc', borderRadius: 14, border: '1px solid #e8e6f0', marginBottom: 32 }}>
+            <div style={{ padding: 20, background: '#f8fafc', borderRadius: 14, border: '1px solid #e8e6f0', marginBottom: 32 }}>
               <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.7 }}>{d.testingSequence}</p>
             </div>
           </>
@@ -435,10 +417,10 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           {d.directCompetitors?.map((c: any, i: number) => {
             const spendColor = { low: '#16a34a', medium: '#f59e0b', high: '#dc2626', heavy: '#7B2FBE' }[c.adSpendTier?.toLowerCase()] || '#64748b';
             return (
-              <div key={i} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-                <div style={{ background: `${spendColor}12`, padding: '14px 18px', borderBottom: '1px solid #f0eef6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden', boxShadow: 'none' }}>
+                <div style={{ background: '#f8fafc', padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <strong style={{ color: '#1a1a2e', fontSize: '1rem' }}>{c.name}</strong>
-                  <span style={{ background: spendColor, color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
+                  <span style={{ background: spendColor, color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>
                     {c.adSpendTier} Spend
                   </span>
                 </div>
@@ -470,12 +452,12 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Untapped opportunities in your competitive landscape">Gap Analysis</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, marginBottom: 32 }}>
               {[
-                { label: 'Platform Gaps', items: d.competitiveGaps.platformGaps, color: '#4285F4', bg: '#eff6ff' },
-                { label: 'Offer Gaps', items: d.competitiveGaps.offerGaps, color: '#e8457a', bg: '#fff0f3' },
-                { label: 'Audience Gaps', items: d.competitiveGaps.audienceGaps, color: '#7B2FBE', bg: '#f3e8ff' },
-                { label: 'Creative Gaps', items: d.competitiveGaps.creativeGaps, color: '#00c9a7', bg: '#f0fdf9' },
-              ].map(({ label, items, color, bg }) => items?.length ? (
-                <div key={label} style={{ padding: 20, background: bg, borderRadius: 14, border: `1px solid ${color}30` }}>
+                { label: 'Platform Gaps', items: d.competitiveGaps.platformGaps, color: '#4285F4' },
+                { label: 'Offer Gaps', items: d.competitiveGaps.offerGaps, color: '#e8457a' },
+                { label: 'Audience Gaps', items: d.competitiveGaps.audienceGaps, color: '#7B2FBE' },
+                { label: 'Creative Gaps', items: d.competitiveGaps.creativeGaps, color: '#00c9a7' },
+              ].map(({ label, items, color }) => items?.length ? (
+                <div key={label} style={{ padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}` }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>{label}</p>
                   <ul style={{ paddingLeft: 16 }}>
                     {items.map((item: string, i: number) => (
@@ -491,8 +473,8 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.positioningRecommendation && (
           <>
             <SectionTitle sub="How to position your brand to win">Positioning Strategy</SectionTitle>
-            <div style={{ padding: 24, background: 'linear-gradient(135deg,#7B2FBE10,#5c8aff10)', border: '1px solid #7B2FBE20', borderRadius: 14, marginBottom: 32 }}>
-              <p style={{ fontSize: '1rem', color: '#1a1a2e', lineHeight: 1.7 }}>{d.positioningRecommendation}</p>
+            <div style={{ padding: 24, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #7B2FBE', borderRadius: 0, marginBottom: 32 }}>
+              <p style={{ fontSize: '1rem', color: '#1e293b', lineHeight: 1.7 }}>{d.positioningRecommendation}</p>
             </div>
           </>
         )}
@@ -502,7 +484,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Alternative solutions your audience might choose">Indirect Competitors</SectionTitle>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 32 }}>
               {d.indirectCompetitors.map((c: any, i: number) => (
-                <div key={i} style={{ padding: '10px 16px', background: '#fafafe', borderRadius: 12, border: '1px solid #f0eef6' }}>
+                <div key={i} style={{ padding: '10px 16px', background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
                   <strong style={{ color: '#1a1a2e' }}>{c.name}</strong>
                   {c.offer && <span style={{ color: '#8888a0', fontSize: '0.83rem', marginLeft: 8 }}>— {c.offer}</span>}
                 </div>
@@ -515,55 +497,279 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
   }
 
   // ── ads-meta ─────────────────────────────────────────────────────
-  if (skillName === 'ads-meta') {
-    const cards = d.audienceSets?.map((a: any, i: number) => ({
-      platform: i % 2 === 0 ? 'facebook' : 'instagram',
-      headline: a.name,
-      body: a.targeting,
-      cta: 'Learn More',
-      angle: 'Targeting',
-    })) || [];
+  if (skillName === 'ads-meta' || skillName === 'meta') {
+    const structure = d.accountStructure || d.campaignStructure?.map((c: any) => ({ ...c, adSets: [] })) || [];
+    const audience = d.audienceStrategy || {};
+    const creative = d.creativeStrategy || {};
+    const copy = d.adCopy || {};
+    const pixel = d.pixelTracking || {};
+    const bidding = d.biddingBudget || {};
+    const launch = d.launchPlan || [];
 
     return (
       <>
-        <SectionTitle sub="Full campaign architecture for Facebook & Instagram">Campaign Structure</SectionTitle>
-        <div style={{ marginBottom: 32 }}>
-          {d.campaignStructure?.map((c: any, i: number) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-                {i + 1}
-              </div>
-              <div style={{ flex: 1 }}>
-                <strong style={{ color: '#1a1a2e', fontSize: '0.9rem' }}>{c.campaignName}</strong>
-                <p style={{ fontSize: '0.83rem', color: '#8888a0', marginTop: 2 }}>Objective: {c.objective} · Budget: {c.budgetSplit}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {cards.length > 0 && (
+        {/* Account Structure */}
+        {structure.length > 0 && (
           <>
-            <SectionTitle sub="Audience sets targeting real users on Meta">Audience Sets</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 16, marginBottom: 32 }}>
-              {cards.map((c: any, i: number) => <AdCreativeCard key={i} index={i} {...c} />)}
+            <SectionTitle sub="Full Ads Manager account structure ready to build">Account Structure</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {structure.map((c: any, ci: number) => (
+                <div key={ci} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 16, overflow: 'hidden' }}>
+                  <div style={{ background: '#f8fafc', padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>{ci + 1}</div>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ color: '#1a1a2e', fontSize: '0.95rem' }}>{c.campaignName}</strong>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
+                        {c.objective} · {c.optimizationEvent && `Optimize: ${c.optimizationEvent} · `}{c.monthlyBudget || c.budgetSplit}
+                        {c.bidStrategy && ` · ${c.bidStrategy}`}
+                      </p>
+                    </div>
+                    {c.placementStrategy && <Tag color='#1877F2' bg='#eff6ff'>{c.placementStrategy}</Tag>}
+                  </div>
+                  {c.adSets?.length > 0 && (
+                    <div style={{ padding: '12px 18px' }}>
+                      <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase', marginBottom: 8 }}>Ad Sets</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 10 }}>
+                        {c.adSets.map((as: any, ai: number) => {
+                          const tierColor = as.audienceType === 'Cold' ? '#4285F4' : as.audienceType === 'Warm' ? '#f59e0b' : '#dc2626';
+                          return (
+                            <div key={ai} style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1a1a2e' }}>{as.name}</p>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>{as.audienceType}</span>
+                              </div>
+                              {as.audienceDescription && <p style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: 6 }}>{as.audienceDescription}</p>}
+                              {as.interests?.length > 0 && <div style={{ marginBottom: 4 }}>{as.interests.slice(0, 4).map((int: string, ii: number) => <Tag key={ii} color='#1877F2' bg='#eff6ff'>{int}</Tag>)}</div>}
+                              {as.placements?.length > 0 && <p style={{ fontSize: '0.72rem', color: '#8888a0', marginTop: 4 }}>📍 {as.placements.join(', ')}</p>}
+                              {as.dailyBudget && <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1877F2', marginTop: 4 }}>{as.dailyBudget}/day</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </>
         )}
 
-        {d.lookalikeStrategy && (
+        {/* Audience Strategy */}
+        {(audience.coldAudiences || audience.warmAudiences || audience.hotAudiences) && (
           <>
-            <SectionTitle sub="Expanding your best audiences with Meta's Lookalike tool">Lookalike Strategy</SectionTitle>
-            <div style={{ padding: 20, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6', marginBottom: 32 }}>
-              <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.65 }}>{d.lookalikeStrategy}</p>
+            <SectionTitle sub="Cold → Warm → Hot audience ladder">Audience Strategy</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
+              {[
+                { key: 'coldAudiences', label: 'COLD', color: '#4285F4' },
+                { key: 'warmAudiences', label: 'WARM', color: '#f59e0b' },
+                { key: 'hotAudiences', label: 'HOT', color: '#dc2626' },
+              ].map(({ key, label, color }) => {
+                const list: any[] = audience[key] || [];
+                if (!list.length) return null;
+                return (
+                  <div key={key} style={{ background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}`, borderRadius: 0 }}>
+                    <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
+                      <p style={{ fontWeight: 800, color, fontSize: '0.88rem' }}>{label} Audiences</p>
+                    </div>
+                    <div style={{ padding: 14 }}>
+                      {list.map((a: any, i: number) => (
+                        <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < list.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                          <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1a1a2e', marginBottom: 2 }}>{a.name}</p>
+                          {a.interestStack?.length > 0 && <div style={{ marginBottom: 4 }}>{a.interestStack.slice(0, 4).map((int: string, ii: number) => <Tag key={ii}>{int}</Tag>)}</div>}
+                          {a.source && <p style={{ fontSize: '0.78rem', color: '#64748b' }}>Source: {a.source}</p>}
+                          {a.window && <p style={{ fontSize: '0.78rem', color: '#64748b' }}>Window: {a.window}</p>}
+                          {a.messagingAngle && <p style={{ fontSize: '0.78rem', color: '#1a1a2e', fontStyle: 'italic', marginTop: 4 }}>→ {a.messagingAngle}</p>}
+                          {a.estimatedReach && <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4, marginTop: 4, display: 'inline-block' }}>~{a.estimatedReach}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {audience.lookalikeSeeds?.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 10 }}>Lookalike Seeds</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {audience.lookalikeSeeds.map((s: any, i: number) => (
+                    <div key={i} style={{ padding: '8px 14px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontWeight: 800, color: i === 0 ? '#16a34a' : i === 1 ? '#f59e0b' : '#8888a0', fontSize: '0.85rem' }}>#{i + 1}</span>
+                      <span style={{ fontSize: '0.85rem', color: '#1a1a2e', fontWeight: 600 }}>{s.seed}</span>
+                      {s.quality && <Tag color={s.quality === 'High' ? '#16a34a' : s.quality === 'Medium' ? '#f59e0b' : '#8888a0'} bg={s.quality === 'High' ? '#f0fdf4' : s.quality === 'Medium' ? '#fffbeb' : '#f4f4f4'}>{s.quality}</Tag>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Creative Strategy */}
+        {creative.heroCreatives?.length > 0 && (
+          <>
+            <SectionTitle sub="Hero ad creative concepts ready to brief your designer">Creative Strategy</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16, marginBottom: 24 }}>
+              {creative.heroCreatives.map((c: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontWeight: 800, color: '#1a1a2e', fontSize: '0.9rem' }}>Concept {i + 1}</p>
+                    {c.format && <Tag>{c.format}</Tag>}
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    {c.concept && <p style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>{c.concept}</p>}
+                    {c.hook && <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, marginBottom: 8, borderLeft: '3px solid #7B2FBE' }}><p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7B2FBE', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hook</p><p style={{ fontSize: '0.85rem', color: '#1a1a2e' }}>{c.hook}</p></div>}
+                    {c.visualDirection && <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 6 }}><strong style={{ color: '#1a1a2e' }}>Visual: </strong>{c.visualDirection}</p>}
+                    {c.copyAngle && <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 6 }}><strong style={{ color: '#1a1a2e' }}>Angle: </strong>{c.copyAngle}</p>}
+                    {c.emotionalTrigger && <Tag color='#e8457a' bg='#fff0f3'>{c.emotionalTrigger}</Tag>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {creative.ugcVsPolishedSplit && (
+              <div style={{ padding: '12px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0, marginBottom: 16 }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>UGC vs Polished Split</p>
+                <p style={{ fontSize: '0.88rem', color: '#1a1a2e' }}>{creative.ugcVsPolishedSplit}</p>
+              </div>
+            )}
+            {creative.testingMatrix?.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 10 }}>Testing Matrix</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 10 }}>
+                  {creative.testingMatrix.map((t: any, i: number) => (
+                    <div key={i} style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.85rem', color: '#7B2FBE', marginBottom: 6 }}>{t.variable}</p>
+                      <div style={{ marginBottom: 6 }}>{(t.variants || []).map((v: string, vi: number) => <Tag key={vi} color='#7B2FBE' bg='#f3e8ff'>{v}</Tag>)}</div>
+                      {t.successMetric && <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Metric: {t.successMetric}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Ad Copy */}
+        {(copy.primaryTexts?.length > 0 || copy.headlines?.length > 0) && (
+          <>
+            <SectionTitle sub="Ready-to-paste copy for Meta Ads Manager">Ad Copy</SectionTitle>
+            {copy.primaryTexts?.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14, marginBottom: 20 }}>
+                {copy.primaryTexts.map((t: any, i: number) => (
+                  <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1877F2', textTransform: 'uppercase', marginBottom: 8 }}>{typeof t === 'string' ? `Variant ${i + 1}` : t.label}</p>
+                    <p style={{ fontSize: '0.88rem', color: '#1a1a2e', lineHeight: 1.65 }}>{typeof t === 'string' ? t : t.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 32 }}>
+              {copy.headlines?.length > 0 && (
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1877F2', textTransform: 'uppercase', marginBottom: 10 }}>Headlines</p>
+                  {copy.headlines.map((h: string, i: number) => (
+                    <div key={i} style={{ padding: '6px 10px', background: '#f8faff', border: '1px solid #e0eaff', borderRadius: 8, marginBottom: 6, fontSize: '0.88rem', color: '#1a1a2e' }}>{h}</div>
+                  ))}
+                </div>
+              )}
+              {copy.linkDescriptions?.length > 0 && (
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1877F2', textTransform: 'uppercase', marginBottom: 10 }}>Link Descriptions</p>
+                  {copy.linkDescriptions.map((ld: string, i: number) => (
+                    <p key={i} style={{ padding: '6px 10px', background: '#f8fafc', borderRadius: 8, marginBottom: 6, fontSize: '0.85rem', color: '#475569' }}>{ld}</p>
+                  ))}
+                  {copy.ctaButton && <div style={{ marginTop: 12, padding: '8px 16px', background: '#1877F2', color: '#fff', borderRadius: 8, fontSize: '0.88rem', fontWeight: 700, display: 'inline-block' }}>{copy.ctaButton}</div>}
+                </div>
+              )}
             </div>
           </>
         )}
 
-        {d.biddingStrategy && (
+        {/* Pixel & Tracking */}
+        {pixel.keyEvents?.length > 0 && (
           <>
-            <SectionTitle sub="Recommended bid strategy to maximize ROAS">Bidding Strategy</SectionTitle>
-            <div style={{ padding: 20, background: '#f3e8ff', borderRadius: 14, border: '1px solid #7B2FBE30', marginBottom: 32 }}>
-              <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.65 }}>{d.biddingStrategy}</p>
+            <SectionTitle sub="Pixel events to fire for accurate attribution">Pixel & Tracking Setup</SectionTitle>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0, padding: '8px 14px', background: '#f8fafc', borderRadius: '10px 10px 0 0', border: '1px solid #e2e8f0' }}>
+                {['Event', 'Trigger', 'Value'].map(h => <p key={h} style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase' }}>{h}</p>)}
+              </div>
+              {pixel.keyEvents.map((e: any, i: number) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0, padding: '10px 14px', background: i % 2 === 0 ? '#fff' : '#fafafe', border: '1px solid #e2e8f0', borderTop: 'none' }}>
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#7B2FBE' }}>{e.event}</p>
+                  <p style={{ fontSize: '0.83rem', color: '#475569' }}>{e.trigger}</p>
+                  <p style={{ fontSize: '0.83rem', color: '#16a34a' }}>{e.value}</p>
+                </div>
+              ))}
+            </div>
+            {pixel.utmStructure && <p style={{ fontSize: '0.83rem', color: '#64748b', marginBottom: 32, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontFamily: 'monospace' }}>{pixel.utmStructure}</p>}
+          </>
+        )}
+
+        {/* Bidding & Budget Targets */}
+        {(bidding.roasTarget || bidding.cpaTarget || bidding.scaleThresholds?.length > 0) && (
+          <>
+            <SectionTitle sub="Bid targets and when to scale">Bidding & Budget Targets</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12, marginBottom: 24 }}>
+              {[['ROAS Target', bidding.roasTarget, '#16a34a'], ['CPA Target', bidding.cpaTarget, '#7B2FBE']].filter(([, v]) => v).map(([k, v, c]) => (
+                <div key={k as string} style={{ padding: 18, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>{k as string}</p>
+                  <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#1e293b' }}>{v as string}</p>
+                </div>
+              ))}
+            </div>
+            {bidding.scaleThresholds?.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 8 }}>Scale When →</p>
+                {bidding.scaleThresholds.map((t: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 0, borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+                    <p style={{ fontSize: '0.85rem', color: '#1a1a2e' }}>{t}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 30-Day Launch Plan */}
+        {launch.length > 0 && (
+          <>
+            <SectionTitle sub="Week-by-week Meta Ads launch roadmap">30-Day Launch Plan</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {launch.map((w: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#1877F2', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', flexShrink: 0 }}>{i + 1}</div>
+                    <div>
+                      <p style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.9rem' }}>{w.week}</p>
+                      {w.focus && <p style={{ fontSize: '0.8rem', color: '#1877F2' }}>{w.focus}</p>}
+                    </div>
+                  </div>
+                  <div style={{ padding: '12px 18px' }}>
+                    {w.actions?.map((a: string, ai: number) => (
+                      <div key={ai} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                        <span style={{ color: '#1877F2', fontWeight: 700, fontSize: '0.85rem' }}>→</span>
+                        <p style={{ fontSize: '0.85rem', color: '#1a1a2e' }}>{a}</p>
+                      </div>
+                    ))}
+                    {w.checkpoints?.length > 0 && (
+                      <div style={{ marginTop: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, borderLeft: '2px solid #e2e8f0' }}>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Checkpoints</p>
+                        {w.checkpoints.map((cp: string, ci: number) => <p key={ci} style={{ fontSize: '0.8rem', color: '#64748b' }}>✓ {cp}</p>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Findings */}
+        {data.findings?.length > 0 && (
+          <>
+            <SectionTitle sub="Key Meta Ads issues to address">Findings</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {data.findings.map((f: any, i: number) => <FindingRow key={i} {...f} />)}
             </div>
           </>
         )}
@@ -578,7 +784,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         <SectionTitle sub="Full Google Ads campaign architecture">Campaign Structure</SectionTitle>
         <div style={{ marginBottom: 32 }}>
           {d.campaignStructure?.map((c: any, i: number) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, marginBottom: 8 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8 }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#4285F4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
                 {i + 1}
               </div>
@@ -595,7 +801,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Organized by intent and search behavior">Keyword Strategy</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16, marginBottom: 32 }}>
               {d.keywordBuckets.map((b: any, i: number) => (
-                <div key={i} style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #f0eef6' }}>
+                <div key={i} style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0' }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4285F4', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{b.category}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {b.keywords?.map((k: string, j: number) => <Tag key={j} color='#1d4ed8' bg='#eff6ff'>{k}</Tag>)}
@@ -618,7 +824,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.biddingStrategy && (
           <>
             <SectionTitle sub="Smart bidding setup for Google Ads">Bidding Strategy</SectionTitle>
-            <div style={{ padding: 20, background: '#f0f7ff', borderRadius: 14, border: '1px solid #bfdbfe', marginBottom: 32 }}>
+            <div style={{ padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 32 }}>
               <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.65 }}>{d.biddingStrategy}</p>
             </div>
           </>
@@ -628,53 +834,259 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
   }
 
   // ── ads-tiktok ───────────────────────────────────────────────────
-  if (skillName === 'ads-tiktok') {
-    const ugcCards = d.creativeDirection?.ugcIdeas?.map((idea: string, i: number) => ({
-      platform: 'tiktok',
-      headline: idea,
-      body: `Native UGC concept for TikTok For Business`,
-      cta: 'Follow Now',
-      angle: d.creativeDirection?.trendingAudioVibes?.[i % (d.creativeDirection.trendingAudioVibes.length || 1)] || 'Trending',
-    })) || [];
+  if (skillName === 'ads-tiktok' || skillName === 'tiktok') {
+    const campaigns = d.campaignArchitecture || d.campaignStructure || [];
+    const formats = d.adFormatStrategy || {};
+    const scripts = d.ugcScripts || [];
+    const targeting = d.targetingMatrix || d.targeting || {};
+    const testing = d.creativeTestingFramework || {};
+    const trending = d.trendingStrategy || {};
+    const kpi = d.kpiBenchmarks || {};
 
     return (
       <>
-        <SectionTitle sub="TikTok For Business campaign architecture">Campaign Objectives</SectionTitle>
-        <div style={{ marginBottom: 32 }}>
-          {d.campaignStructure?.map((c: any, i: number) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-                {i + 1}
-              </div>
-              <div style={{ flex: 1 }}>
-                <strong style={{ color: '#1a1a2e', fontSize: '0.9rem' }}>Objective: {c.objective}</strong>
-                <p style={{ fontSize: '0.83rem', color: '#8888a0', marginTop: 2 }}>Budget: {c.budgetSplit}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {ugcCards.length > 0 && (
+        {/* Campaign Architecture */}
+        {campaigns.length > 0 && (
           <>
-            <SectionTitle sub="Native UGC video concepts for TikTok's algorithm">UGC Creative Concepts</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16, marginBottom: 32 }}>
-              {ugcCards.map((c: any, i: number) => <AdCreativeCard key={i} index={i} {...c} runningDays={7 + i * 5} />)}
+            <SectionTitle sub="TikTok For Business campaign architecture">Campaign Architecture</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {campaigns.map((c: any, i: number) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>{i + 1}</div>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ color: '#1a1a2e', fontSize: '0.92rem' }}>{c.campaignName || c.objective}</strong>
+                    <p style={{ fontSize: '0.8rem', color: '#8888a0', marginTop: 2 }}>
+                      {c.objective && c.campaignName ? `${c.objective} · ` : ''}{c.optimizationGoal && `Optimize: ${c.optimizationGoal} · `}{c.biddingModel && `Bid: ${c.biddingModel} · `}{c.budgetDollars || c.budgetSplit}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </>
         )}
 
-        {d.targeting && (
+        {/* Ad Format Strategy */}
+        {(formats.sparkAds?.applicable || formats.inFeedAds || formats.shoppingAds?.applicable) && (
           <>
-            <SectionTitle sub="TikTok interest and behavior targeting">Targeting Matrix</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, marginBottom: 32 }}>
-              <div style={{ padding: 20, background: '#fff', borderRadius: 14, border: '1px solid #f0eef6' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Interests</p>
-                {d.targeting.interests?.map((t: string, i: number) => <Tag key={i} color='#1a1a2e' bg='#f4f4f4'>{t}</Tag>)}
+            <SectionTitle sub="Which TikTok ad formats to use and how">Ad Format Strategy</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14, marginBottom: 32 }}>
+              {formats.inFeedAds && (
+                <div style={{ padding: 18, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14 }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 8 }}>In-Feed Ads</p>
+                  {formats.inFeedAds.specs && <p style={{ fontSize: '0.83rem', color: '#475569', marginBottom: 4 }}>{formats.inFeedAds.specs}</p>}
+                  {formats.inFeedAds.bestFor && <p style={{ fontSize: '0.82rem', color: '#64748b' }}><strong>Best for:</strong> {formats.inFeedAds.bestFor}</p>}
+                </div>
+              )}
+              {formats.sparkAds?.applicable && (
+                <div style={{ padding: 18, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 8 }}>Spark Ads</p>
+                  {formats.sparkAds.sourcingMethod && <p style={{ fontSize: '0.83rem', color: '#1a1a2e', marginBottom: 6 }}>{formats.sparkAds.sourcingMethod}</p>}
+                  {formats.sparkAds.boostingStrategy && <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 8 }}>{formats.sparkAds.boostingStrategy}</p>}
+                  {formats.sparkAds.creatorTiers?.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', marginBottom: 6, textTransform: 'uppercase' }}>Creator Tiers</p>
+                      {formats.sparkAds.creatorTiers.map((tier: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '0.83rem', fontWeight: 600, color: '#1a1a2e' }}>{tier.tier}</span>
+                          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{tier.followerRange}</span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a' }}>{tier.budgetAllocation}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {formats.topView?.applicable && (
+                <div style={{ padding: 18, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14 }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7B2FBE', textTransform: 'uppercase', marginBottom: 8 }}>TopView</p>
+                  {formats.topView.estimatedCPM && <p style={{ fontSize: '0.85rem', color: '#1a1a2e', marginBottom: 4 }}>Est. CPM: {formats.topView.estimatedCPM}</p>}
+                  {formats.topView.bestUseCase && <p style={{ fontSize: '0.82rem', color: '#64748b' }}>{formats.topView.bestUseCase}</p>}
+                </div>
+              )}
+              {formats.shoppingAds?.applicable && (
+                <div style={{ padding: 18, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>TikTok Shopping</p>
+                  {formats.shoppingAds.formats?.map((f: string, i: number) => <Tag key={i}>{f}</Tag>)}
+                  {formats.shoppingAds.catalogSetup && <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: 8 }}>{formats.shoppingAds.catalogSetup}</p>}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* UGC Scripts */}
+        {scripts.length > 0 && (
+          <>
+            <SectionTitle sub="Full video scripts ready to brief creators — word-for-word">UGC Video Scripts</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 16, marginBottom: 32 }}>
+              {scripts.map((s: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ background: '#000', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>Script {s.scriptNumber || i + 1}</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {s.totalLength && <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '2px 8px', borderRadius: 10 }}>{s.totalLength}</span>}
+                      {s.angle && <span style={{ fontSize: '0.72rem', background: '#7B2FBE', color: '#fff', padding: '2px 8px', borderRadius: 10 }}>{s.angle}</span>}
+                    </div>
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    {s.creatorPersona && <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8888a0', marginBottom: 12 }}>Creator: {s.creatorPersona} · Audio: {s.audioDirection}</p>}
+                    {[
+                      { label: 'HOOK (3 sec)', value: s.hook },
+                      { label: 'PROBLEM (3–5 sec)', value: s.problemSetup },
+                      { label: 'SOLUTION (5–8 sec)', value: s.solutionReveal },
+                      { label: 'PROOF (3–5 sec)', value: s.socialProof },
+                      { label: 'CTA (2–3 sec)', value: s.cta },
+                    ].filter(item => item.value).map(({ label, value }) => (
+                      <div key={label} style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 0, borderBottom: '1px solid #e2e8f0', marginBottom: 0 }}>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</p>
+                        <p style={{ fontSize: '0.88rem', color: '#1e293b' }}>{value}</p>
+                      </div>
+                    ))}
+                    {s.textOverlays?.length > 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase', marginBottom: 4 }}>Text Overlays</p>
+                        <div>{s.textOverlays.map((t: string, ti: number) => <Tag key={ti} color='#000' bg='#f4f4f4'>{t}</Tag>)}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Targeting Matrix */}
+        {(targeting.interestCategories?.length > 0 || targeting.behavioralSignals?.length > 0) && (
+          <>
+            <SectionTitle sub="TikTok For Business targeting parameters">Targeting Matrix</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14, marginBottom: 32 }}>
+              {targeting.interestCategories?.length > 0 && (
+                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 10 }}>Interests</p>
+                  {targeting.interestCategories.map((t: string, i: number) => <Tag key={i} color='#1a1a2e' bg='#f4f4f4'>{t}</Tag>)}
+                </div>
+              )}
+              {targeting.behavioralSignals?.length > 0 && (
+                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 10 }}>Behavioral</p>
+                  {targeting.behavioralSignals.map((b: string, i: number) => <Tag key={i} color='#1a1a2e' bg='#f4f4f4'>{b}</Tag>)}
+                </div>
+              )}
+              {(targeting.interests?.length > 0) && (
+                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 10 }}>Interests</p>
+                  {targeting.interests.map((t: string, i: number) => <Tag key={i} color='#1a1a2e' bg='#f4f4f4'>{t}</Tag>)}
+                </div>
+              )}
+              {(targeting.behaviors?.length > 0) && (
+                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 10 }}>Behaviors</p>
+                  {targeting.behaviors.map((b: string, i: number) => <Tag key={i} color='#1a1a2e' bg='#f4f4f4'>{b}</Tag>)}
+                </div>
+              )}
+              {targeting.demographics && (
+                <div style={{ padding: 18, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 10 }}>Demographics</p>
+                  {targeting.demographics.ageRange && <p style={{ fontSize: '0.85rem', color: '#1a1a2e', marginBottom: 4 }}>Age: {targeting.demographics.ageRange}</p>}
+                  {targeting.demographics.gender && <p style={{ fontSize: '0.85rem', color: '#1a1a2e', marginBottom: 4 }}>Gender: {targeting.demographics.gender}</p>}
+                  {targeting.demographics.geography && <p style={{ fontSize: '0.85rem', color: '#1a1a2e' }}>Geo: {targeting.demographics.geography}</p>}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Creative Testing Framework */}
+        {testing.hookVariants?.length > 0 && (
+          <>
+            <SectionTitle sub="A/B test these variables to find your winning creative">Creative Testing Framework</SectionTitle>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e8457a', textTransform: 'uppercase', marginBottom: 10 }}>Hook Variants to Test</p>
+              {testing.hookVariants.map((h: string, i: number) => (
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 0, borderBottom: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#94a3b8', fontWeight: 700, minWidth: 24, fontSize: '0.78rem' }}>H{i + 1}</span>
+                  <p style={{ fontSize: '0.88rem', color: '#1a1a2e' }}>{h}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 32 }}>
+              {testing.killThreshold && (
+                <div style={{ padding: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 4 }}>Kill Threshold</p>
+                  <p style={{ fontSize: '0.85rem', color: '#1e293b' }}>{testing.killThreshold}</p>
+                </div>
+              )}
+              {testing.scaleThreshold && (
+                <div style={{ padding: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 4 }}>Scale Threshold</p>
+                  <p style={{ fontSize: '0.85rem', color: '#1e293b' }}>{testing.scaleThreshold}</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Trending Strategy */}
+        {(trending.audioCategories?.length > 0 || trending.hashtagStrategy) && (
+          <>
+            <SectionTitle sub="Trending content and organic/paid synergy strategy">Trending Content Strategy</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14, marginBottom: 24 }}>
+              {trending.audioCategories?.length > 0 && (
+                <div style={{ padding: 16, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 10 }}>Audio Categories</p>
+                  {trending.audioCategories.map((a: string, i: number) => <Tag key={i} color='#1a1a2e' bg='#f4f4f4'>🎵 {a}</Tag>)}
+                </div>
+              )}
+              {trending.hashtagStrategy && (
+                <div style={{ padding: 16, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: 10 }}>Hashtag Strategy</p>
+                  {trending.hashtagStrategy.niche?.map((h: string, i: number) => <Tag key={i} color='#4285F4' bg='#eff6ff'>#{h}</Tag>)}
+                  {trending.hashtagStrategy.trending?.map((h: string, i: number) => <Tag key={i} color='#e8457a' bg='#fff0f3'>#{h}</Tag>)}
+                  {trending.hashtagStrategy.branded?.map((h: string, i: number) => <Tag key={i} color='#7B2FBE' bg='#f3e8ff'>#{h}</Tag>)}
+                </div>
+              )}
+              {trending.postingCadence && (
+                <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.04em' }}>Posting Cadence</p>
+                  <p style={{ fontSize: '0.88rem', color: '#1a1a2e' }}>{trending.postingCadence}</p>
+                </div>
+              )}
+            </div>
+            {trending.organicPaidSynergy && (
+              <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 32 }}>
+                <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase', marginBottom: 6 }}>Organic + Paid Synergy</p>
+                <p style={{ fontSize: '0.88rem', color: '#1a1a2e', lineHeight: 1.65 }}>{trending.organicPaidSynergy}</p>
               </div>
-              <div style={{ padding: 20, background: '#fff', borderRadius: 14, border: '1px solid #f0eef6' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#000', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Behaviors</p>
-                {d.targeting.behaviors?.map((b: string, i: number) => <Tag key={i} color='#1a1a2e' bg='#f4f4f4'>{b}</Tag>)}
-              </div>
+            )}
+          </>
+        )}
+
+        {/* KPI Benchmarks */}
+        {(kpi.cpm || kpi.cpc) && (
+          <>
+            <SectionTitle sub="Industry benchmark targets for TikTok Ads">KPI Benchmarks</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 10, marginBottom: 16 }}>
+              {[['CPM', kpi.cpm], ['CPC', kpi.cpc], ['CTR', kpi.ctr], ['VTR', kpi.vtr], ['CPA', kpi.cpa]].filter(([, v]) => v).map(([k, v]) => (
+                <div key={k as string} style={{ padding: '14px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase', marginBottom: 4 }}>{k as string}</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 800, color: '#1a1a2e' }}>{v as string}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 32 }}>
+              {kpi.greenThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0 }}><p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', marginBottom: 3, textTransform: 'uppercase' }}>Scale When</p><p style={{ fontSize: '0.82rem', color: '#1e293b' }}>{kpi.greenThreshold}</p></div>}
+              {kpi.yellowThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #d97706', borderRadius: 0 }}><p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#d97706', marginBottom: 3, textTransform: 'uppercase' }}>Optimise</p><p style={{ fontSize: '0.82rem', color: '#1e293b' }}>{kpi.yellowThreshold}</p></div>}
+              {kpi.redThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0 }}><p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', marginBottom: 3, textTransform: 'uppercase' }}>Pause If</p><p style={{ fontSize: '0.82rem', color: '#1e293b' }}>{kpi.redThreshold}</p></div>}
+            </div>
+          </>
+        )}
+
+        {/* Findings */}
+        {data.findings?.length > 0 && (
+          <>
+            <SectionTitle sub="Key TikTok Ads issues">Findings</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {data.findings.map((f: any, i: number) => <FindingRow key={i} {...f} />)}
             </div>
           </>
         )}
@@ -683,50 +1095,516 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
   }
 
   // ── ads-linkedin ─────────────────────────────────────────────────
-  if (skillName === 'ads-linkedin') {
+  if (skillName === 'ads-linkedin' || skillName === 'linkedin') {
+    const abm = d.abmStrategy || {};
+    const campaigns = d.campaignArchitecture || d.campaignStructure || [];
+    const formats = d.adFormats || {};
+    const targeting = d.targetingMatrix || {};
+    const offers = d.contentOffers || [];
+    const convAds = d.conversationAdScripts || [];
+    const synergy = d.organicPaidSynergy || {};
+    const kpi = d.kpiBenchmarks || {};
+
     return (
       <>
-        <SectionTitle sub="LinkedIn B2B ad campaign architecture">Campaign Formats</SectionTitle>
-        <div style={{ marginBottom: 32 }}>
-          {d.campaignStructure?.map((c: any, i: number) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#0077B5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-                {i + 1}
-              </div>
-              <div style={{ flex: 1 }}>
-                <strong style={{ color: '#1a1a2e', fontSize: '0.9rem' }}>{c.format}</strong>
-                <p style={{ fontSize: '0.83rem', color: '#8888a0', marginTop: 2 }}>Objective: {c.objective} · Budget: {c.budgetSplit}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {d.targetingMatrix && (
+        {/* ABM Strategy */}
+        {(abm.idealCompanyProfile || abm.buyingCommittee?.length > 0) && (
           <>
-            <SectionTitle sub="Seniority, job function, and company targeting for B2B">Targeting Matrix</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 32 }}>
-              {[
-                { label: 'Job Titles', items: d.targetingMatrix.jobTitles },
-                { label: 'Seniority', items: d.targetingMatrix.seniority },
-                { label: 'Industries', items: d.targetingMatrix.industries },
-              ].map(({ label, items }) => (
-                <div key={label} style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #f0eef6' }}>
-                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0077B5', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{label}</p>
-                  {items?.map((item: string, i: number) => <Tag key={i} color='#0077B5' bg='#e0f0fa'>{item}</Tag>)}
+            <SectionTitle sub="Account-Based Marketing targeting strategy">ABM Target Account Strategy</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
+              {abm.idealCompanyProfile && (
+                <div style={{ padding: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '0.04em' }}>Ideal Company Profile</p>
+                  {[['Company Size', abm.idealCompanyProfile.companySize], ['Revenue Range', abm.idealCompanyProfile.revenueRange], ['Growth Stage', abm.idealCompanyProfile.growthStage]].filter(([, v]) => v).map(([k, v]) => (
+                    <div key={k as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0' }}>
+                      <p style={{ fontSize: '0.82rem', color: '#64748b' }}>{k as string}</p>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a1a2e' }}>{v as string}</p>
+                    </div>
+                  ))}
+                  {abm.idealCompanyProfile.industries?.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0077B5', textTransform: 'uppercase', marginBottom: 6 }}>Industries</p>
+                      <div>{abm.idealCompanyProfile.industries.map((ind: string, i: number) => <Tag key={i} color='#0077B5' bg='#e0f0fa'>{ind}</Tag>)}</div>
+                    </div>
+                  )}
+                  {abm.idealCompanyProfile.techStackSignals?.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0077B5', textTransform: 'uppercase', marginBottom: 6 }}>Tech Stack Signals</p>
+                      <div>{abm.idealCompanyProfile.techStackSignals.map((t: string, i: number) => <Tag key={i} color='#475569' bg='#f4f4f4'>{t}</Tag>)}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Buying Committee */}
+              {abm.buyingCommittee?.length > 0 && (
+                <div style={{ padding: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14 }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0077B5', textTransform: 'uppercase', marginBottom: 12 }}>Buying Committee</p>
+                  {abm.buyingCommittee.map((person: any, i: number) => (
+                    <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < abm.buyingCommittee.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <p style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.88rem' }}>{person.role}</p>
+                        <Tag color='#0077B5' bg='#e0f0fa'>{person.linkedinSeniority}</Tag>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 4 }}>{person.title}</p>
+                      {person.concerns?.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {person.concerns.map((c: string, ci: number) => <Tag key={ci} color='#dc2626' bg='#fef2f2'>{c}</Tag>)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Account Tiers */}
+            {abm.accountTiers?.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12, marginBottom: 32 }}>
+                {abm.accountTiers.map((tier: any, i: number) => (
+                  <div key={i} style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                    <p style={{ fontWeight: 800, color: '#0077B5', fontSize: '0.88rem', marginBottom: 6 }}>{tier.tier}</p>
+                    <p style={{ fontSize: '0.82rem', color: '#1a1a2e', marginBottom: 6 }}>{tier.approach}</p>
+                    {tier.budgetAllocation && <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a' }}>{tier.budgetAllocation}</p>}
+                    {tier.targetAccounts && <p style={{ fontSize: '0.75rem', color: '#8888a0', marginTop: 4 }}>Target: {tier.targetAccounts}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Campaign Architecture */}
+        {campaigns.length > 0 && (
+          <>
+            <SectionTitle sub="LinkedIn Campaign Manager structure">Campaign Architecture</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {campaigns.map((c: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px' }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#0077B5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>{i + 1}</div>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ color: '#1a1a2e', fontSize: '0.92rem' }}>{c.campaignName || c.format || `Campaign ${i + 1}`}</strong>
+                      <p style={{ fontSize: '0.8rem', color: '#8888a0', marginTop: 2 }}>
+                        {c.objective} · {c.format && `${c.format} · `}{c.funnelStage && `${c.funnelStage} · `}{c.monthlyBudget || c.budgetSplit}
+                        {c.bidStrategy && ` · ${c.bidStrategy}`}
+                      </p>
+                    </div>
+                    {c.funnelStage && (
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: 4, color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
+                        {c.funnelStage}
+                      </span>
+                    )}
+                  </div>
+                  {c.expectedCPL && (
+                    <div style={{ padding: '6px 18px 10px', borderTop: '1px solid #e2e8f0' }}>
+                      <p style={{ fontSize: '0.78rem', color: '#64748b' }}>Expected CPL: <strong style={{ color: '#1a1a2e' }}>{c.expectedCPL}</strong>{c.audience && ` · Audience: ${c.audience}`}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </>
         )}
 
-        {d.contentOffers?.length > 0 && (
+        {/* Targeting Matrix */}
+        {(targeting.jobTitles?.length > 0 || targeting.seniority?.length > 0) && (
           <>
-            <SectionTitle sub="Lead magnet and content offers for LinkedIn audiences">Content Offers</SectionTitle>
+            <SectionTitle sub="LinkedIn-specific targeting parameters">Targeting Matrix</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 14, marginBottom: 32 }}>
+              {[
+                { label: 'Job Titles', items: targeting.jobTitles },
+                { label: 'Seniority', items: targeting.seniority },
+                { label: 'Industries', items: targeting.industries },
+                { label: 'Company Sizes', items: targeting.companySizes },
+                { label: 'Job Functions', items: targeting.jobFunctions },
+                { label: 'Skills', items: targeting.skills },
+              ].filter(({ items }) => items?.length > 0).map(({ label, items }) => (
+                <div key={label} style={{ padding: 16, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{label}</p>
+                  <div>{items.map((item: string, i: number) => <Tag key={i}>{item}</Tag>)}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Content Offers */}
+        {offers.length > 0 && (
+          <>
+            <SectionTitle sub="Lead magnets ranked by lead quality and CPL efficiency">Content Offer Strategy</SectionTitle>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+              {offers.map((offer: any, i: number) => (
+                <div key={i} style={{ display: 'flex', gap: 16, padding: '16px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: i === 0 ? '#16a34a' : '#0077B5', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>#{i + 1}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <p style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.92rem' }}>{typeof offer === 'string' ? offer : offer.title}</p>
+                      {offer.format && <Tag color='#0077B5' bg='#e0f0fa'>{offer.format}</Tag>}
+                    </div>
+                    {offer.funnelStage && <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 4 }}>Stage: {offer.funnelStage}</p>}
+                    {offer.whyItWorks && <p style={{ fontSize: '0.82rem', color: '#475569', marginBottom: 4 }}>{offer.whyItWorks}</p>}
+                    {offer.followUpSequence && <p style={{ fontSize: '0.78rem', color: '#8888a0', fontStyle: 'italic' }}>Follow-up: {offer.followUpSequence}</p>}
+                  </div>
+                  {offer.expectedCPL && (
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <p style={{ fontSize: '0.72rem', color: '#8888a0', marginBottom: 2 }}>Est. CPL</p>
+                      <p style={{ fontWeight: 800, color: '#0077B5', fontSize: '1rem' }}>{offer.expectedCPL}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Conversation Ad Scripts */}
+        {convAds.length > 0 && (
+          <>
+            <SectionTitle sub="LinkedIn Conversation Ads — ready to build">Conversation Ad Scripts</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 16, marginBottom: 32 }}>
+              {convAds.map((ad: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ background: '#0077B5', padding: '10px 16px' }}>
+                    <p style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>Conversation Ad {i + 1}</p>
+                    {ad.subject && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', marginTop: 2 }}>Subject: {ad.subject}</p>}
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    {ad.introMessage && (
+                      <div style={{ padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 12 }}>
+                        <p style={{ fontSize: '0.88rem', color: '#1a1a2e', lineHeight: 1.6 }}>{ad.introMessage}</p>
+                      </div>
+                    )}
+                    {ad.ctaOptions?.length > 0 && (
+                      <div>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0077B5', textTransform: 'uppercase', marginBottom: 6 }}>CTA Options</p>
+                        {ad.ctaOptions.map((cta: any, ci: number) => (
+                          <div key={ci} style={{ display: 'flex', gap: 8, padding: '7px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 6, alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0077B5' }}>{cta.text}</span>
+                            {cta.destination && <span style={{ fontSize: '0.75rem', color: '#8888a0', marginLeft: 'auto' }}>→ {cta.destination}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {ad.followUpBranch && (
+                      <div style={{ marginTop: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8888a0', marginBottom: 2 }}>Follow-up branch</p>
+                        <p style={{ fontSize: '0.82rem', color: '#475569' }}>{ad.followUpBranch}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Organic + Paid Synergy */}
+        {(synergy.thoughtLeadershipTopics?.length > 0 || synergy.employeeAdvocacyStrategy) && (
+          <>
+            <SectionTitle sub="Amplify paid reach with organic LinkedIn content">Organic + Paid Synergy</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 14, marginBottom: 32 }}>
+              {synergy.thoughtLeadershipTopics?.length > 0 && (
+                <div style={{ padding: 18, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14 }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0077B5', textTransform: 'uppercase', marginBottom: 10 }}>Thought Leadership Topics</p>
+                  {synergy.thoughtLeadershipTopics.map((t: string, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: '1px solid #e2e8f0' }}>
+                      <span style={{ color: '#0077B5', fontWeight: 700 }}>→</span>
+                      <p style={{ fontSize: '0.85rem', color: '#1a1a2e' }}>{t}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {synergy.employeeAdvocacyStrategy && (
+                <div style={{ padding: 18, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>Employee Advocacy</p>
+                  <p style={{ fontSize: '0.88rem', color: '#1a1a2e', lineHeight: 1.65 }}>{synergy.employeeAdvocacyStrategy}</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* KPI Benchmarks */}
+        {(kpi.expectedCTR || kpi.expectedCPL) && (
+          <>
+            <SectionTitle sub="LinkedIn Ads industry benchmarks">KPI Benchmarks</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 10, marginBottom: 32 }}>
+              {[['CTR', kpi.expectedCTR], ['CPL', kpi.expectedCPL], ['CPC', kpi.expectedCPC], ['Engagement', kpi.engagementRate], ['Form Fill', kpi.leadFormFillRate], ['MQL→SQL', kpi.mqtToSqlRate]].filter(([, v]) => v).map(([k, v]) => (
+                <div key={k as string} style={{ padding: '14px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0077B5', textTransform: 'uppercase', marginBottom: 4 }}>{k as string}</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 800, color: '#1a1a2e' }}>{v as string}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Findings */}
+        {data.findings?.length > 0 && (
+          <>
+            <SectionTitle sub="Key LinkedIn B2B Ads issues">Findings</SectionTitle>
             <div style={{ marginBottom: 32 }}>
-              {d.contentOffers.map((offer: string, i: number) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f0f7ff', borderRadius: 10, marginBottom: 8, border: '1px solid #bfdbfe' }}>
-                  <span style={{ color: '#0077B5', fontWeight: 700, fontSize: '1rem' }}>→</span>
-                  <p style={{ fontSize: '0.9rem', color: '#1a1a2e' }}>{offer}</p>
+              {data.findings.map((f: any, i: number) => <FindingRow key={i} {...f} />)}
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
+  // ── ads-report ───────────────────────────────────────────────────
+  if (skillName === 'ads-report' || skillName === 'report') {
+    const targetAud = d.targetAudience || {};
+    const platformStrat = d.platformStrategy || {};
+    const budgetAlloc = d.budgetAllocation || {};
+    const funnelArch = d.funnelArchitecture || {};
+    const campaigns = d.campaignOverview || [];
+    const kpiFramework = d.kpiFramework || {};
+    const plan = d.ninetyDayPlan || [];
+    const risks = d.riskFactors || [];
+
+    return (
+      <>
+        {/* Executive Summary */}
+        {d.executiveSummary && (
+          <>
+            <SectionTitle sub="Senior media buyer assessment of this business">Executive Summary</SectionTitle>
+            <div style={{ padding: 28, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #7B2FBE', borderRadius: 0, marginBottom: 32 }}>
+              <p style={{ fontSize: '1.02rem', color: '#1a1a2e', lineHeight: 1.8 }}>{d.executiveSummary}</p>
+            </div>
+          </>
+        )}
+
+        {/* Market Landscape */}
+        {d.marketLandscape && (
+          <>
+            <SectionTitle sub="Competitive context and market opportunity">Market Landscape</SectionTitle>
+            <div style={{ padding: 22, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
+              <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.75 }}>{d.marketLandscape}</p>
+            </div>
+          </>
+        )}
+
+        {/* Target Audience */}
+        {(typeof targetAud === 'string' ? targetAud : targetAud.primaryICP) && (
+          <>
+            <SectionTitle sub="ICP definition and buyer psychology">Target Audience & ICP</SectionTitle>
+            {typeof targetAud === 'string' ? (
+              <div style={{ padding: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
+                <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.75 }}>{targetAud}</p>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14, marginBottom: 14 }}>
+                  {[['Primary ICP', targetAud.primaryICP], ['Psychographics', targetAud.psychographics], ['Buyer Journey', targetAud.buyerJourney]].filter(([, v]) => v).map(([k, v]) => (
+                    <div key={k as string} style={{ padding: 18, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                      <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7B2FBE', textTransform: 'uppercase', marginBottom: 8 }}>{k as string}</p>
+                      <p style={{ fontSize: '0.88rem', color: '#1a1a2e', lineHeight: 1.65 }}>{v as string}</p>
+                    </div>
+                  ))}
+                </div>
+                {(targetAud.keyObjections?.length > 0 || targetAud.emotionalTriggers?.length > 0) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    {targetAud.keyObjections?.length > 0 && (
+                      <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0 }}>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 8 }}>Key Objections</p>
+                        {targetAud.keyObjections.map((o: string, i: number) => <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}><span style={{ color: '#94a3b8', fontWeight: 700 }}>✕</span><p style={{ fontSize: '0.85rem', color: '#1e293b' }}>{o}</p></div>)}
+                      </div>
+                    )}
+                    {targetAud.emotionalTriggers?.length > 0 && (
+                      <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0 }}>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 8 }}>Emotional Triggers</p>
+                        {targetAud.emotionalTriggers.map((t: string, i: number) => <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}><span style={{ color: '#94a3b8', fontWeight: 700 }}>→</span><p style={{ fontSize: '0.85rem', color: '#1e293b' }}>{t}</p></div>)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Platform Strategy */}
+        {(typeof platformStrat === 'string' ? platformStrat : platformStrat.platforms?.length > 0) && (
+          <>
+            <SectionTitle sub="Platform recommendations ranked by fit and priority">Platform Strategy</SectionTitle>
+            {typeof platformStrat === 'string' ? (
+              <div style={{ padding: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
+                <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.75 }}>{platformStrat}</p>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 32 }}>
+                {platformStrat.summary && <p style={{ fontSize: '0.92rem', color: '#64748b', lineHeight: 1.7, marginBottom: 16 }}>{platformStrat.summary}</p>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {platformStrat.platforms?.map((p: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: 14, padding: '12px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, alignItems: 'center' }}>
+                      <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#7B2FBE', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0 }}>#{p.priority || i + 1}</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{p.platform}</p>
+                        <p style={{ fontSize: '0.82rem', color: '#64748b' }}>{p.rationale}</p>
+                      </div>
+                      {p.allocation && <Tag color='#16a34a' bg='#f0fdf4'>{p.allocation}</Tag>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Creative Direction */}
+        {d.creativeDirection && (
+          <>
+            <SectionTitle sub="Visual style, tone, and creative execution guidance">Creative Direction</SectionTitle>
+            <div style={{ padding: 22, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
+              <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.75 }}>{typeof d.creativeDirection === 'string' ? d.creativeDirection : JSON.stringify(d.creativeDirection)}</p>
+            </div>
+          </>
+        )}
+
+        {/* Budget Allocation */}
+        {(typeof budgetAlloc === 'string' ? budgetAlloc : budgetAlloc.breakdown?.length > 0) && (
+          <>
+            <SectionTitle sub="How to allocate the monthly ad budget">Budget Allocation</SectionTitle>
+            {typeof budgetAlloc === 'string' ? (
+              <div style={{ padding: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
+                <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.75 }}>{budgetAlloc}</p>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 32 }}>
+                {budgetAlloc.summary && <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: 14 }}>{budgetAlloc.summary}</p>}
+                {budgetAlloc.breakdown?.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                    {budgetAlloc.breakdown.map((item: any, i: number) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 100px 80px', gap: 12, padding: '10px 16px', background: i % 2 === 0 ? '#fafafe' : '#fff', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+                        <p style={{ fontSize: '0.88rem', color: '#1a1a2e', fontWeight: 600 }}>{item.item}</p>
+                        <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#16a34a' }}>{item.amount}</p>
+                        <p style={{ fontSize: '0.82rem', color: '#8888a0' }}>{item.percentage}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {budgetAlloc.totalMonthly && <div style={{ padding: '12px 18px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}><p style={{ fontWeight: 800, color: '#1e293b', fontSize: '1.05rem' }}>Total: {budgetAlloc.totalMonthly}/mo</p></div>}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Funnel Architecture */}
+        {(typeof funnelArch === 'string' ? funnelArch : funnelArch.tofu) && (
+          <>
+            <SectionTitle sub="Full-funnel ad-to-conversion architecture">Funnel Architecture</SectionTitle>
+            {typeof funnelArch === 'string' ? (
+              <div style={{ padding: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
+                <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.75 }}>{funnelArch}</p>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 32 }}>
+                {funnelArch.summary && <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: 14 }}>{funnelArch.summary}</p>}
+                {[['TOFU', funnelArch.tofu, '#4285F4'], ['MOFU', funnelArch.mofu, '#f59e0b'], ['BOFU', funnelArch.bofu, '#16a34a']].filter(([, v]) => v).map(([stage, content, color]) => (
+                  <div key={stage as string} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${color as string}`, borderRadius: 0, marginBottom: 8 }}>
+                    <span style={{ fontWeight: 800, color: color as string, minWidth: 50, fontSize: '0.85rem' }}>{stage as string}</span>
+                    <p style={{ fontSize: '0.88rem', color: '#1a1a2e', lineHeight: 1.6 }}>{content as string}</p>
+                  </div>
+                ))}
+                {funnelArch.retargetingSequence && <div style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #7B2FBE', borderRadius: 0, marginTop: 8 }}><p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Retargeting Sequence</p><p style={{ fontSize: '0.88rem', color: '#1e293b' }}>{funnelArch.retargetingSequence}</p></div>}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Campaign Overview */}
+        {campaigns.length > 0 && (
+          <>
+            <SectionTitle sub="All recommended campaigns across platforms">Campaign Overview</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 0, padding: '8px 14px', background: '#f8fafc', borderRadius: '10px 10px 0 0', border: '1px solid #e2e8f0' }}>
+                {['Campaign', 'Platform', 'Objective', 'Audience', 'Budget'].map(h => <p key={h} style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase' }}>{h}</p>)}
+              </div>
+              {campaigns.map((c: any, i: number) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 0, padding: '10px 14px', background: i % 2 === 0 ? '#fff' : '#fafafe', border: '1px solid #e2e8f0', borderTop: 'none' }}>
+                  <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a1a2e' }}>{c.campaignName}</p>
+                  <p style={{ fontSize: '0.82rem', color: '#7B2FBE' }}>{c.platform}</p>
+                  <p style={{ fontSize: '0.82rem', color: '#475569' }}>{c.objective}</p>
+                  <p style={{ fontSize: '0.82rem', color: '#475569' }}>{c.audience}</p>
+                  <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#16a34a' }}>{c.budget}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* KPI Framework */}
+        {kpiFramework.primaryKPIs?.length > 0 && (
+          <>
+            <SectionTitle sub="What to measure, targets, and when to act">KPI Framework</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 10, marginBottom: 16 }}>
+              {kpiFramework.primaryKPIs.map((kpi: any, i: number) => (
+                <div key={i} style={{ padding: '14px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7B2FBE', textTransform: 'uppercase', marginBottom: 4 }}>{kpi.kpi}</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 800, color: '#1a1a2e', marginBottom: 2 }}>{kpi.target}</p>
+                  <p style={{ fontSize: '0.75rem', color: '#8888a0' }}>{kpi.platform}</p>
+                </div>
+              ))}
+            </div>
+            {kpiFramework.optimizationTriggers?.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>Optimization Triggers</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {kpiFramework.optimizationTriggers.map((t: string, i: number) => <Tag key={i} color='#7B2FBE' bg='#f3e8ff'>{t}</Tag>)}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 90-Day Plan */}
+        {plan.length > 0 && (
+          <>
+            <SectionTitle sub="Phase-by-phase implementation roadmap">90-Day Action Plan</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {plan.map((phase: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 12, overflow: 'hidden' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontWeight: 800, color: '#1a1a2e', fontSize: '0.92rem' }}>{phase.phase || `Phase ${i + 1}`}</p>
+                      {phase.weeks && <p style={{ fontSize: '0.78rem', color: '#8888a0' }}>{phase.weeks}</p>}
+                    </div>
+                    {phase.focus && <Tag color={i === 0 ? '#4285F4' : i === 1 ? '#d97706' : '#16a34a'} bg={i === 0 ? '#eff6ff' : i === 1 ? '#fffbeb' : '#f0fdf4'}>{phase.focus}</Tag>}
+                  </div>
+                  <div style={{ padding: '12px 18px' }}>
+                    {(phase.actions || (phase.action ? [phase.action] : [])).map((a: string, ai: number) => (
+                      <div key={ai} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
+                        <span style={{ color: '#7B2FBE', fontWeight: 700 }}>→</span>
+                        <p style={{ fontSize: '0.86rem', color: '#1a1a2e' }}>{a}</p>
+                      </div>
+                    ))}
+                    {phase.expectedOutcome && (
+                      <div style={{ marginTop: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 0, borderLeft: '2px solid #16a34a' }}>
+                        <p style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>Expected: {phase.expectedOutcome}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Risk Factors */}
+        {risks.length > 0 && (
+          <>
+            <SectionTitle sub="Risks that could derail the strategy and how to mitigate them">Risk Factors</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {risks.map((r: any, i: number) => (
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '14px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8 }}>
+                  <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>{r.risk}</p>
+                    {r.probability && <p style={{ fontSize: '0.78rem', color: '#f59e0b', fontWeight: 600, marginBottom: 4 }}>Probability: {r.probability}</p>}
+                    {r.mitigation && <p style={{ fontSize: '0.83rem', color: '#475569' }}>Mitigation: {r.mitigation}</p>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -736,103 +1614,252 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
     );
   }
 
-  // ── ads-report ───────────────────────────────────────────────────
-  if (skillName === 'ads-report' || skillName === 'ads-report-pdf') {
-    if (skillName === 'ads-report-pdf') {
-      return (
-        <>
-          {d.executiveSummary && (
-            <>
-              <SectionTitle sub="Agency-ready executive briefing">Executive Summary</SectionTitle>
-              <div style={{ padding: 24, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6', marginBottom: 32 }}>
-                <p style={{ fontSize: '1rem', color: '#1a1a2e', lineHeight: 1.75 }}>{d.executiveSummary}</p>
-              </div>
-            </>
-          )}
-          {d.scoreBreakdown?.length > 0 && (
-            <>
-              <SectionTitle sub="Dimension scores from the full audit">Score Breakdown</SectionTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16, marginBottom: 32 }}>
-                {d.scoreBreakdown.map((s: any, i: number) => (
-                  <div key={i} style={{ padding: 20, background: '#fff', borderRadius: 14, border: '1px solid #f0eef6', textAlign: 'center' }}>
-                    <ScoreBadge score={s.score} label={s.dimension} />
-                    <p style={{ fontSize: '0.83rem', color: '#64748b', marginTop: 12, lineHeight: 1.5 }}>{s.summary}</p>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-          {d.topFindings?.length > 0 && (
-            <>
-              <SectionTitle sub="Highest priority items from the analysis">Top Findings</SectionTitle>
-              {d.topFindings.map((f: any, i: number) => (
-                <FindingRow key={i} severity={f.severity} title={f.title} impact={f.description} recommendation={f.fix} />
-              ))}
-            </>
-          )}
-          {d.recommendations?.length > 0 && (
-            <>
-              <SectionTitle sub="Ordered by impact and priority">Recommendations</SectionTitle>
-              <div style={{ marginBottom: 32 }}>
-                {d.recommendations.map((r: any, i: number) => (
-                  <div key={i} style={{ display: 'flex', gap: 16, padding: 16, background: '#fff', borderRadius: 12, border: '1px solid #f0eef6', marginBottom: 8 }}>
-                    <span style={{ background: r.priority === 'High' ? '#fee2e2' : r.priority === 'Medium' ? '#fef3c7' : '#f0fdf4', color: r.priority === 'High' ? '#dc2626' : r.priority === 'Medium' ? '#d97706' : '#16a34a', fontSize: '0.7rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, height: 'fit-content', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{r.priority}</span>
-                    <div>
-                      <p style={{ fontWeight: 600, color: '#1a1a2e', fontSize: '0.9rem', marginBottom: 4 }}>{r.action}</p>
-                      <p style={{ fontSize: '0.83rem', color: '#64748b' }}>Expected: {r.expectedImpact}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-          {d.nextSteps?.length > 0 && (
-            <>
-              <SectionTitle sub="Immediate next actions for your team">Next Steps</SectionTitle>
-              <ol style={{ paddingLeft: 20, marginBottom: 32 }}>
-                {d.nextSteps.map((s: string, i: number) => (
-                  <li key={i} style={{ fontSize: '0.9rem', color: '#1a1a2e', lineHeight: 1.7, marginBottom: 6 }}>{s}</li>
-                ))}
-              </ol>
-            </>
-          )}
-        </>
-      );
-    }
+  // ── ads-report-pdf ───────────────────────────────────────────────
+  if (skillName === 'ads-report-pdf' || skillName === 'report-pdf') {
+    const cover = d.coverPage || {};
+    const brief = d.executiveBrief || {};
+    const scores = d.auditScores || d.scoreBreakdown || [];
+    const findings = d.topFindings || [];
+    const platforms = d.platformRecommendations || [];
+    const creative = d.creativeBrief || [];
+    const recs = d.recommendations || [];
+    const invest = d.investmentSummary || {};
+    const next = d.nextSteps || [];
+    const benchmarks = d.benchmarksAppendix || [];
 
-    // ads-report (markdown strategy)
+    const statusColor = (s: string) => s === 'green' ? '#16a34a' : s === 'yellow' ? '#d97706' : '#dc2626';
+    const statusBg = (s: string) => s === 'green' ? '#f0fdf4' : s === 'yellow' ? '#fffbeb' : '#fef2f2';
+
     return (
       <>
-        {d.executiveSummary && (
+        {/* Cover Page */}
+        {cover.title && (
+          <div style={{ padding: 32, background: 'linear-gradient(135deg,#1a1a2e,#2d1b69)', borderRadius: 20, marginBottom: 32, color: '#fff' }}>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>ZieAds · Agency Report</p>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 900, lineHeight: 1.2, marginBottom: 8 }}>{cover.title}</h1>
+              {cover.subtitle && <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)', marginBottom: 20 }}>{cover.subtitle}</p>}
+            </div>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              {cover.preparedFor && <div><p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>PREPARED FOR</p><p style={{ fontWeight: 700 }}>{cover.preparedFor}</p></div>}
+              {cover.url && <div><p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>URL</p><p style={{ fontWeight: 600, fontSize: '0.88rem' }}>{cover.url}</p></div>}
+              {cover.date && <div><p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>DATE</p><p style={{ fontWeight: 700 }}>{cover.date}</p></div>}
+            </div>
+            {cover.tagline && <p style={{ marginTop: 24, fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>{cover.tagline}</p>}
+          </div>
+        )}
+
+        {/* Executive Brief */}
+        {brief.summary && (
           <>
-            <SectionTitle>Executive Summary</SectionTitle>
-            <div style={{ padding: 24, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6', marginBottom: 32 }}>
-              <p style={{ fontSize: '1rem', color: '#1a1a2e', lineHeight: 1.75 }}>{d.executiveSummary}</p>
+            <SectionTitle sub="Client-facing summary — non-technical language">Executive Brief</SectionTitle>
+            <div style={{ padding: 24, background: '#f8fafc', border: '1px solid #e8e6f0', borderRadius: 16, marginBottom: 16 }}>
+              <p style={{ fontSize: '1rem', color: '#1a1a2e', lineHeight: 1.8, marginBottom: 16 }}>{brief.summary}</p>
+              {brief.topPriority && (
+                <div style={{ padding: '12px 16px', background: '#fee2e2', borderRadius: 10, marginBottom: 10 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 4 }}>Top Priority</p>
+                  <p style={{ fontSize: '0.92rem', fontWeight: 600, color: '#1a1a2e' }}>{brief.topPriority}</p>
+                </div>
+              )}
+              {brief.expectedOutcome && (
+                <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 6, borderLeft: '3px solid #16a34a' }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 4 }}>Expected Outcome (90 days)</p>
+                  <p style={{ fontSize: '0.92rem', color: '#1a1a2e' }}>{brief.expectedOutcome}</p>
+                </div>
+              )}
             </div>
           </>
         )}
-        {[
-          { key: 'targetAudience', label: 'Target Audience' },
-          { key: 'platformStrategy', label: 'Platform Strategy' },
-          { key: 'creativeDirection', label: 'Creative Direction' },
-          { key: 'budgetAllocation', label: 'Budget Allocation' },
-          { key: 'funnelStrategy', label: 'Funnel Strategy' },
-        ].map(({ key, label }) => d[key] && (
-          <div key={key} style={{ marginBottom: 32 }}>
-            <SectionTitle>{label}</SectionTitle>
-            <div style={{ padding: 20, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6' }}>
-              <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.7 }}>{d[key]}</p>
-            </div>
-          </div>
-        ))}
-        {d.ninetyDayPlan?.length > 0 && (
+
+        {/* Audit Scores */}
+        {scores.length > 0 && (
           <>
-            <SectionTitle sub="Week-by-week implementation roadmap">90-Day Action Plan</SectionTitle>
+            <SectionTitle sub="8-dimension audit scores with traffic-light status">Audit Scorecard</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 12, marginBottom: 32 }}>
+              {scores.map((s: any, i: number) => {
+                const sc = s.score ?? 0;
+                const status = s.status || (sc >= 70 ? 'green' : sc >= 45 ? 'yellow' : 'red');
+                return (
+                  <div key={i} style={{ padding: 18, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <ScoreBadge score={sc} label={s.dimension} />
+                    <div style={{ display: 'inline-block', marginTop: 8, padding: '3px 10px', background: '#f1f5f9', border: `1px solid ${statusColor(status)}`, borderRadius: 4 }}>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 700, color: statusColor(status) }}>{status.toUpperCase()}</p>
+                    </div>
+                    {s.summary && <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 10, lineHeight: 1.5 }}>{s.summary}</p>}
+                    {s.topRecommendation && <p style={{ fontSize: '0.75rem', color: '#7B2FBE', marginTop: 8, fontStyle: 'italic' }}>{s.topRecommendation}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Top Findings */}
+        {findings.length > 0 && (
+          <>
+            <SectionTitle sub="Client-presentation findings with revenue impact">Top Findings</SectionTitle>
             <div style={{ marginBottom: 32 }}>
-              {d.ninetyDayPlan.map((step: any, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 16, padding: '12px 16px', borderRadius: 10, background: i % 2 === 0 ? '#fafafe' : '#fff', border: '1px solid #f0eef6', marginBottom: 6 }}>
-                  <span style={{ fontWeight: 700, color: '#7B2FBE', minWidth: 80, fontSize: '0.85rem' }}>{step.week}</span>
-                  <p style={{ fontSize: '0.875rem', color: '#1a1a2e' }}>{step.action}</p>
+              {findings.map((f: any, i: number) => {
+                const sev = (f.severity || '').toLowerCase();
+                return (
+                  <div key={i} style={{ padding: '18px 20px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <span style={{ background: '#f1f5f9', border: `1px solid ${sev === 'critical' ? '#dc2626' : sev === 'high' ? '#d97706' : sev === 'medium' ? '#0284c7' : '#16a34a'}`, color: sev === 'critical' ? '#dc2626' : sev === 'high' ? '#d97706' : sev === 'medium' ? '#0284c7' : '#16a34a', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase' }}>{f.severity}</span>
+                      <strong style={{ color: '#1a1a2e', fontSize: '0.95rem' }}>{f.title}</strong>
+                    </div>
+                    {f.clientDescription && <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: 1.65, marginBottom: 10 }}>{f.clientDescription}</p>}
+                    {f.recommendedFix && <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 10, marginBottom: 8 }}><p style={{ fontSize: '0.83rem', color: '#1a1a2e' }}>Fix: {f.recommendedFix}</p></div>}
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                      {f.timeToImplement && <p style={{ fontSize: '0.75rem', color: '#8888a0' }}>⏱ {f.timeToImplement}</p>}
+                      {f.expectedImpact && <p style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>📈 {f.expectedImpact}</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Platform Recommendations */}
+        {platforms.length > 0 && (
+          <>
+            <SectionTitle sub="Which platforms to use and why">Platform Recommendations</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 14, marginBottom: 32 }}>
+              {platforms.map((p: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontWeight: 800, color: '#1a1a2e' }}>{p.platform}</p>
+                    <span style={{ fontWeight: 800, color: p.fitScore >= 70 ? '#16a34a' : p.fitScore >= 50 ? '#d97706' : '#dc2626', fontSize: '0.9rem' }}>{p.fitScore}/100</span>
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    {p.whyItFits && <p style={{ fontSize: '0.83rem', color: '#475569', marginBottom: 10, lineHeight: 1.55 }}>{p.whyItFits}</p>}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                      {p.expectedCPA && <div style={{ padding: '4px 10px', background: '#f8fafc', borderRadius: 8, fontSize: '0.78rem', color: '#1a1a2e' }}>CPA: {p.expectedCPA}</div>}
+                      {p.expectedROAS && <div style={{ padding: '4px 10px', background: '#f8fafc', borderRadius: 8, fontSize: '0.78rem', color: '#1a1a2e' }}>ROAS: {p.expectedROAS}</div>}
+                    </div>
+                    {p.budgetAllocation && <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#16a34a' }}>Allocation: {p.budgetAllocation}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Creative Brief */}
+        {creative.length > 0 && (
+          <>
+            <SectionTitle sub="Ad concept briefs for your creative team">Creative Brief</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 14, marginBottom: 32 }}>
+              {creative.map((c: any, i: number) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+                    <p style={{ fontWeight: 800, color: '#1a1a2e', fontSize: '0.9rem' }}>{c.conceptName || `Concept ${i + 1}`}</p>
+                    {c.format && <Tag>{c.format}</Tag>}
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    {c.hook && <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 0, marginBottom: 8, borderLeft: '3px solid #7B2FBE' }}><p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hook</p><p style={{ fontSize: '0.88rem', color: '#1e293b' }}>{c.hook}</p></div>}
+                    {c.visualDirection && <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 4 }}><strong style={{ color: '#1a1a2e' }}>Visual: </strong>{c.visualDirection}</p>}
+                    {c.copyDirection && <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 4 }}><strong style={{ color: '#1a1a2e' }}>Copy: </strong>{c.copyDirection}</p>}
+                    {c.targetAudience && <p style={{ fontSize: '0.78rem', color: '#8888a0', marginBottom: 4 }}>Audience: {c.targetAudience}</p>}
+                    {c.expectedCTR && <Tag color='#16a34a' bg='#f0fdf4'>CTR: {c.expectedCTR}</Tag>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Prioritised Recommendations */}
+        {recs.length > 0 && (
+          <>
+            <SectionTitle sub="Ordered by ROI impact — implement in this order">Prioritised Recommendations</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {recs.map((r: any, i: number) => {
+                const effortColor = { Low: '#16a34a', Medium: '#d97706', High: '#dc2626' }[(r.effort || 'Medium') as string] || '#64748b';
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 14, padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8, alignItems: 'flex-start' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#7B2FBE', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.82rem', flexShrink: 0 }}>{r.rank || i + 1}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                        <p style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.9rem' }}>{r.title || r.action}</p>
+                        {r.category && <Tag color='#7B2FBE' bg='#f3e8ff'>{r.category}</Tag>}
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>{r.effort} Effort</span>
+                      </div>
+                      {r.action && r.title && <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: 4 }}>{r.action}</p>}
+                      {r.expectedImpact && <p style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>Impact: {r.expectedImpact}</p>}
+                    </div>
+                    {r.timeline && <p style={{ fontSize: '0.78rem', color: '#8888a0', flexShrink: 0, whiteSpace: 'nowrap' }}>{r.timeline}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Investment Summary */}
+        {(invest.monthlyAdSpend || invest.results30Days) && (
+          <>
+            <SectionTitle sub="Monthly investment and expected return milestones">Investment Summary</SectionTitle>
+            <div style={{ padding: 24, background: 'linear-gradient(135deg,#1a1a2e,#2d1b69)', borderRadius: 16, marginBottom: 16, color: '#fff' }}>
+              {invest.monthlyAdSpend && <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>MONTHLY AD SPEND</p>}
+              {invest.monthlyAdSpend && <p style={{ fontSize: '2rem', fontWeight: 900, marginBottom: 20 }}>{invest.monthlyAdSpend}</p>}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+                {[['30 Days', invest.results30Days], ['60 Days', invest.results60Days], ['90 Days', invest.results90Days]].filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k as string} style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.08)', borderRadius: 12 }}>
+                    <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>{k as string}</p>
+                    <p style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.5 }}>{v as string}</p>
+                  </div>
+                ))}
+              </div>
+              {invest.breakEvenAnalysis && <p style={{ marginTop: 16, fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>{invest.breakEvenAnalysis}</p>}
+            </div>
+            {invest.platformBreakdown?.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                {invest.platformBreakdown.map((p: any, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: 14, padding: '8px 14px', background: i % 2 === 0 ? '#fafafe' : '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 4, alignItems: 'center' }}>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1a1a2e', flex: 1 }}>{p.platform}</p>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#16a34a' }}>{p.amount}</p>
+                    <p style={{ fontSize: '0.82rem', color: '#8888a0', minWidth: 40, textAlign: 'right' }}>{p.percentage}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Next Steps */}
+        {next.length > 0 && (
+          <>
+            <SectionTitle sub="First 30-day onboarding actions">Next Steps</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              {next.map((n: any, i: number) => (
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '12px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8, alignItems: 'flex-start' }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#16a34a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0 }}>{n.step || i + 1}</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{typeof n === 'string' ? n : n.action}</p>
+                    {n.owner && <p style={{ fontSize: '0.78rem', color: '#64748b' }}>Owner: {n.owner}</p>}
+                  </div>
+                  {n.timeline && <p style={{ fontSize: '0.78rem', color: '#7B2FBE', fontWeight: 600, flexShrink: 0 }}>{n.timeline}</p>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Benchmarks Appendix */}
+        {benchmarks.length > 0 && (
+          <>
+            <SectionTitle sub="Industry performance benchmarks across platforms">Benchmarks Appendix</SectionTitle>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', padding: '8px 14px', background: '#f8fafc', borderRadius: '10px 10px 0 0', border: '1px solid #e2e8f0' }}>
+                {['Platform', 'Metric', 'Industry Avg', 'Top Performer'].map(h => <p key={h} style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase' }}>{h}</p>)}
+              </div>
+              {benchmarks.map((b: any, i: number) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', padding: '10px 14px', background: i % 2 === 0 ? '#fff' : '#fafafe', border: '1px solid #e2e8f0', borderTop: 'none' }}>
+                  <p style={{ fontSize: '0.83rem', fontWeight: 600, color: '#7B2FBE' }}>{b.platform}</p>
+                  <p style={{ fontSize: '0.83rem', color: '#1a1a2e' }}>{b.metric}</p>
+                  <p style={{ fontSize: '0.83rem', color: '#64748b' }}>{b.industryAvg}</p>
+                  <p style={{ fontSize: '0.83rem', fontWeight: 700, color: '#16a34a' }}>{b.topPerformer}</p>
                 </div>
               ))}
             </div>
@@ -862,7 +1889,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
       <>
         {/* Overall verdict */}
         {(d.readyToRun !== undefined || d.estimatedReadinessGrade) && (
-          <div style={{ marginBottom: 32, padding: 24, borderRadius: 16, background: d.readyToRun ? '#f0fdf4' : '#fef2f2', border: `1px solid ${d.readyToRun ? '#a7f3d0' : '#fecaca'}` }}>
+          <div style={{ marginBottom: 32, padding: 24, borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: `4px solid ${d.readyToRun ? '#16a34a' : '#dc2626'}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <span style={{ fontSize: '2rem' }}>{d.readyToRun ? '🟢' : '🔴'}</span>
               <div>
@@ -887,7 +1914,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="5 key readiness signals checked">Readiness Signals</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12, marginBottom: 32 }}>
               {Object.entries(signals).map(([key, val]: [string, any]) => (
-                <div key={key} style={{ padding: '16px 18px', background: statusBg(val.status), border: `1px solid ${statusBorder(val.status)}`, borderRadius: 12 }}>
+                <div key={key} style={{ padding: '16px 18px', background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${statusColor(val.status)}`, borderRadius: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1a1a2e' }}>{signalLabels[key] || key}</p>
                     <span style={{ width: 22, height: 22, borderRadius: '50%', background: statusColor(val.status), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
@@ -942,9 +1969,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               {Object.entries(scores).map(([key, val]: [string, any]) => {
                 const score = Number(val) || 0;
                 return (
-                  <div key={key} style={{ padding: '16px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, textAlign: 'center' }}>
+                  <div key={key} style={{ padding: '16px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, textAlign: 'center' }}>
                     <div style={{ fontSize: '1.6rem', fontWeight: 800, color: scoreColor(score), marginBottom: 4 }}>{score}</div>
-                    <div style={{ width: '100%', height: 4, background: '#f0eef6', borderRadius: 2, marginBottom: 8 }}>
+                    <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 8 }}>
                       <div style={{ width: `${score}%`, height: '100%', background: scoreColor(score), borderRadius: 2 }} />
                     </div>
                     <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b' }}>{scoreLabels[key] || key}</p>
@@ -971,7 +1998,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Fix these in under 30 minutes each">Quick Wins</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {d.quickWins.map((win: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 10, marginBottom: 8 }}>
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0, marginBottom: 0, borderBottom: i < d.quickWins.length - 1 ? '1px solid #e2e8f0' : '1px solid #e2e8f0' }}>
                   <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '1rem' }}>{i + 1}.</span>
                   <p style={{ fontSize: '0.9rem', color: '#1a1a2e' }}>{win}</p>
                 </div>
@@ -986,7 +2013,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Drop-in replacements for your current headline">Headline Rewrites</SectionTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
               {d.headlineRewrites.map((h: string, i: number) => (
-                <div key={i} style={{ padding: '14px 18px', background: '#fafafe', border: '1px solid #f0eef6', borderRadius: 12, fontSize: '1rem', fontWeight: 600, color: '#1a1a2e' }}>
+                <div key={i} style={{ padding: '14px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: '1rem', fontWeight: 600, color: '#1a1a2e' }}>
                   "{h}"
                 </div>
               ))}
@@ -1000,9 +2027,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Better CTA copy and placement suggestions">CTA Improvements</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {d.ctaOptimizations.map((cta: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, marginBottom: 8 }}>
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 0, borderBottom: '1px solid #e2e8f0' }}>
                   <span style={{ color: '#d97706', fontWeight: 700 }}>→</span>
-                  <p style={{ fontSize: '0.9rem', color: '#1a1a2e' }}>{cta}</p>
+                  <p style={{ fontSize: '0.9rem', color: '#1e293b' }}>{cta}</p>
                 </div>
               ))}
             </div>
@@ -1015,9 +2042,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Missing trust elements that reduce conversion">Trust Signal Gaps</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {d.trustSignalGaps.map((gap: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: 8 }}>
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0, marginBottom: 0, borderBottom: '1px solid #e2e8f0' }}>
                   <span style={{ color: '#dc2626', fontWeight: 700 }}>✕</span>
-                  <p style={{ fontSize: '0.9rem', color: '#1a1a2e' }}>{gap}</p>
+                  <p style={{ fontSize: '0.9rem', color: '#1e293b' }}>{gap}</p>
                 </div>
               ))}
             </div>
@@ -1028,7 +2055,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.messagingRecommendations && (
           <>
             <SectionTitle sub="Align page copy with your paid ad messaging">Messaging Recommendations</SectionTitle>
-            <div style={{ padding: 20, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6', marginBottom: 32 }}>
+            <div style={{ padding: 20, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 32 }}>
               <p style={{ fontSize: '0.95rem', color: '#1a1a2e', lineHeight: 1.75 }}>{d.messagingRecommendations}</p>
             </div>
           </>
@@ -1048,9 +2075,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
     const seeds = d.lookalikeSeeds || [];
 
     const tierConfig = [
-      { key: 'cold', label: 'COLD — Top of Funnel', color: '#4285F4', bg: '#eff6ff', border: '#bfdbfe', desc: 'Cold interest-based audiences' },
-      { key: 'warm', label: 'WARM — Mid Funnel', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', desc: 'Engagement & lookalike audiences' },
-      { key: 'hot', label: 'HOT — Bottom Funnel', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', desc: 'Retargeting & customer lists' },
+      { key: 'cold', label: 'COLD — Top of Funnel', color: '#4285F4', desc: 'Cold interest-based audiences' },
+      { key: 'warm', label: 'WARM — Mid Funnel', color: '#f59e0b', desc: 'Engagement & lookalike audiences' },
+      { key: 'hot', label: 'HOT — Bottom Funnel', color: '#dc2626', desc: 'Retargeting & customer lists' },
     ];
 
     return (
@@ -1060,12 +2087,12 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           <>
             <SectionTitle sub="Your primary buyer persona — be specific, not assumed">Ideal Customer Profile (ICP)</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 24 }}>
-              <div style={{ padding: 24, background: 'linear-gradient(135deg,#8b5cf610,#7B2FBE10)', border: '1px solid #8b5cf640', borderRadius: 16 }}>
+              <div style={{ padding: 24, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Primary ICP</p>
                 <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a1a2e', marginBottom: 16 }}>{icp.name}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                   {[['Age Range', icp.ageRange], ['Income', icp.income], ['Role/Stage', icp.jobOrLifeStage]].map(([k, v]) => v ? (
-                    <div key={k as string} style={{ padding: '8px 12px', background: '#fff', borderRadius: 10, border: '1px solid #f0eef6' }}>
+                    <div key={k as string} style={{ padding: '8px 12px', background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                       <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8888a0', marginBottom: 2 }}>{k as string}</p>
                       <p style={{ fontSize: '0.85rem', color: '#1a1a2e', fontWeight: 600 }}>{v as string}</p>
                     </div>
@@ -1098,7 +2125,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               {/* Job to Be Done + Secondary ICP */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {(jtbd.functional || jtbd.emotional) && (
-                  <div style={{ padding: 20, background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, flex: 1 }}>
+                  <div style={{ padding: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, flex: 1 }}>
                     <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7B2FBE', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Job To Be Done</p>
                     {[['Functional', jtbd.functional, '#4285F4'], ['Emotional', jtbd.emotional, '#e8457a'], ['Social', jtbd.social, '#8b5cf6']].filter(([, v]) => v).map(([k, v, c]) => (
                       <div key={k as string} style={{ marginBottom: 10 }}>
@@ -1109,7 +2136,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                   </div>
                 )}
                 {sec.name && (
-                  <div style={{ padding: 18, background: '#fafafe', border: '1px solid #f0eef6', borderRadius: 14 }}>
+                  <div style={{ padding: 18, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14 }}>
                     <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Secondary ICP</p>
                     <p style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>{sec.name}</p>
                     <p style={{ fontSize: '0.83rem', color: '#64748b' }}>{sec.description}</p>
@@ -1126,20 +2153,20 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           <>
             <SectionTitle sub="Cold → Warm → Hot audience ladder for full-funnel coverage">Audience Tier Strategy</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
-              {tierConfig.map(({ key, label, color, bg, border }) => {
+              {tierConfig.map(({ key, label, color }) => {
                 const audiences: any[] = tiers[key] || [];
                 if (!audiences.length) return null;
                 return (
-                  <div key={key} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 18px', borderBottom: `1px solid ${border}` }}>
+                  <div key={key} style={{ background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}`, borderRadius: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 18px', borderBottom: '1px solid #e2e8f0' }}>
                       <p style={{ fontWeight: 800, fontSize: '0.88rem', color }}>{label}</p>
                     </div>
                     <div style={{ padding: 16 }}>
                       {audiences.map((a: any, i: number) => (
-                        <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < audiences.length - 1 ? `1px solid ${border}` : 'none' }}>
+                        <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < audiences.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
                           <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1a1a2e', marginBottom: 2 }}>{a.label || a}</p>
                           {a.rationale && <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 2 }}>{a.rationale}</p>}
-                          {a.estimatedReach && <span style={{ fontSize: '0.72rem', fontWeight: 600, color, background: `${color}15`, padding: '2px 8px', borderRadius: 12 }}>~{a.estimatedReach}</span>}
+                          {a.estimatedReach && <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4 }}>~{a.estimatedReach}</span>}
                         </div>
                       ))}
                     </div>
@@ -1158,7 +2185,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
 
               {/* Meta */}
               {pm.meta && (
-                <div style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden' }}>
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ background: '#1877F2', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>Meta Ads</span>
                     {pm.meta.recommendedBudgetSplit && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)' }}>{pm.meta.recommendedBudgetSplit}</span>}
@@ -1188,7 +2215,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
 
               {/* Google */}
               {pm.google && (
-                <div style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden' }}>
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ background: '#4285F4', padding: '10px 16px' }}>
                     <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>Google Ads</span>
                   </div>
@@ -1217,7 +2244,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
 
               {/* TikTok */}
               {pm.tiktok && (
-                <div style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden' }}>
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ background: '#000', padding: '10px 16px' }}>
                     <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>TikTok Ads</span>
                   </div>
@@ -1240,7 +2267,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
 
               {/* LinkedIn — only if B2B */}
               {pm.linkedin?.applicableIfB2B && (
-                <div style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden' }}>
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ background: '#0077B5', padding: '10px 16px' }}>
                     <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>LinkedIn Ads</span>
                   </div>
@@ -1264,7 +2291,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Ranked by conversion probability — use these as Lookalike seeds">Lookalike Seed Audiences</SectionTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
               {seeds.map((s: any, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, alignItems: 'flex-start' }}>
+                <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, alignItems: 'flex-start' }}>
                   <div style={{ width: 32, height: 32, borderRadius: '50%', background: i === 0 ? '#16a34a' : i === 1 ? '#f59e0b' : '#8888a0', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.88rem', flexShrink: 0 }}>
                     #{i + 1}
                   </div>
@@ -1335,10 +2362,10 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 const spendColor: Record<string, string> = { low: '#16a34a', medium: '#f59e0b', high: '#dc2626', heavy: '#7B2FBE' };
                 const sc = spendColor[(c.adSpendTier || '').toLowerCase()] || '#64748b';
                 return (
-                  <div key={i} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-                    <div style={{ background: `${sc}12`, padding: '14px 18px', borderBottom: '1px solid #f0eef6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden', boxShadow: 'none' }}>
+                    <div style={{ background: '#f8fafc', padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <strong style={{ color: '#1a1a2e', fontSize: '1rem' }}>{c.name}</strong>
-                      <span style={{ background: sc, color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{c.adSpendTier} Spend</span>
+                      <span style={{ background: sc, color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>{c.adSpendTier} Spend</span>
                     </div>
                     <div style={{ padding: 18 }}>
                       {c.estimatedMonthlySpend && <p style={{ fontSize: '0.78rem', color: sc, fontWeight: 700, marginBottom: 8 }}>Est. {c.estimatedMonthlySpend}/mo</p>}
@@ -1368,7 +2395,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Different product, same problem — alternative solutions your ICP might choose">Tier 2: Indirect Competitors</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12, marginBottom: 32 }}>
               {t2.map((c: any, i: number) => (
-                <div key={i} style={{ padding: '16px 18px', background: '#fafafe', border: '1px solid #f0eef6', borderRadius: 12 }}>
+                <div key={i} style={{ padding: '16px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12 }}>
                   <strong style={{ color: '#1a1a2e', display: 'block', marginBottom: 6 }}>{c.name}</strong>
                   <p style={{ fontSize: '0.83rem', color: '#64748b', marginBottom: 6 }}>{c.alternativeOffer || c.offer}</p>
                   {c.whyCustomersChooseThem && <p style={{ fontSize: '0.8rem', color: '#8888a0', fontStyle: 'italic', marginBottom: 6 }}>Why chosen: {c.whyCustomersChooseThem}</p>}
@@ -1405,7 +2432,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="What the competitive ad landscape looks like in your niche">Ad Intelligence</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16, marginBottom: 32 }}>
               {intel.dominantPlatforms?.length > 0 && (
-                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #f0eef6' }}>
+                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0' }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1877F2', textTransform: 'uppercase', marginBottom: 10 }}>Dominant Platforms</p>
                   {intel.dominantPlatforms.map((p: string, i: number) => <Tag key={i} color='#1877F2' bg='#eff6ff'>{p}</Tag>)}
                 </div>
@@ -1423,7 +2450,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 </div>
               )}
               {(intel.industryCPMRange || intel.industryCPARange) && (
-                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #f0eef6' }}>
+                <div style={{ padding: 18, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0' }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 10 }}>Industry Benchmarks</p>
                   {intel.industryCPMRange && <p style={{ fontSize: '0.85rem', color: '#1a1a2e', marginBottom: 4 }}>CPM: {intel.industryCPMRange}</p>}
                   {intel.industryCPARange && <p style={{ fontSize: '0.85rem', color: '#1a1a2e', marginBottom: 4 }}>CPA: {intel.industryCPARange}</p>}
@@ -1441,14 +2468,14 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16, marginBottom: 32 }}>
               {[
                 { label: 'Platform Gaps', items: gaps.platformGaps, color: '#4285F4', bg: '#eff6ff' },
-                { label: 'Offer Gaps', items: gaps.offerGaps, color: '#e8457a', bg: '#fff0f3' },
-                { label: 'Audience Gaps', items: gaps.audienceGaps, color: '#7B2FBE', bg: '#f3e8ff' },
-                { label: 'Creative Gaps', items: gaps.creativeGaps, color: '#00c9a7', bg: '#f0fdf9' },
-                { label: 'Messaging Gaps', items: gaps.messagingGaps, color: '#f59e0b', bg: '#fffbeb' },
-              ].map(({ label, items, color, bg }) => {
+                { label: 'Offer Gaps', items: gaps.offerGaps, color: '#e8457a' },
+                { label: 'Audience Gaps', items: gaps.audienceGaps, color: '#7B2FBE' },
+                { label: 'Creative Gaps', items: gaps.creativeGaps, color: '#00c9a7' },
+                { label: 'Messaging Gaps', items: gaps.messagingGaps, color: '#f59e0b' },
+              ].map(({ label, items, color }) => {
                 const normalizedItems = Array.isArray(items) ? items.map((item: any) => typeof item === 'string' ? item : `${item.platform || ''}: ${item.opportunity || ''}`) : [];
                 return normalizedItems.length ? (
-                  <div key={label} style={{ padding: 18, background: bg, borderRadius: 14, border: `1px solid ${color}30` }}>
+                  <div key={label} style={{ padding: 18, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}` }}>
                     <p style={{ fontSize: '0.78rem', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>{label}</p>
                     <ul style={{ paddingLeft: 16 }}>
                       {normalizedItems.map((item: string, i: number) => (
@@ -1469,7 +2496,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             {(playbook.currentPositioning || playbook.recommendedPositioning) && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 {playbook.currentPositioning && (
-                  <div style={{ padding: 18, background: '#fafafe', borderRadius: 14, border: '1px solid #f0eef6' }}>
+                  <div style={{ padding: 18, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0' }}>
                     <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase', marginBottom: 8 }}>Current Positioning</p>
                     <p style={{ fontSize: '0.9rem', color: '#1a1a2e', lineHeight: 1.6 }}>{playbook.currentPositioning}</p>
                   </div>
@@ -1509,7 +2536,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 10 }}>Tagline Options</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {playbook.taglineOptions.map((t: string, i: number) => (
-                    <div key={i} style={{ padding: '8px 16px', background: '#fafafe', border: '1px solid #f0eef6', borderRadius: 20, fontSize: '0.9rem', fontWeight: 600, color: '#1a1a2e', fontStyle: 'italic' }}>
+                    <div key={i} style={{ padding: '8px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 20, fontSize: '0.9rem', fontWeight: 600, color: '#1a1a2e', fontStyle: 'italic' }}>
                       "{t}"
                     </div>
                   ))}
@@ -1570,10 +2597,10 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           ].map(({ label, score, sub }) => {
             const c = scoreColor(score);
             return (
-              <div key={label} style={{ padding: 24, background: `${c}08`, border: `1px solid ${c}30`, borderRadius: 14, textAlign: 'center' }}>
-                <div style={{ fontSize: '2.5rem', fontWeight: 900, color: c, marginBottom: 4 }}>{score}</div>
-                <p style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{label}</p>
-                <p style={{ fontSize: '0.8rem', color: '#8888a0' }}>{sub}</p>
+              <div key={label} style={{ padding: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: c, marginBottom: 4 }}>{score}</div>
+                <p style={{ fontWeight: 600, color: '#0f172a', marginBottom: 2, fontSize: '0.875rem' }}>{label}</p>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{sub}</p>
               </div>
             );
           })}
@@ -1587,9 +2614,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               {Object.entries(lp).map(([key, val]: [string, any]) => {
                 const s = Number(val) || 0;
                 return (
-                  <div key={key} style={{ padding: '14px 16px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, textAlign: 'center' }}>
+                  <div key={key} style={{ padding: '14px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, textAlign: 'center' }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: 800, color: scoreColor(s), marginBottom: 4 }}>{s}</div>
-                    <div style={{ width: '100%', height: 4, background: '#f0eef6', borderRadius: 2, marginBottom: 8 }}>
+                    <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 8 }}>
                       <div style={{ width: `${s}%`, height: '100%', background: scoreColor(s), borderRadius: 2 }} />
                     </div>
                     <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b' }}>{lpLabels[key] || key}</p>
@@ -1621,9 +2648,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                     <div style={{ padding: 16 }}>
                       {stage.currentState && <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: 12 }}>{stage.currentState}</p>}
                       {(stage.recommendedAdType || stage.recommendedOffer) && (
-                        <div style={{ padding: '8px 12px', background: `${color}10`, borderRadius: 8, marginBottom: 10 }}>
-                          <p style={{ fontSize: '0.78rem', fontWeight: 700, color, marginBottom: 2 }}>Recommended</p>
-                          <p style={{ fontSize: '0.83rem', color: '#1a1a2e' }}>{stage.recommendedAdType || stage.recommendedOffer}</p>
+                        <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, marginBottom: 10, borderLeft: '3px solid #7B2FBE' }}>
+                          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7B2FBE', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recommended</p>
+                          <p style={{ fontSize: '0.83rem', color: '#0f172a' }}>{stage.recommendedAdType || stage.recommendedOffer}</p>
                         </div>
                       )}
                       {stage.retargetingWindow && <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 6 }}>Retargeting Window: {stage.retargetingWindow}</p>}
@@ -1642,7 +2669,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                       {stage.recommendedContent?.length > 0 && (
                         <div style={{ marginTop: 8 }}>
                           <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>Content Ideas</p>
-                          {stage.recommendedContent.map((c: string, i: number) => <Tag key={i} color={color} bg={`${color}15`}>{c}</Tag>)}
+                          {stage.recommendedContent.map((c: string, i: number) => <Tag key={i} color='#475569' bg='#f1f5f9'>{c}</Tag>)}
                         </div>
                       )}
                     </div>
@@ -1658,13 +2685,13 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           <>
             <SectionTitle sub="How to route different audiences through the funnel">Audience Routing Logic</SectionTitle>
             <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0, marginBottom: 6, padding: '8px 14px', background: '#f8f7fc', borderRadius: '10px 10px 0 0', border: '1px solid #f0eef6' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0, marginBottom: 6, padding: '8px 14px', background: '#f8fafc', borderRadius: '10px 10px 0 0', border: '1px solid #e2e8f0' }}>
                 {['Audience Type', 'Ad Objective', 'Creative Direction', 'Pixel Event'].map(h => (
                   <p key={h} style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8888a0', textTransform: 'uppercase' }}>{h}</p>
                 ))}
               </div>
               {routing.map((row: any, i: number) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0, padding: '12px 14px', background: i % 2 === 0 ? '#fff' : '#fafafe', border: '1px solid #f0eef6', borderTop: 'none' }}>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0, padding: '12px 14px', background: i % 2 === 0 ? '#fff' : '#fafafe', border: '1px solid #e2e8f0', borderTop: 'none' }}>
                   <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a1a2e' }}>{row.audienceType}</p>
                   <p style={{ fontSize: '0.83rem', color: '#7B2FBE' }}>{row.adObjective}</p>
                   <p style={{ fontSize: '0.83rem', color: '#475569' }}>{row.creative}</p>
@@ -1683,14 +2710,14 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               {buildSeq.map((step: any, i: number) => {
                 const effortColor = { Low: '#16a34a', Medium: '#d97706', High: '#dc2626' }[(step.effort || 'Medium') as string] || '#64748b';
                 return (
-                  <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, marginBottom: 8, alignItems: 'flex-start' }}>
+                  <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8, alignItems: 'flex-start' }}>
                     <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#7B2FBE', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>
                       {step.step || i + 1}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                         <p style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.9rem' }}>{step.action}</p>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: effortColor, background: `${effortColor}15`, padding: '2px 8px', borderRadius: 12 }}>{step.effort} Effort</span>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: effortColor, background: '#f1f5f9', padding: '2px 8px', borderRadius: 4, border: `1px solid #e2e8f0` }}>{step.effort} Effort</span>
                       </div>
                       {step.impact && <p style={{ fontSize: '0.82rem', color: '#64748b' }}>Impact: {step.impact}</p>}
                     </div>
@@ -1707,8 +2734,8 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Top issues killing conversions right now">Conversion Blockers</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {blockers.map((b: any, i: number) => (
-                <div key={i} style={{ padding: '14px 18px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, marginBottom: 8 }}>
-                  <p style={{ fontWeight: 700, color: '#dc2626', marginBottom: 4, fontSize: '0.9rem' }}>{typeof b === 'string' ? b : b.blocker}</p>
+                <div key={i} style={{ padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0, marginBottom: 8 }}>
+                  <p style={{ fontWeight: 700, color: '#1e293b', marginBottom: 4, fontSize: '0.9rem' }}>{typeof b === 'string' ? b : b.blocker}</p>
                   {b.impact && <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 4 }}>Impact: {b.impact}</p>}
                   {b.fix && (
                     <div style={{ padding: '6px 10px', background: '#fff', borderRadius: 8, marginTop: 6 }}>
@@ -1730,7 +2757,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 <div>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 10 }}>Headline Rewrites</p>
                   {d.headlineRewrites.map((h: string, i: number) => (
-                    <div key={i} style={{ padding: '12px 16px', background: '#fafafe', border: '1px solid #f0eef6', borderRadius: 10, marginBottom: 6, fontSize: '0.9rem', fontWeight: 600, color: '#1a1a2e' }}>"{h}"</div>
+                    <div key={i} style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 6, fontSize: '0.9rem', fontWeight: 600, color: '#1a1a2e' }}>"{h}"</div>
                   ))}
                 </div>
               )}
@@ -1789,7 +2816,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 const rc = recColor(p.recommendation);
                 const rb = recBg(p.recommendation);
                 return (
-                  <div key={i} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, overflow: 'hidden' }}>
+                  <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px' }}>
                       <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f0eef6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#7B2FBE', fontSize: '0.85rem', flexShrink: 0 }}>
                         #{i + 1}
@@ -1833,7 +2860,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 const stage = budgetAlloc[key];
                 if (!stage) return null;
                 return (
-                  <div key={key} style={{ padding: 18, background: '#fff', border: `1px solid ${color}30`, borderRadius: 14, textAlign: 'center' }}>
+                  <div key={key} style={{ padding: 18, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, textAlign: 'center' }}>
                     <p style={{ fontSize: '0.8rem', fontWeight: 700, color, textTransform: 'uppercase', marginBottom: 8 }}>{label}</p>
                     {stage.dollars && <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#1a1a2e', marginBottom: 2 }}>{stage.dollars}</p>}
                     {stage.percentage && <p style={{ fontSize: '0.88rem', color: '#8888a0', marginBottom: 8 }}>{stage.percentage}</p>}
@@ -1851,7 +2878,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="How to evolve your budget as performance data comes in">Budget Ramp Plan</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 32 }}>
               {[['Month 1', monthly.month1, '#4285F4'], ['Month 3', monthly.month3, '#7B2FBE'], ['Month 6', monthly.month6, '#16a34a']].filter(([, v]) => v).map(([label, val, c]) => (
-                <div key={label as string} style={{ padding: 18, background: '#fafafe', border: `1px solid ${c as string}30`, borderRadius: 14 }}>
+                <div key={label as string} style={{ padding: 18, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: c as string, textTransform: 'uppercase', marginBottom: 8 }}>{label as string}</p>
                   <p style={{ fontSize: '0.88rem', color: '#1a1a2e', lineHeight: 1.6 }}>{val as string}</p>
                 </div>
@@ -1874,7 +2901,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 const bench = kpi[key];
                 if (!bench) return null;
                 return (
-                  <div key={key} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, overflow: 'hidden' }}>
+                  <div key={key} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
                     <div style={{ background: color, padding: '10px 16px' }}>
                       <p style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>{label}</p>
                     </div>
@@ -1909,7 +2936,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Platform-specific bid strategy recommendations">Bidding Strategies</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {bidding.map((b: any, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #f0eef6', borderRadius: 12, marginBottom: 8 }}>
+                <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 8 }}>
                   <div style={{ flexShrink: 0, minWidth: 80 }}>
                     <p style={{ fontWeight: 700, color: '#7B2FBE', fontSize: '0.88rem' }}>{b.platform}</p>
                   </div>
@@ -1958,7 +2985,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             {scaling.milestones?.length > 0 && (
               <div style={{ marginBottom: 32 }}>
                 {scaling.milestones.map((m: any, i: number) => (
-                  <div key={i} style={{ display: 'flex', gap: 16, padding: '12px 16px', background: i % 2 === 0 ? '#fafafe' : '#fff', border: '1px solid #f0eef6', borderRadius: 10, marginBottom: 6 }}>
+                  <div key={i} style={{ display: 'flex', gap: 16, padding: '12px 16px', background: i % 2 === 0 ? '#fafafe' : '#fff', border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 6 }}>
                     <span style={{ fontWeight: 700, color: '#7B2FBE', minWidth: 70 }}>{m.period}</span>
                     <p style={{ fontSize: '0.85rem', color: '#475569', flex: 1 }}>Target: {m.target}</p>
                     <p style={{ fontSize: '0.83rem', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>{m.budgetAction}</p>
@@ -2007,7 +3034,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="How to split your Google Ads budget across campaign types">Budget Breakdown</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 32 }}>
               {[['Search', budget.search, '#4285F4'], ['Shopping', budget.shopping, '#0f9d58'], ['Display', budget.display, '#f4b400'], ['Perf Max', budget.performanceMax, '#db4437']].filter(([, v]) => v).map(([k, v, c]) => (
-                <div key={k as string} style={{ padding: 16, background: '#fff', border: `1px solid ${c as string}30`, borderRadius: 14, textAlign: 'center' }}>
+                <div key={k as string} style={{ padding: 16, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, textAlign: 'center' }}>
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, color: c as string, textTransform: 'uppercase', marginBottom: 6 }}>{k as string}</p>
                   <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a1a2e' }}>{v as string}</p>
                 </div>
@@ -2022,7 +3049,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Full campaign architecture for Google Search">Search Campaign Structure</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {search.map((c: any, i: number) => (
-                <div key={i} style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, marginBottom: 12, overflow: 'hidden' }}>
+                <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 12, overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', borderBottom: '1px solid #f0eef6' }}>
                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#4285F4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>{i + 1}</div>
                     <div style={{ flex: 1 }}>
@@ -2058,15 +3085,15 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               {kw.map((b: any, i: number) => {
                 const c = intentColor[b.category] || '#64748b';
                 return (
-                  <div key={i} style={{ padding: 18, background: '#fff', borderRadius: 14, border: `1px solid ${c}25` }}>
+                  <div key={i} style={{ padding: 18, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: c, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{b.category}</p>
-                      {b.matchTypes && <Tag color={c} bg={`${c}15`}>{b.matchTypes}</Tag>}
+                      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{b.category}</p>
+                      {b.matchTypes && <Tag color='#475569' bg='#f1f5f9'>{b.matchTypes}</Tag>}
                     </div>
                     {b.intent && <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 10 }}>{b.intent}</p>}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {(b.keywords || []).map((k: string, j: number) => (
-                        <div key={j} style={{ padding: '4px 10px', background: `${c}12`, borderRadius: 8, fontSize: '0.82rem', color: c, fontWeight: 500 }}>{k}</div>
+                        <div key={j} style={{ padding: '4px 10px', background: '#f1f5f9', borderRadius: 4, fontSize: '0.82rem', color: '#1e293b', fontWeight: 500, border: '1px solid #e2e8f0' }}>{k}</div>
                       ))}
                     </div>
                     {b.bidModifier && <p style={{ fontSize: '0.75rem', color: '#8888a0', marginTop: 10 }}>Bid modifier: {b.bidModifier}</p>}
@@ -2081,7 +3108,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {(rsa.headlines?.length > 0 || rsa.descriptions?.length > 0) && (
           <>
             <SectionTitle sub="Responsive Search Ad assets — paste directly into Google Ads">RSA Copy Bank</SectionTitle>
-            <div style={{ background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, padding: 24, marginBottom: 32 }}>
+            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 32 }}>
               {rsa.pinnedHeadline1 && (
                 <div style={{ padding: '10px 14px', background: '#f0f7ff', borderRadius: 10, marginBottom: 16, display: 'flex', gap: 10 }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4285F4' }}>PIN H1</span>
@@ -2102,7 +3129,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 <div>
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4285F4', textTransform: 'uppercase', marginBottom: 10 }}>Descriptions (max 90 chars each)</p>
                   {rsa.descriptions.map((desc: string, i: number) => (
-                    <p key={i} style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.6, marginBottom: 6, padding: '8px 12px', background: '#fafafe', borderRadius: 8 }}>{desc}</p>
+                    <p key={i} style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.6, marginBottom: 6, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>{desc}</p>
                   ))}
                 </div>
               )}
@@ -2114,7 +3141,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {shopping.applicable && (
           <>
             <SectionTitle sub="Google Shopping and Performance Max for e-commerce">Shopping Strategy</SectionTitle>
-            <div style={{ padding: 20, background: '#fff', border: '1px solid #f0eef6', borderRadius: 14, marginBottom: 32 }}>
+            <div style={{ padding: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
               {shopping.structure && <p style={{ fontSize: '0.9rem', color: '#1a1a2e', marginBottom: 14 }}>{shopping.structure}</p>}
               {shopping.feedOptimizationTips?.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
@@ -2138,7 +3165,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Display and remarketing campaign setup">Display & Remarketing</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
               {display.audienceSegments?.map((seg: any, i: number) => (
-                <div key={i} style={{ padding: 16, background: '#fff', border: '1px solid #f0eef6', borderRadius: 12 }}>
+                <div key={i} style={{ padding: 16, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
                   <p style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 4, fontSize: '0.9rem' }}>{seg.segment}</p>
                   {seg.adAngle && <p style={{ fontSize: '0.83rem', color: '#64748b', marginBottom: 6 }}>{seg.adAngle}</p>}
                   {seg.frequencyCap && <Tag color='#f4b400' bg='#fffbeb'>Cap: {seg.frequencyCap}</Tag>}
@@ -2169,7 +3196,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {pmax.applicable && (
           <>
             <SectionTitle sub="Performance Max campaign setup and asset groups">Performance Max</SectionTitle>
-            <div style={{ padding: 20, background: '#fafafe', border: '1px solid #f0eef6', borderRadius: 14, marginBottom: 32 }}>
+            <div style={{ padding: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 32 }}>
               {pmax.assetGroups?.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#db4437', textTransform: 'uppercase', marginBottom: 8 }}>Asset Groups</p>
@@ -2229,17 +3256,17 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 {Array.isArray(val) ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {val.map((item, i) => (
-                      <div key={i} style={{ padding: '8px 14px', background: '#fafafe', borderRadius: 10, border: '1px solid #f0eef6', fontSize: '0.875rem', color: '#1a1a2e' }}>
+                      <div key={i} style={{ padding: '8px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.875rem', color: '#1a1a2e' }}>
                         {typeof item === 'string' ? item : JSON.stringify(item)}
                       </div>
                     ))}
                   </div>
                 ) : typeof val === 'object' ? (
-                  <div style={{ padding: 16, background: '#fafafe', borderRadius: 12, border: '1px solid #f0eef6', fontFamily: 'monospace', fontSize: '0.83rem', whiteSpace: 'pre-wrap', color: '#475569' }}>
+                  <div style={{ padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.83rem', whiteSpace: 'pre-wrap', color: '#475569' }}>
                     {JSON.stringify(val, null, 2)}
                   </div>
                 ) : (
-                  <p style={{ padding: '12px 16px', background: '#fafafe', borderRadius: 10, border: '1px solid #f0eef6', fontSize: '0.9rem', color: '#1a1a2e', lineHeight: 1.65 }}>{String(val)}</p>
+                  <p style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.9rem', color: '#1a1a2e', lineHeight: 1.65 }}>{String(val)}</p>
                 )}
               </div>
             );
@@ -2260,36 +3287,32 @@ const TIPS = [
 ];
 
 // ─── Progress step card ───────────────────────────────────────────
-function ProgressCard({ label, desc, progress, color }: { label: string; desc: string; progress: number; color: string }) {
+function ProgressCard({ label, desc, progress }: { label: string; desc: string; progress: number; color: string }) {
   const done = progress >= 100;
   return (
-    <div style={{
-      background: '#fff',
-      border: `1px solid ${done ? color + '40' : '#f0eef6'}`,
-      borderRadius: 14,
-      padding: '16px 20px',
-      marginBottom: 10,
-      transition: 'border-color 0.4s',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: done ? color : '#f4f2fa', border: `2px solid ${done ? color : '#e8e6f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.4s' }}>
-            {done
-              ? <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" width="16" height="16"><path d="M5 13l4 4L19 7"/></svg>
-              : <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, opacity: 0.4 }} />
-            }
-          </div>
-          <div>
-            <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1a1a2e' }}>{label}</p>
-            <p style={{ fontSize: '0.78rem', color: '#8888a0', marginTop: 1 }}>{done ? 'Complete' : desc}</p>
-          </div>
-        </div>
-        <span style={{ fontSize: '0.83rem', fontWeight: 700, color: done ? color : '#b0b0c0' }}>
-          {done ? 'Done' : `${Math.round(progress)}%`}
-        </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 18, marginBottom: 18, borderBottom: '1px solid #f1f5f9' }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%',
+        background: done ? '#0f172a' : '#f8fafc',
+        border: `1.5px solid ${done ? '#0f172a' : '#e2e8f0'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, transition: 'all 0.3s',
+      }}>
+        {done
+          ? <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" width="13" height="13"><path d="M5 13l4 4L19 7"/></svg>
+          : <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#cbd5e1' }} />
+        }
       </div>
-      <div style={{ height: 4, background: '#f0eef6', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${progress}%`, background: color, borderRadius: 4, transition: 'width 0.3s ease' }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: done ? '#0f172a' : '#64748b' }}>{label}</span>
+          <span style={{ fontSize: '0.78rem', color: done ? '#16a34a' : '#94a3b8', fontWeight: 600 }}>
+            {done ? 'Done' : `${Math.round(progress)}%`}
+          </span>
+        </div>
+        <div style={{ height: 3, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${progress}%`, background: done ? '#16a34a' : '#0f172a', borderRadius: 3, transition: 'width 0.4s ease' }} />
+        </div>
       </div>
     </div>
   );
@@ -2308,6 +3331,7 @@ export default function SkillReport() {
   const [showBrandingModal, setShowBrandingModal] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTip, setCurrentTip] = useState(0);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
   const startedRef = useRef(false);
 
   const url = searchParams.get('url') || '';
@@ -2426,8 +3450,8 @@ export default function SkillReport() {
     ];
 
     return (
-      <div style={{ minHeight: '100vh', background: '#f8f7fc', display: 'flex', flexDirection: 'column' }}>
-        <nav className="navbar">
+      <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
+        <nav className="navbar" style={{ borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
           <div className="nav-inner">
             <div className="nav-brand">
               <ZieAdsLogo size={34} />
@@ -2436,40 +3460,37 @@ export default function SkillReport() {
           </div>
         </nav>
 
-        <div style={{ flex: 1, maxWidth: 600, margin: '0 auto', padding: '60px 24px', width: '100%' }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 12, display: 'flex', justifyContent: 'center', color: meta.color }}>
-              {typeof meta.icon === 'string' ? meta.icon : meta.icon}
-            </div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#1a1a2e', letterSpacing: '-0.02em', marginBottom: 8 }}>
-              Running {meta.title}...
-            </h1>
-            <p style={{ color: '#8888a0', fontSize: '0.9rem' }}>
-              Analyzing <strong style={{ color: '#475569' }}>{businessName || url}</strong>
+        <div style={{ flex: 1, maxWidth: 520, margin: '0 auto', padding: '72px 24px 60px', width: '100%' }}>
+          <div style={{ marginBottom: 40 }}>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+              Analyzing {businessName || url}
             </p>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 6px' }}>
+              {meta.title}
+            </h1>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>This usually takes 30–60 seconds</p>
           </div>
 
-          {/* Overall bar */}
-          <div style={{ background: '#fff', borderRadius: 16, padding: 20, border: '1px solid #f0eef6', marginBottom: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: '0.83rem', fontWeight: 700, color: '#1a1a2e' }}>Overall Progress</span>
-              <span style={{ fontSize: '0.83rem', fontWeight: 700, color: meta.color }}>{Math.round(progress)}%</span>
+          {/* Progress bar */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>Progress</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>{Math.round(progress)}%</span>
             </div>
-            <div style={{ height: 8, background: '#f0eef6', borderRadius: 8 }}>
-              <div style={{ height: '100%', width: `${progress}%`, background: `linear-gradient(90deg,${meta.color},${meta.color}99)`, borderRadius: 8, transition: 'width 0.3s ease' }} />
+            <div style={{ height: 4, background: '#f1f5f9', borderRadius: 4 }}>
+              <div style={{ height: '100%', width: `${progress}%`, background: '#0f172a', borderRadius: 4, transition: 'width 0.4s ease' }} />
             </div>
           </div>
 
-          {/* Step cards */}
+          {/* Steps */}
           {steps.map((s, i) => (
             <ProgressCard key={i} label={s.label} desc={s.desc} progress={s.pct} color={meta.color} />
           ))}
 
           {/* Tip */}
-          <div style={{ marginTop: 32, padding: '16px 20px', background: `${meta.color}08`, borderRadius: 14, border: `1px solid ${meta.color}20`, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <Lightbulb size={20} style={{ color: meta.color, flexShrink: 0 }} />
-            <p style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.6 }}>{TIPS[currentTip]}</p>
+          <div style={{ marginTop: 36, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <Lightbulb size={16} style={{ color: '#94a3b8', flexShrink: 0, marginTop: 2 }} />
+            <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>{TIPS[currentTip]}</p>
           </div>
         </div>
       </div>
@@ -2479,26 +3500,26 @@ export default function SkillReport() {
   // ── Error view ────────────────────────────────────────────────────
   if (status === 'error') {
     return (
-      <div style={{ minHeight: '100vh', background: '#f8f7fc', display: 'flex', flexDirection: 'column' }}>
-        <nav className="navbar">
+      <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
+        <nav className="navbar" style={{ borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
           <div className="nav-inner">
             <div className="nav-brand"><ZieAdsLogo size={34} /><span className="brand-name">{agencyName}</span></div>
-            <button onClick={() => navigate('/clients')} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '6px 14px', fontSize: '0.83rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+            <button onClick={() => navigate('/clients')} style={{ background: 'none', border: 'none', fontSize: '0.83rem', fontWeight: 500, color: '#64748b', cursor: 'pointer' }}>
               ← Dashboard
             </button>
           </div>
         </nav>
-        <div style={{ maxWidth: 480, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
+        <div style={{ maxWidth: 440, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, color: '#dc2626' }}>
-            <AlertTriangle size={48} />
+            <AlertTriangle size={40} />
           </div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1a1a2e', marginBottom: 12 }}>Analysis Failed</h2>
-          <p style={{ color: '#64748b', marginBottom: 24, lineHeight: 1.6 }}>{error}</p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <button onClick={() => navigate('/clients')} style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, color: '#64748b' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>Analysis Failed</h2>
+          <p style={{ color: '#64748b', marginBottom: 28, lineHeight: 1.6, fontSize: '0.875rem' }}>{error}</p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+            <button onClick={() => navigate('/clients')} style={{ padding: '9px 18px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, color: '#64748b', fontSize: '0.875rem' }}>
               Back to Dashboard
             </button>
-            <button onClick={() => { setStatus('loading'); startedRef.current = false; }} style={{ padding: '10px 20px', borderRadius: 10, background: meta.color, border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+            <button onClick={() => { setStatus('loading'); startedRef.current = false; }} style={{ padding: '9px 18px', borderRadius: 6, background: '#0f172a', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem' }}>
               Retry
             </button>
           </div>
@@ -2509,16 +3530,16 @@ export default function SkillReport() {
 
   // ── Result view ───────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f7fc' }}>
+    <div style={{ minHeight: '100vh', background: '#fff' }}>
       {/* Navbar */}
-      <nav className="navbar" style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav className="navbar" style={{ position: 'sticky', top: 0, zIndex: 100, background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
         <div className="nav-inner">
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div className="nav-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
               <ZieAdsLogo size={34} />
               <span className="brand-name">{agencyName}</span>
             </div>
-            <button onClick={() => navigate('/clients')} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '6px 14px', fontSize: '0.83rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+            <button onClick={() => navigate('/clients')} style={{ background: 'none', border: 'none', padding: '6px 2px', fontSize: '0.83rem', fontWeight: 500, color: '#64748b', cursor: 'pointer' }}>
               ← Dashboard
             </button>
           </div>
@@ -2526,60 +3547,63 @@ export default function SkillReport() {
             <button onClick={() => setShowBrandingModal(true)} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '6px 14px', fontSize: '0.83rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
               White-Label
             </button>
-            <button onClick={() => window.print()} style={{ background: 'linear-gradient(135deg,#9B59D0,#5c8aff)', border: 'none', borderRadius: 20, padding: '6px 16px', fontSize: '0.83rem', fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              disabled={downloadingPDF}
+              onClick={async () => {
+                if (!result) return;
+                setDownloadingPDF(true);
+                try {
+                  await generateSkillPDF(
+                    meta.title,
+                    skillName,
+                    businessName,
+                    url,
+                    result,
+                    { isAgency: agencyName !== 'ZieAds', agencyName }
+                  );
+                } finally {
+                  setDownloadingPDF(false);
+                }
+              }}
+              style={{ background: '#1a1a2e', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: '0.83rem', fontWeight: 600, color: '#fff', cursor: downloadingPDF ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: downloadingPDF ? 0.6 : 1 }}
+            >
               <Download size={14} />
-              Export PDF
+              {downloadingPDF ? 'Generating…' : 'Download PDF'}
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Intelligence Brief Header */}
-      <div style={{
-        background: `linear-gradient(135deg, ${meta.color}18, ${meta.color}06)`,
-        borderBottom: `1px solid ${meta.color}20`,
-        padding: '40px 0 32px',
-      }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
+      {/* Report Header */}
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '32px 0 28px', background: '#fff' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 32px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <span style={{ fontSize: '2rem', color: meta.color }}>
-                  {typeof meta.icon === 'string' ? meta.icon : React.cloneElement(meta.icon as React.ReactElement<{ size?: number }>, { size: 32 })}
-                </span>
-                <div>
-                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                    {agencyName} · Intelligence Brief
-                  </p>
-                  <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1a1a2e', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
-                    {meta.title}
-                  </h1>
-                </div>
-              </div>
-              {url && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: '0.8rem', color: '#8888a0' }}>Analyzing:</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>{businessName || url}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12 }}>
-                <Tag color={meta.color} bg={`${meta.color}15`}>{meta.platform}</Tag>
-                <span style={{ fontSize: '0.78rem', color: '#b0b0c0' }}>
-                  {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+                {agencyName} · {meta.platform}
+              </p>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.2, margin: '0 0 12px' }}>
+                {meta.title}
+              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {(businessName || url) && (
+                  <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 500 }}>
+                    {businessName || url}
+                  </span>
+                )}
+                <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#cbd5e1', display: 'inline-block' }} />
+                <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                  {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </span>
               </div>
             </div>
-            {score > 0 && (
-              <div style={{ background: '#fff', borderRadius: 16, padding: '20px 28px', border: '1px solid #f0eef6', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-                <ScoreBadge score={score} label="Score" />
-              </div>
-            )}
+            {score > 0 && <ScoreBadge score={score} label="Score" />}
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px' }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 32px 100px' }}>
         {result && (
           <>
             {/* Live Ad Creative Analysis */}
@@ -2587,11 +3611,11 @@ export default function SkillReport() {
               <LiveAdsSection url={url} businessName={businessName} accentColor={meta.color} skillData={result} />
             )}
 
-            {/* Findings (universal) */}
+            {/* Findings */}
             {result.findings?.length > 0 && (
               <>
                 <SectionTitle sub={`${result.findings.length} issues identified`}>Key Findings</SectionTitle>
-                <div style={{ marginBottom: 32 }}>
+                <div style={{ marginBottom: 16 }}>
                   {result.findings.slice(0, 5).map((f: any, i: number) => <FindingRow key={i} {...f} />)}
                 </div>
               </>
@@ -2600,13 +3624,13 @@ export default function SkillReport() {
             {/* Skill-specific content */}
             {renderSkillContent(skillName, result, businessName, url)}
 
-            {/* Footer CTA */}
-            <div style={{ marginTop: 48, padding: 32, background: 'linear-gradient(135deg,#7B2FBE15,#5c8aff10)', borderRadius: 20, border: '1px solid #7B2FBE20', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7B2FBE', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                {agencyName} Intelligence Platform
+            {/* Footer */}
+            <div style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                {agencyName} · Generated {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </p>
-              <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
-                This report was generated by AI and should be reviewed by a media buyer before implementation.
+              <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Review recommendations with a media buyer before implementation.
               </p>
             </div>
           </>

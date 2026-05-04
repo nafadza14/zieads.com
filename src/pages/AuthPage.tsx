@@ -3,16 +3,67 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { supabase } from '../lib/supabaseClient';
 
+const GoogleIcon = () => (
+  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+  </svg>
+);
+
+const TESTIMONIALS = [
+  {
+    quote: "ZieAds cut our client onboarding from 3 days to 20 minutes. Every agency needs this.",
+    name: "Rafi S.",
+    role: "Performance Marketing Lead",
+    initials: "RS",
+    color: "#7C5CFC",
+  },
+  {
+    quote: "The AI audit caught targeting gaps our team missed for months. ROI improved within the first week.",
+    name: "Dewi A.",
+    role: "Head of Growth, e-Commerce",
+    initials: "DA",
+    color: "#5C8AFF",
+  },
+  {
+    quote: "We run ZieAds on every new client before a single rupiah is spent. It changed how we work.",
+    name: "Bima P.",
+    role: "Founder, Digital Agency",
+    initials: "BP",
+    color: "#A855F7",
+  },
+  {
+    quote: "The ad copy output is genuinely better than what my copywriter was producing. Fast and on-brand.",
+    name: "Sinta W.",
+    role: "Marketing Director",
+    initials: "SW",
+    color: "#6366F1",
+  },
+  {
+    quote: "Competitor intelligence alone is worth the subscription. I can see exactly what rivals are running.",
+    name: "Aryo K.",
+    role: "Media Buyer",
+    initials: "AK",
+    color: "#8B5CF6",
+  },
+];
+
+const TICKER = [...TESTIMONIALS, ...TESTIMONIALS];
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isSignUp = location.pathname.includes('/sign-up');
-  const from = location.state?.from || '/clients';
-  
-  const [email, setEmail] = useState(location.state?.email || '');
+  const from = (location.state as any)?.from || '/clients';
+
+  const [email, setEmail]       = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -20,130 +71,244 @@ export default function AuthPage() {
     });
   }, [navigate, from]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
+    setSuccessMsg(null);
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+        const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        // Proceed normally, Supabase logs in automatically if email confirm is off
+        setSuccessMsg('Account created. Check your email to confirm, then sign in.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        navigate(from, { replace: true });
       }
-      navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication.');
+      setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}${from}` },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Could not sign in with Google. Please try again.');
+      setGoogleLoading(false);
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
-        <div style={{ padding: '24px 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => navigate('/')}>
-            <ZieAdsLogo size={32} />
-            <span style={{ fontSize: '20px', fontWeight: 700, color: '#7B2FBE' }}>zieads</span>
+    <div className="min-h-screen flex bg-white">
+
+      {/* ── Left: Form Panel ── */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Logo */}
+        <div className="px-12 pt-10">
+          <div
+            className="flex items-center gap-2.5 cursor-pointer w-fit"
+            onClick={() => navigate('/')}
+          >
+            <div className="bg-[#6C47FF] p-2 rounded-xl">
+              <ZieAdsLogo size={20} className="text-white" />
+            </div>
+            <span className="text-[18px] font-bold tracking-tight text-gray-900">ZieAds</span>
           </div>
         </div>
-        
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
-          <div style={{ width: '100%', maxWidth: 360 }}>
-             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>
-               {isSignUp ? 'Create an account' : 'Welcome back'}
-             </h2>
-             <p style={{ color: '#64748b', marginBottom: 32, fontSize: '0.95rem' }}>
-               {isSignUp ? 'Sign up to start executing AI strategy.' : 'Sign in to access your agency dashboard.'}
-             </p>
 
-             {error && (
-               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', padding: '12px 16px', borderRadius: 8, fontSize: '0.85rem', marginBottom: 24 }}>
-                 {error}
-               </div>
-             )}
+        {/* Form */}
+        <div className="flex-1 flex items-center justify-center px-12 py-10">
+          <div className="w-full max-w-[420px]">
 
-             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-               <div>
-                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: 8 }}>Email Address</label>
-                 <input 
-                   type="email" 
-                   required
-                   value={email}
-                   onChange={(e) => setEmail(e.target.value)}
-                   style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }} 
-                   placeholder="you@agency.com"
-                 />
-               </div>
-               <div>
-                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: 8 }}>Password</label>
-                 <input 
-                   type="password" 
-                   required
-                   value={password}
-                   onChange={(e) => setPassword(e.target.value)}
-                   style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }} 
-                   placeholder="••••••••"
-                 />
-               </div>
+            <h1 className="text-[32px] font-bold text-gray-900 mb-2 tracking-tight leading-tight">
+              {isSignUp ? 'Create your account' : 'Welcome back'}
+            </h1>
+            <p className="text-[16px] text-gray-500 mb-8">
+              {isSignUp
+                ? 'Start running AI powered ad strategy today.'
+                : 'Welcome back! Please enter your details.'}
+            </p>
 
-               <button 
-                 type="submit" 
-                 disabled={loading}
-                 style={{ 
-                   background: 'linear-gradient(135deg, #7B2FBE 0%, #5c8aff 100%)', 
-                   color: '#fff', 
-                   border: 'none', 
-                   padding: '14px', 
-                   borderRadius: 100, 
-                   fontSize: '1rem', 
-                   fontWeight: 600, 
-                   cursor: loading ? 'not-allowed' : 'pointer',
-                   opacity: loading ? 0.7 : 1,
-                   marginTop: 8
-                 }}
-               >
-                 {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-               </button>
-             </form>
+            {error && (
+              <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-[14px]">
+                {error}
+              </div>
+            )}
+            {successMsg && (
+              <div className="mb-5 px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-[14px]">
+                {successMsg}
+              </div>
+            )}
 
-             <div style={{ textAlign: 'center', marginTop: 32, fontSize: '0.9rem', color: '#64748b' }}>
-               {isSignUp ? (
-                 <>Already have an account? <span onClick={() => navigate('/sign-in')} style={{ color: '#7B2FBE', fontWeight: 600, cursor: 'pointer' }}>Sign in</span></>
-               ) : (
-                 <>Don't have an account? <span onClick={() => navigate('/sign-up')} style={{ color: '#7B2FBE', fontWeight: 600, cursor: 'pointer' }}>Sign up</span></>
-               )}
-             </div>
+            <form onSubmit={handleEmailSubmit} className="space-y-5">
+              <div>
+                <label className="block text-[14px] font-semibold text-gray-700 mb-2">Email</label>
+                <input
+                  id="email-input"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-gray-900 text-[15px] placeholder:text-gray-400 outline-none focus:border-[#6C47FF] focus:ring-4 focus:ring-[#6C47FF]/10 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[14px] font-semibold text-gray-700 mb-2">Password</label>
+                <input
+                  id="password-input"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  minLength={6}
+                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-gray-900 text-[15px] placeholder:text-gray-400 outline-none focus:border-[#6C47FF] focus:ring-4 focus:ring-[#6C47FF]/10 transition-all"
+                />
+              </div>
+
+              <button
+                id="email-submit-btn"
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-[#6C47FF] text-white font-semibold text-[15px] rounded-xl hover:bg-[#5a38e0] active:scale-[0.98] transition-all disabled:opacity-60"
+              >
+                {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
+              </button>
+            </form>
+
+            {/* Google */}
+            <button
+              id="google-signin-btn"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="w-full mt-3 flex items-center justify-center gap-3 py-3.5 border border-gray-200 rounded-xl text-gray-700 font-semibold text-[15px] hover:bg-gray-50 active:scale-[0.98] transition-all disabled:opacity-60"
+            >
+              {googleLoading
+                ? <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                : <GoogleIcon />}
+              {googleLoading ? 'Redirecting...' : 'Sign in with Google'}
+            </button>
+
+            {/* Toggle sign in / sign up */}
+            <p className="text-center mt-6 text-[14px] text-gray-500">
+              {isSignUp ? (
+                <>Already have an account?{' '}
+                  <button onClick={() => navigate('/sign-in')} className="text-[#6C47FF] font-semibold hover:underline">Sign in</button>
+                </>
+              ) : (
+                <>Don't have an account?{' '}
+                  <button onClick={() => navigate('/sign-up')} className="text-[#6C47FF] font-semibold hover:underline">Sign up</button>
+                </>
+              )}
+            </p>
+
+            {/* Consent text */}
+            <p className="text-center mt-4 text-[12px] text-gray-400 leading-relaxed max-w-[360px] mx-auto">
+              By clicking on 'Continue with Google' or Email you consent to receive occasional product updates
+              and important account alerts. Read our{' '}
+              <button
+                onClick={() => navigate('/privacy-policy')}
+                className="text-[#6C47FF] hover:underline font-medium"
+              >
+                Privacy Policy
+              </button>
+              .
+            </p>
+
+            {/* Links */}
+            <p className="text-center mt-3 text-[12px] text-gray-400">
+              <button onClick={() => navigate('/terms')} className="hover:underline hover:text-gray-600 transition-colors">Terms of Service</button>
+              {' · '}
+              <button onClick={() => navigate('/privacy-policy')} className="hover:underline hover:text-gray-600 transition-colors">Privacy Policy</button>
+            </p>
           </div>
         </div>
       </div>
-      
-      <div className="auth-illustration" style={{ flex: 1, background: 'linear-gradient(135deg, #7B2FBE 0%, #5c8aff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px', color: '#fff' }}>
-        <div style={{ maxWidth: 480 }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: 24, lineHeight: 1.1 }}>Your AI Ads Team, <br/>ready to execute.</h1>
-          <p style={{ fontSize: '1.25rem', opacity: 0.9, marginBottom: 40, lineHeight: 1.5 }}>Join thousands of agencies and freelancers generating revenue-driving campaigns in seconds.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-             <div style={{ background: 'rgba(255,255,255,0.1)', padding: 20, borderRadius: 12, backdropFilter: 'blur(10px)' }}>
-                <span style={{ display: 'block', fontSize: '2rem', fontWeight: 800, marginBottom: 8 }}>#1</span>
-                <span style={{ fontSize: '0.9rem', opacity: 0.9 }}>AI Copilot for Ad Agencies</span>
-             </div>
-             <div style={{ background: 'rgba(255,255,255,0.1)', padding: 20, borderRadius: 12, backdropFilter: 'blur(10px)' }}>
-                <span style={{ display: 'block', fontSize: '2rem', fontWeight: 800, marginBottom: 8 }}>14x</span>
-                <span style={{ fontSize: '0.9rem', opacity: 0.9 }}>Faster Strategy Execution</span>
-             </div>
+
+      {/* ── Right: Visual Panel ── */}
+      <div className="hidden lg:flex flex-1 flex-col bg-[#F0EEFF] overflow-hidden relative">
+
+        {/* Marketing hero image */}
+        <div className="flex-1 flex items-center justify-center p-8 pb-4">
+          <img
+            src="/zieads-hero.png"
+            alt="ZieAds Before and After comparison"
+            className="w-full max-w-[560px] object-contain drop-shadow-xl"
+          />
+        </div>
+
+        {/* Glassmorphism testimonial ticker */}
+        <div
+          className="pb-8 overflow-hidden"
+          style={{
+            background: 'linear-gradient(to top, rgba(108,71,255,0.15) 0%, transparent 100%)',
+          }}
+        >
+          <p className="text-center text-[11px] font-bold tracking-widest text-[#6C47FF]/60 uppercase mb-4">
+            Trusted by marketers worldwide
+          </p>
+
+          <div className="overflow-hidden">
+            <div
+              className="flex gap-4 px-2"
+              style={{
+                animation: 'ticker-rtl 32s linear infinite',
+                width: 'max-content',
+              }}
+            >
+              {TICKER.map((t, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 rounded-2xl px-5 py-4 border"
+                  style={{
+                    width: 260,
+                    background: 'rgba(255, 255, 255, 0.45)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    borderColor: 'rgba(255,255,255,0.7)',
+                    boxShadow: '0 4px 24px rgba(108,71,255,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
+                  }}
+                >
+                  <p className="text-[13px] text-gray-700 leading-relaxed mb-3 font-medium">
+                    "{t.quote}"
+                  </p>
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                      style={{ backgroundColor: t.color }}
+                    >
+                      {t.initials}
+                    </div>
+                    <div>
+                      <div className="text-[12px] font-semibold text-gray-800">{t.name}</div>
+                      <div className="text-[11px] text-gray-500">{t.role}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes ticker-rtl {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   );
 }

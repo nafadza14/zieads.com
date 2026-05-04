@@ -10,6 +10,9 @@ import ClientDashboard from './pages/ClientDashboard';
 import PricingPage from './pages/PricingPage';
 import SkillReport from './pages/SkillReport';
 import AgentChat from './pages/AgentChat';
+import BusinessProfile from './pages/BusinessProfile';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
 import { supabase } from './lib/supabaseClient';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -82,7 +85,10 @@ export default function App() {
         <Route path="/clients" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
         <Route path="/skill-report/:skillName" element={<ProtectedRoute><SkillReport /></ProtectedRoute>} />
         <Route path="/agent" element={<ProtectedRoute><AgentChat /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><BusinessProfile /></ProtectedRoute>} />
         <Route path="/tools" element={<Navigate to="/clients" replace />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
       </Routes>
     </Router>
   );

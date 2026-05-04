@@ -27,6 +27,23 @@ import { agentRouter } from "./routes/api-agent.js";
 const app = express();
 app.use(express.json());
 
+// ─── Enrich BusinessContext from saved profile ─────────────
+async function enrichContextFromProfile(
+  userId: string | null,
+  partial: { businessName: string; businessType: string; primaryGoal: string; monthlyBudget: string; platforms: string[] }
+) {
+  if (!userId) return partial;
+  const profile = await getProfile(userId);
+  if (!profile) return partial;
+  return {
+    businessName: partial.businessName || profile.business_name || '',
+    businessType: partial.businessType || profile.business_type || '',
+    primaryGoal: partial.primaryGoal !== 'Generate leads' ? partial.primaryGoal : (profile.primary_goal || 'Generate leads'),
+    monthlyBudget: partial.monthlyBudget !== 'Not specified' ? partial.monthlyBudget : (profile.monthly_budget || 'Not specified'),
+    platforms: partial.platforms.length > 0 ? partial.platforms : (profile.platforms || []),
+  };
+}
+
 // ─── CORS ─────────────────────────────────────────────
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -169,15 +186,14 @@ app.post("/api/audit", async (req, res) => {
 
   try {
     const scrapedData = await scrapeUrl(url);
-    const context: BusinessContext = {
-      url,
+    const enriched = await enrichContextFromProfile(userId, {
       businessName: businessName || scrapedData.title || new URL(url).hostname,
       businessType: businessType || scrapedData.inferredBusinessType,
       primaryGoal: primaryGoal || "Generate leads",
       monthlyBudget: monthlyBudget || "Not specified",
       platforms: platforms || [],
-      scrapedData,
-    };
+    });
+    const context: BusinessContext = { url, ...enriched, scrapedData };
 
     const agentResults = await runFullAudit(context);
     const report = synthesizeReport(agentResults);
@@ -220,15 +236,14 @@ app.post("/api/skill/:name", async (req, res) => {
 
   try {
     const scrapedData = await scrapeUrl(url);
-    const context: BusinessContext = {
-      url,
+    const enriched = await enrichContextFromProfile(userId, {
       businessName: businessName || scrapedData.title || new URL(url).hostname,
       businessType: businessType || scrapedData.inferredBusinessType,
       primaryGoal: primaryGoal || "Generate leads",
       monthlyBudget: monthlyBudget || "Not specified",
       platforms: platforms || [],
-      scrapedData,
-    };
+    });
+    const context: BusinessContext = { url, ...enriched, scrapedData };
 
     const result = await runAgent(name, context);
 

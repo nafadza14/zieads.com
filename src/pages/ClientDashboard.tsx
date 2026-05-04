@@ -93,7 +93,13 @@ export default function ClientDashboard({ reportData }: Props) {
 
         if (latestJson.data) dbLatest = latestJson.data;
         if (allJson.data?.length) dbAll = allJson.data;
-        if (profileJson.data) setUserProfile(profileJson.data);
+        if (profileJson.data) {
+          setUserProfile(profileJson.data);
+          // Pre-fill URL input from saved profile if user hasn't typed one
+          if (profileJson.data.primary_url) {
+            setUrlInput(prev => prev || profileJson.data.primary_url);
+          }
+        }
       } catch (err) {
         console.warn('Could not load data from API:', err);
       }
@@ -235,8 +241,8 @@ export default function ClientDashboard({ reportData }: Props) {
               <div style={{ fontSize: '0.7rem', color: G, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: 12 }}>{section === 'home' ? 'MAIN' : 'SKILLS'}</div>
               {section === 'home' ? (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[{k:'home',l:'Home'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
-                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 4, margin: '0 -12px', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? '#f1f5f9' : 'transparent', color: n.k === 'agent' ? P : D, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {[{k:'home',l:'Home'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'profile-page',l:'Business Profile'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
+                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } if (n.k === 'profile-page') { navigate('/profile'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 4, margin: '0 -12px', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? '#f1f5f9' : 'transparent', color: n.k === 'agent' || n.k === 'profile-page' ? P : D, display: 'flex', alignItems: 'center', gap: 8 }}>
                       {sidebarNav === n.k && <span style={{ width: 6, height: 6, borderRadius: '50%', background: P }}></span>}
                       {n.k === 'agent' ? <Bot size={16} /> : ''}{n.l}
                     </li>

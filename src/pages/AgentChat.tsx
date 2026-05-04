@@ -162,6 +162,7 @@ export default function AgentChat() {
   const [activeTab, setActiveTab] = useState<'chat' | 'modes'>('chat');
   const [runningMode, setRunningMode] = useState<UseCaseId | null>(null);
   const [additionalData, setAdditionalData] = useState('');
+  const [userProfile, setUserProfile] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -182,12 +183,14 @@ export default function AgentChat() {
       const { data: userData } = await supabase.auth.getUser();
       if (userData?.user?.email) setUserEmail(userData.user.email);
       const headers = await getAuthHeaders();
-      const [convRes, usageRes] = await Promise.all([
+      const [convRes, usageRes, profileRes] = await Promise.all([
         fetch('/api/agent/conversations', { headers }),
         fetch('/api/agent/usage', { headers }),
+        fetch('/api/profile', { headers }),
       ]);
       if (convRes.ok) { const j = await convRes.json(); setConversations(j.data || []); }
       if (usageRes.ok) { const j = await usageRes.json(); if (j.data) setUsage(j.data); }
+      if (profileRes.ok) { const j = await profileRes.json(); if (j.data) setUserProfile(j.data); }
       setLoadingConvs(false);
     };
     init();
@@ -353,6 +356,22 @@ export default function AgentChat() {
           </button>
         </div>
 
+        {/* Business context pill */}
+        {userProfile?.business_name && (
+          <div style={{ padding: '10px 16px', borderBottom: `1px solid ${B}` }}>
+            <div style={{ fontSize: '0.63rem', fontWeight: 700, color: G, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>Analyzing</div>
+            <div style={{ background: PL, border: `1px solid rgba(123,47,190,0.18)`, borderRadius: 6, padding: '8px 10px' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: D, marginBottom: 1 }}>{userProfile.business_name}</div>
+              {userProfile.business_type && <div style={{ fontSize: '0.7rem', color: G, marginBottom: 1 }}>{userProfile.business_type}</div>}
+              {userProfile.monthly_budget && <div style={{ fontSize: '0.7rem', color: G, marginBottom: 1 }}>Budget: {userProfile.monthly_budget}</div>}
+              {userProfile.platforms?.length > 0 && <div style={{ fontSize: '0.7rem', color: G }}>Platforms: {userProfile.platforms.join(', ')}</div>}
+            </div>
+            <button onClick={() => navigate('/profile')} style={{ marginTop: 5, background: 'none', border: 'none', fontSize: '0.68rem', color: P, cursor: 'pointer', padding: 0, fontWeight: 600 }}>
+              Update profile →
+            </button>
+          </div>
+        )}
+
         {/* Conversation list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
           <div style={{ padding: '6px 20px 4px', fontSize: '0.68rem', fontWeight: 700, color: G, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent</div>
@@ -459,7 +478,7 @@ export default function AgentChat() {
             {/* Messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
               {messages.length === 0 ? (
-                <EmptyState onSuggest={q => sendMessage(q)} onSwitchModes={() => setActiveTab('modes')} />
+                <EmptyState onSuggest={q => sendMessage(q)} onSwitchModes={() => setActiveTab('modes')} businessName={userProfile?.business_name} />
               ) : (
                 <>
                   {messages.map((msg, i) => (
@@ -568,7 +587,7 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun }: {
 }
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
-function EmptyState({ onSuggest, onSwitchModes }: { onSuggest: (q: string) => void; onSwitchModes: () => void }) {
+function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q: string) => void; onSwitchModes: () => void; businessName?: string }) {
   const cats = [...new Set(QUICK_QUESTIONS.map(q => q.cat))];
 
   return (
@@ -579,9 +598,14 @@ function EmptyState({ onSuggest, onSwitchModes }: { onSuggest: (q: string) => vo
           <Bot size={30} />
         </div>
         <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: D, margin: '0 0 10px' }}>ZieAds AI Agent</h2>
-        <p style={{ color: G, fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 16px' }}>
+        <p style={{ color: G, fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 12px' }}>
           Your expert paid ads strategist. Ask anything about Meta, Google, TikTok or LinkedIn — or run one of our 10 deep analysis modes.
         </p>
+        {businessName && (
+          <div style={{ display: 'inline-block', background: PL, border: `1px solid rgba(123,47,190,0.2)`, borderRadius: 20, padding: '4px 14px', fontSize: '0.78rem', color: P, fontWeight: 600, marginBottom: 14 }}>
+            Personalized for: {businessName}
+          </div>
+        )}
         <button onClick={onSwitchModes} style={{ background: P, color: '#fff', border: 'none', padding: '9px 22px', borderRadius: 20, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <UilBolt size={18} /> Run Deep Analysis <UilArrowRight size={18} />
         </button>

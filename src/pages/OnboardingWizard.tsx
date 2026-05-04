@@ -29,6 +29,7 @@ export default function OnboardingWizard({ scanData, onComplete }: Props) {
   const stateUrl = location.state?.url || '';
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
     businessName: scanData?.businessName || '',
     url: stateUrl || scanData?.url || '',
@@ -55,7 +56,7 @@ export default function OnboardingWizard({ scanData, onComplete }: Props) {
       const { data } = await supabase.auth.getSession();
       const token = data?.session?.access_token;
       if (token) {
-        await fetch('/api/profile', {
+        const res = await fetch('/api/profile', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -63,11 +64,13 @@ export default function OnboardingWizard({ scanData, onComplete }: Props) {
           },
           body: JSON.stringify(form)
         });
+        if (res.ok) setSaved(true);
       }
     } catch (e) {
       console.warn('Failed to save profile on onboarding', e);
     }
     setLoading(false);
+    await new Promise(r => setTimeout(r, 1400));
     navigate('/audit/progress');
   };
 
@@ -278,6 +281,12 @@ export default function OnboardingWizard({ scanData, onComplete }: Props) {
                 </div>
               </div>
             </div>
+
+            {saved && (
+              <div style={{ margin: '0 0 16px', padding: '12px 16px', background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 8, fontSize: '0.9rem', color: '#065f46', fontWeight: 500 }}>
+                ZieAds AI is now configured for <strong>{form.businessName || 'your business'}</strong>. We've stored your business context and all future analysis will be personalized to you.
+              </div>
+            )}
 
             <div className="wizard-buttons">
               <button className="wizard-back" onClick={() => setStep(2)}>Back</button>
