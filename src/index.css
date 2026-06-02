@@ -1,49 +1,56 @@
 /* ═══════════════════════════════════════════════════════
-   ZieAds — Light Theme (Sokosumi-inspired)
+   ZieAds — Neo-Minimalist / Quiet UI Theme
    ═══════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
 @import "tailwindcss";
+
 :root {
-  --primary: #7B2FBE;
-  --primary-light: #9B59D0;
-  --primary-bg: rgba(123, 47, 190, 0.06);
-  --primary-border: rgba(123, 47, 190, 0.15);
-  --gradient: linear-gradient(135deg, #9B59D0 0%, #5c8aff 100%);
-  --gradient-btn: linear-gradient(135deg, #9B59D0 0%, #5c8aff 60%, #5cdee8 100%);
-  --bg: #ffffff;
-  --bg-soft: #f8f7fc;
-  --bg-card: #ffffff;
-  --bg-card-hover: #faf9fe;
-  --bg-surface: #f4f2fa;
-  --text: #1a1a2e;
-  --text-secondary: #4a4a6a;
-  /* WCAG AA: lifted from #8888a0 (~3.0:1) → #5e5e7a (~4.7:1 on white) */
-  --text-muted: #5e5e7a;
-  /* WCAG AA: lifted from #b0b0c0 (~1.8:1) → #6b6b85 (~4.6:1 on white) */
-  --text-dim: #6b6b85;
-  --border: #e8e6f0;
-  --border-light: #f0eef6;
-  /* Decorative / icon accent colours – not used as standalone text */
-  --red: #e8457a;
-  --orange: #f59e0b;
-  --green: #00c9a7;
-  --blue: #5c8aff;
-  --purple: #8b5cf6;
-  /* AA-compliant text-safe variants for coloured labels on light backgrounds */
-  --red-text: #c0194a;    /* 5.2:1 on white */
-  --orange-text: #8a5a00; /* 5.1:1 on white */
-  --green-text: #007a64;  /* 5.0:1 on white */
-  --blue-text: #1d4ecc;   /* 5.5:1 on white */
-  --purple-text: #5b3fb5; /* 5.0:1 on white */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
-  --shadow: 0 4px 20px rgba(0,0,0,0.06);
-  --shadow-md: 0 8px 30px rgba(0,0,0,0.08);
-  --shadow-lg: 0 20px 60px rgba(0,0,0,0.1);
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 20px;
-  --radius-pill: 100px;
+  --primary: #09090B;
+  --primary-light: #27272A;
+  --primary-bg: #F4F4F5;
+  --primary-border: #E4E4E7;
+  --gradient: linear-gradient(135deg, #09090B 0%, #27272A 100%);
+  --gradient-btn: linear-gradient(135deg, #09090B 0%, #27272A 100%);
+  
+  --bg: #FFFFFF;
+  --bg-soft: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FAFAFA;
+  --bg-surface: #F4F4F5;
+  
+  --text: #09090B;
+  --text-secondary: #52525B;
+  --text-muted: #71717A;
+  --text-dim: #A1A1AA;
+  --text-disabled: #D4D4D8;
+  
+  --border: #E4E4E7;
+  --border-light: #F4F4F5;
+  --border-strong: #D4D4D8;
+  
+  /* Status Accents (used purely for semantic indicator states) */
+  --red: #B91C1C;
+  --orange: #A16207;
+  --green: #15803D;
+  --blue: #1D4ED8;
+  --purple: #09090B;
+  
+  --red-text: #B91C1C;
+  --orange-text: #A16207;
+  --green-text: #15803D;
+  --blue-text: #1D4ED8;
+  --purple-text: #09090B;
+
+  --shadow-sm: 0 1px 2px rgba(9, 9, 11, 0.04);
+  --shadow: 0 1px 3px rgba(9, 9, 11, 0.06), 0 1px 2px rgba(9, 9, 11, 0.04);
+  --shadow-md: 0 4px 16px rgba(9, 9, 11, 0.08);
+  --shadow-lg: 0 16px 48px rgba(9, 9, 11, 0.12);
+  
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -51,10 +58,10 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 

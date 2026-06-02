@@ -162,7 +162,7 @@ export default function AuditProgress({ businessContext }: Props) {
     <svg viewBox="0 0 24 24" fill="none" stroke="#e8457a" strokeWidth="2.5" width="18" height="18" style={{ display: 'inline', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
   );
   const TipIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="#7B2FBE" strokeWidth="2" width="18" height="18"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17H8v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" width="18" height="18"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17H8v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/></svg>
   );
 
   return (
@@ -194,7 +194,7 @@ export default function AuditProgress({ businessContext }: Props) {
             return (
               <div key={agent.id} className={`agent-progress-card ${progress >= 100 ? 'agent-done' : ''}`}>
                 <div className="apc-header">
-                  <span className="apc-icon" style={{ color: '#7B2FBE' }}>{agentIcons[agent.id]}</span>
+                  <span className="apc-icon" style={{ color: 'var(--primary)' }}>{agentIcons[agent.id]}</span>
                   <span className="apc-name">{agent.name}</span>
                   <span className="apc-status">
                     {progress >= 100 ? <><StatusDone /> Done</> : `${Math.round(progress)}%`}

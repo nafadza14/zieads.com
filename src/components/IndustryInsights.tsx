@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
-const P = '#7B2FBE';
-const G = '#64748b';
-const D = '#1e293b';
-const B = '#e2e8f0';
+const P = 'var(--primary)';
+const G = 'var(--text-muted)';
+const D = 'var(--text)';
+const B = 'var(--border)';
 
 export default function IndustryInsights({ latestScore }: { latestScore: number }) {
   const [data, setData] = useState<{ globalAverage: number; totalScanned: number } | null>(null);
@@ -24,15 +24,15 @@ export default function IndustryInsights({ latestScore }: { latestScore: number 
     <div style={{ marginTop: 40, marginBottom: 40 }}>
       <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: D, marginBottom: 16 }}>Industry Insights</h2>
       
-      <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderRadius: 12, padding: 32, color: 'white', display: 'flex', gap: 32, alignItems: 'center' }}>
+      <div style={{ background: '#09090B', borderRadius: 8, padding: 32, color: 'white', display: 'flex', gap: 32, alignItems: 'center' }}>
         
         {/* Metric Block */}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 12 }}>Your Percentile</div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 12 }}>Your Percentile</div>
           <div style={{ fontSize: '3rem', fontWeight: 800, marginBottom: 8 }}>Top {100 - percentileCalc}%</div>
           <p style={{ fontSize: '0.95rem', color: '#cbd5e1', lineHeight: '1.5' }}>
             Based on {data.totalScanned.toLocaleString()} recent SaaS audits, your score of {latestScore} is {Math.abs(diff)} points 
-            <strong style={{ color: isAbove ? '#10b981' : '#f59e0b' }}> {isAbove ? 'above' : 'below'} </strong> 
+            <strong style={{ color: isAbove ? 'var(--green-text)' : 'var(--orange-text)' }}> {isAbove ? 'above' : 'below'} </strong> 
             the global industry average of {data.globalAverage}.
           </p>
         </div>
@@ -47,8 +47,8 @@ export default function IndustryInsights({ latestScore }: { latestScore: number 
             </div>
             {/* User Marker */}
             <div style={{ position: 'absolute', left: `${latestScore}%`, top: -30, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff', background: P, padding: '2px 8px', borderRadius: 12 }}>You</span>
-              <div style={{ width: 3, height: 38, background: P, marginTop: 4 }}></div>
+              <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#000', background: '#FFF', padding: '2px 8px', borderRadius: 4 }}>You</span>
+              <div style={{ width: 3, height: 38, background: '#FFF', marginTop: 4 }}></div>
             </div>
           </div>
         </div>

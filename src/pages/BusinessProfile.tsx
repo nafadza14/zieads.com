@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
-const P = '#7B2FBE';
-const PL = 'rgba(123,47,190,0.08)';
-const G = '#64748b';
-const D = '#1e293b';
-const B = '#e2e8f0';
+const P = 'var(--primary)';
+const PL = 'var(--primary-bg)';
+const G = 'var(--text-muted)';
+const D = 'var(--text)';
+const B = 'var(--border)';
 
 const BUSINESS_TYPES = ['E-commerce', 'SaaS', 'Local Business', 'B2B Lead Gen', 'Creator', 'Other'];
 const GOALS = ['Drive sales', 'Generate leads', 'App installs', 'Brand awareness', 'Event registrations'];
@@ -88,7 +88,7 @@ export default function BusinessProfile() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif", color: G }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: G }}>
         Loading profile...
       </div>
     );
@@ -96,7 +96,7 @@ export default function BusinessProfile() {
 
   const pillBtn = (active: boolean) => ({
     padding: '8px 16px',
-    borderRadius: 20,
+    borderRadius: 9999,
     border: `1px solid ${active ? P : B}`,
     background: active ? PL : '#fff',
     color: active ? P : D,
@@ -108,7 +108,7 @@ export default function BusinessProfile() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafafa', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-soft)', color: 'var(--text)' }}>
       {/* Header */}
       <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '14px 40px', display: 'flex', alignItems: 'center', gap: 16 }}>
         <button
@@ -134,7 +134,7 @@ export default function BusinessProfile() {
 
         <form onSubmit={handleSave}>
           {/* Business Basics */}
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 28, marginBottom: 20 }}>
+          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 28, marginBottom: 20 }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: D, margin: '0 0 20px' }}>Business Basics</h2>
 
             <div style={{ marginBottom: 16 }}>
@@ -178,7 +178,7 @@ export default function BusinessProfile() {
           </div>
 
           {/* Budget & Platforms */}
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 28, marginBottom: 20 }}>
+          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 28, marginBottom: 20 }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: D, margin: '0 0 20px' }}>Budget & Platforms</h2>
 
             <div style={{ marginBottom: 20 }}>
@@ -201,7 +201,7 @@ export default function BusinessProfile() {
           </div>
 
           {/* Challenge */}
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 28, marginBottom: 24 }}>
+          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 28, marginBottom: 24 }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: D, margin: '0 0 6px' }}>Your Biggest Challenge</h2>
             <p style={{ fontSize: '0.83rem', color: G, margin: '0 0 12px' }}>The AI agent uses this to frame analysis around your specific pain point.</p>
             <textarea
@@ -216,7 +216,7 @@ export default function BusinessProfile() {
           <button
             type="submit"
             disabled={saving}
-            style={{ background: saving ? '#e2e8f0' : P, color: saving ? G : '#fff', border: 'none', padding: '12px 28px', borderRadius: 8, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '0.95rem', fontFamily: 'inherit' }}
+            style={{ background: saving ? '#e2e8f0' : P, color: saving ? G : '#fff', border: 'none', padding: '12px 28px', borderRadius: 6, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '0.95rem', fontFamily: 'inherit' }}
           >
             {saving ? 'Saving...' : 'Save Profile'}
           </button>

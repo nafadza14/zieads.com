@@ -6,11 +6,11 @@ import {
   UilSearchAlt, UilFileAlt, UilPen, UilPalette, UilChartPie, UilHome, UilCrosshairs, UilMoneyBill, UilFacebook, UilVideo, UilLinkedin, UilFilter, UilBullseye, UilGoogle
 } from '@iconscout/react-unicons';
 
-const P = '#7B2FBE';
-const PL = 'rgba(123,47,190,0.08)';
-const G = '#64748b';
-const D = '#1e293b';
-const B = '#e2e8f0';
+const P = 'var(--primary)';
+const PL = 'var(--primary-bg)';
+const G = 'var(--text-muted)';
+const D = 'var(--text)';
+const B = 'var(--border)';
 
 const SKILLS = [
   { id: 'audit', name: 'Full Audit', icon: <UilSearchAlt size={20} />, color: P, desc: '5 agents · all 6 dimensions scored', cmd: '/ads audit' },
@@ -203,30 +203,30 @@ export default function ClientDashboard({ reportData }: Props) {
   const getScoreColor = (s: number) => s >= 70 ? '#00c9a7' : s >= 50 ? '#f59e0b' : s > 0 ? '#dc2626' : G;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#fafafa', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', fontFamily: 'inherit' }}>
 
       {/* ─── SIDEBAR ─── */}
-      <aside style={{ width: 240, background: '#fff', borderRight: `1px solid ${B}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '20px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 24 }} onClick={() => navigate('/')}>
-            <div style={{ width: 28, height: 28, background: P, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Z</div>
-            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: D }}>ZieAds</span>
+      <aside style={{ width: 240, background: 'var(--bg-soft)', borderRight: `1px solid ${B}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ padding: '20px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 24, paddingLeft: 8 }} onClick={() => navigate('/')}>
+            <div style={{ width: 28, height: 28, background: P, borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Z</div>
+            <span style={{ fontSize: '1rem', fontWeight: 600, color: D }}>ZieAds</span>
           </div>
 
-          <button onClick={() => { setUrlInput(''); setSidebarNav('home'); }} style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '10px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', marginBottom: 24 }}>
+          <button onClick={() => { setUrlInput(''); setSidebarNav('home'); }} style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '8px 0', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: 'pointer', marginBottom: 24, fontSize: '0.875rem' }}>
             + New audit
           </button>
 
           {/* Score Pill */}
-          <div style={{ background: '#f8fafc', border: `1px solid ${B}`, borderRadius: 8, padding: 16, marginBottom: 32 }}>
+          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: 16, marginBottom: 32, boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: '0.75rem', color: G, marginBottom: 4 }}>Ads readiness score</div>
             {hasReport ? (
               <>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
-                  <span style={{ fontSize: '1.8rem', fontWeight: 800, color: D }}>{overall}</span>
+                  <span style={{ fontSize: '1.8rem', fontWeight: 600, color: D, fontFamily: 'monospace' }}>{overall}</span>
                   <span style={{ fontSize: '0.85rem', color: G }}>/100</span>
                 </div>
-                <div style={{ width: '100%', height: 4, background: B, borderRadius: 2 }}>
+                <div style={{ width: '100%', height: 4, background: 'var(--bg-surface)', borderRadius: 2 }}>
                   <div style={{ width: `${overall}%`, height: '100%', background: getScoreColor(overall), borderRadius: 2 }}></div>
                 </div>
               </>
@@ -238,22 +238,22 @@ export default function ClientDashboard({ reportData }: Props) {
           {/* Nav */}
           {['home', 'skills'].map(section => (
             <div key={section} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: '0.7rem', color: G, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: 12 }}>{section === 'home' ? 'MAIN' : 'SKILLS'}</div>
+              <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>{section === 'home' ? 'MAIN' : 'SKILLS'}</div>
               {section === 'home' ? (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {[{k:'home',l:'Home'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'profile-page',l:'Business Profile'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
-                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } if (n.k === 'profile-page') { navigate('/profile'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 4, margin: '0 -12px', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? '#f1f5f9' : 'transparent', color: n.k === 'agent' || n.k === 'profile-page' ? P : D, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {sidebarNav === n.k && <span style={{ width: 6, height: 6, borderRadius: '50%', background: P }}></span>}
-                      {n.k === 'agent' ? <Bot size={16} /> : ''}{n.l}
+                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } if (n.k === 'profile-page') { navigate('/profile'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontWeight: sidebarNav === n.k ? 500 : 400, background: sidebarNav === n.k ? 'var(--primary-bg)' : 'transparent', color: sidebarNav === n.k ? 'var(--text)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {sidebarNav === n.k && <span style={{ width: 4, height: 4, borderRadius: '50%', background: P }}></span>}
+                      {n.k === 'agent' ? <Bot size={14} /> : ''}{n.l}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'monospace' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'monospace', paddingLeft: 8 }}>
                   {SKILLS.slice(0, 5).map(s => (
-                    <li key={s.id} onClick={() => { setSidebarNav('skills'); setSelectedSkill(s.id); }} style={{ cursor: 'pointer', color: D }}>{s.cmd}</li>
+                    <li key={s.id} onClick={() => { setSidebarNav('skills'); setSelectedSkill(s.id); }} style={{ cursor: 'pointer', color: 'var(--text-secondary)' }}>{s.cmd}</li>
                   ))}
-                  <li onClick={() => setSidebarNav('skills')} style={{ cursor: 'pointer', color: G, fontFamily: 'inherit', fontSize: '0.8rem' }}>+ {SKILLS.length - 5} more</li>
+                  <li onClick={() => setSidebarNav('skills')} style={{ cursor: 'pointer', color: G, fontFamily: 'inherit', fontSize: '0.8rem', paddingTop: 4 }}>+ {SKILLS.length - 5} more</li>
                 </ul>
               )}
             </div>
@@ -262,25 +262,25 @@ export default function ClientDashboard({ reportData }: Props) {
           {/* Clients */}
           {hasReport && (
             <div>
-              <div style={{ fontSize: '0.7rem', color: G, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: 12 }}>CLIENTS</div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: P }}></span>{auditUrl}</li>
+              <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>CLIENTS</div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <li style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', color: 'var(--text-secondary)' }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: P }}></span>{auditUrl}</li>
               </ul>
             </div>
           )}
         </div>
 
         {/* User footer */}
-        <div style={{ marginTop: 'auto', padding: '16px 24px', borderTop: `1px solid ${B}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: D }}>{initials}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: D, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120 }}>{userEmail || 'User'}</div>
-              <div style={{ fontSize: '0.75rem', color: G }}>Free Plan</div>
+        <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: `1px solid ${B}`, background: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: D }}>{initials}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: D, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail || 'User'}</div>
+              <div style={{ fontSize: '0.7rem', color: G }}>Free Plan</div>
             </div>
           </div>
-          <button onClick={() => navigate('/pricing')} style={{ marginTop: 12, width: '100%', background: PL, border: `1px solid rgba(123,47,190,0.2)`, borderRadius: 6, padding: '6px 0', fontSize: '0.8rem', fontWeight: 600, color: P, cursor: 'pointer' }}>Upgrade Plan</button>
-          <button onClick={handleSignOut} style={{ marginTop: 8, width: '100%', background: 'transparent', border: `1px solid ${B}`, borderRadius: 6, padding: '6px 0', fontSize: '0.8rem', color: G, cursor: 'pointer' }}>Sign out</button>
+          <button onClick={() => navigate('/pricing')} style={{ marginTop: 12, width: '100%', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '6px 0', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>Upgrade Plan</button>
+          <button onClick={handleSignOut} style={{ marginTop: 6, width: '100%', background: 'transparent', border: 'none', borderRadius: 'var(--radius-sm)', padding: '6px 0', fontSize: '0.78rem', color: G, cursor: 'pointer' }}>Sign out</button>
         </div>
       </aside>
 
@@ -591,15 +591,15 @@ export default function ClientDashboard({ reportData }: Props) {
           <>
             {/* Empty State */}
             {!hasReport && (
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: '64px 40px', textAlign: 'center', marginBottom: 32 }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: PL, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: P }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: '64px 40px', textAlign: 'center', marginBottom: 32 }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: 'var(--text-secondary)', border: `1px solid ${B}` }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                 </div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: D, marginBottom: 8 }}>No audits yet</h2>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: D, marginBottom: 8 }}>No audits yet</h2>
                 <p style={{ fontSize: '1rem', color: G, marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
                   Paste any website URL above and run your first AI audit. You'll get a full paid ads readiness score across 6 dimensions.
                 </p>
-                <button onClick={() => document.querySelector<HTMLInputElement>('input[type="text"]')?.focus()} style={{ background: P, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 100, fontWeight: 600, cursor: 'pointer', fontSize: '1rem' }}>
+                <button onClick={() => document.querySelector<HTMLInputElement>('input[type="text"]')?.focus()} style={{ background: P, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: 'pointer', fontSize: '0.875rem' }}>
                   Run your first audit
                 </button>
               </div>
@@ -609,10 +609,10 @@ export default function ClientDashboard({ reportData }: Props) {
             {hasReport && (
               <div style={{ marginBottom: 32 }}>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: D, marginBottom: 16 }}>Latest audit insights</h2>
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24 }}>
-                  <p style={{ fontSize: '0.95rem', color: D, lineHeight: '1.6', marginBottom: 20 }}>{report.executiveSummary || 'No executive summary available.'}</p>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 12, marginLeft: 36 }}>
-                    <button onClick={() => navigate('/audit/report')} style={{ padding: '6px 14px', background: 'transparent', border: `1px solid ${P}`, borderRadius: 100, color: P, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>View full report</button>
+                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 24 }}>
+                  <p style={{ fontSize: '0.95rem', color: D, lineHeight: '1.5', marginBottom: 20 }}>{report.executiveSummary || 'No executive summary available.'}</p>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                    <button onClick={() => navigate('/audit/report')} style={{ padding: '8px 16px', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>View full report</button>
                   </div>
                 </div>
               </div>
@@ -622,9 +622,9 @@ export default function ClientDashboard({ reportData }: Props) {
             <div style={{ marginBottom: 12, fontSize: '0.85rem', fontWeight: 600, color: G }}>Quick actions</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
               {SKILLS.slice(0, 6).map((s, i) => (
-                <div key={i} onClick={() => { setSelectedSkill(s.id); document.querySelector<HTMLInputElement>('input[type="text"]')?.focus(); }} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 16, cursor: 'pointer', transition: 'border-color 0.2s' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${s.color}15`, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', marginBottom: 12 }}>{s.icon}</div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: D, marginBottom: 4 }}>{s.name}</div>
+                <div key={i} onClick={() => { setSelectedSkill(s.id); document.querySelector<HTMLInputElement>('input[type="text"]')?.focus(); }} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 16, cursor: 'pointer', transition: 'border-color 0.15s' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', border: `1px solid ${B}`, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', marginBottom: 12 }}>{s.icon}</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 600, color: D, marginBottom: 4 }}>{s.name}</div>
                   <div style={{ fontSize: '0.8rem', color: G, marginBottom: 8 }}>{s.desc}</div>
                   <div style={{ fontSize: '0.75rem', color: G, fontFamily: 'monospace' }}>{s.cmd}</div>
                 </div>
@@ -635,10 +635,10 @@ export default function ClientDashboard({ reportData }: Props) {
             {hasReport && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
                 {/* Score Card */}
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24 }}>
+                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 24 }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 16 }}>Paid ads readiness score</div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 24 }}>
-                    <div style={{ fontSize: '3rem', fontWeight: 800, color: D, lineHeight: 1 }}>{overall}</div>
+                    <div style={{ fontSize: '3rem', fontWeight: 600, color: D, lineHeight: 1, fontFamily: 'monospace' }}>{overall}</div>
                     <div>
                       <div style={{ color: getScoreColor(overall), fontWeight: 700 }}>Grade {grade}</div>
                       <div style={{ color: G, fontSize: '0.8rem' }}>{businessName || auditUrl}</div>
@@ -655,18 +655,18 @@ export default function ClientDashboard({ reportData }: Props) {
                     ].map((d, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', fontSize: '0.85rem', color: D }}>
                         <span style={{ width: 120 }}>{d.name}</span>
-                        <div style={{ flex: 1, background: '#f1f5f9', height: 4, borderRadius: 2, margin: '0 12px' }}>
+                        <div style={{ flex: 1, background: 'var(--bg-surface)', height: 4, borderRadius: 2, margin: '0 12px' }}>
                           <div style={{ width: `${d.score}%`, height: '100%', background: getScoreColor(d.score), borderRadius: 2 }}></div>
                         </div>
-                        <span style={{ fontWeight: 600, width: 24, textAlign: 'right' }}>{d.score}</span>
+                        <span style={{ fontWeight: 600, width: 24, textAlign: 'right', fontFamily: 'monospace' }}>{d.score}</span>
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => navigate('/audit/report')} style={{ padding: '8px 16px', background: PL, border: `1px solid ${P}`, borderRadius: 100, color: P, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>View full report</button>
+                  <button onClick={() => navigate('/audit/report')} style={{ padding: '8px 16px', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>View full report</button>
                 </div>
 
                 {/* Critical Findings */}
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 24, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: D }}>Critical findings & Strategy</div>
                   </div>

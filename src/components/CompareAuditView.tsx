@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
-const P = '#7B2FBE';
-const G = '#64748b';
-const D = '#1e293b';
-const B = '#e2e8f0';
+const P = 'var(--primary)';
+const G = 'var(--text-muted)';
+const D = 'var(--text-primary)';
+const B = 'var(--border)';
 
 export default function CompareAuditView({ audits }: { audits: any[] }) {
   if (audits.length < 2) return null;
@@ -14,14 +14,14 @@ export default function CompareAuditView({ audits }: { audits: any[] }) {
   const a1 = audits[audit1Idx];
   const a2 = audits[audit2Idx];
 
-  const getScoreColor = (s: number) => s >= 70 ? '#00c9a7' : s >= 50 ? '#f59e0b' : s > 0 ? '#dc2626' : G;
+  const getScoreColor = (s: number) => s >= 70 ? 'var(--green)' : s >= 50 ? 'var(--orange)' : s > 0 ? 'var(--red)' : G;
   const formatDate = (d: string) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
   const getDelta = (s1: number, s2: number) => {
     const diff = s2 - s1;
     if (diff === 0) return <span style={{ color: G, fontSize: '0.85rem' }}>No change</span>;
-    if (diff > 0) return <span style={{ color: '#00c9a7', fontWeight: 600, fontSize: '0.85rem' }}>+{diff} pts</span>;
-    return <span style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.85rem' }}>{diff} pts</span>;
+    if (diff > 0) return <span style={{ color: 'var(--green)', fontWeight: 600, fontSize: '0.85rem' }}>+{diff} pts</span>;
+    return <span style={{ color: 'var(--red)', fontWeight: 600, fontSize: '0.85rem' }}>{diff} pts</span>;
   };
 
   const dimsList = ['creative', 'audience', 'landing', 'platform', 'funnel', 'competitive'];

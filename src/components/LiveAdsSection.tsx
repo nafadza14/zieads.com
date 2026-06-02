@@ -378,7 +378,7 @@ function extractPreviewsFromSkillData(data: any): AdPreview[] {
 }
 
 // ─── Main component ───────────────────────────────────────────────
-export default function LiveAdsSection({ url, businessName, accentColor = '#7B2FBE', skillData }: Props) {
+export default function LiveAdsSection({ url, businessName, accentColor = 'var(--primary)', skillData }: Props) {
   const [activeTab, setActiveTab] = useState<'all' | 'meta' | 'tiktok' | 'google'>('all');
 
   const domain = (() => {
@@ -408,32 +408,32 @@ export default function LiveAdsSection({ url, businessName, accentColor = '#7B2F
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, marginTop: 40, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1a1a2e', letterSpacing: '-0.02em', margin: 0 }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>
               Ad Creative Analysis
             </h2>
-            <span style={{ background: '#f3e8ff', color: '#7B2FBE', fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+            <span style={{ background: 'var(--primary-bg)', color: 'var(--primary)', fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>
               AI-Generated
             </span>
           </div>
-          <p style={{ color: '#8888a0', fontSize: '0.875rem', margin: 0 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
             AI-predicted ad creatives based on {brandLabel}'s website — click any card to search in the live ad library
           </p>
         </div>
 
         {/* Platform tab filter */}
         {allPreviews.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, background: '#f4f2fa', borderRadius: 24, padding: 4, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3, flexShrink: 0 }}>
             {platformTabs.map(t => (
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
                 style={{
-                  padding: '5px 14px', borderRadius: 20, border: 'none',
-                  background: activeTab === t.key ? '#fff' : 'transparent',
-                  boxShadow: activeTab === t.key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                  color: activeTab === t.key ? '#1a1a2e' : '#8888a0',
-                  fontWeight: activeTab === t.key ? 700 : 500,
-                  fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s',
+                  padding: '4px 12px', borderRadius: 'var(--radius-sm)', border: 'none',
+                  background: activeTab === t.key ? 'var(--bg)' : 'transparent',
+                  boxShadow: activeTab === t.key ? 'var(--shadow-sm)' : 'none',
+                  color: activeTab === t.key ? 'var(--text)' : 'var(--text-muted)',
+                  fontWeight: activeTab === t.key ? 600 : 500,
+                  fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.15s',
                 }}
               >
                 {t.label}

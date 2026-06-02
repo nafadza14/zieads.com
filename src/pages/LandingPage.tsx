@@ -254,12 +254,12 @@ export default function LandingPage({ onScanComplete }: Props) {
         <p className="section-subtitle">Track your progress with a 0 to 100 score across 6 dimensions</p>
         <div className="score-dimensions">
           {[
-            { name: 'Creative & Offer', weight: '25%', color: '#7B2FBE' },
-            { name: 'Audience Clarity', weight: '20%', color: '#5c8aff' },
-            { name: 'Landing Page', weight: '20%', color: '#00c9a7' },
-            { name: 'Platform Fit', weight: '15%', color: '#e8457a' },
-            { name: 'Funnel Coverage', weight: '10%', color: '#f59e0b' },
-            { name: 'Competitive', weight: '10%', color: '#8b5cf6' },
+            { name: 'Creative & Offer', weight: '25%', color: 'var(--primary)' },
+            { name: 'Audience Clarity', weight: '20%', color: 'var(--primary-light)' },
+            { name: 'Landing Page', weight: '20%', color: 'var(--text-secondary)' },
+            { name: 'Platform Fit', weight: '15%', color: 'var(--text-muted)' },
+            { name: 'Funnel Coverage', weight: '10%', color: 'var(--text-dim)' },
+            { name: 'Competitive', weight: '10%', color: 'var(--text-disabled)' },
           ].map((dim, i) => (
             <div key={i} className="dimension-bar">
               <div className="dim-info">

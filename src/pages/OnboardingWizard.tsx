@@ -258,7 +258,7 @@ export default function OnboardingWizard({ scanData, onComplete }: Props) {
                     { key: 'funnel', name: 'Funnel & Conversion', time: '~30s' },
                   ].map((a, i) => (
                     <div key={i} className="preview-agent-row">
-                      <span className="pa-icon" style={{ color: '#7B2FBE' }}>{agentIcons[a.key]}</span>
+                      <span className="pa-icon" style={{ color: 'var(--primary)' }}>{agentIcons[a.key]}</span>
                       <span className="pa-name">{a.name}</span>
                       <span className="pa-time">{a.time}</span>
                     </div>

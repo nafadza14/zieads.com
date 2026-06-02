@@ -7,11 +7,11 @@ import {
 } from '@iconscout/react-unicons';
 import { supabase } from '../lib/supabaseClient';
 
-const P = '#7B2FBE';
-const PL = 'rgba(123,47,190,0.08)';
-const G = '#64748b';
-const D = '#1e293b';
-const B = '#e2e8f0';
+const P = 'var(--primary)';
+const PL = 'var(--primary-bg)';
+const G = 'var(--text-muted)';
+const D = 'var(--text)';
+const B = 'var(--border)';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Message {
@@ -491,40 +491,83 @@ export default function AgentChat() {
             </div>
 
             {/* Input */}
-            <div style={{ padding: '14px 28px', background: '#fff', borderTop: `1px solid ${B}`, flexShrink: 0 }}>
-              {isAtLimit ? (
-                <div style={{ padding: 14, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ color: '#dc2626', fontWeight: 600, marginBottom: 6 }}>Monthly limit reached</div>
-                  <div style={{ color: G, fontSize: '0.83rem', marginBottom: 10 }}>You've used all {usage.limit} messages this month.</div>
-                  <button onClick={() => navigate('/pricing')} style={{ background: P, color: '#fff', border: 'none', padding: '7px 20px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>Upgrade Plan</button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', background: '#f8fafc', border: `1px solid ${B}`, borderRadius: 10, padding: '10px 14px' }}>
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask anything — ad strategy, copy, analysis, ROAS issues... (Enter to send)"
-                    rows={1}
-                    style={{ flex: 1, resize: 'none', border: 'none', background: 'transparent', outline: 'none', fontSize: '0.92rem', color: D, fontFamily: 'inherit', lineHeight: '1.5', maxHeight: 120, overflowY: 'auto' }}
-                    onInput={e => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }}
-                    disabled={loading}
-                  />
-                  <button
-                    onClick={() => sendMessage()}
-                    disabled={loading || !input.trim()}
-                    style={{ background: loading || !input.trim() ? B : P, color: loading || !input.trim() ? G : '#fff', border: 'none', width: 34, height: 34, borderRadius: 7, cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}
-                  >
-                    {loading ? '…' : <UilArrowUp size={20} />}
+            <div style={{ padding: '16px 28px 24px', background: '#fff', borderTop: `1px solid ${B}`, flexShrink: 0 }}>
+              <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
+                {isAtLimit ? (
+                  <div style={{ padding: 14, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                    <div style={{ color: 'var(--red-text)', fontWeight: 600, marginBottom: 6 }}>Monthly limit reached</div>
+                    <div style={{ color: G, fontSize: '0.83rem', marginBottom: 10 }}>You've used all {usage.limit} messages this month.</div>
+                    <button onClick={() => navigate('/pricing')} style={{ background: P, color: '#fff', border: 'none', padding: '7px 20px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>Upgrade Plan</button>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    background: '#FFFFFF', 
+                    border: `1px solid ${B}`, 
+                    borderRadius: 12, 
+                    padding: '12px 16px',
+                    boxShadow: '0 1px 3px rgba(9, 9, 11, 0.04)',
+                    minHeight: 56
+                  }}>
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Ask anything — ad strategy, copy, analysis, ROAS issues..."
+                      rows={1}
+                      style={{ 
+                        flex: 1, 
+                        resize: 'none', 
+                        border: 'none', 
+                        background: 'transparent', 
+                        outline: 'none', 
+                        fontSize: '15px', 
+                        color: D, 
+                        fontFamily: 'inherit', 
+                        lineHeight: '1.5', 
+                        maxHeight: 120, 
+                        overflowY: 'auto' 
+                      }}
+                      onInput={e => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }}
+                      disabled={loading}
+                    />
+                    {/* Bottom Toolbar */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, borderTop: `1px solid ${B}`, paddingTop: 10 }}>
+                      <div style={{ display: 'flex', gap: 12, fontSize: '13px', color: G }}>
+                        <span style={{ cursor: 'pointer' }}>Attach</span>
+                        <span style={{ cursor: 'pointer' }}>Search</span>
+                        <span style={{ cursor: 'pointer' }}>Style</span>
+                      </div>
+                      <button
+                        onClick={() => sendMessage()}
+                        disabled={loading || !input.trim()}
+                        style={{ 
+                          background: loading || !input.trim() ? 'var(--bg-surface)' : 'var(--primary)', 
+                          color: loading || !input.trim() ? G : '#fff', 
+                          border: 'none', 
+                          width: 28, 
+                          height: 28, 
+                          borderRadius: '50%', 
+                          cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          flexShrink: 0 
+                        }}
+                      >
+                        {loading ? '…' : <UilArrowUp size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, padding: '0 4px' }}>
+                  <span style={{ fontSize: '0.68rem', color: G }}>Uses your audit history · Enter to send · Shift+Enter for new line</span>
+                  <button onClick={() => setActiveTab('modes')} style={{ fontSize: '0.72rem', color: P, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <UilBolt size={14} /> Run deep analysis <UilArrowRight size={14} />
                   </button>
                 </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                <span style={{ fontSize: '0.68rem', color: G }}>Uses your audit history · Enter to send · Shift+Enter for new line</span>
-                <button onClick={() => setActiveTab('modes')} style={{ fontSize: '0.72rem', color: P, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <UilBolt size={14} /> Run deep analysis <UilArrowRight size={14} />
-                </button>
               </div>
             </div>
           </>
@@ -542,34 +585,34 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun }: {
   onRun: () => void;
 }) {
   return (
-    <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, transition: 'border-color 0.15s, box-shadow 0.15s' }}
-      onMouseOver={e => { (e.currentTarget as HTMLDivElement).style.borderColor = useCase.color; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 2px 12px ${useCase.color}22`; }}
+    <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, transition: 'border-color 0.1s, box-shadow 0.1s' }}
+      onMouseOver={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'; }}
       onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.borderColor = B; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 8, background: useCase.bg, border: `1px solid ${useCase.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', border: `1px solid ${B}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
           {useCase.icon}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e293b' }}>{useCase.label}</div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>{useCase.shortDesc}</div>
+          <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text)' }}>{useCase.label}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>{useCase.shortDesc}</div>
         </div>
       </div>
-      <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.5 }}>{useCase.prompt.slice(0, 100)}…</div>
+      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5, flex: 1 }}>{useCase.prompt.slice(0, 100)}…</div>
       <button
         onClick={onRun}
         disabled={isDisabled}
         style={{
-          background: isRunning ? useCase.bg : useCase.color,
-          color: isRunning ? useCase.color : '#fff',
-          border: `1px solid ${isRunning ? useCase.border : useCase.color}`,
-          borderRadius: 6,
-          padding: '7px 0',
+          background: isRunning ? 'var(--bg-surface)' : 'var(--primary)',
+          color: isRunning ? 'var(--text)' : '#fff',
+          border: isRunning ? `1px solid ${B}` : 'none',
+          borderRadius: 'var(--radius-sm)',
+          padding: '6px 0',
           fontWeight: 600,
           cursor: isDisabled ? 'not-allowed' : 'pointer',
           fontSize: '0.82rem',
           opacity: isDisabled && !isRunning ? 0.5 : 1,
-          transition: 'all 0.15s',
+          transition: 'all 0.1s',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -591,24 +634,28 @@ function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q:
   const cats = [...new Set(QUICK_QUESTIONS.map(q => q.cat))];
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', paddingTop: 30 }}>
+    <div style={{ maxWidth: 680, margin: '0 auto', paddingTop: 40 }}>
       {/* Hero */}
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ width: 60, height: 60, background: PL, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', color: P }}>
-          <Bot size={30} />
+      <div style={{ textAlign: 'center', marginBottom: 40 }}>
+        <div style={{ width: 48, height: 48, background: 'var(--bg-surface)', border: `1px solid ${B}`, borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--text)' }}>
+          <Bot size={22} />
         </div>
-        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: D, margin: '0 0 10px' }}>ZieAds AI Agent</h2>
-        <p style={{ color: G, fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 12px' }}>
+        <h2 style={{ fontSize: '32px', fontWeight: 500, color: 'var(--text)', letterSpacing: '-0.02em', margin: '0 0 16px', lineHeight: 1.2 }}>
+          Ask ZieAds anything about <span style={{ fontStyle: 'italic', fontWeight: 600 }}>paid ads strategy</span>.
+        </h2>
+        <p style={{ color: G, fontSize: '0.875rem', lineHeight: 1.5, margin: '0 auto 24px', maxWidth: 520 }}>
           Your expert paid ads strategist. Ask anything about Meta, Google, TikTok or LinkedIn — or run one of our 10 deep analysis modes.
         </p>
         {businessName && (
-          <div style={{ display: 'inline-block', background: PL, border: `1px solid rgba(123,47,190,0.2)`, borderRadius: 20, padding: '4px 14px', fontSize: '0.78rem', color: P, fontWeight: 600, marginBottom: 14 }}>
-            Personalized for: {businessName}
+          <div style={{ display: 'inline-block', background: 'var(--bg-soft)', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '4px 12px', fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 20 }}>
+            Context: {businessName}
           </div>
         )}
-        <button onClick={onSwitchModes} style={{ background: P, color: '#fff', border: 'none', padding: '9px 22px', borderRadius: 20, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <UilBolt size={18} /> Run Deep Analysis <UilArrowRight size={18} />
-        </button>
+        <div>
+          <button onClick={onSwitchModes} style={{ background: P, color: '#fff', border: 'none', padding: '8px 18px', borderRadius: 'var(--radius-sm)', fontWeight: 500, cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <UilBolt size={14} /> Run Deep Analysis <UilArrowRight size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Feature pills */}
@@ -619,14 +666,14 @@ function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q:
       </div>
 
       {/* Quick questions by category */}
-      <div style={{ marginBottom: 8, fontSize: '0.75rem', fontWeight: 700, color: G, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick questions</div>
+      <div style={{ marginBottom: 10, fontSize: '0.72rem', fontWeight: 600, color: G, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quick questions</div>
       {cats.map(cat => (
-        <div key={cat} style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: P, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{cat}</div>
+        <div key={cat} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{cat}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {QUICK_QUESTIONS.filter(q => q.cat === cat).map((q, i) => (
-              <button key={i} onClick={() => onSuggest(q.q)} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 7, padding: '10px 14px', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', color: D, lineHeight: 1.4, transition: 'all 0.15s' }}
-                onMouseOver={e => { e.currentTarget.style.borderColor = P; e.currentTarget.style.background = PL; }}
+              <button key={i} onClick={() => onSuggest(q.q)} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '10px 14px', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', color: D, lineHeight: 1.4, transition: 'all 0.1s' }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = P; e.currentTarget.style.background = 'var(--bg-surface)'; }}
                 onMouseOut={e => { e.currentTarget.style.borderColor = B; e.currentTarget.style.background = '#fff'; }}
               >
                 {q.q}
