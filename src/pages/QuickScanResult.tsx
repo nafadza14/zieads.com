@@ -112,11 +112,18 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
           <h2>Critical Findings</h2>
           {findings.slice(0, 3).map((f: any, i: number) => (
             <div key={i} className={`finding-card finding-${f.severity}`}>
-              <div className="finding-badge">{f.severity.toUpperCase()}</div>
-              <div className="finding-content">
-                <h4>{f.title}</h4>
-                <p className="finding-impact">{f.impact}</p>
-                <p className="finding-rec"><IconTip />{f.recommendation}</p>
+              <div className="finding-header">
+                <div className="finding-title-group">
+                  <span className="finding-badge">{f.severity.toUpperCase()}</span>
+                  <div className="finding-content">
+                    <h4>{f.title}</h4>
+                  </div>
+                </div>
+              </div>
+              <p className="finding-impact">{f.impact}</p>
+              <div className="finding-rec">
+                <IconTip />
+                <span>{f.recommendation}</span>
               </div>
             </div>
           ))}
