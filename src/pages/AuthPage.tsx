@@ -121,7 +121,7 @@ export default function AuthPage() {
             <h1 className="text-[28px] font-bold text-gray-950 tracking-tight mb-1">
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
-            <p className="text-[14px] text-gray-500 mb-6 font-medium">
+            <p className="text-[14px] text-gray-500 mb-[72px] font-medium">
               Continue with one of the following options
             </p>
 
@@ -147,7 +147,7 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email Address"
-                  className="w-full h-[60px] px-5 border border-[#E2D9D4] bg-white rounded-[16px] text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-450 transition-all"
+                  className="w-full h-[60px] px-5 border border-[#E2D9D4] bg-white rounded-[16px] text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455 transition-all"
                 />
               </div>
 
@@ -208,7 +208,7 @@ export default function AuthPage() {
                 id="email-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full h-[60px] flex items-center justify-center bg-[#0D0D0D] hover:bg-black text-white rounded-[16px] font-bold text-[16px] transition-all active:scale-[0.98] disabled:opacity-60"
+                className="w-full h-[60px] flex items-center justify-center btn-lp-primary-gradient text-white rounded-[16px] font-bold text-[16px] transition-all active:scale-[0.98] disabled:opacity-60"
               >
                 {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
               </button>
