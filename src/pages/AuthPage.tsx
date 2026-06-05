@@ -136,10 +136,10 @@ export default function AuthPage() {
               </div>
             )}
 
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <form onSubmit={handleEmailSubmit} className="space-y-5">
               {/* Email Field */}
               <div>
-                <label className="block text-[13px] font-bold text-gray-950 mb-1.5">Email</label>
+                <label className="block text-[14px] font-bold text-gray-950 mb-2">Email</label>
                 <input
                   id="email-input"
                   type="email"
@@ -147,13 +147,13 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email Address"
-                  className="w-full h-[52px] px-4 border border-[#E5E0DA] bg-white rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 transition-all"
+                  className="w-full h-[60px] px-5 border border-[#E2D9D4] bg-white rounded-[16px] text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-450 transition-all"
                 />
               </div>
 
               {/* Password Field */}
               <div>
-                <label className="block text-[13px] font-bold text-gray-950 mb-1.5">Password</label>
+                <label className="block text-[14px] font-bold text-gray-950 mb-2">Password</label>
                 <div className="relative">
                   <input
                     id="password-input"
@@ -162,12 +162,12 @@ export default function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={isSignUp ? 'At least 6 characters' : 'Password 8-16 character'}
-                    className="w-full h-[52px] pl-4 pr-12 border border-[#E5E0DA] bg-white rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 transition-all"
+                    className="w-full h-[60px] pl-5 pr-12 border border-[#E2D9D4] bg-white rounded-[16px] text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setIsPasswordVisible(!isPasswordVisible)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {isPasswordVisible ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -184,7 +184,7 @@ export default function AuthPage() {
               </div>
 
               {/* Options Row */}
-              <div className="flex items-center justify-between text-[13px] pt-1 pb-2">
+              <div className="flex items-center justify-between text-[13px] pt-1 pb-1">
                 <label className="flex items-center gap-2 text-gray-400 font-medium cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -192,7 +192,7 @@ export default function AuthPage() {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded border-gray-300 accent-gray-900 cursor-pointer"
                   />
-                  <span>Remember me</span>
+                  <span className="text-gray-400">Remember me</span>
                 </label>
                 <button
                   type="button"
@@ -208,7 +208,7 @@ export default function AuthPage() {
                 id="email-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full h-[52px] flex items-center justify-center bg-[#0D0D0D] hover:bg-black text-white rounded-xl font-bold text-[15px] transition-all active:scale-[0.98] disabled:opacity-60"
+                className="w-full h-[60px] flex items-center justify-center bg-[#0D0D0D] hover:bg-black text-white rounded-[16px] font-bold text-[16px] transition-all active:scale-[0.98] disabled:opacity-60"
               >
                 {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
               </button>
@@ -218,7 +218,7 @@ export default function AuthPage() {
                 id="google-signin-btn"
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading}
-                className="w-full h-[52px] flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-750 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
+                className="w-full h-[60px] flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-700 rounded-[16px] text-[15px] font-bold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
               >
                 {googleLoading ? (
                   <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
