@@ -12,40 +12,17 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const TESTIMONIALS = [
-  {
-    quote: "ZieAds cut our client onboarding from 3 days to 20 minutes. Every agency needs this.",
-    name: "Rafi S.",
-    role: "Performance Marketing Lead",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80",
-  },
-  {
-    quote: "The AI audit caught targeting gaps our team missed for months. ROI improved within the first week.",
-    name: "Dewi A.",
-    role: "Head of Growth, e-Commerce",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80",
-  },
-  {
-    quote: "We run ZieAds on every new client before a single rupiah is spent. It changed how we work.",
-    name: "Bima P.",
-    role: "Founder, Digital Agency",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80",
-  },
-  {
-    quote: "The ad copy output is genuinely better than what my copywriter was producing. Fast and on-brand.",
-    name: "Sinta W.",
-    role: "Marketing Director",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&h=150&q=80",
-  },
-  {
-    quote: "Competitor intelligence alone is worth the subscription. I can see exactly what rivals are running.",
-    name: "Aryo K.",
-    role: "Media Buyer",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80",
-  },
-];
+const AppleIcon = () => (
+  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.69-1.13 1.83-.99 2.94.1.08 2.16.88 2.82-.47c.66-.81 1.11-1.93.99-3.06z" />
+  </svg>
+);
 
-const TICKER = [...TESTIMONIALS, ...TESTIMONIALS];
+const FacebookIcon = () => (
+  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="#1877F2">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+  </svg>
+);
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -59,12 +36,23 @@ export default function AuthPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate(from, { replace: true });
     });
   }, [navigate, from]);
+
+  const handleContinueWithEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setError(null);
+    setShowPassword(true);
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,14 +116,9 @@ export default function AuthPage() {
         <div className="flex-1 flex items-center justify-center px-12 py-10">
           <div className="w-full max-w-[420px]">
 
-            <h1 className="text-[32px] font-bold text-gray-900 mb-2 tracking-tight leading-tight">
-              {isSignUp ? 'Create your account' : 'Welcome back'}
+            <h1 className="text-[32px] font-bold text-gray-900 mb-8 tracking-tight leading-tight text-left">
+              {isSignUp ? 'Sign up' : 'Log in'}
             </h1>
-            <p className="text-[16px] text-gray-500 mb-8">
-              {isSignUp
-                ? 'Start running AI powered ad strategy today.'
-                : 'Welcome back! Please enter your details.'}
-            </p>
 
             {error && (
               <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-[14px]">
@@ -148,74 +131,123 @@ export default function AuthPage() {
               </div>
             )}
 
-            <form onSubmit={handleEmailSubmit} className="space-y-5">
-              <div>
-                <label className="block text-[14px] font-semibold mb-2 auth-label">Email</label>
-                <input
-                  id="email-input"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
-                />
-              </div>
+            {!showPassword ? (
+              <form onSubmit={handleContinueWithEmail} className="space-y-4">
+                <div>
+                  <label className="block text-[14px] font-semibold mb-2 auth-label text-left">Email</label>
+                  <input
+                    id="email-input"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Your address email"
+                    className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[14px] font-semibold mb-2 auth-label">Password</label>
-                <input
-                  id="password-input"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  minLength={6}
-                  className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
-                />
-              </div>
+                <button
+                  id="email-continue-btn"
+                  type="submit"
+                  className="w-full py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
+                >
+                  Continue with email
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleEmailSubmit} className="space-y-4">
+                <div className="flex justify-between items-center bg-[#F1EFEA] border border-[#DDD6C8]/40 p-3.5 rounded-xl mb-4">
+                  <span className="text-[14px] text-gray-700 truncate font-medium">{email}</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(false)}
+                    className="text-[12px] font-semibold text-[#1E7BFF] hover:underline"
+                  >
+                    Change
+                  </button>
+                </div>
 
-              <button
-                id="email-submit-btn"
-                type="submit"
-                disabled={loading}
-                className="w-full mt-5 py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
-              >
-                {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
-              </button>
-            </form>
+                <div>
+                  <label className="block text-[14px] font-semibold mb-2 auth-label text-left">Password</label>
+                  <input
+                    id="password-input"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    minLength={6}
+                    className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
+                  />
+                </div>
 
-            {/* Google */}
-            {/* Google */}
-            <button
-              id="google-signin-btn"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full mt-3 flex items-center justify-center gap-3 py-3.5 btn-lp-google text-[15px] active:scale-[0.98] disabled:opacity-60"
-            >
-              {googleLoading
-                ? <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                : <GoogleIcon />}
-              {googleLoading ? 'Redirecting...' : isSignUp ? 'Sign up with Google' : 'Sign in with Google'}
-            </button>
+                <button
+                  id="email-submit-btn"
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
+                >
+                  {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
+                </button>
+              </form>
+            )}
+
+            {!showPassword && (
+              <>
+                <div className="flex items-center my-6">
+                  <div className="flex-1 border-t border-gray-200"></div>
+                  <span className="px-3 text-[12px] text-gray-400 font-semibold tracking-wider">OR</span>
+                  <div className="flex-1 border-t border-gray-200"></div>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm"
+                  >
+                    <AppleIcon />
+                    Continue with Apple
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm"
+                  >
+                    <FacebookIcon />
+                    Continue with Facebook
+                  </button>
+                  <button
+                    id="google-signin-btn"
+                    onClick={handleGoogleSignIn}
+                    disabled={googleLoading}
+                    className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
+                  >
+                    {googleLoading ? (
+                      <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    ) : (
+                      <GoogleIcon />
+                    )}
+                    Continue with Google
+                  </button>
+                </div>
+              </>
+            )}
 
             {/* Toggle sign in / sign up */}
-            <p className="text-center mt-6 text-[14px] text-gray-500">
+            <p className="text-center mt-8 text-[14px] text-gray-500">
               {isSignUp ? (
                 <>Already have an account?{' '}
-                  <button onClick={() => navigate('/sign-in')} className="auth-toggle-link">Sign in</button>
+                  <button onClick={() => { navigate('/sign-in'); setShowPassword(false); }} className="auth-toggle-link text-[14px]">Log in</button>
                 </>
               ) : (
-                <>Don't have an account?{' '}
-                  <button onClick={() => navigate('/sign-up')} className="auth-toggle-link">Sign up</button>
+                <>New to ZieAds?{' '}
+                  <button onClick={() => { navigate('/sign-up'); setShowPassword(false); }} className="auth-toggle-link text-[14px]">Get Started</button>
                 </>
               )}
             </p>
 
             {/* Consent text */}
-            <p className="text-center mt-4 text-[12px] text-gray-400 leading-relaxed max-w-[360px] mx-auto">
-              By clicking on 'Continue with Google' or Email you consent to receive occasional product updates
+            <p className="text-center mt-6 text-[12px] text-gray-400 leading-relaxed max-w-[360px] mx-auto">
+              By clicking on 'Continue' you consent to receive occasional product updates
               and important account alerts. Read our{' '}
               <button
                 onClick={() => navigate('/privacy-policy')}
@@ -245,9 +277,19 @@ export default function AuthPage() {
           backgroundSize: '20px 20px',
         }} />
 
+        {/* Testimonial Quote */}
+        <div className="px-16 pt-24 max-w-[680px] z-10 text-left">
+          <p className="text-[20px] lg:text-[24px] text-gray-700 font-normal leading-relaxed mb-4">
+            "ZieAds has been a game-changer for our design team, streamlining our workflow and allowing us to create consistent, high-quality designs with ease!"
+          </p>
+          <p className="text-[14px] text-gray-400 font-semibold">
+            — Adam Doe, Senior Product Designer
+          </p>
+        </div>
+
         {/* Marketing dashboard preview */}
-        <div className="flex-1 flex items-center justify-center p-6 lg:p-12 z-10 w-full">
-          <div className="lp-showcase-container !mt-0 w-full max-w-[560px]">
+        <div className="flex-1 flex items-end justify-center px-12 z-10 w-full mt-10 overflow-hidden translate-y-[100px] hover:translate-y-[80px] transition-transform duration-500">
+          <div className="lp-showcase-container !mt-0 w-full max-w-[580px]">
             <div className="lp-rainbow-glow !top-[30%]"></div>
             <div className="lp-showcase-card shadow-2xl">
               <div className="lp-showcase-header">
@@ -304,71 +346,7 @@ export default function AuthPage() {
             </div>
           </div>
         </div>
-
-        {/* Glassmorphism testimonial ticker */}
-        <div
-          className="pb-8 overflow-hidden z-10"
-          style={{
-            background: 'linear-gradient(to top, rgba(30,123,255,0.06) 0%, transparent 100%)',
-          }}
-        >
-          <p className="text-center text-[13px] font-semibold tracking-normal text-[#1E7BFF] mb-4">
-            Trusted by marketers worldwide
-          </p>
-
-          <div className="overflow-hidden">
-            <div
-              className="flex gap-4 px-2"
-              style={{
-                animation: 'ticker-rtl 32s linear infinite',
-                width: 'max-content',
-              }}
-            >
-              {TICKER.map((t, i) => (
-                <div
-                  key={i}
-                  className="flex-shrink-0 p-8 border-0"
-                  style={{
-                    width: 380,
-                    background: 'var(--lp-accent-gradient)',
-                    borderRadius: 'var(--lp-radius-card)',
-                    boxShadow: 'var(--lp-shadow-card-hover)',
-                  }}
-                >
-                  <div className="flex gap-0.5 mb-4 text-yellow-300">
-                    {[...Array(5)].map((_, si) => (
-                      <svg key={si} className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <p className="text-[14.5px] text-white/95 leading-relaxed mb-5 font-medium">
-                    "{t.quote}"
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={t.avatar}
-                      alt={t.name}
-                      className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white/20"
-                    />
-                    <div>
-                      <div className="text-[14px] font-semibold text-white">{t.name}</div>
-                      <div className="text-[12px] text-white/80">{t.role}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
-
-      <style>{`
-        @keyframes ticker-rtl {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-      `}</style>
     </div>
   );
 }
