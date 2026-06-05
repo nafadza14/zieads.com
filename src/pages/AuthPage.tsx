@@ -116,8 +116,8 @@ export default function AuthPage() {
       <main className="flex-1 flex items-center justify-center px-4 md:px-12 py-6 z-10 relative">
         <div className="w-full max-w-[1000px] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
           
-          {/* Left Panel: Glassmorphic Auth Form */}
-          <div className="bg-[#FFFDFD] border border-gray-100 shadow-[0_15px_50px_rgba(0,0,0,0.03)] rounded-[32px] p-8 md:p-10 flex flex-col justify-center text-left max-w-[450px] mx-auto w-full">
+          {/* Left Panel: Transparent/No-Card Auth Form */}
+          <div className="flex flex-col justify-center text-left max-w-[450px] mx-auto w-full p-4 md:p-6">
             <h1 className="text-[28px] font-bold text-gray-950 tracking-tight mb-1">
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
@@ -213,20 +213,22 @@ export default function AuthPage() {
                 {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
               </button>
 
-              {/* Social Google Login */}
-              <button
-                id="google-signin-btn"
-                onClick={handleGoogleSignIn}
-                disabled={googleLoading}
-                className="w-full h-[60px] flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-700 rounded-[16px] text-[15px] font-bold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
-              >
-                {googleLoading ? (
-                  <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                ) : (
-                  <GoogleIcon />
-                )}
-                Continue with Google
-              </button>
+              {/* Social Google Login Wrapper for Spacing */}
+              <div className="pt-2">
+                <button
+                  id="google-signin-btn"
+                  onClick={handleGoogleSignIn}
+                  disabled={googleLoading}
+                  className="w-full h-[60px] flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-700 rounded-[16px] text-[15px] font-bold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
+                >
+                  {googleLoading ? (
+                    <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                  ) : (
+                    <GoogleIcon />
+                  )}
+                  Continue with Google
+                </button>
+              </div>
             </form>
 
             {/* Auth Toggle footer */}
