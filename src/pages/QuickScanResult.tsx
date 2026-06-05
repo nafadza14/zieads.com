@@ -137,7 +137,7 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
             <div className="blur-finding"></div>
           </div>
           <div className="blur-overlay">
-            <h3>5 more critical findings found — unlock to see</h3>
+            <h3>5 more critical findings found. Unlock to see</h3>
             <p>Enter your email to save your results and run your first full audit free.</p>
             <form onSubmit={handleRunFullAudit} className="email-capture-form">
               <input 

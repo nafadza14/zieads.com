@@ -110,7 +110,7 @@ export default function AuthPage() {
       <div className="lp-grid-line lp-line-right"></div>
 
       {/* ── Left: Form Panel ── */}
-      <div className="flex-1 flex flex-col min-h-screen z-10">
+      <div className="w-full lg:w-[25%] shrink-0 flex flex-col min-h-screen z-10 bg-[#F7F5F0] border-r border-[#DDD6C8]/30">
         {/* Logo */}
         <div className="px-12 pt-10">
           <div
@@ -180,7 +180,7 @@ export default function AuthPage() {
                 id="email-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
+                className="w-full mt-5 py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
               >
                 {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
               </button>
@@ -237,7 +237,7 @@ export default function AuthPage() {
       </div>
 
       {/* ── Right: Visual Panel ── */}
-      <div className="hidden lg:flex flex-1 flex-col lp-visual-panel overflow-hidden relative justify-between">
+      <div className="hidden lg:flex lg:w-[75%] flex-col lp-visual-panel overflow-hidden relative justify-between">
         
         {/* Dotted Wallpaper pattern container */}
         <div className="absolute inset-0 opacity-40 pointer-events-none" style={{
@@ -278,15 +278,15 @@ export default function AuthPage() {
                   </div>
                   <div className="lp-showcase-metrics grid grid-cols-3 gap-2">
                     <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
-                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium uppercase tracking-wider">Readiness</span>
+                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium ">Readiness Score</span>
                       <span className="lp-metric-value text-[14px] font-bold text-gray-900 mt-1 font-mono">87/100</span>
                     </div>
                     <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
-                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium uppercase tracking-wider">Est. ROAS</span>
+                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium ">Est. ROAS Increase</span>
                       <span className="lp-metric-value text-[14px] font-bold text-green-600 mt-1 font-mono">+42%</span>
                     </div>
                     <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
-                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium uppercase tracking-wider">AI Agents</span>
+                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium ">AI Agent Audit</span>
                       <span className="lp-metric-value text-[14px] font-bold text-blue-600 mt-1 font-mono">5/5 Done</span>
                     </div>
                   </div>
@@ -327,26 +327,33 @@ export default function AuthPage() {
               {TICKER.map((t, i) => (
                 <div
                   key={i}
-                  className="flex-shrink-0 px-5 py-4 border-0"
+                  className="flex-shrink-0 p-8 border-0"
                   style={{
-                    width: 280,
+                    width: 380,
                     background: 'var(--lp-accent-gradient)',
-                    borderRadius: 'var(--lp-radius-card-sm)',
+                    borderRadius: 'var(--lp-radius-card)',
                     boxShadow: 'var(--lp-shadow-card-hover)',
                   }}
                 >
-                  <p className="text-[13px] text-white/95 leading-relaxed mb-3 font-medium">
+                  <div className="flex gap-0.5 mb-4 text-yellow-300">
+                    {[...Array(5)].map((_, si) => (
+                      <svg key={si} className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <p className="text-[14.5px] text-white/95 leading-relaxed mb-5 font-medium">
                     "{t.quote}"
                   </p>
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-3">
                     <img
                       src={t.avatar}
                       alt={t.name}
-                      className="w-7 h-7 rounded-full object-cover shrink-0 border border-white/20"
+                      className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white/20"
                     />
                     <div>
-                      <div className="text-[12px] font-semibold text-white">{t.name}</div>
-                      <div className="text-[11px] text-white/80">{t.role}</div>
+                      <div className="text-[14px] font-semibold text-white">{t.name}</div>
+                      <div className="text-[12px] text-white/80">{t.role}</div>
                     </div>
                   </div>
                 </div>

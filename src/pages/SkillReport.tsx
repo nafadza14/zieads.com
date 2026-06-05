@@ -482,7 +482,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               {d.indirectCompetitors.map((c: any, i: number) => (
                 <div key={i} style={{ padding: '10px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                   <strong style={{ color: '#1e293b' }}>{c.name}</strong>
-                  {c.offer && <span style={{ color: '#94a3b8', fontSize: '0.875rem', marginLeft: 8 }}>— {c.offer}</span>}
+                  {c.offer && <span style={{ color: '#94a3b8', fontSize: '0.875rem', marginLeft: 8 }}>({c.offer})</span>}
                 </div>
               ))}
             </div>
@@ -913,7 +913,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* UGC Scripts */}
         {scripts.length > 0 && (
           <>
-            <SectionTitle sub="Full video scripts ready to brief creators — word-for-word">UGC Video Scripts</SectionTitle>
+            <SectionTitle sub="Full video scripts ready to brief creators (word-for-word)">UGC Video Scripts</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 16, marginBottom: 32 }}>
               {scripts.map((s: any, i: number) => (
                 <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
@@ -1257,7 +1257,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Conversation Ad Scripts */}
         {convAds.length > 0 && (
           <>
-            <SectionTitle sub="LinkedIn Conversation Ads — ready to build">Conversation Ad Scripts</SectionTitle>
+            <SectionTitle sub="LinkedIn Conversation Ads, ready to build">Conversation Ad Scripts</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 16, marginBottom: 32 }}>
               {convAds.map((ad: any, i: number) => (
                 <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
@@ -1648,7 +1648,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Executive Brief */}
         {brief.summary && (
           <>
-            <SectionTitle sub="Client-facing summary — non-technical language">Executive Brief</SectionTitle>
+            <SectionTitle sub="Client-facing summary in non-technical language">Executive Brief</SectionTitle>
             <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e8e6f0', borderRadius: 8, marginBottom: 16 }}>
               <p style={{ fontSize: '1rem', color: '#1e293b', lineHeight: 1.8, marginBottom: 16 }}>{brief.summary}</p>
               {brief.topPriority && (
@@ -1768,7 +1768,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Prioritised Recommendations */}
         {recs.length > 0 && (
           <>
-            <SectionTitle sub="Ordered by ROI impact — implement in this order">Prioritised Recommendations</SectionTitle>
+            <SectionTitle sub="Ordered by ROI impact, implement in this order">Prioritised Recommendations</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {recs.map((r: any, i: number) => {
                 const effortColor = { Low: '#16a34a', Medium: '#d97706', High: '#dc2626' }[(r.effort || 'Medium') as string] || '#64748b';
@@ -1890,7 +1890,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               <span style={{ fontSize: '2rem' }}>{d.readyToRun ? '🟢' : '🔴'}</span>
               <div>
                 <p style={{ fontWeight: 800, fontSize: '1.1rem', color: d.readyToRun ? '#15803d' : '#dc2626', marginBottom: 2 }}>
-                  {d.readyToRun ? 'Ready to Run Ads' : 'Not Ready — Fix Issues First'}
+                  {d.readyToRun ? 'Ready to Run Ads' : 'Not Ready: Fix Issues First'}
                 </p>
                 <p style={{ fontSize: '0.875rem', color: RP }}>Grade: {d.estimatedReadinessGrade} · {d.platformRecommendation}</p>
               </div>
@@ -2071,9 +2071,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
     const seeds = d.lookalikeSeeds || [];
 
     const tierConfig = [
-      { key: 'cold', label: 'COLD — Top of Funnel', color: RP, desc: 'Cold interest-based audiences' },
-      { key: 'warm', label: 'WARM — Mid Funnel', color: RP, desc: 'Engagement & lookalike audiences' },
-      { key: 'hot', label: 'HOT — Bottom Funnel', color: '#dc2626', desc: 'Retargeting & customer lists' },
+      { key: 'cold', label: 'Cold: Top of Funnel', color: RP, desc: 'Cold interest-based audiences' },
+      { key: 'warm', label: 'Warm: Mid Funnel', color: RP, desc: 'Engagement & lookalike audiences' },
+      { key: 'hot', label: 'Hot: Bottom Funnel', color: '#dc2626', desc: 'Retargeting & customer lists' },
     ];
 
     return (
@@ -2081,7 +2081,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* ICP Hero */}
         {icp.name && (
           <>
-            <SectionTitle sub="Your primary buyer persona — be specific, not assumed">Ideal Customer Profile (ICP)</SectionTitle>
+            <SectionTitle sub="Your primary buyer persona (be specific, not assumed)">Ideal Customer Profile (ICP)</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 24 }}>
               <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
                 <p style={{ fontSize: '0.825rem', fontWeight: 700, color: RP, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Primary ICP</p>
@@ -2284,7 +2284,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Lookalike Seeds */}
         {seeds.length > 0 && (
           <>
-            <SectionTitle sub="Ranked by conversion probability — use these as Lookalike seeds">Lookalike Seed Audiences</SectionTitle>
+            <SectionTitle sub="Ranked by conversion probability, use these as Lookalike seeds">Lookalike Seed Audiences</SectionTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
               {seeds.map((s: any, i: number) => (
                 <div key={i} style={{ display: 'flex', gap: 16, padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, alignItems: 'flex-start' }}>
@@ -2308,7 +2308,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Exclusion Strategy */}
         {excl.length > 0 && (
           <>
-            <SectionTitle sub="Segments to exclude — protect budget from irrelevant audiences">Exclusion Strategy</SectionTitle>
+            <SectionTitle sub="Segments to exclude to protect budget from irrelevant audiences">Exclusion Strategy</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12, marginBottom: 32 }}>
               {excl.map((e: any, i: number) => (
                 <div key={i} style={{ padding: '14px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8 }}>
@@ -2352,7 +2352,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Tier 1 — Direct */}
         {t1.length > 0 && (
           <>
-            <SectionTitle sub="Same product, same ICP — your direct ad competitors">Tier 1: Direct Competitors</SectionTitle>
+            <SectionTitle sub="Same product, same ICP, your direct ad competitors">Tier 1: Direct Competitors</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 16, marginBottom: 32 }}>
               {t1.map((c: any, i: number) => {
                 const spendColor: Record<string, string> = { low: '#16a34a', medium: '#f59e0b', high: '#dc2626', heavy: '#7B2FBE' };
@@ -2388,7 +2388,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Tier 2 — Indirect */}
         {t2.length > 0 && (
           <>
-            <SectionTitle sub="Different product, same problem — alternative solutions your ICP might choose">Tier 2: Indirect Competitors</SectionTitle>
+            <SectionTitle sub="Different product, same problem, alternative solutions your ICP might choose">Tier 2: Indirect Competitors</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12, marginBottom: 32 }}>
               {t2.map((c: any, i: number) => (
                 <div key={i} style={{ padding: '16px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
@@ -2573,9 +2573,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
     const scoreColor = (s: number) => s >= 70 ? '#16a34a' : s >= 45 ? '#d97706' : '#dc2626';
 
     const stageConfig = [
-      { key: 'tofu', label: 'TOFU — Top of Funnel', sublabel: 'Awareness & Discovery', color: RP, bg: '#eff6ff', border: '#bfdbfe' },
-      { key: 'mofu', label: 'MOFU — Middle of Funnel', sublabel: 'Consideration & Nurture', color: RP, bg: '#fffbeb', border: '#fde68a' },
-      { key: 'bofu', label: 'BOFU — Bottom of Funnel', sublabel: 'Conversion & Close', color: '#16a34a', bg: '#f0fdf4', border: '#a7f3d0' },
+      { key: 'tofu', label: 'Tofu: Top of Funnel', sublabel: 'Awareness & Discovery', color: RP, bg: '#eff6ff', border: '#bfdbfe' },
+      { key: 'mofu', label: 'Mofu: Middle of Funnel', sublabel: 'Consideration & Nurture', color: RP, bg: '#fffbeb', border: '#fde68a' },
+      { key: 'bofu', label: 'Bofu: Bottom of Funnel', sublabel: 'Conversion & Close', color: '#16a34a', bg: '#f0fdf4', border: '#a7f3d0' },
     ];
 
     const statusBadge = (s: string) => ({
@@ -2626,7 +2626,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Funnel Map — 3 stages */}
         {(fm.tofu || fm.mofu || fm.bofu) && (
           <>
-            <SectionTitle sub="Current funnel state — green = present, yellow = partial, red = missing">Funnel Architecture Map</SectionTitle>
+            <SectionTitle sub="Current funnel state (green = present, yellow = partial, red = missing)">Funnel Architecture Map</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
               {stageConfig.map(({ key, label, sublabel, color, bg, border }) => {
                 const stage: any = fm[key];
@@ -2701,7 +2701,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Build Sequence */}
         {buildSeq.length > 0 && (
           <>
-            <SectionTitle sub="Prioritised by revenue impact — build in this order">Funnel Build Sequence</SectionTitle>
+            <SectionTitle sub="Prioritised by revenue impact, build in this order">Funnel Build Sequence</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {buildSeq.map((step: any, i: number) => {
                 const effortColor = { Low: '#16a34a', Medium: '#d97706', High: '#dc2626' }[(step.effort || 'Medium') as string] || '#64748b';
@@ -2886,7 +2886,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* KPI Benchmarks */}
         {(kpi.meta || kpi.googleSearch) && (
           <>
-            <SectionTitle sub="Industry benchmarks — these are your green/yellow/red targets">KPI Benchmarks</SectionTitle>
+            <SectionTitle sub="Industry benchmarks, these are your green/yellow/red targets">KPI Benchmarks</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
               {[
                 { key: 'meta', label: 'Meta Ads', color: RP, fields: ['cpm', 'cpc', 'ctr', 'cpa', 'roas'] },
@@ -3076,7 +3076,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* Keyword Buckets */}
         {kw.length > 0 && (
           <>
-            <SectionTitle sub="Organized by search intent — ready for Google Ads Keyword Planner">Keyword Strategy</SectionTitle>
+            <SectionTitle sub="Organized by search intent, ready for Google Ads Keyword Planner">Keyword Strategy</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16, marginBottom: 32 }}>
               {kw.map((b: any, i: number) => {
                 const c = intentColor[b.category] || '#64748b';
@@ -3103,7 +3103,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {/* RSA Copy Bank */}
         {(rsa.headlines?.length > 0 || rsa.descriptions?.length > 0) && (
           <>
-            <SectionTitle sub="Responsive Search Ad assets — paste directly into Google Ads">RSA Copy Bank</SectionTitle>
+            <SectionTitle sub="Responsive Search Ad assets, paste directly into Google Ads">RSA Copy Bank</SectionTitle>
             <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 32 }}>
               {rsa.pinnedHeadline1 && (
                 <div style={{ padding: '10px 14px', background: '#f0f7ff', borderRadius: 10, marginBottom: 16, display: 'flex', gap: 10 }}>
@@ -3277,9 +3277,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
 const TIPS = [
   'AI agents analyze your brand, copy, audiences, and competitors simultaneously.',
   'Top performing ads share one thing: a single clear hook in the first 3 seconds.',
-  'ZieAds mirrors what senior media buyers do — just in under 60 seconds.',
+  'ZieAds mirrors what senior media buyers do, just in under 60 seconds.',
   'Score above 75? You\'re in the top 20% of ad setups we\'ve analyzed.',
-  'The best copy isn\'t clever — it\'s the most specific about one problem.',
+  'The best copy isn\'t clever, it\'s the most specific about one problem.',
 ];
 
 // ─── Progress step card ───────────────────────────────────────────

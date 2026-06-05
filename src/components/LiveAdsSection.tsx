@@ -416,7 +416,7 @@ export default function LiveAdsSection({ url, businessName, accentColor = 'var(-
             </span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
-            AI-predicted ad creatives based on {brandLabel}'s website — click any card to search in the live ad library
+            AI-predicted ad creatives based on {brandLabel}'s website. Click any card to search in the live ad library
           </p>
         </div>
 
@@ -498,7 +498,7 @@ export default function LiveAdsSection({ url, businessName, accentColor = 'var(-
             <a href="https://www.facebook.com/ads/library/api/" target="_blank" rel="noopener noreferrer" style={{ color: '#1877F2', fontWeight: 600 }}>
               facebook.com/ads/library/api
             </a>
-            {' '}— once approved, real ad iframes will appear here automatically.
+            . Once approved, real ad iframes will appear here automatically.
           </p>
         </div>
       </div>

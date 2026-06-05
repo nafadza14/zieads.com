@@ -295,7 +295,7 @@ export default function ClientDashboard({ reportData }: Props) {
         {/* Top Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h1 style={{ fontSize: '1.4rem', color: D, fontWeight: 700, margin: 0 }}>
-            {sidebarNav === 'reports' ? 'Account & Report History' : (hasReport ? `Good morning — let's make your ads win today.` : `Welcome to ZieAds — run your first audit to get started.`)}
+            {sidebarNav === 'reports' ? 'Account & Report History' : (hasReport ? `Good morning. Let's make your ads win today.` : `Welcome to ZieAds. Run your first audit to get started.`)}
           </h1>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             {hasReport && sidebarNav === 'home' && (

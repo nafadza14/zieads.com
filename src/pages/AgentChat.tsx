@@ -139,7 +139,7 @@ type UseCaseId = typeof USE_CASES[number]['id'];
 // ─── Suggested questions grouped by category ─────────────────────────────────
 const QUICK_QUESTIONS = [
   { cat: 'Meta Ads', q: 'What Meta audience should I target for my business?' },
-  { cat: 'Meta Ads', q: 'My Meta ROAS dropped 40% this week — what\'s wrong?' },
+  { cat: 'Meta Ads', q: 'My Meta ROAS dropped 40% this week. What\'s wrong?' },
   { cat: 'Google Ads', q: 'Build me a Google Search campaign structure with ad groups' },
   { cat: 'Google Ads', q: 'How do I fix a low Quality Score on my top keywords?' },
   { cat: 'Creative', q: 'Write 5 Meta ad headlines with strong hooks for my product' },
@@ -450,7 +450,7 @@ export default function AgentChat() {
                 <textarea
                   value={additionalData}
                   onChange={e => setAdditionalData(e.target.value)}
-                  placeholder="e.g. 'Meta ROAS: 1.8, CPA: $42, CTR: 0.9%, Daily spend: $800, Campaign: Prospecting-Broad' — the more specific you are, the better the analysis"
+                  placeholder="e.g. 'Meta ROAS: 1.8, CPA: $42, CTR: 0.9%, Daily spend: $800, Campaign: Prospecting-Broad' (the more specific you are, the better the analysis)"
                   rows={3}
                   style={{ width: '100%', border: `1px solid ${B}`, borderRadius: 6, padding: '10px 12px', fontSize: '0.85rem', color: D, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
                 />
@@ -515,7 +515,7 @@ export default function AgentChat() {
                       value={input}
                       onChange={e => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="Ask anything — ad strategy, copy, analysis, ROAS issues..."
+                      placeholder="Ask anything: ad strategy, copy, analysis, ROAS issues..."
                       rows={1}
                       style={{ 
                         flex: 1, 
@@ -644,7 +644,7 @@ function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q:
           Ask ZieAds anything about <span style={{ fontStyle: 'italic', fontWeight: 600 }}>paid ads strategy</span>.
         </h2>
         <p style={{ color: G, fontSize: '0.875rem', lineHeight: 1.5, margin: '0 auto 24px', maxWidth: 520 }}>
-          Your expert paid ads strategist. Ask anything about Meta, Google, TikTok or LinkedIn — or run one of our 10 deep analysis modes.
+          Your expert paid ads strategist. Ask anything about Meta, Google, TikTok or LinkedIn, or run one of our 10 deep analysis modes.
         </p>
         {businessName && (
           <div style={{ display: 'inline-block', background: 'var(--bg-soft)', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '4px 12px', fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 20 }}>

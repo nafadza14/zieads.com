@@ -80,7 +80,7 @@ export default function LandingPage({ onScanComplete }: Props) {
               <span className="report-score-number mono-num">61</span>
               <span className="report-score-max mono-num">/100</span>
             </div>
-            <div className="report-grade-badge report-grade-c">C — Needs Improvement Before Launch</div>
+            <div className="report-grade-badge report-grade-c">C: Needs Improvement Before Launch</div>
           </div>
           <div className="report-dimensions-list">
             {[
@@ -260,7 +260,7 @@ export default function LandingPage({ onScanComplete }: Props) {
             {[
               { platform: 'Meta Ads', pct: 55, amount: '$1,650', rationale: 'Strongest visual platform for your product category. Start with awareness and conversion campaigns.' },
               { platform: 'Google Search', pct: 30, amount: '$900', rationale: 'High-intent buyers searching for your product type. Protect branded terms first.' },
-              { platform: 'TikTok', pct: 15, amount: '$450', rationale: 'Test budget only. Your product skews older — validate before scaling.' },
+              { platform: 'TikTok', pct: 15, amount: '$450', rationale: 'Test budget only. Your product skews older, validate before scaling.' },
             ].map((b, i) => (
               <div key={i} className="report-budget-row">
                 <div className="report-budget-bar-header">
@@ -291,7 +291,7 @@ export default function LandingPage({ onScanComplete }: Props) {
   const faqItems = [
     {
       q: 'What does ZieAds actually analyze?',
-      a: 'ZieAds crawls your public URL and analyzes five areas: (1) your landing page structure and conversion setup, (2) your offer clarity and creative angles, (3) your likely audience profile and targeting options, (4) your competitive positioning, and (5) your platform fit and budget readiness. We detect tracking pixels, above-fold CTA presence, mobile layout, trust signals, and funnel coverage — all without needing access to your ad account.',
+      a: 'ZieAds crawls your public URL and analyzes five areas: (1) your landing page structure and conversion setup, (2) your offer clarity and creative angles, (3) your likely audience profile and targeting options, (4) your competitive positioning, and (5) your platform fit and budget readiness. We detect tracking pixels, above-fold CTA presence, mobile layout, trust signals, and funnel coverage, all without needing access to your ad account.',
     },
     {
       q: 'Will this work for my business type?',
@@ -299,7 +299,7 @@ export default function LandingPage({ onScanComplete }: Props) {
     },
     {
       q: 'How accurate are the scores?',
-      a: 'The scores are based on what\'s publicly visible on your page — HTML structure, content, detected pixels, page speed, and layout signals. They\'re accurate for surface-layer readiness. They can\'t detect things like your backend attribution setup, CRM integrations, or conversion data that lives inside your ad accounts. Think of the score as a structural readiness check, not a performance prediction.',
+      a: 'The scores are based on what\'s publicly visible on your page: HTML structure, content, detected pixels, page speed, and layout signals. They\'re accurate for surface-layer readiness. They can\'t detect things like your backend attribution setup, CRM integrations, or conversion data that lives inside your ad accounts. Think of the score as a structural readiness check, not a performance prediction.',
     },
     {
       q: 'Can I use this for client work?',
@@ -307,7 +307,7 @@ export default function LandingPage({ onScanComplete }: Props) {
     },
     {
       q: 'How is this different from Semrush or AdEspresso?',
-      a: 'Semrush is an SEO and keyword research platform. It does not produce paid ads strategy briefs from a URL scan. AdEspresso is a campaign management tool for Facebook ads — it requires ad account access and manages running campaigns. ZieAds is a pre-campaign strategy tool. You don\'t connect ad accounts. You paste a URL. You get a strategy brief for campaigns you haven\'t run yet, or a diagnostic for campaigns that aren\'t performing.',
+      a: 'Semrush is an SEO and keyword research platform. It does not produce paid ads strategy briefs from a URL scan. AdEspresso is a campaign management tool for Facebook ads, it requires ad account access and manages running campaigns. ZieAds is a pre-campaign strategy tool. You don\'t connect ad accounts. You paste a URL. You get a strategy brief for campaigns you haven\'t run yet, or a diagnostic for campaigns that aren\'t performing.',
     },
     {
       q: 'What happens after I get my score?',
@@ -365,7 +365,7 @@ export default function LandingPage({ onScanComplete }: Props) {
         
         <p className="hero-subtitle">
           Paste your URL. In 3 minutes, you'll know your ads readiness score, where your funnel is leaking,
-          and exactly what to fix first — across Meta, Google, and TikTok. No ad account access needed.
+          and exactly what to fix first, across Meta, Google, and TikTok. No ad account access needed.
         </p>
 
         <div className="hero-input-wrapper">
@@ -484,9 +484,9 @@ export default function LandingPage({ onScanComplete }: Props) {
       <section className="pain-section">
         <h2 className="section-title">Most ad budgets have a leak.<br />You just don't know where it is.</h2>
         <div className="pain-body">
-          <p>You've run some campaigns. Maybe they worked okay. Maybe they didn't. Either way, you're not totally sure which part of your setup is the problem — the creative, the audience, the landing page, or the offer itself.</p>
+          <p>You've run some campaigns. Maybe they worked okay. Maybe they didn't. Either way, you're not totally sure which part of your setup is the problem: the creative, the audience, the landing page, or the offer itself.</p>
           <p>Hiring an agency to figure it out costs $2,000 before they even touch your account. Asking a freelancer takes a week and a proposal. Running more tests costs more budget you might be wasting.</p>
-          <p>What you actually need is a fast, honest read on your current setup — before you spend another dollar testing.</p>
+          <p>What you actually need is a fast, honest read on your current setup, before you spend another dollar testing.</p>
         </div>
         <p className="pain-transition">That's what ZieAds does.</p>
         <div className="pain-grid">
@@ -517,21 +517,21 @@ export default function LandingPage({ onScanComplete }: Props) {
             <div className="step-number mono-num">01</div>
             <div className="step-icon-wrap"><Link2 size={24} /></div>
             <h3>Paste your URL</h3>
-            <p>Any business URL works — your homepage, product page, or landing page. ZieAds crawls the page, reads your offer, detects your tracking setup, and maps your funnel structure.</p>
+            <p>Any business URL works, your homepage, product page, or landing page. ZieAds crawls the page, reads your offer, detects your tracking setup, and maps your funnel structure.</p>
             <span className="step-time-estimate">Takes 5 seconds on your end</span>
           </div>
           <div className="step-card">
             <div className="step-number mono-num">02</div>
             <div className="step-icon-wrap"><Bot size={24} /></div>
             <h3>5 specialist agents analyze your setup</h3>
-            <p>One checks your creative angles. One maps your audience. One looks at competitive positioning. One audits your landing page across 8 conversion dimensions. One scores your platform fit and budget readiness. They run in parallel — that's why it's fast.</p>
+            <p>One checks your creative angles. One maps your audience. One looks at competitive positioning. One audits your landing page across 8 conversion dimensions. One scores your platform fit and budget readiness. They run in parallel, that's why it's fast.</p>
             <span className="step-time-estimate">60–90 seconds of actual analysis</span>
           </div>
           <div className="step-card">
             <div className="step-number mono-num">03</div>
             <div className="step-icon-wrap"><TrendingUp size={24} /></div>
             <h3>Get a scored report you can act on today</h3>
-            <p>You get a readiness score, a breakdown of your top 3 gaps, creative brief suggestions per platform, audience tier recommendations, and a budget allocation guide. Not a list of observations — a plan.</p>
+            <p>You get a readiness score, a breakdown of your top 3 gaps, creative brief suggestions per platform, audience tier recommendations, and a budget allocation guide. Not a list of observations, a plan.</p>
             <span className="step-time-estimate">Ready in under 3 minutes total</span>
           </div>
         </div>
@@ -576,7 +576,7 @@ export default function LandingPage({ onScanComplete }: Props) {
             {
               Icon: Palette,
               name: 'Creative Intelligence',
-              desc: 'Reads your offer, brand tone, and product category. Identifies what creative angle is likely to work and what three hooks to test first — per platform.',
+              desc: 'Reads your offer, brand tone, and product category. Identifies what creative angle is likely to work and what three hooks to test first, per platform.',
               catches: 'Weak headline hooks, missing emotional angle, offer that sounds like every competitor',
             },
             {
@@ -594,7 +594,7 @@ export default function LandingPage({ onScanComplete }: Props) {
             {
               Icon: DollarSign,
               name: 'Platform & Budget',
-              desc: 'Recommends how to split budget across platforms based on your business model and funnel gaps — not generic percentages, but logic tied to where your customers actually look.',
+              desc: 'Recommends how to split budget across platforms based on your business model and funnel gaps, not generic percentages, but logic tied to where your customers actually look.',
               catches: 'Platform mismatch, budget allocated to channels that don\'t fit the product, no bidding strategy direction',
             },
             {
@@ -637,37 +637,37 @@ export default function LandingPage({ onScanComplete }: Props) {
               {[
                 {
                   criteria: 'Reads your actual URL',
-                  zieads: 'Yes — crawls and analyzes your page',
-                  chatgpt: 'No — works from what you describe',
-                  agency: 'Yes — but takes 1–2 weeks',
-                  manual: 'Yes — if you know what to look for',
+                  zieads: 'Yes, crawls and analyzes your page',
+                  chatgpt: 'No, works from what you describe',
+                  agency: 'Yes, but takes 1–2 weeks',
+                  manual: 'Yes, if you know what to look for',
                 },
                 {
                   criteria: 'Setup time',
                   zieads: 'Under 3 minutes',
-                  chatgpt: 'Instant — but shallow',
+                  chatgpt: 'Instant, but shallow',
                   agency: '2–4 weeks for onboarding',
                   manual: 'Days if you have the frameworks',
                 },
                 {
                   criteria: 'Cost',
                   zieads: 'Free to start, from $29/month',
-                  chatgpt: '$20/month — but you write all the prompts',
+                  chatgpt: '$20/month, but you write all the prompts',
                   agency: '$1,500–$5,000/month minimum',
                   manual: 'Your time, which has a cost too',
                 },
                 {
                   criteria: 'Platform-specific output',
-                  zieads: 'Meta, Google, TikTok — separate briefs',
+                  zieads: 'Meta, Google, TikTok, separate briefs',
                   chatgpt: 'Generic unless you prompt perfectly',
-                  agency: 'Yes — but weeks away',
+                  agency: 'Yes, but weeks away',
                   manual: 'Depends on your expertise',
                 },
                 {
                   criteria: 'Repeatable for multiple clients',
-                  zieads: 'Yes — Pro and Agency plans',
+                  zieads: 'Yes, Pro and Agency plans',
                   chatgpt: 'Possible but inconsistent',
-                  agency: 'No — billed per client',
+                  agency: 'No, billed per client',
                   manual: 'Possible with templates',
                 },
                 {
@@ -694,21 +694,21 @@ export default function LandingPage({ onScanComplete }: Props) {
           <Shield size={18} />
           <p><strong>Honest note:</strong> ZieAds is a pre-campaign strategy tool. It does not manage your active campaigns, adjust bids, or replace a media buyer who works inside your ad accounts. If you need that, look at tools like GoMarble or Madgicx.</p>
         </div>
-        <p className="comparison-wins">ZieAds wins when you need fast, structured strategic input before you spend — not an execution partner for campaigns already running.</p>
+        <p className="comparison-wins">ZieAds wins when you need fast, structured strategic input before you spend, not an execution partner for campaigns already running.</p>
       </section>
 
       {/* ══════════════════════════════════ S8: SCORING ══════════════════════════════════ */}
       <section className="scoring-section">
         <h2 className="section-title">Your Paid Ads Readiness Score</h2>
-        <p className="section-subtitle">A score that tells you whether you're ready to run paid ads profitably — not whether your page looks good.</p>
+        <p className="section-subtitle">A score that tells you whether you're ready to run paid ads profitably, not whether your page looks good.</p>
         <div className="score-dimensions">
           {[
             { name: 'Creative & Offer', weight: '25%', color: 'var(--lp-accent)', tooltip: '25% weight because nothing else matters if your offer is wrong or your hook misses.' },
-            { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)', tooltip: '20% weight — unclear audience = wasted spend from day one.' },
-            { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)', tooltip: '20% weight — your ad brings traffic; your page either converts it or loses it.' },
-            { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)', tooltip: '15% — not every business belongs on every platform at launch.' },
-            { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)', tooltip: '10% — most small businesses only run TOFU and wonder why ROAS is low.' },
-            { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)', tooltip: '10% — knowing where you fit changes how you position your ads.' },
+            { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)', tooltip: '20% weight: unclear audience = wasted spend from day one.' },
+            { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)', tooltip: '20% weight: your ad brings traffic; your page either converts it or loses it.' },
+            { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)', tooltip: '15%: not every business belongs on every platform at launch.' },
+            { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)', tooltip: '10%: most small businesses only run TOFU and wonder why ROAS is low.' },
+            { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)', tooltip: '10%: knowing where you fit changes how you position your ads.' },
           ].map((dim, i) => (
             <div key={i} className="dimension-bar" title={dim.tooltip}>
               <div className="dim-info">
@@ -728,7 +728,7 @@ export default function LandingPage({ onScanComplete }: Props) {
           <div className="score-grade-grid">
             {[
               { range: '80–100', grade: 'A', meaning: 'Strong setup. Your main job is testing creative variations and scaling what works.', color: '#15803D' },
-              { range: '60–79', grade: 'B–C', meaning: 'You can run ads, but specific gaps will limit your results. Fix before scaling.', color: '#1E7BFF' },
+              { range: '60–79', grade: 'B or C', meaning: 'You can run ads, but specific gaps will limit your results. Fix before scaling.', color: '#1E7BFF' },
               { range: '40–59', grade: 'D', meaning: 'Running campaigns now will likely burn budget. Structural fixes needed first.', color: '#A16207' },
               { range: '0–39', grade: 'F', meaning: 'Several foundational gaps. Start with tracking and offer clarity before spending anything.', color: '#B91C1C' },
             ].map((g, i) => (
@@ -799,13 +799,13 @@ export default function LandingPage({ onScanComplete }: Props) {
               Icon: Briefcase,
               title: 'Business owners running their own ads',
               headline: 'You run the ads, the ops, and the product. You don\'t have time for a 40-page audit.',
-              body: 'ZieAds gives you a clear score and the top 3 things to fix first. In 3 minutes, you know whether your setup is ready to spend on — or not.',
+              body: 'ZieAds gives you a clear score and the top 3 things to fix first. In 3 minutes, you know whether your setup is ready to spend on, or not.',
               features: ['Free quick scan', 'Score + critical findings', 'No ad account access needed'],
             },
             {
               Icon: UserCheck,
               title: 'Freelance paid media strategists',
-              headline: 'Your clients pay you for fast, credible strategy — not to wait two weeks.',
+              headline: 'Your clients pay you for fast, credible strategy, not to wait two weeks.',
               body: 'Run an audit on any client URL before the first strategy call. Walk in with a readiness score, a gap list, and a platform recommendation. Close more engagements, faster.',
               features: ['10 audits/month on Starter', 'PDF reports to share with clients', 'Audience and creative briefs per platform'],
             },
