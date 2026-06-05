@@ -97,8 +97,8 @@ export default function AuthPage() {
       <div className="lp-grid-line lp-line-left"></div>
       <div className="lp-grid-line lp-line-right"></div>
 
-      {/* ── Left: Form Panel ── */}
-      <div className="w-full lg:w-[25%] shrink-0 flex flex-col min-h-screen z-10 bg-[#F7F5F0] border-r border-[#DDD6C8]/30">
+      {/* ── Left: Form Panel (50% Split) ── */}
+      <div className="w-full lg:w-[50%] shrink-0 flex flex-col min-h-screen z-10 bg-[#F7F5F0] border-r border-[#DDD6C8]/30">
         {/* Logo */}
         <div className="px-12 pt-10">
           <div
@@ -233,7 +233,7 @@ export default function AuthPage() {
             )}
 
             {/* Toggle sign in / sign up */}
-            <p className="text-center mt-8 text-[14px] text-gray-500">
+            <p className="text-center mt-8 text-[14px] text-gray-500 font-medium">
               {isSignUp ? (
                 <>Already have an account?{' '}
                   <button onClick={() => { navigate('/sign-in'); setShowPassword(false); }} className="auth-toggle-link text-[14px]">Log in</button>
@@ -268,8 +268,8 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* ── Right: Visual Panel ── */}
-      <div className="hidden lg:flex lg:w-[75%] flex-col lp-visual-panel overflow-hidden relative justify-between">
+      {/* ── Right: Visual Panel (50% Split) ── */}
+      <div className="hidden lg:flex lg:w-[50%] flex-col lp-visual-panel overflow-hidden relative justify-between">
         
         {/* Dotted Wallpaper pattern container */}
         <div className="absolute inset-0 opacity-40 pointer-events-none" style={{
@@ -277,17 +277,17 @@ export default function AuthPage() {
           backgroundSize: '20px 20px',
         }} />
 
-        {/* Testimonial Quote */}
+        {/* Real ZieAds Testimonial Quote */}
         <div className="px-16 pt-24 max-w-[680px] z-10 text-left">
           <p className="text-[20px] lg:text-[24px] text-gray-700 font-normal leading-relaxed mb-4">
-            "ZieAds has been a game-changer for our design team, streamlining our workflow and allowing us to create consistent, high-quality designs with ease!"
+            "ZieAds cut our client onboarding from 3 days to 20 minutes. Every agency needs this."
           </p>
           <p className="text-[14px] text-gray-400 font-semibold">
-            — Adam Doe, Senior Product Designer
+            — Rafi S., Performance Marketing Lead
           </p>
         </div>
 
-        {/* Marketing dashboard preview */}
+        {/* Branded replica of the reference dashboard */}
         <div className="flex-1 flex items-end justify-center px-12 z-10 w-full mt-10 overflow-hidden translate-y-[100px] hover:translate-y-[80px] transition-transform duration-500">
           <div className="lp-showcase-container !mt-0 w-full max-w-[580px]">
             <div className="lp-rainbow-glow !top-[30%]"></div>
@@ -298,47 +298,107 @@ export default function AuthPage() {
                   <span className="lp-dot-yellow"></span>
                   <span className="lp-dot-green"></span>
                 </div>
-                <div className="lp-chrome-title">app.zieads.com/dashboard</div>
+                <div className="lp-chrome-title">app.zieads.com/main-library</div>
               </div>
-              <div className="lp-showcase-body !h-[340px]">
-                <div className="lp-showcase-sidebar !w-[160px] p-4 flex flex-col gap-4">
-                  <div className="lp-sidebar-logo flex items-center gap-2 font-bold text-gray-900 text-[14px]">
-                    <ZieAdsLogo size={14} className="text-gray-900" />
-                    <span>zieads</span>
+              <div className="lp-showcase-body !h-[360px] flex">
+                {/* Mock Sidebar */}
+                <div className="lp-showcase-sidebar !w-[170px] p-4 flex flex-col justify-between bg-white border-r border-gray-100 shrink-0">
+                  <div className="flex flex-col gap-5">
+                    <div className="lp-sidebar-logo flex items-center gap-2 font-bold text-gray-900 text-[13px] tracking-tight">
+                      <div className="p-1 bg-gray-900 text-white rounded">
+                        <ZieAdsLogo size={10} className="text-white" />
+                      </div>
+                      <span>zieads.com</span>
+                    </div>
+                    <div className="lp-sidebar-links flex flex-col gap-1">
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
+                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                        Dashboard
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold bg-blue-50 text-blue-600 cursor-pointer">
+                        <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        Main Library
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
+                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        Master
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
+                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3v12M18 9a3 3 0 0 1-3-3m0 0a3 3 0 0 0-3 3m3-3v12"/></svg>
+                        Branches
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
+                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Members
+                      </div>
+                    </div>
                   </div>
-                  <div className="lp-sidebar-links flex flex-col gap-2 mt-2">
-                    <div className="lp-sidebar-link active px-3 py-1.5 rounded-lg text-[12px] font-medium bg-gray-100 text-gray-900 cursor-pointer">Dashboard</div>
-                    <div className="lp-sidebar-link px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">AI Audit</div>
-                    <div className="lp-sidebar-link px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">Creative Studio</div>
-                    <div className="lp-sidebar-link px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">Audience Builder</div>
+                  {/* Sidebar Bottom (Storage & Profile) */}
+                  <div className="flex flex-col gap-3">
+                    <div className="px-2">
+                      <div className="flex justify-between items-center text-[10px] text-gray-400 mb-1">
+                        <span>Your Storage</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                        <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '33%' }}></div>
+                      </div>
+                      <p className="text-[9px] text-gray-400 leading-tight">4.9 GB of 15 GB used</p>
+                      <button className="text-[9px] font-semibold text-blue-600 hover:underline block mt-1">Upgrade Storage</button>
+                    </div>
+                    <div className="border-t border-gray-100 pt-3 flex items-center gap-2">
+                      <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&h=80&q=80" alt="John Doe" className="w-7 h-7 rounded-full object-cover" />
+                      <span className="text-[11px] font-semibold text-gray-700 truncate">John Doe</span>
+                    </div>
                   </div>
                 </div>
-                <div className="lp-showcase-content flex-1 p-5 flex flex-col gap-4 overflow-y-auto">
-                  <div className="lp-content-header flex justify-between items-center">
-                    <h3 className="text-[16px] font-bold text-gray-900">Strategy Report</h3>
-                    <span className="lp-badge-success px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">Ready</span>
+
+                {/* Mock Content */}
+                <div className="flex-1 p-5 flex flex-col gap-4 overflow-y-auto text-left">
+                  <div>
+                    <h3 className="text-[16px] font-bold text-gray-900 leading-tight">Main Library</h3>
                   </div>
-                  <div className="lp-showcase-metrics grid grid-cols-3 gap-2">
-                    <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
-                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium ">Readiness Score</span>
-                      <span className="lp-metric-value text-[14px] font-bold text-gray-900 mt-1 font-mono">87/100</span>
-                    </div>
-                    <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
-                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium ">Est. ROAS Increase</span>
-                      <span className="lp-metric-value text-[14px] font-bold text-green-600 mt-1 font-mono">+42%</span>
-                    </div>
-                    <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
-                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium ">AI Agent Audit</span>
-                      <span className="lp-metric-value text-[14px] font-bold text-blue-600 mt-1 font-mono">5/5 Done</span>
+                  {/* Tabs */}
+                  <div className="flex gap-4 border-b border-gray-100 pb-1 text-[12px]">
+                    <span className="text-blue-600 font-semibold border-b-2 border-blue-600 pb-1 cursor-pointer">Files</span>
+                    <span className="text-gray-400 cursor-pointer hover:text-gray-600 pb-1">Activities</span>
+                    <span className="text-gray-400 cursor-pointer hover:text-gray-600 pb-1">Overview</span>
+                  </div>
+                  {/* Folders Section */}
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Folders</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-blue-500 fill-blue-500/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                          <span className="text-[11px] font-semibold text-gray-700 truncate max-w-[80px]">Figma Library</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-400">3</span>
+                      </div>
+                      <div className="p-3 border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-blue-500 fill-blue-500/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                          <span className="text-[11px] font-semibold text-gray-700 truncate max-w-[80px]">React</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-400">32</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="lp-chat-mock flex flex-col gap-3 mt-1 text-[12px]">
-                    <div className="lp-chat-bubble lp-ai flex gap-2 items-start bg-blue-50/50 p-2.5 rounded-xl">
-                      <span className="lp-ai-avatar w-5 h-5 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[9px] shrink-0">AI</span>
-                      <p className="text-gray-700 leading-relaxed">I've detected Meta pixel gaps on your cart page. Here is the recommended targeting strategy...</p>
-                    </div>
-                    <div className="lp-chat-bubble lp-user flex justify-end">
-                      <p className="bg-gray-100 text-gray-800 p-2.5 rounded-xl max-w-[85%]">Generate 3 image ad hooks for our SaaS launch.</p>
+                  {/* Recent Files Section */}
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Recent files</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 border border-gray-100 rounded-xl bg-white flex flex-col justify-between h-[85px]">
+                        <div className="p-1.5 bg-blue-50 text-blue-600 rounded w-fit">
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <span className="text-[10px] font-semibold text-gray-700 truncate">About ZieAds</span>
+                      </div>
+                      <div className="p-3 border border-gray-100 rounded-xl bg-white flex flex-col justify-between h-[85px]">
+                        <div className="p-1.5 bg-green-50 text-green-600 rounded w-fit">
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <span className="text-[10px] font-semibold text-gray-700 truncate">Competitor Audit</span>
+                      </div>
                     </div>
                   </div>
                 </div>
