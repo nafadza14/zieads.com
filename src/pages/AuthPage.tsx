@@ -117,7 +117,7 @@ export default function AuthPage() {
         <div className="w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
           
           {/* Left Panel: Glassmorphic Auth Form */}
-          <div className="backdrop-blur-xl bg-white/75 border border-gray-100 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.05)] rounded-[32px] p-8 md:p-12 flex flex-col justify-center text-left">
+          <div className="backdrop-blur-xl bg-white/70 border border-white/20 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.05)] rounded-[32px] p-8 md:p-12 flex flex-col justify-center text-left max-w-[460px] mx-auto w-full">
             <h1 className="text-[32px] font-bold text-gray-950 tracking-tight mb-1">
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
@@ -136,10 +136,10 @@ export default function AuthPage() {
               </div>
             )}
 
-            <form onSubmit={handleEmailSubmit} className="space-y-5">
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
               {/* Email Field */}
               <div>
-                <label className="block text-[14px] font-semibold text-gray-800 mb-2">Email</label>
+                <label className="block text-[14px] font-semibold text-gray-950 mb-1.5">Email</label>
                 <input
                   id="email-input"
                   type="email"
@@ -147,13 +147,13 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email Address"
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 bg-white/50 transition-all"
+                  className="w-full h-[54px] px-4 border border-[#E5E0DA] bg-[#FCF9F9] rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 transition-all"
                 />
               </div>
 
               {/* Password Field */}
               <div>
-                <label className="block text-[14px] font-semibold text-gray-800 mb-2">Password</label>
+                <label className="block text-[14px] font-semibold text-gray-950 mb-1.5">Password</label>
                 <div className="relative">
                   <input
                     id="password-input"
@@ -162,7 +162,7 @@ export default function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={isSignUp ? 'At least 6 characters' : 'Password 8-16 character'}
-                    className="w-full pl-4 pr-12 py-3.5 border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 bg-white/50 transition-all"
+                    className="w-full h-[54px] pl-4 pr-12 border border-[#E5E0DA] bg-[#FCF9F9] rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 transition-all"
                   />
                   <button
                     type="button"
@@ -190,7 +190,7 @@ export default function AuthPage() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-350 accent-gray-900 cursor-pointer"
+                    className="w-4 h-4 rounded border-gray-300 accent-gray-900 cursor-pointer"
                   />
                   <span>Remember me</span>
                 </label>
@@ -208,33 +208,26 @@ export default function AuthPage() {
                 id="email-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 flex items-center justify-center bg-gray-950 text-white rounded-xl font-semibold text-[15px] hover:bg-gray-900 active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
+                className="w-full h-[54px] flex items-center justify-center bg-gray-950 hover:bg-gray-900 text-white rounded-[14px] font-bold text-[16px] transition-all active:scale-[0.98] disabled:opacity-60 mt-4"
               >
                 {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
               </button>
+
+              {/* Social Google Login */}
+              <button
+                id="google-signin-btn"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                className="w-full h-[54px] flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-700 rounded-[14px] text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
+              >
+                {googleLoading ? (
+                  <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                Continue with Google
+              </button>
             </form>
-
-            {/* Divider */}
-            <div className="relative my-6 flex items-center">
-              <div className="flex-grow border-t border-gray-200/80"></div>
-              <span className="mx-3 text-[11px] text-gray-400 font-semibold uppercase tracking-wider">or</span>
-              <div className="flex-grow border-t border-gray-200/80"></div>
-            </div>
-
-            {/* Social Google Login */}
-            <button
-              id="google-signin-btn"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full h-12 flex items-center justify-center gap-3 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
-            >
-              {googleLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-              ) : (
-                <GoogleIcon />
-              )}
-              Continue with Google
-            </button>
 
             {/* Auth Toggle footer */}
             <p className="text-center mt-8 text-[14px] text-gray-500 font-medium">
