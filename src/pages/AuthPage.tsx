@@ -18,35 +18,35 @@ const TESTIMONIALS = [
     name: "Rafi S.",
     role: "Performance Marketing Lead",
     initials: "RS",
-    color: "#7C5CFC",
+    color: "var(--lp-accent)",
   },
   {
     quote: "The AI audit caught targeting gaps our team missed for months. ROI improved within the first week.",
     name: "Dewi A.",
     role: "Head of Growth, e-Commerce",
     initials: "DA",
-    color: "#5C8AFF",
+    color: "var(--lp-accent)",
   },
   {
     quote: "We run ZieAds on every new client before a single rupiah is spent. It changed how we work.",
     name: "Bima P.",
     role: "Founder, Digital Agency",
     initials: "BP",
-    color: "#A855F7",
+    color: "var(--lp-accent)",
   },
   {
     quote: "The ad copy output is genuinely better than what my copywriter was producing. Fast and on-brand.",
     name: "Sinta W.",
     role: "Marketing Director",
     initials: "SW",
-    color: "#6366F1",
+    color: "var(--lp-accent)",
   },
   {
     quote: "Competitor intelligence alone is worth the subscription. I can see exactly what rivals are running.",
     name: "Aryo K.",
     role: "Media Buyer",
     initials: "AK",
-    color: "#8B5CF6",
+    color: "var(--lp-accent)",
   },
 ];
 
@@ -109,20 +109,23 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="landing-page min-h-screen flex">
+      {/* GRID LINES BACKGROUND */}
+      <div className="lp-grid-line lp-line-left"></div>
+      <div className="lp-grid-line lp-line-right"></div>
 
       {/* ── Left: Form Panel ── */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen z-10">
         {/* Logo */}
         <div className="px-12 pt-10">
           <div
             className="flex items-center gap-2.5 cursor-pointer w-fit"
             onClick={() => navigate('/')}
           >
-            <div className="bg-[#6C47FF] p-2 rounded-xl">
-              <ZieAdsLogo size={20} className="text-white" />
+            <div className="lp-auth-logo-bg p-2 rounded-xl">
+              <ZieAdsLogo size={20} className="text-gray-900" />
             </div>
-            <span className="text-[18px] font-bold tracking-tight text-gray-900">ZieAds</span>
+            <span className="lp-auth-logo-text text-[18px]">zieads</span>
           </div>
         </div>
 
@@ -152,7 +155,7 @@ export default function AuthPage() {
 
             <form onSubmit={handleEmailSubmit} className="space-y-5">
               <div>
-                <label className="block text-[14px] font-semibold text-gray-700 mb-2">Email</label>
+                <label className="block text-[14px] font-semibold mb-2 auth-label">Email</label>
                 <input
                   id="email-input"
                   type="email"
@@ -160,12 +163,12 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-gray-900 text-[15px] placeholder:text-gray-400 outline-none focus:border-[#6C47FF] focus:ring-4 focus:ring-[#6C47FF]/10 transition-all"
+                  className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-[14px] font-semibold text-gray-700 mb-2">Password</label>
+                <label className="block text-[14px] font-semibold mb-2 auth-label">Password</label>
                 <input
                   id="password-input"
                   type="password"
@@ -174,7 +177,7 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   minLength={6}
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-gray-900 text-[15px] placeholder:text-gray-400 outline-none focus:border-[#6C47FF] focus:ring-4 focus:ring-[#6C47FF]/10 transition-all"
+                  className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
                 />
               </div>
 
@@ -182,7 +185,7 @@ export default function AuthPage() {
                 id="email-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-[#6C47FF] text-white font-semibold text-[15px] rounded-xl hover:bg-[#5a38e0] active:scale-[0.98] transition-all disabled:opacity-60"
+                className="w-full py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
               >
                 {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
               </button>
@@ -193,7 +196,7 @@ export default function AuthPage() {
               id="google-signin-btn"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="w-full mt-3 flex items-center justify-center gap-3 py-3.5 border border-gray-200 rounded-xl text-gray-700 font-semibold text-[15px] hover:bg-gray-50 active:scale-[0.98] transition-all disabled:opacity-60"
+              className="w-full mt-3 flex items-center justify-center gap-3 py-3.5 btn-lp-google text-[15px] active:scale-[0.98] disabled:opacity-60"
             >
               {googleLoading
                 ? <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -205,11 +208,11 @@ export default function AuthPage() {
             <p className="text-center mt-6 text-[14px] text-gray-500">
               {isSignUp ? (
                 <>Already have an account?{' '}
-                  <button onClick={() => navigate('/sign-in')} className="text-[#6C47FF] font-semibold hover:underline">Sign in</button>
+                  <button onClick={() => navigate('/sign-in')} className="auth-toggle-link">Sign in</button>
                 </>
               ) : (
                 <>Don't have an account?{' '}
-                  <button onClick={() => navigate('/sign-up')} className="text-[#6C47FF] font-semibold hover:underline">Sign up</button>
+                  <button onClick={() => navigate('/sign-up')} className="auth-toggle-link">Sign up</button>
                 </>
               )}
             </p>
@@ -220,7 +223,7 @@ export default function AuthPage() {
               and important account alerts. Read our{' '}
               <button
                 onClick={() => navigate('/privacy-policy')}
-                className="text-[#6C47FF] hover:underline font-medium"
+                className="auth-toggle-link text-[12px] font-medium"
               >
                 Privacy Policy
               </button>
@@ -238,10 +241,16 @@ export default function AuthPage() {
       </div>
 
       {/* ── Right: Visual Panel ── */}
-      <div className="hidden lg:flex flex-1 flex-col bg-[#F0EEFF] overflow-hidden relative">
+      <div className="hidden lg:flex flex-1 flex-col lp-visual-panel overflow-hidden relative justify-between">
+        
+        {/* Dotted Wallpaper pattern container */}
+        <div className="absolute inset-0 opacity-40 pointer-events-none" style={{
+          backgroundImage: 'radial-gradient(var(--lp-border-grid) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }} />
 
         {/* Marketing hero image */}
-        <div className="flex-1 flex items-center justify-center p-8 pb-4">
+        <div className="flex-1 flex items-center justify-center p-8 pb-4 z-10">
           <img
             src="/zieads-hero.png"
             alt="ZieAds Before and After comparison"
@@ -251,12 +260,12 @@ export default function AuthPage() {
 
         {/* Glassmorphism testimonial ticker */}
         <div
-          className="pb-8 overflow-hidden"
+          className="pb-8 overflow-hidden z-10"
           style={{
-            background: 'linear-gradient(to top, rgba(108,71,255,0.15) 0%, transparent 100%)',
+            background: 'linear-gradient(to top, rgba(30,123,255,0.06) 0%, transparent 100%)',
           }}
         >
-          <p className="text-center text-[11px] font-bold tracking-widest text-[#6C47FF]/60 uppercase mb-4">
+          <p className="text-center text-[11px] font-bold tracking-widest text-[#1E7BFF]/80 uppercase mb-4">
             Trusted by marketers worldwide
           </p>
 
@@ -274,11 +283,10 @@ export default function AuthPage() {
                   className="flex-shrink-0 rounded-2xl px-5 py-4 border"
                   style={{
                     width: 260,
-                    background: 'rgba(255, 255, 255, 0.45)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    borderColor: 'rgba(255,255,255,0.7)',
-                    boxShadow: '0 4px 24px rgba(108,71,255,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
+                    background: 'var(--lp-bg-card)',
+                    borderColor: 'var(--lp-border-subtle)',
+                    borderRadius: 'var(--lp-radius-card-sm)',
+                    boxShadow: 'var(--lp-shadow-card)',
                   }}
                 >
                   <p className="text-[13px] text-gray-700 leading-relaxed mb-3 font-medium">
@@ -312,3 +320,4 @@ export default function AuthPage() {
     </div>
   );
 }
+

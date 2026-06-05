@@ -2026,3 +2026,66 @@ a:hover { color: var(--primary); }
   margin: 0 !important;
 }
 
+/* AuthPage Style Overrides */
+.landing-page .auth-input {
+  background: var(--lp-bg-card) !important;
+  border: 1px solid var(--lp-border-default) !important;
+  border-radius: var(--lp-radius-button) !important;
+  color: var(--lp-text-primary) !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+.landing-page .auth-input:focus {
+  border-color: var(--lp-text-primary) !important;
+  box-shadow: 0 0 0 3px var(--lp-focus-ring) !important;
+}
+.landing-page .auth-label {
+  color: var(--lp-text-secondary) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.landing-page .auth-submit-btn {
+  border-radius: var(--lp-radius-button) !important;
+  width: 100% !important;
+  min-height: unset !important;
+  padding: 14px !important;
+}
+.landing-page .btn-lp-google {
+  background: #FFFFFF !important;
+  border: 1px solid var(--lp-border-default) !important;
+  border-radius: var(--lp-radius-button) !important;
+  color: var(--lp-text-secondary) !important;
+  font-weight: 500 !important;
+  box-shadow: var(--lp-shadow-subtle) !important;
+  transition: all 0.15s ease !important;
+}
+.landing-page .btn-lp-google:hover:not(:disabled) {
+  background: var(--lp-bg-canvas-alt) !important;
+  border-color: var(--lp-text-primary) !important;
+  color: var(--lp-text-primary) !important;
+}
+.landing-page .auth-toggle-link {
+  color: var(--lp-accent) !important;
+  font-weight: 600 !important;
+  transition: color 0.15s ease !important;
+}
+.landing-page .auth-toggle-link:hover {
+  color: var(--lp-accent-hover) !important;
+  text-decoration: underline !important;
+}
+.landing-page .lp-visual-panel {
+  background-color: var(--lp-bg-canvas-alt) !important;
+  background-image: radial-gradient(var(--lp-border-grid) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+  border-left: 1px dashed var(--lp-border-construction) !important;
+}
+.landing-page .lp-auth-logo-bg {
+  background: var(--lp-bg-card) !important;
+  border: 1px solid var(--lp-border-subtle) !important;
+  box-shadow: var(--lp-shadow-subtle) !important;
+}
+.landing-page .lp-auth-logo-text {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  color: var(--lp-text-primary) !important;
+}
