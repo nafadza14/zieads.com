@@ -17,36 +17,31 @@ const TESTIMONIALS = [
     quote: "ZieAds cut our client onboarding from 3 days to 20 minutes. Every agency needs this.",
     name: "Rafi S.",
     role: "Performance Marketing Lead",
-    initials: "RS",
-    color: "var(--lp-accent)",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80",
   },
   {
     quote: "The AI audit caught targeting gaps our team missed for months. ROI improved within the first week.",
     name: "Dewi A.",
     role: "Head of Growth, e-Commerce",
-    initials: "DA",
-    color: "var(--lp-accent)",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80",
   },
   {
     quote: "We run ZieAds on every new client before a single rupiah is spent. It changed how we work.",
     name: "Bima P.",
     role: "Founder, Digital Agency",
-    initials: "BP",
-    color: "var(--lp-accent)",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80",
   },
   {
     quote: "The ad copy output is genuinely better than what my copywriter was producing. Fast and on-brand.",
     name: "Sinta W.",
     role: "Marketing Director",
-    initials: "SW",
-    color: "var(--lp-accent)",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&h=150&q=80",
   },
   {
     quote: "Competitor intelligence alone is worth the subscription. I can see exactly what rivals are running.",
     name: "Aryo K.",
     role: "Media Buyer",
-    initials: "AK",
-    color: "var(--lp-accent)",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80",
   },
 ];
 
@@ -192,6 +187,7 @@ export default function AuthPage() {
             </form>
 
             {/* Google */}
+            {/* Google */}
             <button
               id="google-signin-btn"
               onClick={handleGoogleSignIn}
@@ -201,7 +197,7 @@ export default function AuthPage() {
               {googleLoading
                 ? <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
                 : <GoogleIcon />}
-              {googleLoading ? 'Redirecting...' : 'Sign in with Google'}
+              {googleLoading ? 'Redirecting...' : isSignUp ? 'Sign up with Google' : 'Sign in with Google'}
             </button>
 
             {/* Toggle sign in / sign up */}
@@ -249,13 +245,64 @@ export default function AuthPage() {
           backgroundSize: '20px 20px',
         }} />
 
-        {/* Marketing hero image */}
-        <div className="flex-1 flex items-center justify-center p-8 pb-4 z-10">
-          <img
-            src="/zieads-hero.png"
-            alt="ZieAds Before and After comparison"
-            className="w-full max-w-[560px] object-contain drop-shadow-xl"
-          />
+        {/* Marketing dashboard preview */}
+        <div className="flex-1 flex items-center justify-center p-6 lg:p-12 z-10 w-full">
+          <div className="lp-showcase-container !mt-0 w-full max-w-[560px]">
+            <div className="lp-rainbow-glow !top-[30%]"></div>
+            <div className="lp-showcase-card shadow-2xl">
+              <div className="lp-showcase-header">
+                <div className="lp-chrome-dots">
+                  <span className="lp-dot-red"></span>
+                  <span className="lp-dot-yellow"></span>
+                  <span className="lp-dot-green"></span>
+                </div>
+                <div className="lp-chrome-title">app.zieads.com/dashboard</div>
+              </div>
+              <div className="lp-showcase-body !h-[340px]">
+                <div className="lp-showcase-sidebar !w-[160px] p-4 flex flex-col gap-4">
+                  <div className="lp-sidebar-logo flex items-center gap-2 font-bold text-gray-900 text-[14px]">
+                    <ZieAdsLogo size={14} className="text-gray-900" />
+                    <span>zieads</span>
+                  </div>
+                  <div className="lp-sidebar-links flex flex-col gap-2 mt-2">
+                    <div className="lp-sidebar-link active px-3 py-1.5 rounded-lg text-[12px] font-medium bg-gray-100 text-gray-900 cursor-pointer">Dashboard</div>
+                    <div className="lp-sidebar-link px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">AI Audit</div>
+                    <div className="lp-sidebar-link px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">Creative Studio</div>
+                    <div className="lp-sidebar-link px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">Audience Builder</div>
+                  </div>
+                </div>
+                <div className="lp-showcase-content flex-1 p-5 flex flex-col gap-4 overflow-y-auto">
+                  <div className="lp-content-header flex justify-between items-center">
+                    <h3 className="text-[16px] font-bold text-gray-900">Strategy Report</h3>
+                    <span className="lp-badge-success px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">Ready</span>
+                  </div>
+                  <div className="lp-showcase-metrics grid grid-cols-3 gap-2">
+                    <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
+                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium uppercase tracking-wider">Readiness</span>
+                      <span className="lp-metric-value text-[14px] font-bold text-gray-900 mt-1 font-mono">87/100</span>
+                    </div>
+                    <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
+                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium uppercase tracking-wider">Est. ROAS</span>
+                      <span className="lp-metric-value text-[14px] font-bold text-green-600 mt-1 font-mono">+42%</span>
+                    </div>
+                    <div className="lp-metric-card p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col">
+                      <span className="lp-metric-label text-[9px] text-gray-400 font-medium uppercase tracking-wider">AI Agents</span>
+                      <span className="lp-metric-value text-[14px] font-bold text-blue-600 mt-1 font-mono">5/5 Done</span>
+                    </div>
+                  </div>
+                  <div className="lp-chat-mock flex flex-col gap-3 mt-1 text-[12px]">
+                    <div className="lp-chat-bubble lp-ai flex gap-2 items-start bg-blue-50/50 p-2.5 rounded-xl">
+                      <span className="lp-ai-avatar w-5 h-5 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[9px] shrink-0">AI</span>
+                      <p className="text-gray-700 leading-relaxed">I've detected Meta pixel gaps on your cart page. Here is the recommended targeting strategy...</p>
+                    </div>
+                    <div className="lp-chat-bubble lp-user flex justify-end">
+                      <p className="bg-gray-100 text-gray-800 p-2.5 rounded-xl max-w-[85%]">Generate 3 image ad hooks for our SaaS launch.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Glassmorphism testimonial ticker */}
@@ -265,7 +312,7 @@ export default function AuthPage() {
             background: 'linear-gradient(to top, rgba(30,123,255,0.06) 0%, transparent 100%)',
           }}
         >
-          <p className="text-center text-[11px] font-bold tracking-widest text-[#1E7BFF]/80 uppercase mb-4">
+          <p className="text-center text-[13px] font-semibold tracking-normal text-[#1E7BFF] mb-4">
             Trusted by marketers worldwide
           </p>
 
@@ -280,28 +327,26 @@ export default function AuthPage() {
               {TICKER.map((t, i) => (
                 <div
                   key={i}
-                  className="flex-shrink-0 rounded-2xl px-5 py-4 border"
+                  className="flex-shrink-0 px-5 py-4 border-0"
                   style={{
-                    width: 260,
-                    background: 'var(--lp-bg-card)',
-                    borderColor: 'var(--lp-border-subtle)',
+                    width: 280,
+                    background: 'var(--lp-accent-gradient)',
                     borderRadius: 'var(--lp-radius-card-sm)',
-                    boxShadow: 'var(--lp-shadow-card)',
+                    boxShadow: 'var(--lp-shadow-card-hover)',
                   }}
                 >
-                  <p className="text-[13px] text-gray-700 leading-relaxed mb-3 font-medium">
+                  <p className="text-[13px] text-white/95 leading-relaxed mb-3 font-medium">
                     "{t.quote}"
                   </p>
                   <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                      style={{ backgroundColor: t.color }}
-                    >
-                      {t.initials}
-                    </div>
+                    <img
+                      src={t.avatar}
+                      alt={t.name}
+                      className="w-7 h-7 rounded-full object-cover shrink-0 border border-white/20"
+                    />
                     <div>
-                      <div className="text-[12px] font-semibold text-gray-800">{t.name}</div>
-                      <div className="text-[11px] text-gray-500">{t.role}</div>
+                      <div className="text-[12px] font-semibold text-white">{t.name}</div>
+                      <div className="text-[11px] text-white/80">{t.role}</div>
                     </div>
                   </div>
                 </div>
