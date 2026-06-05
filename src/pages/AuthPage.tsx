@@ -36,7 +36,8 @@ export default function AuthPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -44,18 +45,17 @@ export default function AuthPage() {
     });
   }, [navigate, from]);
 
-  const handleContinueWithEmail = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !email.includes('@')) {
       setError('Please enter a valid email address.');
       return;
     }
-    setError(null);
-    setShowPassword(true);
-  };
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     setLoading(true);
     setError(null);
     setSuccessMsg(null);
@@ -92,33 +92,38 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="landing-page min-h-screen flex">
-      {/* GRID LINES BACKGROUND */}
-      <div className="lp-grid-line lp-line-left"></div>
-      <div className="lp-grid-line lp-line-right"></div>
-
-      {/* ── Left: Form Panel (50% Split) ── */}
-      <div className="w-full lg:w-[50%] shrink-0 flex flex-col min-h-screen z-10 bg-[#F7F5F0] border-r border-[#DDD6C8]/30">
-        {/* Logo */}
-        <div className="px-12 pt-10">
-          <div
-            className="flex items-center gap-2.5 cursor-pointer w-fit"
-            onClick={() => navigate('/')}
-          >
-            <div className="lp-auth-logo-bg p-2 rounded-xl">
-              <ZieAdsLogo size={20} className="text-gray-900" />
-            </div>
-            <span className="lp-auth-logo-text text-[18px]">zieads</span>
+    <div className="landing-page min-h-screen w-full relative flex flex-col justify-between overflow-x-hidden bg-white font-sans selection:bg-pink-100">
+      
+      {/* Ambient Gradient Background Orbs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-pink-300/20 to-cyan-300/20 blur-[100px] pointer-events-none z-0"></div>
+      <div className="absolute top-[20%] left-[20%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-tr from-cyan-200/10 to-blue-300/20 blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-pink-200/20 to-purple-300/20 blur-[140px] pointer-events-none z-0"></div>
+      
+      {/* Brand Header */}
+      <header className="w-full px-8 pt-8 pb-4 flex items-center justify-between z-10 relative">
+        <div
+          className="flex items-center gap-2.5 cursor-pointer"
+          onClick={() => navigate('/')}
+        >
+          <div className="lp-auth-logo-bg p-2 rounded-xl">
+            <ZieAdsLogo size={20} className="text-gray-900" />
           </div>
+          <span className="lp-auth-logo-text text-[18px]">zieads</span>
         </div>
+      </header>
 
-        {/* Form */}
-        <div className="flex-1 flex items-center justify-center px-12 py-10">
-          <div className="w-full max-w-[420px]">
-
-            <h1 className="text-[32px] font-bold text-gray-900 mb-8 tracking-tight leading-tight text-left">
-              {isSignUp ? 'Sign up' : 'Log in'}
+      {/* Main Dual-Panel Content */}
+      <main className="flex-1 flex items-center justify-center px-4 md:px-12 py-8 z-10 relative">
+        <div className="w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
+          
+          {/* Left Panel: Glassmorphic Auth Form */}
+          <div className="backdrop-blur-xl bg-white/75 border border-gray-100 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.05)] rounded-[32px] p-8 md:p-12 flex flex-col justify-center text-left">
+            <h1 className="text-[32px] font-bold text-gray-950 tracking-tight mb-1">
+              {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
+            <p className="text-[14px] text-gray-500 mb-8 font-medium">
+              Continue with one of the following options
+            </p>
 
             {error && (
               <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-[14px]">
@@ -131,282 +136,155 @@ export default function AuthPage() {
               </div>
             )}
 
-            {!showPassword ? (
-              <form onSubmit={handleContinueWithEmail} className="space-y-4">
-                <div>
-                  <label className="block text-[14px] font-semibold mb-2 auth-label text-left">Email</label>
-                  <input
-                    id="email-input"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Your address email"
-                    className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
-                  />
-                </div>
+            <form onSubmit={handleEmailSubmit} className="space-y-5">
+              {/* Email Field */}
+              <div>
+                <label className="block text-[14px] font-semibold text-gray-800 mb-2">Email</label>
+                <input
+                  id="email-input"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email Address"
+                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 bg-white/50 transition-all"
+                />
+              </div>
 
-                <button
-                  id="email-continue-btn"
-                  type="submit"
-                  className="w-full py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
-                >
-                  Continue with email
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                <div className="flex justify-between items-center bg-[#F1EFEA] border border-[#DDD6C8]/40 p-3.5 rounded-xl mb-4">
-                  <span className="text-[14px] text-gray-700 truncate font-medium">{email}</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(false)}
-                    className="text-[12px] font-semibold text-[#1E7BFF] hover:underline"
-                  >
-                    Change
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-[14px] font-semibold mb-2 auth-label text-left">Password</label>
+              {/* Password Field */}
+              <div>
+                <label className="block text-[14px] font-semibold text-gray-800 mb-2">Password</label>
+                <div className="relative">
                   <input
                     id="password-input"
-                    type="password"
+                    type={isPasswordVisible ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    minLength={6}
-                    className="w-full px-4 py-3.5 auth-input text-[15px] placeholder:text-gray-400"
+                    placeholder={isSignUp ? 'At least 6 characters' : 'Password 8-16 character'}
+                    className="w-full pl-4 pr-12 py-3.5 border border-gray-200 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-400 bg-white/50 transition-all"
                   />
-                </div>
-
-                <button
-                  id="email-submit-btn"
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 btn-lp-primary-gradient auth-submit-btn text-white font-semibold text-[15px] active:scale-[0.98] disabled:opacity-60"
-                >
-                  {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
-                </button>
-              </form>
-            )}
-
-            {!showPassword && (
-              <>
-                <div className="flex items-center my-6">
-                  <div className="flex-1 border-t border-gray-200"></div>
-                  <span className="px-3 text-[12px] text-gray-400 font-semibold tracking-wider">OR</span>
-                  <div className="flex-1 border-t border-gray-200"></div>
-                </div>
-
-                <div className="space-y-3">
                   <button
                     type="button"
-                    className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm"
+                    onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
-                    <AppleIcon />
-                    Continue with Apple
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm"
-                  >
-                    <FacebookIcon />
-                    Continue with Facebook
-                  </button>
-                  <button
-                    id="google-signin-btn"
-                    onClick={handleGoogleSignIn}
-                    disabled={googleLoading}
-                    className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
-                  >
-                    {googleLoading ? (
-                      <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    {isPasswordVisible ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
                     ) : (
-                      <GoogleIcon />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                      </svg>
                     )}
-                    Continue with Google
                   </button>
                 </div>
-              </>
-            )}
+              </div>
 
-            {/* Toggle sign in / sign up */}
+              {/* Options Row */}
+              <div className="flex items-center justify-between text-[13px] pt-1">
+                <label className="flex items-center gap-2 text-gray-400 font-medium cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-350 accent-gray-900 cursor-pointer"
+                  />
+                  <span>Remember me</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => navigate('/reset-password')}
+                  className="text-gray-950 font-bold hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                id="email-submit-btn"
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 flex items-center justify-center bg-gray-950 text-white rounded-xl font-semibold text-[15px] hover:bg-gray-900 active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
+              >
+                {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-6 flex items-center">
+              <div className="flex-grow border-t border-gray-200/80"></div>
+              <span className="mx-3 text-[11px] text-gray-400 font-semibold uppercase tracking-wider">or</span>
+              <div className="flex-grow border-t border-gray-200/80"></div>
+            </div>
+
+            {/* Social Google Login */}
+            <button
+              id="google-signin-btn"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="w-full h-12 flex items-center justify-center gap-3 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
+            >
+              {googleLoading ? (
+                <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              ) : (
+                <GoogleIcon />
+              )}
+              Continue with Google
+            </button>
+
+            {/* Auth Toggle footer */}
             <p className="text-center mt-8 text-[14px] text-gray-500 font-medium">
               {isSignUp ? (
                 <>Already have an account?{' '}
-                  <button onClick={() => { navigate('/sign-in'); setShowPassword(false); }} className="auth-toggle-link text-[14px]">Log in</button>
+                  <button onClick={() => navigate('/sign-in')} className="text-gray-950 font-bold hover:underline">Log In</button>
                 </>
               ) : (
                 <>New to ZieAds?{' '}
-                  <button onClick={() => { navigate('/sign-up'); setShowPassword(false); }} className="auth-toggle-link text-[14px]">Get Started</button>
+                  <button onClick={() => navigate('/sign-up')} className="text-gray-950 font-bold hover:underline">Get Started</button>
                 </>
               )}
             </p>
-
-            {/* Consent text */}
-            <p className="text-center mt-6 text-[12px] text-gray-400 leading-relaxed max-w-[360px] mx-auto">
-              By clicking on 'Continue' you consent to receive occasional product updates
-              and important account alerts. Read our{' '}
-              <button
-                onClick={() => navigate('/privacy-policy')}
-                className="auth-toggle-link text-[12px] font-medium"
-              >
-                Privacy Policy
-              </button>
-              .
-            </p>
-
-            {/* Links */}
-            <p className="text-center mt-3 text-[12px] text-gray-400">
-              <button onClick={() => navigate('/terms')} className="hover:underline hover:text-gray-600 transition-colors">Terms of Service</button>
-              {' · '}
-              <button onClick={() => navigate('/privacy-policy')} className="hover:underline hover:text-gray-600 transition-colors">Privacy Policy</button>
-            </p>
           </div>
-        </div>
-      </div>
 
-      {/* ── Right: Visual Panel (50% Split) ── */}
-      <div className="hidden lg:flex lg:w-[50%] flex-col lp-visual-panel overflow-hidden relative justify-between">
-        
-        {/* Dotted Wallpaper pattern container */}
-        <div className="absolute inset-0 opacity-40 pointer-events-none" style={{
-          backgroundImage: 'radial-gradient(var(--lp-border-grid) 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
-        }} />
-
-        {/* Real ZieAds Testimonial Quote */}
-        <div className="px-16 pt-24 max-w-[680px] z-10 text-left">
-          <p className="text-[20px] lg:text-[24px] text-gray-700 font-normal leading-relaxed mb-4">
-            "ZieAds cut our client onboarding from 3 days to 20 minutes. Every agency needs this."
-          </p>
-          <p className="text-[14px] text-gray-400 font-semibold">
-            — Rafi S., Performance Marketing Lead
-          </p>
-        </div>
-
-        {/* Branded replica of the reference dashboard */}
-        <div className="flex-1 flex items-end justify-center px-12 z-10 w-full mt-10 overflow-hidden translate-y-[100px] hover:translate-y-[80px] transition-transform duration-500">
-          <div className="lp-showcase-container !mt-0 w-full max-w-[580px]">
-            <div className="lp-rainbow-glow !top-[30%]"></div>
-            <div className="lp-showcase-card shadow-2xl">
-              <div className="lp-showcase-header">
-                <div className="lp-chrome-dots">
-                  <span className="lp-dot-red"></span>
-                  <span className="lp-dot-yellow"></span>
-                  <span className="lp-dot-green"></span>
-                </div>
-                <div className="lp-chrome-title">app.zieads.com/main-library</div>
-              </div>
-              <div className="lp-showcase-body !h-[360px] flex">
-                {/* Mock Sidebar */}
-                <div className="lp-showcase-sidebar !w-[170px] p-4 flex flex-col justify-between bg-white border-r border-gray-100 shrink-0">
-                  <div className="flex flex-col gap-5">
-                    <div className="lp-sidebar-logo flex items-center gap-2 font-bold text-gray-900 text-[13px] tracking-tight">
-                      <div className="p-1 bg-gray-900 text-white rounded">
-                        <ZieAdsLogo size={10} className="text-white" />
-                      </div>
-                      <span>zieads.com</span>
-                    </div>
-                    <div className="lp-sidebar-links flex flex-col gap-1">
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
-                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-                        Dashboard
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold bg-blue-50 text-blue-600 cursor-pointer">
-                        <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                        Main Library
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
-                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                        Master
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
-                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3v12M18 9a3 3 0 0 1-3-3m0 0a3 3 0 0 0-3 3m3-3v12"/></svg>
-                        Branches
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-500 cursor-pointer hover:bg-gray-50 hover:text-gray-900">
-                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        Members
-                      </div>
-                    </div>
-                  </div>
-                  {/* Sidebar Bottom (Storage & Profile) */}
-                  <div className="flex flex-col gap-3">
-                    <div className="px-2">
-                      <div className="flex justify-between items-center text-[10px] text-gray-400 mb-1">
-                        <span>Your Storage</span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
-                        <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '33%' }}></div>
-                      </div>
-                      <p className="text-[9px] text-gray-400 leading-tight">4.9 GB of 15 GB used</p>
-                      <button className="text-[9px] font-semibold text-blue-600 hover:underline block mt-1">Upgrade Storage</button>
-                    </div>
-                    <div className="border-t border-gray-100 pt-3 flex items-center gap-2">
-                      <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&h=80&q=80" alt="John Doe" className="w-7 h-7 rounded-full object-cover" />
-                      <span className="text-[11px] font-semibold text-gray-700 truncate">John Doe</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mock Content */}
-                <div className="flex-1 p-5 flex flex-col gap-4 overflow-y-auto text-left">
-                  <div>
-                    <h3 className="text-[16px] font-bold text-gray-900 leading-tight">Main Library</h3>
-                  </div>
-                  {/* Tabs */}
-                  <div className="flex gap-4 border-b border-gray-100 pb-1 text-[12px]">
-                    <span className="text-blue-600 font-semibold border-b-2 border-blue-600 pb-1 cursor-pointer">Files</span>
-                    <span className="text-gray-400 cursor-pointer hover:text-gray-600 pb-1">Activities</span>
-                    <span className="text-gray-400 cursor-pointer hover:text-gray-600 pb-1">Overview</span>
-                  </div>
-                  {/* Folders Section */}
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Folders</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <svg className="w-5 h-5 text-blue-500 fill-blue-500/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                          <span className="text-[11px] font-semibold text-gray-700 truncate max-w-[80px]">Figma Library</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-gray-400">3</span>
-                      </div>
-                      <div className="p-3 border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <svg className="w-5 h-5 text-blue-500 fill-blue-500/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                          <span className="text-[11px] font-semibold text-gray-700 truncate max-w-[80px]">React</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-gray-400">32</span>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Recent Files Section */}
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Recent files</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 border border-gray-100 rounded-xl bg-white flex flex-col justify-between h-[85px]">
-                        <div className="p-1.5 bg-blue-50 text-blue-600 rounded w-fit">
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        </div>
-                        <span className="text-[10px] font-semibold text-gray-700 truncate">About ZieAds</span>
-                      </div>
-                      <div className="p-3 border border-gray-100 rounded-xl bg-white flex flex-col justify-between h-[85px]">
-                        <div className="p-1.5 bg-green-50 text-green-600 rounded w-fit">
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        </div>
-                        <span className="text-[10px] font-semibold text-gray-700 truncate">Competitor Audit</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Right Panel: Floating Astronaut */}
+          <div className="hidden lg:flex flex-col justify-center items-center rounded-[32px] border border-gray-100/50 bg-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.02)] backdrop-blur-md p-8 relative overflow-hidden group min-h-[500px]">
+            {/* Animated subtle light orb inside astronaut container */}
+            <div className="absolute w-[250px] h-[250px] rounded-full bg-gradient-to-tr from-pink-300/10 via-purple-300/10 to-cyan-300/10 blur-[50px] z-0 animate-pulse"></div>
+            
+            <img
+              src="/astronaut_floating.png"
+              alt="Floating Astronaut illustration"
+              className="w-full max-w-[320px] h-auto object-contain z-10 relative drop-shadow-[0_20px_50px_rgba(0,0,0,0.06)] group-hover:scale-105 group-hover:-translate-y-2 transition-all duration-700 ease-out"
+              style={{
+                animation: 'float 6s ease-in-out infinite'
+              }}
+            />
           </div>
+
         </div>
-      </div>
+      </main>
+
+      {/* Footer Links */}
+      <footer className="w-full py-6 text-center text-[12px] text-gray-400 z-10 relative">
+        <div className="flex justify-center gap-4">
+          <button onClick={() => navigate('/terms')} className="hover:underline hover:text-gray-600 transition-colors">Terms of Service</button>
+          <span>·</span>
+          <button onClick={() => navigate('/privacy-policy')} className="hover:underline hover:text-gray-600 transition-colors">Privacy Policy</button>
+        </div>
+      </footer>
+
+      {/* Embedded CSS for Floating animation */}
+      <style>{`
+        @keyframes float {
+          0% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(1.5deg); }
+          100% { transform: translateY(0px) rotate(0deg); }
+        }
+      `}</style>
     </div>
   );
 }
