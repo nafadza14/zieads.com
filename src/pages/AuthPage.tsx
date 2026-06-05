@@ -100,15 +100,15 @@ export default function AuthPage() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-pink-200/20 to-purple-300/20 blur-[140px] pointer-events-none z-0"></div>
       
       {/* Brand Header */}
-      <header className="w-full px-16 lg:px-24 pt-12 pb-4 flex items-center justify-between z-10 relative">
+      <header className="w-full px-8 pt-8 pb-4 flex items-center justify-between z-10 relative">
         <div
-          className="flex items-center gap-4 cursor-pointer"
+          className="flex items-center gap-2.5 cursor-pointer"
           onClick={() => navigate('/')}
         >
-          <div className="lp-auth-logo-bg p-3.5 rounded-2xl">
-            <ZieAdsLogo size={40} className="text-gray-900" />
+          <div className="lp-auth-logo-bg p-2 rounded-xl">
+            <ZieAdsLogo size={20} className="text-gray-900" />
           </div>
-          <span className="lp-auth-logo-text text-[36px] tracking-tight">zieads</span>
+          <span className="lp-auth-logo-text text-[18px]">zieads</span>
         </div>
       </header>
 
@@ -116,8 +116,8 @@ export default function AuthPage() {
       <main className="flex-1 flex items-center justify-center px-4 md:px-12 py-8 z-10 relative">
         <div className="w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
           
-          {/* Left Panel: Transparent/No-Card Auth Form */}
-          <div className="flex flex-col justify-center text-left max-w-[460px] mx-auto w-full p-4 md:p-6">
+          {/* Left Panel: Glassmorphic Auth Form */}
+          <div className="backdrop-blur-xl bg-white/70 border border-white/20 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.05)] rounded-[32px] p-8 md:p-12 flex flex-col justify-center text-left max-w-[460px] mx-auto w-full">
             <h1 className="text-[32px] font-bold text-gray-950 tracking-tight mb-1">
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
@@ -243,15 +243,15 @@ export default function AuthPage() {
             </p>
           </div>
 
-          {/* Right Panel: Floating Astronaut (Fills entire card border) */}
-          <div className="hidden lg:flex flex-col justify-center items-center rounded-[32px] border border-gray-100/50 bg-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.02)] backdrop-blur-md p-0 relative overflow-hidden group min-h-[500px]">
+          {/* Right Panel: Floating Astronaut */}
+          <div className="hidden lg:flex flex-col justify-center items-center rounded-[32px] border border-gray-100/50 bg-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.02)] backdrop-blur-md p-8 relative overflow-hidden group min-h-[500px]">
             {/* Animated subtle light orb inside astronaut container */}
             <div className="absolute w-[250px] h-[250px] rounded-full bg-gradient-to-tr from-pink-300/10 via-purple-300/10 to-cyan-300/10 blur-[50px] z-0 animate-pulse"></div>
             
             <img
               src="/astronaut_floating.png"
               alt="Floating Astronaut illustration"
-              className="w-full h-full object-cover z-10 relative drop-shadow-[0_20px_50px_rgba(0,0,0,0.06)] group-hover:scale-105 transition-all duration-700 ease-out"
+              className="w-full max-w-[320px] h-auto object-contain z-10 relative drop-shadow-[0_20px_50px_rgba(0,0,0,0.06)] group-hover:scale-105 group-hover:-translate-y-2 transition-all duration-700 ease-out"
               style={{
                 animation: 'float 6s ease-in-out infinite'
               }}
