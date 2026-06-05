@@ -99,26 +99,23 @@ export default function AuthPage() {
       <div className="absolute top-[20%] left-[20%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-tr from-cyan-200/10 to-blue-300/20 blur-[120px] pointer-events-none z-0"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-pink-200/20 to-purple-300/20 blur-[140px] pointer-events-none z-0"></div>
       
-      {/* Brand Header */}
-      {/* Brand Header aligned to main container */}
-      <header className="w-full max-w-[1000px] mx-auto px-4 md:px-6 pt-12 pb-4 flex items-center justify-between z-10 relative">
-        <div
-          className="flex items-center gap-2.5 cursor-pointer"
-          onClick={() => navigate('/')}
-        >
-          <div className="lp-auth-logo-bg p-2 rounded-xl">
-            <ZieAdsLogo size={20} className="text-gray-900" />
-          </div>
-          <span className="lp-auth-logo-text text-[18px]">zieads</span>
-        </div>
-      </header>
-
       {/* Main Dual-Panel Content */}
       <main className="flex-1 flex items-center justify-center px-4 md:px-12 py-6 z-10 relative">
         <div className="w-full max-w-[1000px] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
           
           {/* Left Panel: Transparent/No-Card Auth Form */}
           <div className="flex flex-col justify-center text-left max-w-[450px] mx-auto w-full p-4 md:p-6">
+            
+            {/* Logo inside form column */}
+            <div
+              className="flex items-center gap-2.5 cursor-pointer mb-8 w-fit"
+              onClick={() => navigate('/')}
+            >
+              <div className="lp-auth-logo-bg p-2 rounded-xl">
+                <ZieAdsLogo size={20} className="text-gray-900" />
+              </div>
+              <span className="lp-auth-logo-text text-[18px]">zieads</span>
+            </div>
             <h1 className="text-[28px] font-bold text-gray-950 tracking-tight" style={{ marginBottom: '8px' }}>
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
@@ -148,13 +145,13 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email Address"
-                  className="w-full border border-[#E2D9D4] bg-white transition-all text-center focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-450"
+                  className="w-full border border-[#E2D9D4] bg-white transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-450"
                   style={{
                     height: '60px',
                     borderRadius: '16px',
-                    textAlign: 'center',
-                    paddingLeft: '20px',
-                    paddingRight: '20px',
+                    textAlign: 'left',
+                    paddingLeft: '16px',
+                    paddingRight: '16px',
                     fontSize: '15px'
                   }}
                 />
@@ -171,12 +168,12 @@ export default function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={isSignUp ? 'At least 6 characters' : 'Password 8-16 character'}
-                    className="w-full border border-[#E2D9D4] bg-white transition-all text-center focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455"
+                    className="w-full border border-[#E2D9D4] bg-white transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455"
                     style={{
                       height: '60px',
                       borderRadius: '16px',
-                      textAlign: 'center',
-                      paddingLeft: '48px',
+                      textAlign: 'left',
+                      paddingLeft: '16px',
                       paddingRight: '48px',
                       fontSize: '15px'
                     }}
