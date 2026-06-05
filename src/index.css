@@ -1218,7 +1218,7 @@ a:hover { color: var(--primary); }
   padding: 8px 12px 8px 24px !important;
   height: 56px !important;
   width: calc(100% - 40px) !important;
-  max-width: 800px !important;
+  max-width: 1200px !important;
   display: flex !important;
   align-items: center !important;
   left: 50% !important;
