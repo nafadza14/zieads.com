@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot } from 'lucide-react';
+import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import { 
-  UilSearchAlt, UilFileAlt, UilPen, UilPalette, UilChartPie, UilHome, UilCrosshairs, UilMoneyBill, UilFacebook, UilVideo, UilLinkedin, UilFilter, UilBullseye, UilGoogle
-} from '@iconscout/react-unicons';
+import NounIcon from '../components/NounIcon';
 
 const P = 'var(--primary)';
 const PL = 'var(--primary-bg)';
@@ -13,22 +11,23 @@ const D = 'var(--text)';
 const B = 'var(--border)';
 
 const SKILLS = [
-  { id: 'audit', name: 'Full Audit', icon: <UilSearchAlt size={20} />, color: P, desc: '5 agents · all 6 dimensions scored', cmd: '/ads audit' },
-  { id: 'quick', name: 'Quick Scan', icon: <UilChartPie size={20} />, color: '#f59e0b', desc: '60-second ads readiness snapshot', cmd: '/ads quick' },
-  { id: 'copy', name: 'Ad Copy', icon: <UilPen size={20} />, color: '#f59e0b', desc: 'Google, Meta, TikTok, LinkedIn ready', cmd: '/ads copy' },
-  { id: 'creatives', name: 'Creative Brief', icon: <UilPalette size={20} />, color: '#00c9a7', desc: '3 concepts per platform', cmd: '/ads creatives' },
-  { id: 'landing', name: 'Landing Page CRO', icon: <UilHome size={20} />, color: '#5c8aff', desc: '8-dimension conversion audit', cmd: '/ads landing' },
-  { id: 'audiences', name: 'Audience Targeting', icon: <UilCrosshairs size={20} />, color: '#8b5cf6', desc: 'ICP & platform matrices', cmd: '/ads audiences' },
-  { id: 'competitors', name: 'Competitor Intel', icon: <UilBullseye size={20} />, color: '#e8457a', desc: '3-tier intelligence map', cmd: '/ads competitors' },
-  { id: 'funnel', name: 'Funnel Architecture', icon: <UilFilter size={20} />, color: '#f59e0b', desc: 'TOFU/MOFU/BOFU routing', cmd: '/ads funnel' },
-  { id: 'budget', name: 'Budget Model', icon: <UilMoneyBill size={20} />, color: '#10b981', desc: 'Platform allocation + KPIs', cmd: '/ads budget' },
-  { id: 'google', name: 'Google Ads', icon: <UilGoogle size={20} />, color: '#4285f4', desc: 'Search, Shopping, Display strategy', cmd: '/ads google' },
-  { id: 'meta', name: 'Meta Ads', icon: <UilFacebook size={20} />, color: '#1877f2', desc: 'Facebook & Instagram strategy', cmd: '/ads meta' },
-  { id: 'tiktok', name: 'TikTok Ads', icon: <UilVideo size={20} />, color: '#000', desc: 'UGC & spark ads strategy', cmd: '/ads tiktok' },
-  { id: 'linkedin', name: 'LinkedIn Ads', icon: <UilLinkedin size={20} />, color: '#0a66c2', desc: 'B2B account-based marketing', cmd: '/ads linkedin' },
-  { id: 'report', name: 'Strategy Report', icon: <UilFileAlt size={20} />, color: '#64748b', desc: 'Full markdown strategy export', cmd: '/ads report' },
-  { id: 'report-pdf', name: 'White-Label PDF', icon: <UilFileAlt size={20} />, color: P, desc: 'Professional agency deck', cmd: '/ads report-pdf' },
+  { id: 'audit', name: 'Full Audit', icon: <NounIcon name="audit" color="#6366f1" size={20} />, color: '#6366f1', desc: '5 agents · all 6 dimensions scored', cmd: '/ads audit' },
+  { id: 'quick', name: 'Quick Scan', icon: <NounIcon name="quick" color="#f59e0b" size={20} />, color: '#f59e0b', desc: '60-second ads readiness snapshot', cmd: '/ads quick' },
+  { id: 'copy', name: 'Ad Copy', icon: <NounIcon name="copy" color="#2563eb" size={20} />, color: '#2563eb', desc: 'Google, Meta, TikTok, LinkedIn ready', cmd: '/ads copy' },
+  { id: 'creatives', name: 'Creative Brief', icon: <NounIcon name="creatives" color="#ec4899" size={20} />, color: '#ec4899', desc: '3 concepts per platform', cmd: '/ads creatives' },
+  { id: 'landing', name: 'Landing Page CRO', icon: <NounIcon name="landing" color="#10b981" size={20} />, color: '#10b981', desc: '8-dimension conversion audit', cmd: '/ads landing' },
+  { id: 'audiences', name: 'Audience Targeting', icon: <NounIcon name="audiences" color="#8b5cf6" size={20} />, color: '#8b5cf6', desc: 'ICP & platform matrices', cmd: '/ads audiences' },
+  { id: 'competitors', name: 'Competitor Intel', icon: <NounIcon name="competitors" color="#ef4444" size={20} />, color: '#ef4444', desc: '3-tier intelligence map', cmd: '/ads competitors' },
+  { id: 'funnel', name: 'Funnel Architecture', icon: <NounIcon name="funnel" color="#06b6d4" size={20} />, color: '#06b6d4', desc: 'TOFU/MOFU/BOFU routing', cmd: '/ads funnel' },
+  { id: 'budget', name: 'Budget Model', icon: <NounIcon name="budget" color="#16a34a" size={20} />, color: '#16a34a', desc: 'Platform allocation + KPIs', cmd: '/ads budget' },
+  { id: 'google', name: 'Google Ads', icon: <NounIcon name="google" color="#4285f4" size={20} />, color: '#4285f4', desc: 'Search, Shopping, Display strategy', cmd: '/ads google' },
+  { id: 'meta', name: 'Meta Ads', icon: <NounIcon name="meta" color="#1877f2" size={20} />, color: '#1877f2', desc: 'Facebook & Instagram strategy', cmd: '/ads meta' },
+  { id: 'tiktok', name: 'TikTok Ads', icon: <NounIcon name="tiktok" color="#ff0050" size={20} />, color: '#ff0050', desc: 'UGC & spark ads strategy', cmd: '/ads tiktok' },
+  { id: 'linkedin', name: 'LinkedIn Ads', icon: <NounIcon name="linkedin" color="#0a66c2" size={20} />, color: '#0a66c2', desc: 'B2B account-based marketing', cmd: '/ads linkedin' },
+  { id: 'report', name: 'Strategy Report', icon: <NounIcon name="report" color="#f97316" size={20} />, color: '#f97316', desc: 'Full markdown strategy export', cmd: '/ads report' },
+  { id: 'report-pdf', name: 'White-Label PDF', icon: <NounIcon name="report-pdf" color="#d946ef" size={20} />, color: '#d946ef', desc: 'Professional agency deck', cmd: '/ads report-pdf' },
 ];
+
 
 const RHYTHM = [
   { day: 'MON', label: 'Full audit + score review', cmds: '/ads audit', color: P },
@@ -242,9 +241,15 @@ export default function ClientDashboard({ reportData }: Props) {
               {section === 'home' ? (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {[{k:'home',l:'Home'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'profile-page',l:'Business Profile'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
-                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } if (n.k === 'profile-page') { navigate('/profile'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontWeight: sidebarNav === n.k ? 500 : 400, background: sidebarNav === n.k ? 'var(--primary-bg)' : 'transparent', color: sidebarNav === n.k ? 'var(--text)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {sidebarNav === n.k && <span style={{ width: 4, height: 4, borderRadius: '50%', background: P }}></span>}
-                      {n.k === 'agent' ? <Bot size={14} /> : ''}{n.l}
+                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } if (n.k === 'profile-page') { navigate('/profile'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? 'var(--primary-bg)' : 'transparent', color: sidebarNav === n.k ? 'var(--text)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {n.k === 'home' && <Home size={15} style={{ color: '#6366F1' }} />}
+                      {n.k === 'reports' && <FileText size={15} style={{ color: '#0D9488' }} />}
+                      {n.k === 'agent' && <Bot size={15} style={{ color: '#8B5CF6' }} />}
+                      {n.k === 'profile-page' && <User size={15} style={{ color: '#F97316' }} />}
+                      {n.k === 'referrals' && <Share2 size={15} style={{ color: '#EC4899' }} />}
+                      {n.k === 'settings' && <SettingsIcon size={15} style={{ color: '#71717A' }} />}
+                      {n.k === 'skills' && <LayoutGrid size={15} style={{ color: '#10B981' }} />}
+                      {n.l}
                     </li>
                   ))}
                 </ul>
@@ -623,7 +628,9 @@ export default function ClientDashboard({ reportData }: Props) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
               {SKILLS.slice(0, 6).map((s, i) => (
                 <div key={i} onClick={() => { setSelectedSkill(s.id); document.querySelector<HTMLInputElement>('input[type="text"]')?.focus(); }} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 16, cursor: 'pointer', transition: 'border-color 0.15s' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', border: `1px solid ${B}`, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', marginBottom: 12 }}>{s.icon}</div>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: `${s.color}12`, border: `1px solid ${s.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                    <NounIcon name={s.id} size={18} color={s.color} />
+                  </div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 600, color: D, marginBottom: 4 }}>{s.name}</div>
                   <div style={{ fontSize: '0.8rem', color: G, marginBottom: 8 }}>{s.desc}</div>
                   <div style={{ fontSize: '0.75rem', color: G, fontFamily: 'monospace' }}>{s.cmd}</div>
@@ -721,7 +728,9 @@ export default function ClientDashboard({ reportData }: Props) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 6, background: `${s.color}15`, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>{s.icon}</div>
+                        <div style={{ width: 28, height: 28, borderRadius: 6, background: `${s.color}15`, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <NounIcon name={s.id} size={16} color={s.color} />
+                        </div>
                         <strong style={{ color: D }}>{s.name}</strong>
                       </div>
                       <code style={{ fontSize: '0.75rem', color: P, background: '#f3e8ff', padding: '2px 6px', borderRadius: 4 }}>{s.cmd}</code>

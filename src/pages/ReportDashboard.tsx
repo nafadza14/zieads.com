@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { supabase } from '../lib/supabaseClient';
+import NounIcon from '../components/NounIcon';
 
 const TABS = ['Overview', 'Creatives', 'Audiences', 'Platforms', 'Funnel', 'Competitors', 'Budget'];
 
@@ -706,7 +707,7 @@ export default function ReportDashboard() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`relative px-8 py-3.5 rounded-md text-sm font-black uppercase tracking-widest whitespace-nowrap transition-colors z-10 ${activeTab === tab ? 'text-white' : 'text-neutral-500 hover:text-neutral-900'}`}
+                    className={`relative px-6 py-3 rounded-md text-sm font-black uppercase tracking-widest whitespace-nowrap transition-colors z-10 flex items-center gap-2 ${activeTab === tab ? 'text-white' : 'text-neutral-500 hover:text-neutral-900'}`}
                   >
                     {activeTab === tab && (
                       <motion.div 
@@ -715,7 +716,14 @@ export default function ReportDashboard() {
                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                       />
                     )}
-                    {tab}
+                    {tab === 'Overview' && <NounIcon name="audit" size={14} color={activeTab === tab ? '#fff' : '#6366F1'} />}
+                    {tab === 'Creatives' && <NounIcon name="creatives" size={14} color={activeTab === tab ? '#fff' : '#EC4899'} />}
+                    {tab === 'Audiences' && <NounIcon name="audiences" size={14} color={activeTab === tab ? '#fff' : '#8B5CF6'} />}
+                    {tab === 'Platforms' && <NounIcon name="meta" size={14} color={activeTab === tab ? '#fff' : '#1877F2'} />}
+                    {tab === 'Funnel' && <NounIcon name="funnel" size={14} color={activeTab === tab ? '#fff' : '#06B6D4'} />}
+                    {tab === 'Competitors' && <NounIcon name="competitors" size={14} color={activeTab === tab ? '#fff' : '#EF4444'} />}
+                    {tab === 'Budget' && <NounIcon name="budget" size={14} color={activeTab === tab ? '#fff' : '#16A34A'} />}
+                    <span>{tab}</span>
                   </button>
                 ))}
               </div>

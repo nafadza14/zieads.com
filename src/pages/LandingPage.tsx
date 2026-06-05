@@ -1,60 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
-
-// SVG Icon Components (replacing emojis)
-const IconLink = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="step-icon-svg">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
-const IconBot = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="step-icon-svg">
-    <rect x="3" y="11" width="18" height="10" rx="2" />
-    <circle cx="9" cy="16" r="1" /><circle cx="15" cy="16" r="1" />
-    <path d="M12 11V7" /><path d="M8 7h8" />
-    <path d="M12 7V4" />
-  </svg>
-);
-const IconChart = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="step-icon-svg">
-    <path d="M3 3v18h18" />
-    <path d="M7 16l4-8 4 4 4-8" />
-  </svg>
-);
-const IconPalette = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="agent-icon-svg">
-    <circle cx="12" cy="12" r="10" />
-    <circle cx="12" cy="8" r="1.5" fill="currentColor" />
-    <circle cx="8" cy="12" r="1.5" fill="currentColor" />
-    <circle cx="15.5" cy="10" r="1.5" fill="currentColor" />
-    <circle cx="15" cy="14.5" r="1.5" fill="currentColor" />
-    <path d="M9 17c1-1 3-1.5 5-.5" />
-  </svg>
-);
-const IconTarget = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="agent-icon-svg">
-    <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
-  </svg>
-);
-const IconSearch = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="agent-icon-svg">
-    <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-  </svg>
-);
-const IconDollar = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="agent-icon-svg">
-    <line x1="12" y1="1" x2="12" y2="23" />
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-  </svg>
-);
-const IconFunnel = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="agent-icon-svg">
-    <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-  </svg>
-);
-
+import { 
+  Link2, 
+  Bot, 
+  TrendingUp, 
+  Palette, 
+  Target, 
+  Search, 
+  DollarSign, 
+  Filter, 
+  Check 
+} from 'lucide-react';
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -100,11 +57,16 @@ export default function LandingPage({ onScanComplete }: Props) {
 
   return (
     <div className="landing-page">
+      {/* GRID LINES BACKGROUND */}
+      <div className="lp-grid-line lp-line-left"></div>
+      <div className="lp-grid-line lp-line-right"></div>
+      <div className="lp-line-top"></div>
+
       {/* NAVBAR */}
       <nav className="navbar">
         <div className="nav-inner">
-          <div className="nav-brand">
-            <ZieAdsLogo size={36} />
+          <div className="nav-brand" onClick={() => navigate('/')}>
+            <ZieAdsLogo size={32} />
             <span className="brand-name">zieads</span>
           </div>
           <div className="nav-links">
@@ -117,9 +79,6 @@ export default function LandingPage({ onScanComplete }: Props) {
             <button className="btn-login" onClick={() => navigate('/sign-in')}>Login</button>
             <button className="btn-get-started" onClick={() => navigate('/sign-up')}>
               Get Started
-              <span className="btn-arrow-circle">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-              </span>
             </button>
           </div>
         </div>
@@ -127,14 +86,22 @@ export default function LandingPage({ onScanComplete }: Props) {
 
       {/* HERO */}
       <section className="hero-section">
-        <div className="hero-badge">
-          <span className="badge-dot"></span>
-          AI Powered Ads Strategy in Under 3 Minutes
+        <div className="lp-hero-eyebrow">
+          <div className="lp-stars">
+            {[...Array(5)].map((_, i) => (
+              <svg key={i} className="lp-star" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+              </svg>
+            ))}
+          </div>
+          <span className="lp-rating-text">4.9 on Product Hunt · AI Strategy in Under 3 Minutes</span>
         </div>
+        
         <h1 className="hero-title">
           Get a Complete Paid Ads <br />
-          <span className="gradient-text">Strategy in Minutes</span>
+          <span className="lp-pill-highlight">Strategy in Minutes</span>
         </h1>
+        
         <p className="hero-subtitle">
           Enter any URL. ZieAds deploys 5 AI agents in parallel to audit your ads setup,
           score your readiness, and deliver an execution ready strategy across Meta, Google, TikTok & more.
@@ -142,9 +109,7 @@ export default function LandingPage({ onScanComplete }: Props) {
 
         <div className="hero-input-wrapper">
           <div className="hero-input-container">
-            <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-            </svg>
+            <Search className="input-icon" size={20} />
             <input
               type="text"
               className="hero-input"
@@ -162,17 +127,70 @@ export default function LandingPage({ onScanComplete }: Props) {
               {loading ? (
                 <span className="spinner-inline"></span>
               ) : (
-                <>
-                  Run Free Quick Scan
-                  <span className="btn-arrow-circle">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                  </span>
-                </>
+                "Run Free Quick Scan"
               )}
             </button>
           </div>
           {error && <p className="hero-error">{error}</p>}
           <p className="hero-note">No sign up required · Results in 30 seconds · 100% free</p>
+        </div>
+
+        {/* SHOWCASE CARD WITH RAINBOW GLOW */}
+        <div className="lp-showcase-container">
+          <div className="lp-rainbow-glow"></div>
+          <div className="lp-showcase-card">
+            <div className="lp-showcase-header">
+              <div className="lp-chrome-dots">
+                <span className="lp-dot-red"></span>
+                <span className="lp-dot-yellow"></span>
+                <span className="lp-dot-green"></span>
+              </div>
+              <div className="lp-chrome-title">app.zieads.com/dashboard</div>
+            </div>
+            <div className="lp-showcase-body">
+              <div className="lp-showcase-sidebar">
+                <div className="lp-sidebar-logo">
+                  <ZieAdsLogo size={20} />
+                  <span>zieads</span>
+                </div>
+                <div className="lp-sidebar-links">
+                  <div className="lp-sidebar-link active">Dashboard</div>
+                  <div className="lp-sidebar-link">AI Audit</div>
+                  <div className="lp-sidebar-link">Creative Studio</div>
+                  <div className="lp-sidebar-link">Audience Builder</div>
+                </div>
+              </div>
+              <div className="lp-showcase-content">
+                <div className="lp-content-header">
+                  <h3>Strategy Report</h3>
+                  <span className="lp-badge-success">Ready</span>
+                </div>
+                <div className="lp-showcase-metrics">
+                  <div className="lp-metric-card">
+                    <span className="lp-metric-label">Readiness Score</span>
+                    <span className="lp-metric-value">87/100</span>
+                  </div>
+                  <div className="lp-metric-card">
+                    <span className="lp-metric-label">Est. ROAS Increase</span>
+                    <span className="lp-metric-value">+42%</span>
+                  </div>
+                  <div className="lp-metric-card">
+                    <span className="lp-metric-label">AI Agent Audit</span>
+                    <span className="lp-metric-value">5/5 Done</span>
+                  </div>
+                </div>
+                <div className="lp-chat-mock">
+                  <div className="lp-chat-bubble lp-ai">
+                    <span className="lp-ai-avatar">AI</span>
+                    <p>I've detected Meta pixel gaps on your cart page. Here is the recommended targeting strategy...</p>
+                  </div>
+                  <div className="lp-chat-bubble lp-user">
+                    <p>Generate 3 image ad hooks for our SaaS launch.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -180,22 +198,22 @@ export default function LandingPage({ onScanComplete }: Props) {
       <section className="social-proof">
         <div className="proof-stats">
           <div className="stat">
-            <span className="stat-number">2,847</span>
+            <span className="stat-number mono-num">2,847</span>
             <span className="stat-label">Reports Generated</span>
           </div>
           <div className="stat-divider"></div>
           <div className="stat">
-            <span className="stat-number">4.8/5</span>
+            <span className="stat-number mono-num">4.8/5</span>
             <span className="stat-label">Average Rating</span>
           </div>
           <div className="stat-divider"></div>
           <div className="stat">
-            <span className="stat-number">&lt; 3 min</span>
+            <span className="stat-number mono-num">&lt; 3 min</span>
             <span className="stat-label">Avg Report Time</span>
           </div>
           <div className="stat-divider"></div>
           <div className="stat">
-            <span className="stat-number">15</span>
+            <span className="stat-number mono-num">15</span>
             <span className="stat-label">AI Skill Agents</span>
           </div>
         </div>
@@ -207,20 +225,20 @@ export default function LandingPage({ onScanComplete }: Props) {
         <p className="section-subtitle">From URL to execution ready strategy in 3 steps</p>
         <div className="steps-grid">
           <div className="step-card">
-            <div className="step-number">1</div>
-            <div className="step-icon-wrap"><IconLink /></div>
+            <div className="step-number mono-num">1</div>
+            <div className="step-icon-wrap"><Link2 size={24} /></div>
             <h3>Enter Your URL</h3>
             <p>Paste any business URL. ZieAds scrapes the page, detects pixels, identifies your offer, and builds context.</p>
           </div>
           <div className="step-card">
-            <div className="step-number">2</div>
-            <div className="step-icon-wrap"><IconBot /></div>
+            <div className="step-number mono-num">2</div>
+            <div className="step-icon-wrap"><Bot size={24} /></div>
             <h3>5 AI Agents Analyze</h3>
             <p>Five specialized agents run in parallel: Creative, Audience, Competitive, Platform/Budget, and Funnel/Conversion.</p>
           </div>
           <div className="step-card">
-            <div className="step-number">3</div>
-            <div className="step-icon-wrap"><IconChart /></div>
+            <div className="step-number mono-num">3</div>
+            <div className="step-icon-wrap"><TrendingUp size={24} /></div>
             <h3>Get Your Report</h3>
             <p>Receive a scored audit with actionable findings, creative briefs, audience strategies, and a downloadable PDF.</p>
           </div>
@@ -233,14 +251,14 @@ export default function LandingPage({ onScanComplete }: Props) {
         <p className="section-subtitle">5 specialist agents working together to build your strategy</p>
         <div className="agents-grid">
           {[
-            { Icon: IconPalette, name: 'Creative Intelligence', desc: 'Analyzes brand identity, generates 3 creative concepts per platform with hooks, visuals, and emotional angles.' },
-            { Icon: IconTarget, name: 'Audience & Targeting', desc: 'Builds your ICP, audience tiers (cold/warm/hot), and platform specific targeting matrices.' },
-            { Icon: IconSearch, name: 'Competitive Intelligence', desc: 'Maps 3 tiers of competitors, analyzes their ad spend, platforms, and positioning gaps.' },
-            { Icon: IconDollar, name: 'Platform & Budget', desc: 'Determines optimal platform mix, budget allocation, KPI benchmarks, and bidding strategies.' },
-            { Icon: IconFunnel, name: 'Funnel & Conversion', desc: 'Audits landing pages across 8 dimensions and maps your TOFU/MOFU/BOFU coverage.' },
+            { Icon: Palette, name: 'Creative Intelligence', desc: 'Analyzes brand identity, generates 3 creative concepts per platform with hooks, visuals, and emotional angles.' },
+            { Icon: Target, name: 'Audience & Targeting', desc: 'Builds your ICP, audience tiers (cold/warm/hot), and platform specific targeting matrices.' },
+            { Icon: Search, name: 'Competitive Intelligence', desc: 'Maps 3 tiers of competitors, analyzes their ad spend, platforms, and positioning gaps.' },
+            { Icon: DollarSign, name: 'Platform & Budget', desc: 'Determines optimal platform mix, budget allocation, KPI benchmarks, and bidding strategies.' },
+            { Icon: Filter, name: 'Funnel & Conversion', desc: 'Audits landing pages across 8 dimensions and maps your TOFU/MOFU/BOFU coverage.' },
           ].map((agent, i) => (
             <div key={i} className="agent-card">
-              <div className="agent-icon-wrap"><agent.Icon /></div>
+              <div className="agent-icon-wrap"><agent.Icon size={24} className="agent-icon-svg" /></div>
               <h3>{agent.name}</h3>
               <p>{agent.desc}</p>
             </div>
@@ -254,17 +272,17 @@ export default function LandingPage({ onScanComplete }: Props) {
         <p className="section-subtitle">Track your progress with a 0 to 100 score across 6 dimensions</p>
         <div className="score-dimensions">
           {[
-            { name: 'Creative & Offer', weight: '25%', color: 'var(--primary)' },
-            { name: 'Audience Clarity', weight: '20%', color: 'var(--primary-light)' },
-            { name: 'Landing Page', weight: '20%', color: 'var(--text-secondary)' },
-            { name: 'Platform Fit', weight: '15%', color: 'var(--text-muted)' },
-            { name: 'Funnel Coverage', weight: '10%', color: 'var(--text-dim)' },
-            { name: 'Competitive', weight: '10%', color: 'var(--text-disabled)' },
+            { name: 'Creative & Offer', weight: '25%', color: 'var(--lp-accent)' },
+            { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)' },
+            { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)' },
+            { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)' },
+            { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)' },
+            { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)' },
           ].map((dim, i) => (
             <div key={i} className="dimension-bar">
               <div className="dim-info">
                 <span className="dim-name">{dim.name}</span>
-                <span className="dim-weight">{dim.weight}</span>
+                <span className="dim-weight mono-num">{dim.weight}</span>
               </div>
               <div className="dim-track">
                 <div className="dim-fill" style={{ width: `${60 + i * 5}%`, backgroundColor: dim.color }}></div>
@@ -317,20 +335,18 @@ export default function LandingPage({ onScanComplete }: Props) {
               {plan.highlight && <div className="popular-badge">Most Popular</div>}
               <h3 className="plan-name">{plan.tier}</h3>
               <div className="plan-price">
-                <span className="price-amount">{plan.price}</span>
+                <span className="price-amount mono-num">{plan.price}</span>
                 <span className="price-period">{plan.period}</span>
               </div>
               <ul className="plan-features">
                 {plan.features.map((f, j) => (
-                  <li key={j}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="check-icon">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    {f}
+                  <li key={j} className="flex items-center gap-2 py-2">
+                    <Check size={16} className="check-icon" />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
-              <button className={`plan-cta ${plan.highlight ? 'plan-cta-primary' : ''}`}>{plan.cta}</button>
+              <button className="plan-cta">{plan.cta}</button>
             </div>
           ))}
         </div>
@@ -355,10 +371,27 @@ export default function LandingPage({ onScanComplete }: Props) {
         </div>
       </section>
 
+      {/* FINAL CTA */}
+      <section className="final-cta-section">
+        <div className="lp-grid-line lp-line-left"></div>
+        <div className="lp-grid-line lp-line-right"></div>
+        <div className="final-cta-content">
+          <h2 className="final-cta-title">
+            Ready to Scale Your Ads <span className="lp-pill-highlight">Without the Agency Cost?</span>
+          </h2>
+          <p className="final-cta-subtitle">
+            Join thousands of businesses using AI-powered strategies to optimize campaigns in minutes.
+          </p>
+          <button className="btn-lp-primary-gradient final-cta-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            Run Your Free Scan Now
+          </button>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer className="footer">
         <div className="footer-inner">
-          <div className="footer-brand">
+          <div className="footer-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <ZieAdsLogo size={32} />
             <span className="brand-name">zieads</span>
           </div>
@@ -369,3 +402,4 @@ export default function LandingPage({ onScanComplete }: Props) {
     </div>
   );
 }
+

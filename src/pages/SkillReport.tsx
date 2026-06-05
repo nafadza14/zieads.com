@@ -2,10 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Bot, Lightbulb, AlertTriangle, Download } from 'lucide-react';
 import { generateSkillPDF } from '../lib/pdfGenerator';
-import { 
-  UilPen, UilPalette, UilSearchAlt, UilGoogle, UilFacebook, UilVideo, UilLinkedin, 
-  UilChartPie, UilFileAlt, UilHome, UilFilter, UilCrosshairs, UilMoneyBill
-} from '@iconscout/react-unicons';
+import NounIcon from '../components/NounIcon';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import LiveAdsSection from '../components/LiveAdsSection';
 import { supabase } from '../lib/supabaseClient';
@@ -33,36 +30,36 @@ const PLATFORM_COLORS: Record<string, { bg: string; text: string; label: string 
   youtube: { bg: 'var(--primary)', text: '#fff', label: 'YouTube' },
 };
 
-const SKILL_META: Record<string, { title: string; icon: React.ReactNode; platform: string; color: string }> = {
-  'ads-copy':       { title: 'Ad Copy Intelligence',      icon: <UilPen size={28} />,       platform: 'All Platforms',          color: RP },
-  'ads-creatives':  { title: 'Creative Brief',            icon: <UilPalette size={28} />,   platform: 'Creative Studio',        color: RP },
-  'ads-competitors':{ title: 'Competitor Intelligence',   icon: <UilSearchAlt size={28} />, platform: 'Competitive Landscape',  color: RP },
-  'ads-google':     { title: 'Google Ads Strategy',       icon: <UilGoogle size={28} />,    platform: 'Google Ads',             color: RP },
-  'ads-meta':       { title: 'Meta Ads Strategy',         icon: <UilFacebook size={28} />,  platform: 'Facebook & Instagram',   color: RP },
-  'ads-tiktok':     { title: 'TikTok Ads Strategy',       icon: <UilVideo size={28} />,     platform: 'TikTok',                 color: '#000' },
-  'ads-linkedin':   { title: 'LinkedIn B2B Strategy',     icon: <UilLinkedin size={28} />,  platform: 'LinkedIn',               color: RP },
-  'ads-report':     { title: 'Strategy Report',           icon: <UilChartPie size={28} />,  platform: 'Full Analysis',          color: RP },
-  'ads-report-pdf': { title: 'White-Label PDF Report',    icon: <UilFileAlt size={28} />,   platform: 'Agency Export',          color: RP },
-  'ads-landing':    { title: 'Landing Page CRO Audit',    icon: <UilHome size={28} />,      platform: 'Conversion Rate',        color: RP },
-  'ads-funnel':     { title: 'Funnel Architecture',       icon: <UilFilter size={28} />,    platform: 'Full Funnel',            color: RP },
-  'ads-audiences':  { title: 'Audience Intelligence',     icon: <UilCrosshairs size={28} />,platform: 'Targeting',              color: RP },
-  'ads-budget':     { title: 'Budget Strategy',           icon: <UilMoneyBill size={28} />, platform: 'Budget Allocation',      color: RP },
-  'ads-quick':      { title: 'Quick Scan',                icon: '⚡',                       platform: 'Ads Readiness',          color: RP },
+const SKILL_META: Record<string, { title: string; platform: string; color: string }> = {
+  'ads-copy':       { title: 'Ad Copy Intelligence',      platform: 'All Platforms',          color: '#2563eb' },
+  'ads-creatives':  { title: 'Creative Brief',            platform: 'Creative Studio',        color: '#ec4899' },
+  'ads-competitors':{ title: 'Competitor Intelligence',   platform: 'Competitive Landscape',  color: '#ef4444' },
+  'ads-google':     { title: 'Google Ads Strategy',       platform: 'Google Ads',             color: '#4285f4' },
+  'ads-meta':       { title: 'Meta Ads Strategy',         platform: 'Facebook & Instagram',   color: '#1877f2' },
+  'ads-tiktok':     { title: 'TikTok Ads Strategy',       platform: 'TikTok',                 color: '#ff0050' },
+  'ads-linkedin':   { title: 'LinkedIn B2B Strategy',     platform: 'LinkedIn',               color: '#0a66c2' },
+  'ads-report':     { title: 'Strategy Report',           platform: 'Full Analysis',          color: '#f97316' },
+  'ads-report-pdf': { title: 'White-Label PDF Report',    platform: 'Agency Export',          color: '#d946ef' },
+  'ads-landing':    { title: 'Landing Page CRO Audit',    platform: 'Conversion Rate',        color: '#10b981' },
+  'ads-funnel':     { title: 'Funnel Architecture',       platform: 'Full Funnel',            color: '#06b6d4' },
+  'ads-audiences':  { title: 'Audience Intelligence',     platform: 'Targeting',              color: '#8b5cf6' },
+  'ads-budget':     { title: 'Budget Strategy',           platform: 'Budget Allocation',      color: '#16a34a' },
+  'ads-quick':      { title: 'Quick Scan',                platform: 'Ads Readiness',          color: '#f59e0b' },
   // short-name aliases
-  'copy':           { title: 'Ad Copy Intelligence',      icon: <UilPen size={28} />,       platform: 'All Platforms',          color: RP },
-  'creatives':      { title: 'Creative Brief',            icon: <UilPalette size={28} />,   platform: 'Creative Studio',        color: RP },
-  'landing':        { title: 'Landing Page CRO Audit',    icon: <UilHome size={28} />,      platform: 'Conversion Rate',        color: RP },
-  'quick':          { title: 'Quick Scan',                icon: '⚡',                       platform: 'Ads Readiness',          color: RP },
-  'competitors':    { title: 'Competitor Intelligence',   icon: <UilSearchAlt size={28} />, platform: 'Competitive Landscape',  color: RP },
-  'google':         { title: 'Google Ads Strategy',       icon: <UilGoogle size={28} />,    platform: 'Google Ads',             color: RP },
-  'meta':           { title: 'Meta Ads Strategy',         icon: <UilFacebook size={28} />,  platform: 'Facebook & Instagram',   color: RP },
-  'tiktok':         { title: 'TikTok Ads Strategy',       icon: <UilVideo size={28} />,     platform: 'TikTok',                 color: '#000' },
-  'linkedin':       { title: 'LinkedIn B2B Strategy',     icon: <UilLinkedin size={28} />,  platform: 'LinkedIn',               color: RP },
-  'funnel':         { title: 'Funnel Architecture',       icon: <UilFilter size={28} />,    platform: 'Full Funnel',            color: RP },
-  'audiences':      { title: 'Audience Intelligence',     icon: <UilCrosshairs size={28} />,platform: 'Targeting',              color: RP },
-  'budget':         { title: 'Budget Strategy',           icon: <UilMoneyBill size={28} />, platform: 'Budget Allocation',      color: RP },
-  'report':         { title: 'Strategy Report',           icon: <UilChartPie size={28} />,  platform: 'Full Analysis',          color: RP },
-  'report-pdf':     { title: 'White-Label PDF Report',    icon: <UilFileAlt size={28} />,   platform: 'Agency Export',          color: RP },
+  'copy':           { title: 'Ad Copy Intelligence',      platform: 'All Platforms',          color: '#2563eb' },
+  'creatives':      { title: 'Creative Brief',            platform: 'Creative Studio',        color: '#ec4899' },
+  'landing':        { title: 'Landing Page CRO Audit',    platform: 'Conversion Rate',        color: '#10b981' },
+  'quick':          { title: 'Quick Scan',                platform: 'Ads Readiness',          color: '#f59e0b' },
+  'competitors':    { title: 'Competitor Intelligence',   platform: 'Competitive Landscape',  color: '#ef4444' },
+  'google':         { title: 'Google Ads Strategy',       platform: 'Google Ads',             color: '#4285f4' },
+  'meta':           { title: 'Meta Ads Strategy',         platform: 'Facebook & Instagram',   color: '#1877f2' },
+  'tiktok':         { title: 'TikTok Ads Strategy',       platform: 'TikTok',                 color: '#ff0050' },
+  'linkedin':       { title: 'LinkedIn B2B Strategy',     platform: 'LinkedIn',               color: '#0a66c2' },
+  'funnel':         { title: 'Funnel Architecture',       platform: 'Full Funnel',            color: '#06b6d4' },
+  'audiences':      { title: 'Audience Intelligence',     platform: 'Targeting',              color: '#8b5cf6' },
+  'budget':         { title: 'Budget Strategy',           platform: 'Budget Allocation',      color: '#16a34a' },
+  'report':         { title: 'Strategy Report',           platform: 'Full Analysis',          color: '#f97316' },
+  'report-pdf':     { title: 'White-Label PDF Report',    platform: 'Agency Export',          color: '#d946ef' },
 };
 
 // ─── Ad Creative Card ─────────────────────────────────────────────
@@ -3459,6 +3456,9 @@ export default function SkillReport() {
 
         <div style={{ flex: 1, maxWidth: 480, margin: '0 auto', padding: '60px 24px 60px', width: '100%' }}>
           <div style={{ marginBottom: 40 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: `${meta.color}15`, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <NounIcon name={skillName} size={24} color={meta.color} />
+            </div>
             <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
               Analyzing {businessName || url}
             </p>
@@ -3572,11 +3572,18 @@ export default function SkillReport() {
         <aside style={{ width: 220, background: '#fff', borderRight: `1px solid ${RB}`, flexShrink: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ padding: '20px 20px 16px' }}>
             {/* Report title */}
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: RG, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-              {meta.platform}
-            </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: RD, lineHeight: 1.3, marginBottom: 16 }}>
-              {meta.title}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: `${meta.color}15`, color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <NounIcon name={skillName} size={20} color={meta.color} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: RG, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {meta.platform}
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: RD, lineHeight: 1.3 }}>
+                  {meta.title}
+                </div>
+              </div>
             </div>
 
             {/* Score widget */}
