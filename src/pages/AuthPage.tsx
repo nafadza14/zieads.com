@@ -100,7 +100,8 @@ export default function AuthPage() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-pink-200/20 to-purple-300/20 blur-[140px] pointer-events-none z-0"></div>
       
       {/* Brand Header */}
-      <header className="w-full px-12 pt-8 pb-2 flex items-center justify-between z-10 relative">
+      {/* Brand Header aligned to main container */}
+      <header className="w-full max-w-[1000px] mx-auto px-4 md:px-6 pt-12 pb-4 flex items-center justify-between z-10 relative">
         <div
           className="flex items-center gap-2.5 cursor-pointer"
           onClick={() => navigate('/')}
@@ -118,10 +119,10 @@ export default function AuthPage() {
           
           {/* Left Panel: Transparent/No-Card Auth Form */}
           <div className="flex flex-col justify-center text-left max-w-[450px] mx-auto w-full p-4 md:p-6">
-            <h1 className="text-[28px] font-bold text-gray-950 tracking-tight mb-1">
+            <h1 className="text-[28px] font-bold text-gray-950 tracking-tight" style={{ marginBottom: '8px' }}>
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
-            <p className="text-[14px] text-gray-500 mb-[72px] font-medium">
+            <p className="text-[14px] text-gray-500 font-medium" style={{ marginBottom: '64px' }}>
               Continue with one of the following options
             </p>
 
@@ -136,10 +137,10 @@ export default function AuthPage() {
               </div>
             )}
 
-            <form onSubmit={handleEmailSubmit} className="space-y-5">
+            <form onSubmit={handleEmailSubmit}>
               {/* Email Field */}
-              <div>
-                <label className="block text-[14px] font-bold text-gray-950 mb-2">Email</label>
+              <div style={{ marginBottom: '24px' }}>
+                <label className="block text-[14px] font-bold text-gray-950" style={{ marginBottom: '8px' }}>Email</label>
                 <input
                   id="email-input"
                   type="email"
@@ -147,13 +148,21 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email Address"
-                  className="w-full h-[60px] px-5 border border-[#E2D9D4] bg-white rounded-[16px] text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455 transition-all"
+                  className="w-full border border-[#E2D9D4] bg-white transition-all text-center focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-450"
+                  style={{
+                    height: '60px',
+                    borderRadius: '16px',
+                    textAlign: 'center',
+                    paddingLeft: '20px',
+                    paddingRight: '20px',
+                    fontSize: '15px'
+                  }}
                 />
               </div>
 
               {/* Password Field */}
-              <div>
-                <label className="block text-[14px] font-bold text-gray-950 mb-2">Password</label>
+              <div style={{ marginBottom: '20px' }}>
+                <label className="block text-[14px] font-bold text-gray-950" style={{ marginBottom: '8px' }}>Password</label>
                 <div className="relative">
                   <input
                     id="password-input"
@@ -162,7 +171,15 @@ export default function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={isSignUp ? 'At least 6 characters' : 'Password 8-16 character'}
-                    className="w-full h-[60px] pl-5 pr-12 border border-[#E2D9D4] bg-white rounded-[16px] text-[15px] focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455 transition-all"
+                    className="w-full border border-[#E2D9D4] bg-white transition-all text-center focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455"
+                    style={{
+                      height: '60px',
+                      borderRadius: '16px',
+                      textAlign: 'center',
+                      paddingLeft: '48px',
+                      paddingRight: '48px',
+                      fontSize: '15px'
+                    }}
                   />
                   <button
                     type="button"
@@ -184,7 +201,7 @@ export default function AuthPage() {
               </div>
 
               {/* Options Row */}
-              <div className="flex items-center justify-between text-[13px] pt-1 pb-1">
+              <div className="flex items-center justify-between text-[13px] pt-1" style={{ marginBottom: '28px' }}>
                 <label className="flex items-center gap-2 text-gray-400 font-medium cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -208,27 +225,36 @@ export default function AuthPage() {
                 id="email-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full h-[60px] flex items-center justify-center btn-lp-primary-gradient text-white rounded-[16px] font-bold text-[16px] transition-all active:scale-[0.98] disabled:opacity-60"
+                className="w-full flex items-center justify-center btn-lp-primary-gradient text-white font-bold transition-all active:scale-[0.98] disabled:opacity-60"
+                style={{
+                  height: '60px',
+                  borderRadius: '16px',
+                  fontSize: '16px',
+                  marginBottom: '20px'
+                }}
               >
                 {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
               </button>
 
-              {/* Social Google Login Wrapper for Spacing */}
-              <div className="pt-2">
-                <button
-                  id="google-signin-btn"
-                  onClick={handleGoogleSignIn}
-                  disabled={googleLoading}
-                  className="w-full h-[60px] flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-700 rounded-[16px] text-[15px] font-bold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
-                >
-                  {googleLoading ? (
-                    <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                  ) : (
-                    <GoogleIcon />
-                  )}
-                  Continue with Google
-                </button>
-              </div>
+              {/* Social Google Login Wrapper with spacing */}
+              <button
+                id="google-signin-btn"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                className="w-full flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-750 font-bold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
+                style={{
+                  height: '60px',
+                  borderRadius: '16px',
+                  fontSize: '15px'
+                }}
+              >
+                {googleLoading ? (
+                  <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                Continue with Google
+              </button>
             </form>
 
             {/* Auth Toggle footer */}
