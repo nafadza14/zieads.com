@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
+import { MessageSquare, Zap } from 'lucide-react';
 
 // ─── Plan Data ────────────────────────────────────────────────────────────────
 
@@ -363,8 +364,10 @@ export default function PricingPage() {
                     color: plan.recommended ? 'var(--lp-accent)' : 'var(--lp-text-primary)',
                     fontSize: '11px', fontWeight: 700,
                     border: plan.recommended ? '1px solid rgba(30, 123, 255, 0.2)' : '1px solid var(--lp-border-subtle)',
+                    display: 'inline-flex', alignItems: 'center', gap: 6
                   }}>
-                    💬 {plan.aiChat.label}
+                    <MessageSquare size={12} style={{ opacity: 0.8 }} />
+                    <span>{plan.aiChat.label}</span>
                   </span>
                   <span style={{
                     padding: '4px 10px', borderRadius: 6,
@@ -372,8 +375,10 @@ export default function PricingPage() {
                     color: plan.recommended ? 'var(--lp-accent)' : 'var(--lp-text-primary)',
                     fontSize: '11px', fontWeight: 700,
                     border: plan.recommended ? '1px solid rgba(30, 123, 255, 0.2)' : '1px solid var(--lp-border-subtle)',
+                    display: 'inline-flex', alignItems: 'center', gap: 6
                   }}>
-                    ⚡ {plan.skillRun.label}
+                    <Zap size={12} style={{ opacity: 0.8 }} />
+                    <span>{plan.skillRun.label}</span>
                   </span>
                 </div>
 
