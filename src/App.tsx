@@ -14,6 +14,7 @@ import BusinessProfile from './pages/BusinessProfile';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
 import { supabase } from './lib/supabaseClient';
+import { CreditProvider } from './lib/creditStore';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<any>(null);
@@ -38,7 +39,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
   if (!session) return <Navigate to="/sign-in" state={{ from: location.pathname }} />;
-  return <>{children}</>;
+  return <CreditProvider>{children}</CreditProvider>;
 };
 
 export default function App() {

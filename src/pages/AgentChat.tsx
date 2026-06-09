@@ -6,6 +6,10 @@ import {
   UilFlask, UilAnalysis, UilCrosshairs, UilRocket, UilChat, UilBolt, UilArrowUp, UilArrowRight, UilPlay
 } from '@iconscout/react-unicons';
 import { supabase } from '../lib/supabaseClient';
+import { useCreditStore } from '../lib/creditStore';
+import CreditBadge from '../components/CreditBadge';
+import DepletionOverlay from '../components/DepletionOverlay';
+import FeatureGateModal from '../components/FeatureGateModal';
 
 const P = 'var(--primary)';
 const PL = 'var(--primary-bg)';
@@ -316,7 +320,21 @@ export default function AgentChat() {
   const usagePct = Math.min((usage.used / Math.max(usage.limit, 1)) * 100, 100);
   const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : 'ZA';
 
+  // Credit system integration
+  const creditStore = useCreditStore();
+  const isChatDepleted = creditStore.ai_chat.state === 'DEPLETED' || creditStore.ai_chat.state === 'RESET_IMMINENT';
+  const [modeGateModal, setModeGateModal] = useState<{ open: boolean; modeName: string; requiredPlan: 'starter' | 'pro' | 'agency' }>({ open: false, modeName: '', requiredPlan: 'pro' });
+
+  const handleModeClick = (modeId: string, modeLabel: string) => {
+    if (creditStore.isModeLocked(modeId)) {
+      setModeGateModal({ open: true, modeName: modeLabel, requiredPlan: 'pro' });
+      return;
+    }
+    runAnalysis(modeId as any);
+  };
+
   return (
+    <>
     <div style={{ display: 'flex', height: '100vh', background: '#f8fafc', fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* ─── LEFT SIDEBAR ─── */}
@@ -333,18 +351,16 @@ export default function AgentChat() {
           </button>
         </div>
 
-        {/* Usage */}
+        {/* Credit badges */}
         <div style={{ padding: '12px 20px', borderBottom: `1px solid ${B}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: '0.72rem', color: G }}>
-            <span>Messages this month</span>
-            <span style={{ fontWeight: 700, color: isAtLimit ? '#dc2626' : D }}>{usage.used}/{usage.limit >= 1e9 ? '∞' : usage.limit}</span>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: G, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Credits</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <CreditBadge pool="ai_chat" />
+            <CreditBadge pool="skill_run" compact />
           </div>
-          <div style={{ width: '100%', height: 3, background: B, borderRadius: 2 }}>
-            <div style={{ width: `${usagePct}%`, height: '100%', background: isAtLimit ? '#dc2626' : P, borderRadius: 2, transition: 'width 0.3s' }} />
-          </div>
-          {isAtLimit && (
+          {isChatDepleted && (
             <button onClick={() => navigate('/pricing')} style={{ marginTop: 8, width: '100%', background: PL, border: `1px solid rgba(123,47,190,0.2)`, borderRadius: 5, padding: '5px 0', fontSize: '0.75rem', fontWeight: 600, color: P, cursor: 'pointer' }}>
-              Upgrade for more →
+              Upgrade for more credits →
             </button>
           )}
         </div>
@@ -574,6 +590,17 @@ export default function AgentChat() {
         )}
       </main>
     </div>
+
+    {/* Mode Feature Gate Modal */}
+    <FeatureGateModal
+      isOpen={modeGateModal.open}
+      onClose={() => setModeGateModal(m => ({ ...m, open: false }))}
+      featureName={modeGateModal.modeName}
+      featureDescription={`${modeGateModal.modeName} is available on Pro and above. Unlock all 6 AI analysis modes with Pro.`}
+      requiredPlan={modeGateModal.requiredPlan}
+      featureType="mode"
+    />
+    </>
   );
 }
 

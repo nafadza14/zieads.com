@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import NounIcon from '../components/NounIcon';
+import { useCreditStore } from '../lib/creditStore';
+import CreditBadge from '../components/CreditBadge';
+import FeatureGateModal from '../components/FeatureGateModal';
+import DepletionOverlay from '../components/DepletionOverlay';
 
 const P = 'var(--primary)';
 const PL = 'var(--primary-bg)';
@@ -49,6 +53,7 @@ interface Props {
 
 export default function ClientDashboard({ reportData }: Props) {
   const navigate = useNavigate();
+  const creditStore = useCreditStore();
   const [selectedSkill, setSelectedSkill] = useState('audit');
   const [urlInput, setUrlInput] = useState('');
   const [checkedFindings, setCheckedFindings] = useState<Set<number>>(new Set());
@@ -62,6 +67,15 @@ export default function ClientDashboard({ reportData }: Props) {
   const [loading, setLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [copyActiveTab, setCopyActiveTab] = useState('metaAds');
+
+  // Feature gate modal state
+  const [gateModal, setGateModal] = useState<{ open: boolean; featureName: string; featureDesc?: string; requiredPlan?: 'starter' | 'pro' | 'agency'; featureType?: 'skill' | 'mode' }>({
+    open: false, featureName: '', requiredPlan: 'starter', featureType: 'skill',
+  });
+
+  const openGate = (skill: typeof SKILLS[0]) => {
+    setGateModal({ open: true, featureName: skill.name, featureDesc: skill.desc, requiredPlan: 'starter', featureType: 'skill' });
+  };
 
   // Helper to get auth headers
   const getAuthHeaders = async () => {
@@ -137,6 +151,18 @@ export default function ClientDashboard({ reportData }: Props) {
   };
 
   const handleRunSkill = (skillId: string) => {
+    // Feature gate check
+    if (creditStore.isSkillLocked(`ads_${skillId}`)) {
+      const skill = SKILLS.find(s => s.id === skillId);
+      if (skill) openGate(skill);
+      return;
+    }
+    // Depletion check
+    if (creditStore.skill_run.state === 'DEPLETED' || creditStore.skill_run.state === 'RESET_IMMINENT') {
+      alert('No skill run credits remaining. Please upgrade or wait for reset.');
+      return;
+    }
+
     if (!urlInput.trim()) { alert('Please enter a URL first.'); return; }
 
     let u = urlInput.trim();
@@ -151,7 +177,7 @@ export default function ClientDashboard({ reportData }: Props) {
       return;
     }
 
-    // All other skills → dedicated SkillReport page (with progress animation + result)
+    // All other skills → dedicated SkillReport page
     const params = new URLSearchParams({ url: u, businessName: userProfile?.business_name || '' });
     navigate(`/skill-report/${skillId}?${params.toString()}`);
   };
@@ -281,13 +307,28 @@ export default function ClientDashboard({ reportData }: Props) {
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: D }}>{initials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 500, color: D, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail || 'User'}</div>
-              <div style={{ fontSize: '0.7rem', color: G }}>Free Plan</div>
+              <div style={{ fontSize: '0.7rem', color: G }}>{creditStore.plan_display_name || 'Free'} Plan</div>
             </div>
           </div>
-          <button onClick={() => navigate('/pricing')} style={{ marginTop: 12, width: '100%', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '6px 0', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>Upgrade Plan</button>
+          {/* Credit badge row */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <CreditBadge pool="ai_chat" />
+            <CreditBadge pool="skill_run" />
+          </div>
+          <button onClick={() => navigate('/pricing')} style={{ marginTop: 10, width: '100%', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '6px 0', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>Upgrade Plan</button>
           <button onClick={handleSignOut} style={{ marginTop: 6, width: '100%', background: 'transparent', border: 'none', borderRadius: 'var(--radius-sm)', padding: '6px 0', fontSize: '0.78rem', color: G, cursor: 'pointer' }}>Sign out</button>
         </div>
       </aside>
+
+      {/* Feature Gate Modal */}
+      <FeatureGateModal
+        isOpen={gateModal.open}
+        onClose={() => setGateModal(m => ({ ...m, open: false }))}
+        featureName={gateModal.featureName}
+        featureDescription={gateModal.featureDesc}
+        requiredPlan={gateModal.requiredPlan || 'starter'}
+        featureType={gateModal.featureType || 'skill'}
+      />
 
       {/* ─── MAIN ─── */}
       <main style={{ flex: 1, padding: '24px 40px', overflowY: 'auto' }}>
@@ -325,6 +366,12 @@ export default function ClientDashboard({ reportData }: Props) {
                 {runningSkill ? 'Running...' : 'Run agent'}
               </button>
             </div>
+            {/* Skill credit depletion inline banner */}
+            {(creditStore.skill_run.state === 'DEPLETED' || creditStore.skill_run.state === 'RESET_IMMINENT') && (
+              <div style={{ marginTop: 12 }}>
+                <DepletionOverlay pool="skill_run" inline />
+              </div>
+            )}
           </div>
         )}
 

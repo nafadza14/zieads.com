@@ -18,11 +18,13 @@ import {
   getLatestAudit,
   getUserSkillResults,
   getBenchmarkAverages,
-  getUserUsageCount,
 } from "./supabaseServer.js";
 import { publicApiRouter } from "./routes/api-public.js";
 import { adsLibraryRouter } from "./routes/api-ads-library.js";
 import { agentRouter } from "./routes/api-agent.js";
+import { creditsRouter } from "./routes/api-credits.js";
+import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
+import { supabaseAdmin } from "./supabaseServer.js";
 
 const app = express();
 app.use(express.json());
@@ -55,6 +57,9 @@ app.use((req, res, next) => {
 
 // ─── Public Webhook API ────────────────────────────────
 app.use("/v1", publicApiRouter);
+
+// ─── Credits API ───────────────────────────────────────
+app.use("/api/v1/credits", creditsRouter);
 
 // ─── Ads Library (Meta Ads Library proxy) ─────────────
 app.use("/api/ads-library", adsLibraryRouter);
@@ -176,11 +181,16 @@ app.post("/api/audit", async (req, res) => {
   if (!url) return res.status(400).json({ error: "URL is required" });
 
   const userId = await getUserIdFromRequest(req);
-  
+
+  // Credit pre-flight check
   if (userId) {
-    const usageCount = await getUserUsageCount(userId);
-    if (usageCount >= 5) {
-      return res.status(403).json({ error: "PAYWALL_LIMIT", message: "You have used all 5 free credits. Please upgrade to continue." });
+    const [planRes, creditsRes] = await Promise.all([
+      supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).single(),
+      supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).single(),
+    ]);
+    const remaining = creditsRes.data?.skill_run_monthly_remaining ?? 0;
+    if (remaining !== -1 && remaining < 3) {
+      return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: 'Not enough skill credits. Full audit costs 3 credits.', upgrade_url: '/pricing' });
     }
   }
 
@@ -226,11 +236,19 @@ app.post("/api/skill/:name", async (req, res) => {
   if (!url) return res.status(400).json({ error: "URL is required" });
 
   const userId = await getUserIdFromRequest(req);
-  
+
+  // Credit pre-flight check
   if (userId) {
-    const usageCount = await getUserUsageCount(userId);
-    if (usageCount >= 5) {
-      return res.status(403).json({ error: "PAYWALL_LIMIT", message: "You have used all 5 free credits. Please upgrade to continue." });
+    const operationId = SKILL_ROUTE_TO_OPERATION[name] || `skill_ads_${name}`;
+    const op = OPERATION_COSTS[operationId];
+    const cost = op?.cost ?? 2;
+    const [planRes, creditsRes] = await Promise.all([
+      supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).single(),
+      supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).single(),
+    ]);
+    const remaining = creditsRes.data?.skill_run_monthly_remaining ?? 0;
+    if (remaining !== -1 && remaining < cost) {
+      return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: `Not enough skill credits. This skill costs ${cost} credits.`, upgrade_url: '/pricing' });
     }
   }
 
