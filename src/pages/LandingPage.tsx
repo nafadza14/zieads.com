@@ -20,7 +20,13 @@ import {
   ChevronDown,
   ExternalLink,
   AlertTriangle,
-  Shield
+  Shield,
+  Activity,
+  TrendingDown,
+  EyeOff,
+  Sliders,
+  Radar,
+  Rocket
 } from 'lucide-react';
 
 interface Props {
@@ -76,12 +82,15 @@ export default function LandingPage({ onScanComplete }: Props) {
       label: 'Readiness Score',
       content: (
         <div className="report-tab-panel">
+          <p className="report-tab-intro" style={{ marginBottom: 16, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+            Your score breaks down across six dimensions, each weighted by how much it actually affects paid performance. A weak score on 'Creative and Offer' matters more than a weak score on 'Competitive' because it kills your campaign before the first impression.
+          </p>
           <div className="report-score-header">
             <div className="report-overall-score">
               <span className="report-score-number mono-num">61</span>
               <span className="report-score-max mono-num">/100</span>
             </div>
-            <div className="report-grade-badge report-grade-c">C: Needs Improvement Before Launch</div>
+            <div className="report-grade-badge report-grade-c">C - Structural gaps present</div>
           </div>
           <div className="report-dimensions-list">
             {[
@@ -111,28 +120,28 @@ export default function LandingPage({ onScanComplete }: Props) {
       ),
     },
     {
-      label: 'Top 3 Gaps',
+      label: 'Top Gaps',
       content: (
         <div className="report-tab-panel">
           <div className="report-findings-list">
             {[
               {
                 severity: 'Critical',
-                finding: 'No Meta Pixel detected on key conversion pages',
-                impact: 'Without conversion data, Meta can\'t optimize delivery. You\'re running blind.',
-                fix: 'Install Pixel on checkout, thank-you page, and lead capture. Verify with Meta Pixel Helper.',
+                finding: 'No Meta Pixel detected on your checkout page',
+                impact: 'Meta cannot optimize ad delivery without conversion data. You are spending money to train their algorithm but giving it nothing to learn from.',
+                fix: 'Install Pixel on checkout and thank-you pages. Verify with Meta Pixel Helper before spending.',
               },
               {
                 severity: 'High',
-                finding: 'Primary offer is below-fold on mobile',
-                impact: '60%+ of your traffic likely sees no value proposition before scrolling. High bounce = higher CPM over time.',
-                fix: 'Move product name, key benefit, and CTA above 600px on mobile viewport.',
+                finding: 'Primary offer is not visible above the fold on mobile',
+                impact: 'More than half your paid traffic is on mobile. If they cannot see what you are selling in the first screen, they leave. Higher bounce rate means worse ad delivery over time.',
+                fix: 'Move your product name, key benefit, and CTA above 600px on mobile viewport.',
               },
               {
                 severity: 'High',
-                finding: 'No retargeting or MOFU audience strategy',
-                impact: 'You\'re paying to acquire traffic but not recapturing people who already showed intent.',
-                fix: 'Build a 30-day website visitor audience and run a separate warm campaign with a different offer angle.',
+                finding: 'No retargeting or warm audience strategy detected',
+                impact: 'You are paying to bring people to your site and then not following up when they leave without buying. That warm traffic is your cheapest possible conversion.',
+                fix: 'Build a 30-day website visitor audience. Run a separate campaign with a different angle for them.',
               },
             ].map((f, i) => (
               <div key={i} className={`report-finding-card report-severity-${f.severity.toLowerCase()}`}>
@@ -160,24 +169,20 @@ export default function LandingPage({ onScanComplete }: Props) {
       label: 'Creative Brief',
       content: (
         <div className="report-tab-panel">
+          <p style={{ marginBottom: 20, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+            Three creative directions per platform, each with a hook angle, visual direction, and copy framework.
+          </p>
           <div className="report-brief-platform">
             <span className="report-platform-badge">Meta Ads</span>
           </div>
           <div className="report-creative-angles">
             {[
               {
-                angle: 'Problem-first video hook',
-                hook: 'Still getting clicks that don\'t convert?',
-                visual: 'Screen recording of a cart abandonment moment. No voiceover. Subtitles only.',
-                framework: 'Pain → Root cause → Product as fix → Social proof → CTA',
-                format: 'Video, 15–30 seconds, vertical',
-              },
-              {
-                angle: 'Specificity trust-builder',
-                hook: 'Our ROAS went from 1.8x to 4.2x after one audit.',
-                visual: 'Side-by-side before/after of dashboard numbers. Static image.',
-                framework: 'Result first → How → What changed → CTA',
-                format: 'Static, 1:1, feed placement',
+                angle: 'Problem-first',
+                hook: 'Still getting clicks that do not convert?',
+                visual: 'Screen recording of cart abandonment. No voiceover. Subtitles only. Under 20 seconds.',
+                framework: 'Name the problem. Identify the root cause. Show the fix. One proof point. CTA.',
+                format: 'Vertical video, 15 to 30 seconds',
               },
             ].map((c, i) => (
               <div key={i} className="report-angle-card">
@@ -210,22 +215,25 @@ export default function LandingPage({ onScanComplete }: Props) {
       label: 'Audience Strategy',
       content: (
         <div className="report-tab-panel">
+          <p style={{ marginBottom: 20, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+            Cold, warm, and hot audience tiers with platform-specific targeting logic. Not generic advice. Built from what ZieAds read on your actual page.
+          </p>
           <div className="report-audience-tiers">
             {[
               {
-                tier: 'Cold (Top of Funnel)',
+                tier: 'Cold audience',
                 budget: '50%',
-                meta: 'Advantage+ Audience with creative signals. Seed with interest layers: digital marketing, e-commerce, small business owners. Exclude existing customers.',
-                google: 'Broad match keywords with smart bidding. Target In-Market: Software > Business Tools.',
+                meta: 'Advantage+ with interest signals from your product category. Exclude existing customers.',
+                google: 'Broad match keywords with smart bidding. Target In-Market matching your category.',
               },
               {
-                tier: 'Warm (Middle of Funnel)',
+                tier: 'Warm audience',
                 budget: '35%',
                 meta: 'Website visitors last 30 days. Video viewers 75%+. Lookalike 1% from customer list.',
                 google: 'Remarketing list for search ads (RLSA) on branded and competitor terms.',
               },
               {
-                tier: 'Hot (Bottom of Funnel)',
+                tier: 'Hot audience',
                 budget: '15%',
                 meta: 'Cart abandoners, checkout starters, and lead form openers last 7 days. Dynamic product ads if applicable.',
                 google: 'Branded search + exact match competitor terms.',
@@ -253,10 +261,12 @@ export default function LandingPage({ onScanComplete }: Props) {
       ),
     },
     {
-      label: 'Budget Allocation',
+      label: 'Budget Plan',
       content: (
         <div className="report-tab-panel">
-          <p className="report-budget-context">E-commerce, $3,000/month ad budget, no prior retargeting</p>
+          <p style={{ marginBottom: 20, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+            Where to put your budget and why, based on your business type and the gaps found in your audit.
+          </p>
           <div className="report-budget-split">
             {[
               { platform: 'Meta Ads', pct: 55, amount: '$1,650', rationale: 'Strongest visual platform for your product category. Start with awareness and conversion campaigns.' },
@@ -275,14 +285,9 @@ export default function LandingPage({ onScanComplete }: Props) {
               </div>
             ))}
           </div>
-          <div className="report-funnel-split">
-            <h4>Budget by funnel stage</h4>
-            <div className="report-funnel-items">
-              <div className="report-funnel-item"><span className="report-funnel-label">TOFU</span><span className="mono-num">$1,500 (50%)</span></div>
-              <div className="report-funnel-item"><span className="report-funnel-label">MOFU</span><span className="mono-num">$1,050 (35%)</span></div>
-              <div className="report-funnel-item"><span className="report-funnel-label">BOFU</span><span className="mono-num">$450 (15%)</span></div>
-            </div>
-          </div>
+          <p style={{ marginTop: 24, fontSize: '12px', fontStyle: 'italic', color: 'var(--lp-text-muted)' }}>
+            This is a starting allocation, not a final answer. Adjust based on your first two weeks of data.
+          </p>
         </div>
       ),
     },
@@ -291,28 +296,28 @@ export default function LandingPage({ onScanComplete }: Props) {
   /* ── FAQ Data ── */
   const faqItems = [
     {
-      q: 'What does ZieAds actually analyze?',
-      a: 'ZieAds crawls your public URL and analyzes five areas: (1) your landing page structure and conversion setup, (2) your offer clarity and creative angles, (3) your likely audience profile and targeting options, (4) your competitive positioning, and (5) your platform fit and budget readiness. We detect tracking pixels, above-fold CTA presence, mobile layout, trust signals, and funnel coverage, all without needing access to your ad account.',
+      q: 'What does ZieAds actually look at?',
+      a: 'ZieAds crawls your public URL and checks five things: your landing page structure and conversion setup, your offer clarity and what creative angles might work, your likely audience profile based on what your page communicates, what your competitors appear to be doing in paid media, and whether your tracking and platform setup is ready for campaigns. It does all of this without connecting to your ad account.',
     },
     {
-      q: 'Will this work for my business type?',
-      a: 'ZieAds works well for e-commerce, service businesses, SaaS, and lead generation companies with a public-facing website or landing page. It works less well for businesses with complex or login-gated sales flows, very niche B2B products with no public content, or businesses that only sell via phone or referral. If your website doesn\'t describe your offer clearly, the audit output will reflect that gap.',
+      q: 'Does this work if I have never run ads before?',
+      a: 'Yes. A lot of people use ZieAds before their first campaign specifically to find out what they need to fix before spending. The audit will tell you what is missing, and the AI Strategist can walk you through what each finding means and what to do next.',
     },
     {
       q: 'How accurate are the scores?',
-      a: 'The scores are based on what\'s publicly visible on your page: HTML structure, content, detected pixels, page speed, and layout signals. They\'re accurate for surface-layer readiness. They can\'t detect things like your backend attribution setup, CRM integrations, or conversion data that lives inside your ad accounts. Think of the score as a structural readiness check, not a performance prediction.',
+      a: 'The scores are based on what is publicly visible on your page: the HTML structure, your content and offer language, whether tracking pixels are present, your page load time, and your funnel layout. They are accurate for what we can see. They cannot check things that live inside your ad accounts, like your historical conversion data or your campaign structure. Think of it as a structural readiness check, not a performance prediction.',
     },
     {
       q: 'Can I use this for client work?',
-      a: 'Yes. The Starter plan gives you ZieAds-branded PDF reports. Pro gives you white-label PDFs with custom branding. Agency gives you your logo on every report plus a client management dashboard. A number of freelancers and small agencies use ZieAds audit reports as part of their initial strategy proposals.',
+      a: 'Yes. The Starter plan exports ZieAds-branded PDFs. Pro gives you white-label reports with your name on them. Agency gives you your logo on every PDF plus a client dashboard. A number of freelancers use the audit as the starting point for their initial client strategy calls.',
     },
     {
       q: 'How is this different from Semrush or AdEspresso?',
-      a: 'Semrush is an SEO and keyword research platform. It does not produce paid ads strategy briefs from a URL scan. AdEspresso is a campaign management tool for Facebook ads, it requires ad account access and manages running campaigns. ZieAds is a pre-campaign strategy tool. You don\'t connect ad accounts. You paste a URL. You get a strategy brief for campaigns you haven\'t run yet, or a diagnostic for campaigns that aren\'t performing.',
+      a: 'Semrush is built for SEO and keyword research. It does not produce paid ads strategy briefs from a URL scan. AdEspresso is a campaign management tool for Facebook ads and it requires ad account access. ZieAds does not connect to your ad accounts and does not manage running campaigns. It is for strategy before campaigns launch, or diagnosis when they are not performing.',
     },
     {
       q: 'What happens after I get my score?',
-      a: 'The free scan gives you your overall readiness score and your top 3 critical gaps. A full audit (available on paid plans) gives you the complete dimension breakdown, creative briefs per platform, audience tier strategy, budget allocation recommendation, funnel gap diagnosis, and a downloadable PDF. You can re-run audits after making changes to track improvement.',
+      a: 'The free scan gives you your overall readiness score and your top three gaps. A full audit on paid plans gives you the complete dimension breakdown, creative briefs per platform, audience tier strategy, budget allocation guide, funnel gap diagnosis, and a downloadable PDF. You can re-run audits after making changes to track improvement over time.',
     },
   ];
 
@@ -332,15 +337,13 @@ export default function LandingPage({ onScanComplete }: Props) {
           </div>
           <div className="nav-links hidden md:flex">
             <a href="#how-it-works">How It Works</a>
-            <a href="#sample-report">Sample Report</a>
             <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/clients'); }}>Agency Login</a>
           </div>
           <div className="nav-actions hidden md:flex">
-            <button className="btn-login" onClick={() => navigate('/sign-in')}>Login</button>
+            <button className="btn-login" onClick={() => navigate('/sign-in')}>Log in</button>
             <button className="btn-get-started" onClick={() => navigate('/sign-up')}>
-              Get Started
+              Get Started Free
             </button>
           </div>
 
@@ -367,10 +370,8 @@ export default function LandingPage({ onScanComplete }: Props) {
             <div className="absolute top-[60px] left-0 right-0 w-full bg-white/95 border border-gray-100 rounded-3xl shadow-xl p-6 flex flex-col gap-4 text-left z-50 backdrop-blur-xl md:hidden">
               <div className="flex flex-col gap-3 font-semibold text-gray-750 text-[15px] pl-2">
                 <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)}>How It Works</a>
-                <a href="#sample-report" onClick={() => setIsMobileMenuOpen(false)}>Sample Report</a>
                 <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</a>
                 <a href="#faq" onClick={() => setIsMobileMenuOpen(false)}>FAQ</a>
-                <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/clients'); }}>Agency Login</a>
               </div>
               <hr className="border-gray-100 my-1" />
               <div className="flex flex-col gap-3">
@@ -379,14 +380,14 @@ export default function LandingPage({ onScanComplete }: Props) {
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-in'); }}
                   style={{ cursor: 'pointer' }}
                 >
-                  Login
+                  Log in
                 </button>
                 <button
                   className="w-full py-3.5 btn-lp-primary-gradient text-white rounded-xl font-bold text-[14px] text-center active:scale-[0.98] transition-all"
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-up'); }}
                   style={{ cursor: 'pointer' }}
                 >
-                  Get Started
+                  Start Free
                 </button>
               </div>
             </div>
@@ -397,24 +398,16 @@ export default function LandingPage({ onScanComplete }: Props) {
       {/* ══════════════════════════════════ S1: HERO ══════════════════════════════════ */}
       <section className="hero-section">
         <div className="lp-hero-eyebrow">
-          <div className="lp-stars">
-            {[...Array(5)].map((_, i) => (
-              <svg key={i} className="lp-star" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-              </svg>
-            ))}
-          </div>
-          <span className="lp-rating-text">4.9 on Product Hunt · AI Strategy in Under 3 Minutes</span>
+          <span className="lp-rating-text">Paid ads strategy in under 3 minutes</span>
         </div>
         
         <h1 className="hero-title">
-          Get a Complete Paid Ads <br />
-          <span className="lp-pill-highlight">Strategy in Minutes</span>
+          Most paid ads campaigns fail in the <br />
+          <span className="lp-pill-highlight">setup, not the spend.</span>
         </h1>
         
         <p className="hero-subtitle">
-          Paste your URL. In 3 minutes, you'll know your ads readiness score, where your funnel is leaking,
-          and exactly what to fix first, across Meta, Google, and TikTok. No ad account access needed.
+          ZieAds reads your website like a paid media strategist would. Paste any URL and get a scored audit of your offer, funnel, tracking setup, creative angles, and audience fit across Meta, Google, and TikTok. No ad account access. No agency required.
         </p>
 
         <div className="hero-input-wrapper">
@@ -423,7 +416,7 @@ export default function LandingPage({ onScanComplete }: Props) {
             <input
               type="text"
               className="hero-input"
-              placeholder="Enter your website URL (e.g. example.com)"
+              placeholder="Paste any website URL here..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleQuickScan()}
@@ -437,12 +430,12 @@ export default function LandingPage({ onScanComplete }: Props) {
               {loading ? (
                 <span className="spinner-inline"></span>
               ) : (
-                "Get My Free Ads Audit"
+                "Get My Free Audit"
               )}
             </button>
           </div>
           {error && <p className="hero-error">{error}</p>}
-          <p className="hero-note">No ad account access. No signup. Your score in under 3 minutes.</p>
+          <p className="hero-note">No ad account access. No signup required. Your score in under 3 minutes.</p>
         </div>
 
         {/* SHOWCASE CARD WITH RAINBOW GLOW */}
@@ -472,8 +465,7 @@ export default function LandingPage({ onScanComplete }: Props) {
               </div>
               <div className="lp-showcase-content">
                 <div className="lp-content-header">
-                  <h3>Strategy Report</h3>
-                  <span className="lp-badge-success">Ready</span>
+                  <h3>Strategy Report - Ready</h3>
                 </div>
                 <div className="lp-showcase-metrics">
                   <div className="lp-metric-card">
@@ -508,51 +500,52 @@ export default function LandingPage({ onScanComplete }: Props) {
       <section className="social-proof">
         <div className="proof-stats">
           <div className="stat">
-            <span className="stat-number mono-num">&lt; 3 min</span>
-            <span className="stat-label">Average time to your first score</span>
+            <span className="stat-number mono-num">Under 3 min</span>
+            <span className="stat-label">From URL to your first score</span>
           </div>
           <div className="stat-divider"></div>
           <div className="stat">
             <span className="stat-number mono-num">6</span>
-            <span className="stat-label">Dimensions audited per scan</span>
+            <span className="stat-label">Dimensions audited in every scan</span>
           </div>
           <div className="stat-divider"></div>
           <div className="stat">
-            <span className="stat-number mono-num">5</span>
-            <span className="stat-label">Specialist AI agents per audit</span>
+            <span className="stat-number mono-num">15</span>
+            <span className="stat-label">AI skills covering your full paid media stack</span>
           </div>
           <div className="stat-divider"></div>
           <div className="stat">
             <span className="stat-number mono-num">Free</span>
-            <span className="stat-label">To find your biggest gaps</span>
+            <span className="stat-label">To find where your setup is losing money</span>
           </div>
         </div>
       </section>
 
       {/* ══════════════════════════════════ S3: PAIN SECTION (NEW) ══════════════════════════════════ */}
       <section className="pain-section">
-        <h2 className="section-title">Most ad budgets have a leak.<br />You just don't know where it is.</h2>
+        <h2 className="section-title">You are not bad at ads. You are running them on a setup that was never ready.</h2>
         <div className="pain-body">
-          <p>You've run some campaigns. Maybe they worked okay. Maybe they didn't. Either way, you're not totally sure which part of your setup is the problem: the creative, the audience, the landing page, or the offer itself.</p>
-          <p>Hiring an agency to figure it out costs $2,000 before they even touch your account. Asking a freelancer takes a week and a proposal. Running more tests costs more budget you might be wasting.</p>
-          <p>What you actually need is a fast, honest read on your current setup, before you spend another dollar testing.</p>
+          <p>You have a real product. You have budget. You have watched enough YouTube tutorials to know the difference between a lookalike audience and a retargeting campaign. But the results are still inconsistent and you are not totally sure why.</p>
+          <p>Maybe the creative is the problem. Maybe it is the audience. Maybe it is the landing page. Maybe it is the pixel that your developer installed six months ago and you have never verified. You do not know which one to fix first so you test one thing at a time and wait two weeks per test.</p>
+          <p>Meanwhile the agency quote came back at $3,000 a month. The freelancer needs two weeks to prepare a strategy. And ChatGPT gave you a framework that was technically correct but had no idea what your website actually looked like.</p>
+          <p>The gap is not between you and people who are good at ads. The gap is information. Specifically, you do not have a fast, honest read on what is actually wrong with your setup right now.</p>
         </div>
-        <p className="pain-transition">That's what ZieAds does.</p>
+        <p className="pain-transition">That is the only thing ZieAds does.</p>
         <div className="pain-grid">
           <div className="pain-card">
             <div className="pain-icon-wrap"><Clock size={24} /></div>
-            <h3>Agency audit</h3>
-            <p>$1,500–$3,000 and 1–2 weeks before you see a recommendation</p>
+            <h3>Getting an audit done</h3>
+            <p>A proper agency audit costs $1,500 to $3,000 and takes 10 days. By then you could have spent another month on the wrong setup.</p>
           </div>
           <div className="pain-card">
             <div className="pain-icon-wrap"><Shuffle size={24} /></div>
-            <h3>Guessing what to test</h3>
-            <p>Running more campaigns hoping something sticks is expensive and slow</p>
+            <h3>Testing your way to clarity</h3>
+            <p>Running more campaigns to figure out what is wrong is the most expensive way to learn. You are paying tuition every time.</p>
           </div>
           <div className="pain-card">
             <div className="pain-icon-wrap"><HelpCircle size={24} /></div>
-            <h3>ChatGPT doesn't know your site</h3>
-            <p>A generic AI can't read your landing page, detect your tracking gaps, or audit your offer</p>
+            <h3>Asking an AI assistant</h3>
+            <p>ChatGPT does not know what your landing page looks like, whether your pixel is firing, or what your competitors are spending on ads. It gives frameworks. Not answers.</p>
           </div>
         </div>
       </section>
@@ -560,36 +553,37 @@ export default function LandingPage({ onScanComplete }: Props) {
       {/* ══════════════════════════════════ S4: HOW IT WORKS ══════════════════════════════════ */}
       <section id="how-it-works" className="how-section">
         <h2 className="section-title">From URL to strategy brief in 3 steps</h2>
-        <p className="section-subtitle">No integrations. No account access. Just your website URL.</p>
+        <p className="section-subtitle">No ad account access. No setup. Just paste your URL.</p>
         <div className="steps-grid">
           <div className="step-card">
             <div className="step-number mono-num">01</div>
             <div className="step-icon-wrap"><Link2 size={24} /></div>
             <h3>Paste your URL</h3>
-            <p>Any business URL works, your homepage, product page, or landing page. ZieAds crawls the page, reads your offer, detects your tracking setup, and maps your funnel structure.</p>
-            <span className="step-time-estimate">Takes 5 seconds on your end</span>
+            <p>Any public business URL works. Your homepage, a product page, a landing page you are about to run traffic to. ZieAds crawls the page, reads your offer, checks your tracking setup, and maps the structure of your funnel.</p>
+            <span className="step-time-estimate">5 seconds on your end</span>
           </div>
           <div className="step-card">
             <div className="step-number mono-num">02</div>
             <div className="step-icon-wrap"><Bot size={24} /></div>
-            <h3>5 specialist agents analyze your setup</h3>
-            <p>One checks your creative angles. One maps your audience. One looks at competitive positioning. One audits your landing page across 8 conversion dimensions. One scores your platform fit and budget readiness. They run in parallel, that's why it's fast.</p>
-            <span className="step-time-estimate">60–90 seconds of actual analysis</span>
+            <h3>Five specialists analyze your setup</h3>
+            <p>One checks your creative angles and offer clarity. One maps your audience and ICP. One looks at what your competitors are doing. One audits your landing page across 8 conversion dimensions. One scores your platform fit and budget readiness. They run at the same time so the whole thing takes under 3 minutes.</p>
+            <span className="step-time-estimate">60 to 90 seconds of actual analysis</span>
           </div>
           <div className="step-card">
             <div className="step-number mono-num">03</div>
             <div className="step-icon-wrap"><TrendingUp size={24} /></div>
-            <h3>Get a scored report you can act on today</h3>
-            <p>You get a readiness score, a breakdown of your top 3 gaps, creative brief suggestions per platform, audience tier recommendations, and a budget allocation guide. Not a list of observations, a plan.</p>
+            <h3>Get a report you can act on today</h3>
+            <p>Your readiness score, your top gaps ranked by impact, creative briefs per platform, audience tier recommendations, and a budget split guide. Not a list of observations. A plan with a clear starting point.</p>
             <span className="step-time-estimate">Ready in under 3 minutes total</span>
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════ S5: SAMPLE REPORT PREVIEW (NEW) ══════════════════════════════════ */}
+      {/* ══════════════════════════════════ S5: SAMPLE REPORT PREVIEW ══════════════════════════════════ */}
       <section id="sample-report" className="report-preview-section">
-        <h2 className="section-title">Here's what you get after a full audit</h2>
-        <p className="section-subtitle">This is a real output from a ZieAds scan. Every section is included in the free quick scan or the full audit depending on your plan.</p>
+        <span className="report-preview-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>What you actually get</span>
+        <h2 className="section-title" style={{ marginTop: 8 }}>This is a real ZieAds audit.</h2>
+        <p className="section-subtitle">Not a mock-up. Every field below comes from a live scan. The free scan gives you your score and top 3 gaps. The full report is what the paid plans unlock.</p>
         
         <div className="report-preview-container">
           <div className="report-tabs">
@@ -609,122 +603,233 @@ export default function LandingPage({ onScanComplete }: Props) {
         </div>
 
         <div className="report-preview-cta">
-          <button className="btn-lp-primary-gradient" onClick={scrollToHero}>
-            Run a free audit and see yours
+          <button className="btn-lp-primary-gradient" onClick={scrollToHero} style={{ cursor: 'pointer', padding: '14px 28px', fontSize: '15px', fontWeight: 600, border: 'none', borderRadius: '12px', color: 'white', transition: 'all 0.2s' }}>
+            See yours
           </button>
-          <p className="report-preview-microcopy">Free scan gives you your score and top 3 gaps. Full report requires a plan.</p>
+          <p className="report-preview-microcopy" style={{ marginTop: 12, fontSize: '13px', color: 'var(--lp-text-muted)' }}>Free scan takes 3 minutes. No signup.</p>
         </div>
       </section>
 
-      {/* ══════════════════════════════════ S6: AI AGENTS ══════════════════════════════════ */}
-      <section className="agents-section">
-        <h2 className="section-title">5 specialists. One audit.</h2>
-        <p className="section-subtitle">Each agent was built for a specific part of the paid media stack. They don't overlap. They don't repeat each other's work.</p>
-        <div className="agents-grid">
+      {/* ══════════════════════════════════ S6: AI STRATEGIST SECTION ══════════════════════════════════ */}
+      <section className="ai-strategist-section" style={{ padding: '120px 24px', background: 'var(--lp-bg-canvas)', textAlign: 'center' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>After the audit</span>
+        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>Your AI strategist. It already knows your setup.</h2>
+        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px' }}>Most AI tools answer questions. ZieAds AI answers your questions. There is a difference.</p>
+        
+        <div className="ai-strategist-explanation" style={{ maxWidth: '780px', margin: '0 auto 48px', textAlign: 'left', fontSize: '16px', lineHeight: '1.7', color: 'var(--lp-text-secondary)', background: 'var(--lp-bg-card)', border: '1px solid var(--lp-border-subtle)', borderRadius: '16px', padding: '32px', boxShadow: 'var(--lp-shadow-card)' }}>
+          <p style={{ margin: 0 }}>
+            When you ask "My ROAS dropped this week, what could it be?", ZieAds AI already knows that your pixel was not firing on checkout when we last checked, that your main creative angle was problem-first, and that you were running cold audiences only. The answer it gives you reflects all of that. A generic AI assistant starts from zero every time.
+          </p>
+        </div>
+
+        <div className="pain-grid" style={{ marginBottom: 48 }}>
           {[
             {
-              Icon: Palette,
-              name: 'Creative Intelligence',
-              desc: 'Reads your offer, brand tone, and product category. Identifies what creative angle is likely to work and what three hooks to test first, per platform.',
-              catches: 'Weak headline hooks, missing emotional angle, offer that sounds like every competitor',
+              Icon: Activity,
+              name: 'Daily Diagnosis',
+              desc: 'What changed in your ad performance today and what it likely means. Not a data dump. A diagnosis.',
             },
             {
-              Icon: Target,
-              name: 'Audience & Targeting',
-              desc: 'Builds your ICP based on your landing page content. Maps cold, warm, and hot audience tiers with platform-specific targeting logic for Meta, Google, and TikTok.',
-              catches: 'Undefined ICP, no retargeting layer, audience structure that wastes budget on low-intent traffic',
+              Icon: TrendingDown,
+              name: 'ROAS Drop Analysis',
+              desc: 'When your returns fall, there is usually one specific cause. This mode works through the likely culprits in order of probability.',
             },
             {
-              Icon: Search,
-              name: 'Competitive Intelligence',
-              desc: 'Identifies 3 tiers of competitors based on your market. Surfaces their likely ad angles, platform presence, and positioning gaps you can exploit.',
-              catches: 'Positioning that doesn\'t differentiate, copy that mirrors competitors without standing out',
+              Icon: EyeOff,
+              name: 'Creative Fatigue',
+              desc: 'Your audience has seen your ad. Now what? New formats, new hooks based on what you have already been running.',
             },
             {
-              Icon: DollarSign,
-              name: 'Platform & Budget',
-              desc: 'Recommends how to split budget across platforms based on your business model and funnel gaps, not generic percentages, but logic tied to where your customers actually look.',
-              catches: 'Platform mismatch, budget allocated to channels that don\'t fit the product, no bidding strategy direction',
+              Icon: Sliders,
+              name: 'Budget Optimization',
+              desc: 'How to reallocate your spend across platforms and audience tiers based on current performance and your business stage.',
             },
             {
-              Icon: Filter,
-              name: 'Funnel & Conversion',
-              desc: 'Audits your landing page across 8 dimensions: above-fold clarity, CTA presence, trust signals, mobile UX, tracking setup, offer-ad alignment, social proof, and load speed.',
-              catches: 'No pixel, no CTA above fold, missing trust signals, offer that doesn\'t match what the ad promises',
+              Icon: Radar,
+              name: 'Competitive Intel',
+              desc: 'What your competitors are doing in paid media right now. Where they are spending. What angles they are running. Where the gaps are.',
             },
-          ].map((agent, i) => (
-            <div key={i} className="agent-card">
-              <div className="agent-icon-wrap"><agent.Icon size={24} className="agent-icon-svg" /></div>
-              <h3>{agent.name}</h3>
-              <p>{agent.desc}</p>
-              <div className="agent-catches">
-                <span className="agent-catches-label">What it catches:</span>
-                <span className="agent-catches-text">{agent.catches}</span>
+            {
+              Icon: Rocket,
+              name: 'Launch Readiness',
+              desc: 'Pre-launch check before a new campaign, product, or platform. Run this before you spend, not after.',
+            },
+          ].map((mode, i) => (
+            <div key={i} className="pain-card">
+              <div className="pain-icon-wrap" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', background: 'var(--lp-pill-bg)', color: 'var(--lp-accent)', marginBottom: '20px' }}>
+                <mode.Icon size={24} />
+              </div>
+              <h3>{mode.name}</h3>
+              <p>{mode.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="ai-context-callout" style={{ maxWidth: '780px', margin: '0 auto', textAlign: 'left', background: 'var(--lp-bg-inset)', borderLeft: '4px solid var(--lp-accent)', padding: '24px', borderRadius: '0 12px 12px 0' }}>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 700, color: 'var(--lp-text-primary)' }}>What makes this different from ChatGPT</h4>
+          <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+            ZieAds AI reads your audit history before every answer. It knows what your scan found, what you have already fixed, and what platform you are running on. ChatGPT does not know any of that. You would have to explain your entire setup every time.
+          </p>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════ S7: 15 SKILLS SECTION ══════════════════════════════════ */}
+      <section className="skills-section" style={{ padding: '120px 24px', background: 'var(--lp-bg-canvas-alt)', textAlign: 'center' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>One platform. 15 skills.</span>
+        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>Every skill your paid media strategy needs.</h2>
+        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px' }}>
+          Run any of them on demand. Each one draws from your Business Profile and audit history so the output is specific to your setup, not generic to your industry.
+        </p>
+
+        <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--lp-text-primary)', marginBottom: 32 }}>
+          Tap any command. Get a structured output in under 3 minutes.
+        </p>
+
+        <div className="pain-grid" style={{ marginBottom: 32 }}>
+          {[
+            {
+              command: '/ads audit',
+              name: 'Full Audit',
+              description: '5 specialists. All 6 dimensions. Your most complete readiness picture.',
+            },
+            {
+              command: '/ads quick',
+              name: 'Quick Scan',
+              description: '60-second readiness snapshot when you need a fast check before a decision.',
+            },
+            {
+              command: '/ads copy',
+              name: 'Ad Copy',
+              description: 'Platform-specific headlines and body copy for Google, Meta, TikTok, and LinkedIn.',
+            },
+            {
+              command: '/ads creatives',
+              name: 'Creative Brief',
+              description: 'Three creative directions per platform with angles, hooks, and visual frameworks.',
+            },
+            {
+              command: '/ads landing',
+              name: 'Landing Page CRO',
+              description: '8-dimension audit of your landing page conversion setup.',
+            },
+            {
+              command: '/ads audiences',
+              name: 'Audience Targeting',
+              description: 'ICP definition, cold/warm/hot tiers, and platform-specific targeting matrices.',
+            },
+            {
+              command: '/ads competitors',
+              name: 'Competitor Intel',
+              description: 'Three-tier competitor map: who they are, what they are spending, where they are leaving gaps.',
+            },
+            {
+              command: '/ads funnel',
+              name: 'Funnel Architecture',
+              description: 'TOFU, MOFU, BOFU mapping with gap diagnosis and routing logic.',
+            },
+            {
+              command: '/ads budget',
+              name: 'Budget Model',
+              description: 'Platform allocation, KPI benchmarks, and spend recommendations by funnel stage.',
+            },
+            {
+              command: '/ads google',
+              name: 'Google Ads Strategy',
+              description: 'Search, Shopping, and Display campaign structures with match type recommendations.',
+            },
+            {
+              command: '/ads meta',
+              name: 'Meta Ads Strategy',
+              description: 'Facebook and Instagram campaign structure, creative format, and objective selection.',
+            },
+            {
+              command: '/ads tiktok',
+              name: 'TikTok Ads Strategy',
+              description: 'UGC angles, Spark Ads setup, and creative hooks that perform on short-form.',
+            },
+          ].map((skill, i) => (
+            <div key={i} className="pain-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <span className="mono-num" style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--lp-accent)', background: 'var(--lp-pill-bg)', padding: '4px 10px', borderRadius: '6px', display: 'inline-block', marginBottom: '16px' }}>
+                  {skill.command}
+                </span>
+                <h3 style={{ fontSize: '17px', fontWeight: 600, marginBottom: '8px', color: 'var(--lp-text-primary)' }}>{skill.name}</h3>
+                <p style={{ fontSize: '13.5px', color: 'var(--lp-text-secondary)', lineHeight: '1.5', margin: 0 }}>{skill.description}</p>
               </div>
             </div>
           ))}
         </div>
+
+        <p style={{ fontSize: '14px', fontStyle: 'italic', color: 'var(--lp-text-muted)' }}>
+          Plus 3 additional skills available inside the platform.
+        </p>
       </section>
 
-      {/* ══════════════════════════════════ S7: COMPARISON TABLE (NEW) ══════════════════════════════════ */}
+      {/* ══════════════════════════════════ S8: COMPARISON TABLE (NEW) ══════════════════════════════════ */}
       <section className="comparison-section">
-        <h2 className="section-title">Why not just use ChatGPT<br />or hire an agency?</h2>
-        <p className="section-subtitle">Honest answer: it depends on what you need. Here's how ZieAds fits relative to your other options.</p>
+        <h2 className="section-title">Why not just use ChatGPT?</h2>
+        <p className="section-subtitle">Fair question. Honest answer.</p>
         
+        <div style={{ maxWidth: '780px', margin: '0 auto 40px', textAlign: 'left', fontSize: '15px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+          <p>
+            ChatGPT is a good thinking partner. It helps you brainstorm. It helps you structure. But it starts from zero every time you open a new chat, it cannot read your actual website, and it has no idea what your readiness score is or what your competitors are spending. ZieAds does all three of those things and nothing else.
+          </p>
+        </div>
+
         <div className="comparison-table-wrap">
           <table className="comparison-table">
             <thead>
               <tr>
                 <th></th>
                 <th className="comp-highlight">ZieAds</th>
-                <th>Ask ChatGPT</th>
-                <th>Hire an Agency</th>
-                <th>Do It Manually</th>
+                <th>ChatGPT</th>
+                <th>Hiring an Agency</th>
+                <th>Doing It Manually</th>
               </tr>
             </thead>
             <tbody>
               {[
                 {
                   criteria: 'Reads your actual URL',
-                  zieads: 'Yes, crawls and analyzes your page',
-                  chatgpt: 'No, works from what you describe',
-                  agency: 'Yes, but takes 1–2 weeks',
+                  zieads: 'Yes, every scan crawls your page',
+                  chatgpt: 'No. Knows only what you describe',
+                  agency: 'Yes, but 10 to 14 days later',
                   manual: 'Yes, if you know what to look for',
                 },
                 {
-                  criteria: 'Setup time',
-                  zieads: 'Under 3 minutes',
-                  chatgpt: 'Instant, but shallow',
-                  agency: '2–4 weeks for onboarding',
-                  manual: 'Days if you have the frameworks',
+                  criteria: 'Remembers your audit history',
+                  zieads: 'Yes. Every answer draws from past scans',
+                  chatgpt: 'No. Fresh start every session',
+                  agency: 'Partially. Notes in a shared doc',
+                  manual: 'Only if you keep records',
                 },
                 {
-                  criteria: 'Cost',
-                  zieads: 'Free to start, from $29/month',
-                  chatgpt: '$20/month, but you write all the prompts',
-                  agency: '$1,500–$5,000/month minimum',
-                  manual: 'Your time, which has a cost too',
+                  criteria: 'Time to first insight',
+                  zieads: 'Under 3 minutes',
+                  chatgpt: 'Instant, but generic',
+                  agency: '1 to 2 weeks',
+                  manual: 'Days if you know the frameworks',
+                },
+                {
+                  criteria: 'Monthly cost',
+                  zieads: 'Free to start, from $29',
+                  chatgpt: '$20, plus all your prompting time',
+                  agency: '$1,500 to $5,000 minimum',
+                  manual: 'Your time, which has a cost',
                 },
                 {
                   criteria: 'Platform-specific output',
-                  zieads: 'Meta, Google, TikTok, separate briefs',
-                  chatgpt: 'Generic unless you prompt perfectly',
+                  zieads: 'Separate briefs for Meta, Google, TikTok',
+                  chatgpt: 'Generic unless you prompt it perfectly',
                   agency: 'Yes, but weeks away',
                   manual: 'Depends on your expertise',
                 },
                 {
-                  criteria: 'Repeatable for multiple clients',
-                  zieads: 'Yes, Pro and Agency plans',
-                  chatgpt: 'Possible but inconsistent',
-                  agency: 'No, billed per client',
-                  manual: 'Possible with templates',
-                },
-                {
-                  criteria: 'Ad account access required',
-                  zieads: 'No',
-                  chatgpt: 'No',
-                  agency: 'Yes',
-                  manual: 'Depends on audit type',
+                  criteria: 'No ad account access needed',
+                  zieads: 'Correct. URL only.',
+                  chatgpt: 'Correct',
+                  agency: 'No. They need full account access',
+                  manual: 'Not always',
                 },
               ].map((row, i) => (
                 <tr key={i}>
@@ -739,25 +844,26 @@ export default function LandingPage({ onScanComplete }: Props) {
           </table>
         </div>
 
-        <div className="comparison-disclaimer">
-          <Shield size={18} />
-          <p><strong>Honest note:</strong> ZieAds is a pre-campaign strategy tool. It does not manage your active campaigns, adjust bids, or replace a media buyer who works inside your ad accounts. If you need that, look at tools like GoMarble or Madgicx.</p>
+        <div className="comparison-disclaimer" style={{ background: 'var(--lp-bg-inset)', borderLeft: '4px solid var(--lp-accent)', padding: '24px', borderRadius: '0 12px 12px 0', marginTop: '32px', textAlign: 'left', maxWidth: '780px', margin: '32px auto 0' }}>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 700, color: 'var(--lp-text-primary)' }}>What ZieAds does not do</h4>
+          <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+            ZieAds does not manage your active campaigns, adjust your bids, or replace a media buyer working inside your ad accounts. If your campaigns are already running and you need execution help, tools like GoMarble or Madgicx are built for that. ZieAds is for strategy: what to run, how to structure it, and whether your setup is ready before you spend.
+          </p>
         </div>
-        <p className="comparison-wins">ZieAds wins when you need fast, structured strategic input before you spend, not an execution partner for campaigns already running.</p>
       </section>
 
-      {/* ══════════════════════════════════ S8: SCORING ══════════════════════════════════ */}
+      {/* ══════════════════════════════════ S9: READINESS SCORE EXPLAINED ══════════════════════════════════ */}
       <section className="scoring-section">
-        <h2 className="section-title">Your Paid Ads Readiness Score</h2>
-        <p className="section-subtitle">A score that tells you whether you're ready to run paid ads profitably, not whether your page looks good.</p>
+        <h2 className="section-title">Your score tells you where to start, not just how you rank.</h2>
+        <p className="section-subtitle">Six dimensions. Each one weighted by how much it actually moves paid performance.</p>
         <div className="score-dimensions">
           {[
-            { name: 'Creative & Offer', weight: '25%', color: 'var(--lp-accent)', tooltip: '25% weight because nothing else matters if your offer is wrong or your hook misses.' },
-            { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)', tooltip: '20% weight: unclear audience = wasted spend from day one.' },
-            { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)', tooltip: '20% weight: your ad brings traffic; your page either converts it or loses it.' },
-            { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)', tooltip: '15%: not every business belongs on every platform at launch.' },
-            { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)', tooltip: '10%: most small businesses only run TOFU and wonder why ROAS is low.' },
-            { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)', tooltip: '10%: knowing where you fit changes how you position your ads.' },
+            { name: 'Creative and Offer', weight: '25%', color: 'var(--lp-accent)', tooltip: 'The heaviest weight because if your offer is unclear or your creative hook is weak, nothing else can save the campaign. This is where most problems start.' },
+            { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)', tooltip: 'You cannot target the right people if you have not defined who they are. A fuzzy ICP leads to wasted spend from the first impression.' },
+            { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)', tooltip: 'Your ad brings traffic. Your page either earns it or loses it. Tracking gaps and weak above-fold content are the two most common killers here.' },
+            { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)', tooltip: 'Not every business belongs on every platform at the start. This dimension checks whether your product, budget, and format match the platform you are planning to use.' },
+            { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)', tooltip: 'Most small businesses run top-of-funnel only and then wonder why ROAS is low. This checks whether you have warm and hot audience strategies in place.' },
+            { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)', tooltip: 'Understanding where your competitors are positioned changes how you write your ads. This surfaces the positioning gaps worth owning.' },
           ].map((dim, i) => (
             <div key={i} className="dimension-bar" title={dim.tooltip}>
               <div className="dim-info">
@@ -773,13 +879,13 @@ export default function LandingPage({ onScanComplete }: Props) {
 
         {/* Score Interpretation Block */}
         <div className="score-interpretation">
-          <h3 className="score-interp-title">What does your score mean?</h3>
+          <h3 className="score-interp-title">What your score means in practice</h3>
           <div className="score-grade-grid">
             {[
-              { range: '80–100', grade: 'A', meaning: 'Strong setup. Your main job is testing creative variations and scaling what works.', color: '#15803D' },
-              { range: '60–79', grade: 'B or C', meaning: 'You can run ads, but specific gaps will limit your results. Fix before scaling.', color: '#1E7BFF' },
-              { range: '40–59', grade: 'D', meaning: 'Running campaigns now will likely burn budget. Structural fixes needed first.', color: '#A16207' },
-              { range: '0–39', grade: 'F', meaning: 'Several foundational gaps. Start with tracking and offer clarity before spending anything.', color: '#B91C1C' },
+              { range: '80 to 100', grade: 'A', meaning: 'Your setup is solid. Focus on creative testing and scaling what works.', color: '#15803D' },
+              { range: '60 to 79', grade: 'B or C', meaning: 'Specific gaps are capping your performance. Fix the highest-weight issues before increasing spend.', color: '#1E7BFF' },
+              { range: '40 to 59', grade: 'D', meaning: 'Running campaigns at this score will burn budget. Structural fixes come before spend increases.', color: '#A16207' },
+              { range: '0 to 39', grade: 'F', meaning: 'Several foundational issues need attention. Start with tracking and offer clarity.', color: '#B91C1C' },
             ].map((g, i) => (
               <div key={i} className="score-grade-row">
                 <div className="score-grade-badge" style={{ backgroundColor: g.color }}>{g.grade}</div>
@@ -793,27 +899,28 @@ export default function LandingPage({ onScanComplete }: Props) {
         </div>
       </section>
 
-      {/* ══════════════════════════════════ S9: TESTIMONIALS (NEW) ══════════════════════════════════ */}
+      {/* ══════════════════════════════════ S11: TESTIMONIALS (NEW) ══════════════════════════════════ */}
       <section className="testimonials-section">
-        <h2 className="section-title">What paid media teams say<br />after their first audit</h2>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>From people using it</span>
+        <h2 className="section-title" style={{ marginTop: 8 }}>What they found in their first audit.</h2>
         <div className="testimonials-grid">
           {[
             {
-              quote: "ZieAds cut our client onboarding from 3 days to 20 minutes. Every agency needs this.",
-              name: "Rafi S.",
-              role: "Performance Marketing Lead",
+              quote: "I had been running Meta ads for three months and assumed the pixel was fine. The audit flagged it immediately. No pixel on the checkout page. I had been optimizing for click traffic the whole time with zero purchase data going back to Meta. That one finding alone was worth more than the cost of the plan.",
+              name: "Alex M.",
+              role: "E-commerce founder, 2-person team",
               avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80",
             },
             {
-              quote: "The AI audit caught targeting gaps our team missed for months. ROI improved within the first week.",
-              name: "Dewi A.",
-              role: "Head of Growth, e-Commerce",
+              quote: "I run paid media for six clients. Before ZieAds I was spending 4 to 5 hours per client putting together a first strategy session. Now I run the audit, use the brief as my starting point, and spend that time on strategy calls instead. The PDF comes out clean enough to share directly.",
+              name: "Sarah K.",
+              role: "Freelance paid media strategist",
               avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80",
             },
             {
-              quote: "We run ZieAds on every new client before a single rupiah is spent. It changed how we work.",
-              name: "Bima P.",
-              role: "Founder, Digital Agency",
+              quote: "The readiness score gave me something concrete to show my manager when I asked for more budget. Instead of saying 'I think we need to fix the landing page', I had a score that said landing page is at 48 out of 100 and here is why. That conversation went differently.",
+              name: "David L.",
+              role: "In-house marketing manager",
               avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80",
             },
           ].map((t, i) => (
@@ -840,30 +947,33 @@ export default function LandingPage({ onScanComplete }: Props) {
 
       {/* ══════════════════════════════════ S10: WHO IS IT FOR (NEW) ══════════════════════════════════ */}
       <section className="who-section">
-        <h2 className="section-title">Built for people who run<br />paid ads seriously</h2>
-        <p className="section-subtitle">Whether that's your own brand or someone else's.</p>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>Built for people who run paid ads seriously</span>
+        <h2 className="section-title" style={{ marginTop: 8 }}>Whether that is your own brand or someone else's.</h2>
         <div className="who-grid">
           {[
             {
               Icon: Briefcase,
-              title: 'Business owners running their own ads',
-              headline: 'You run the ads, the ops, and the product. You don\'t have time for a 40-page audit.',
-              body: 'ZieAds gives you a clear score and the top 3 things to fix first. In 3 minutes, you know whether your setup is ready to spend on, or not.',
-              features: ['Free quick scan', 'Score + critical findings', 'No ad account access needed'],
+              title: "You run your own ads.",
+              headline: "You are doing this yourself and you want to know if you are doing it right.",
+              body: "You do not need someone to manage your campaigns. You need a fast, honest assessment of whether your setup is ready before you commit budget. ZieAds gives you your readiness score, your top gaps, and exactly what to fix first. In under 3 minutes.",
+              features: ["Free scan with no signup", "Readiness score across 6 dimensions", "Specific fix recommendations per gap"],
+              plan_suggestion: "Start free. Upgrade to Starter if you run more than one campaign per month."
             },
             {
               Icon: UserCheck,
-              title: 'Freelance paid media strategists',
-              headline: 'Your clients pay you for fast, credible strategy, not to wait two weeks.',
-              body: 'Run an audit on any client URL before the first strategy call. Walk in with a readiness score, a gap list, and a platform recommendation. Close more engagements, faster.',
-              features: ['10 audits/month on Starter', 'PDF reports to share with clients', 'Audience and creative briefs per platform'],
+              title: "You do this for clients.",
+              headline: "Your clients pay for fast, credible strategy. They do not want to wait a week for a document.",
+              body: "Run a ZieAds audit on any client URL before your first strategy call. Walk in with a readiness score, a gap breakdown, and platform recommendations already prepared. The PDF comes out clean enough to share directly or use as a foundation for your own deck.",
+              features: ["Audit any URL in under 3 minutes", "PDF report ready to share", "Creative briefs and audience strategy per platform"],
+              plan_suggestion: "Starter works for 2 to 3 clients a month. Pro is for 10 or more."
             },
             {
               Icon: Users,
-              title: 'Small agencies with multiple clients',
-              headline: 'You can\'t hire a strategist for every client. You can build a repeatable audit process.',
-              body: 'White-label PDF reports with your agency logo. Unlimited audits. A client management dashboard to track who\'s been audited and when. Turn your strategy process into a product.',
-              features: ['Unlimited audits on Agency plan', 'White label + agency logo', 'Client management dashboard'],
+              title: "You run paid media for multiple clients.",
+              headline: "You need a repeatable audit process that does not cost you 4 hours per client.",
+              body: "Unlimited audits. White-label PDFs with your agency name. A client dashboard that tracks every account you manage. Five team seats. ZieAds becomes your pre-campaign process, not a one-off tool you pull out occasionally.",
+              features: ["Unlimited audits", "White-label PDF with your agency logo", "Client management dashboard", "Up to 5 team seats"],
+              plan_suggestion: "Agency plan. One client retainer covers the monthly cost."
             },
           ].map((persona, i) => (
             <div key={i} className="persona-card">
@@ -871,61 +981,90 @@ export default function LandingPage({ onScanComplete }: Props) {
               <span className="persona-type">{persona.title}</span>
               <h3>{persona.headline}</h3>
               <p className="persona-body">{persona.body}</p>
-              <ul className="persona-features">
+              <ul className="persona-features" style={{ marginBottom: '16px' }}>
                 {persona.features.map((f, j) => (
                   <li key={j}><Check size={14} /> {f}</li>
                 ))}
               </ul>
+              <div className="persona-suggestion" style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--lp-accent)', borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '12px' }}>
+                {persona.plan_suggestion}
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ══════════════════════════════════ S11: PRICING ══════════════════════════════════ */}
+      {/* ══════════════════════════════════ S12: PRICING ══════════════════════════════════ */}
       <section id="pricing" className="pricing-section">
-        <h2 className="section-title">Simple, Transparent Pricing</h2>
-        <p className="section-subtitle">Start free. The paid plans are for when you need more audits, white-label reports, or client workflows.</p>
+        <h2 className="section-title">Predictable cost. No surprises.</h2>
+        <p className="section-subtitle">Run audits, fix funnels, and get to a strategy you can actually execute. Without an agency.</p>
         <div className="pricing-grid">
           {[
             {
               tier: 'Free',
-              tagline: 'Find out if your setup is ready',
+              tagline: 'Find out what is actually wrong.',
               price: '$0',
               period: 'forever',
-              features: ['3 Quick Scans / month', 'Score + 3 critical findings', 'No full audit'],
-              cta: 'Get Started Free',
+              features: [
+                "3 quick scans per month",
+                "Readiness score across 6 dimensions",
+                "Top 3 critical findings",
+                "No ad account access required"
+              ],
+              cta: 'Start for free',
               highlight: false,
             },
             {
               tier: 'Starter',
-              tagline: 'For solo founders and in-house marketers',
+              tagline: 'For one brand running its own ads.',
               price: '$29',
               period: '/month',
-              features: ['10 full audits / month', 'All 15 skill commands', 'PDF reports (ZieAds branded)', '7 day report history'],
+              features: [
+                "10 full audits per month",
+                "All 15 AI skill commands",
+                "PDF reports",
+                "7-day report history",
+                "AI Strategist with audit history context",
+                "Email support"
+              ],
               cta: 'Start Starter',
               highlight: false,
             },
             {
               tier: 'Pro',
-              tagline: 'For serious paid media practitioners',
+              tagline: 'For freelancers and practitioners working on client accounts.',
               price: '$79',
               period: '/month',
-              features: ['40 full audits / month', 'White label PDFs', 'Custom branding on reports', 'API access', 'Priority processing'],
+              features: [
+                "40 full audits per month",
+                "White-label PDFs, your name on reports",
+                "All analysis modes in AI Strategist",
+                "Priority processing",
+                "API access",
+                "Unlimited report history"
+              ],
               cta: 'Go Pro',
               highlight: true,
             },
             {
               tier: 'Agency',
-              tagline: 'For teams running paid media at scale',
+              tagline: 'For agencies managing paid media across multiple client accounts.',
               price: '$199',
               period: '/month',
-              features: ['Unlimited audits', 'White label + agency logo', 'Team seats (up to 5)', 'Full API access', 'Client management dashboard'],
+              features: [
+                "Unlimited full audits",
+                "White-label PDFs with agency logo",
+                "5 team seats",
+                "Client management dashboard",
+                "Monthly aggregate client reports",
+                "Premium support"
+              ],
               cta: 'Start Agency',
               highlight: false,
             },
           ].map((plan, i) => (
             <div key={i} className={`pricing-card ${plan.highlight ? 'pricing-highlight' : ''}`}>
-              {plan.highlight && <div className="popular-badge">Most Popular</div>}
+              {plan.highlight && <div className="popular-badge">Most Used</div>}
               <h3 className="plan-name">{plan.tier}</h3>
               <p className="plan-tagline">{plan.tagline}</p>
               <div className="plan-price">
@@ -940,16 +1079,16 @@ export default function LandingPage({ onScanComplete }: Props) {
                   </li>
                 ))}
               </ul>
-              <button className="plan-cta">{plan.cta}</button>
+              <button className="plan-cta" style={{ cursor: 'pointer' }}>{plan.cta}</button>
             </div>
           ))}
         </div>
 
         {/* ROI Framing */}
         <div className="pricing-roi-block">
-          <h3>A freelance strategy audit typically costs $500–$1,500.</h3>
-          <p>The Starter plan is $29. The Pro plan is $79. If you use it to audit one client website per month and charge for the strategic output, the math works.</p>
-          <button className="btn-lp-primary-gradient" onClick={() => { const el = document.getElementById('sample-report'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }}>
+          <h3>A strategy session with a freelance consultant typically costs $500 to $1,000.</h3>
+          <p>Starter is $29. If you use it once a month to prep for a campaign and it saves you one bad spend decision, it has already paid for itself.</p>
+          <button className="btn-lp-primary-gradient" onClick={() => { const el = document.getElementById('sample-report'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }} style={{ cursor: 'pointer' }}>
             See what a full report looks like
           </button>
         </div>
@@ -985,16 +1124,16 @@ export default function LandingPage({ onScanComplete }: Props) {
         <div className="lp-grid-line lp-line-right"></div>
         <div className="final-cta-content">
           <h2 className="final-cta-title">
-            Run the audit. Know what to fix.<br /><span className="lp-pill-highlight">Stop guessing.</span>
+            Run the audit. Know what to fix. <br /><span className="lp-pill-highlight">Stop guessing.</span>
           </h2>
           <p className="final-cta-subtitle">
             Paste your URL. Get your readiness score and top gaps in under 3 minutes. No ad account access, no signup required for the free scan.
           </p>
-          <button className="btn-lp-primary-gradient final-cta-btn" onClick={scrollToHero}>
-            Get My Free Ads Audit
+          <button className="btn-lp-primary-gradient final-cta-btn" onClick={scrollToHero} style={{ cursor: 'pointer' }}>
+            Get My Free Audit
           </button>
           <div className="final-cta-trust-strip">
-            <span><Shield size={14} /> No ad account access required</span>
+            <span><Shield size={14} /> No ad account access</span>
             <span><Check size={14} /> No signup for free scan</span>
             <span><Clock size={14} /> Results in under 3 minutes</span>
           </div>
@@ -1025,14 +1164,17 @@ export default function LandingPage({ onScanComplete }: Props) {
           <div className="footer-col">
             <h4 className="footer-col-title">Product</h4>
             <a href="#how-it-works">How It Works</a>
+            <a href="#sample-report">All 15 Skills</a>
             <a href="#sample-report">Sample Report</a>
             <a href="#pricing">Pricing</a>
             <a href="#" onClick={(e) => { e.preventDefault(); navigate('/clients'); }}>Agency Plan</a>
           </div>
           <div className="footer-col">
             <h4 className="footer-col-title">Resources</h4>
-            <a href="#faq">FAQ</a>
+            <a href="#pricing">Paid Ads Readiness Guide</a>
             <a href="#sample-report">Platform Comparison</a>
+            <a href="#faq">FAQ</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Blog</a>
           </div>
           <div className="footer-col">
             <h4 className="footer-col-title">Legal</h4>
