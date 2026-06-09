@@ -450,47 +450,18 @@ export default function LandingPage({ onScanComplete }: Props) {
               </div>
               <div className="lp-chrome-title">app.zieads.com/dashboard</div>
             </div>
-            <div className="lp-showcase-body">
-              <div className="lp-showcase-sidebar">
-                <div className="lp-sidebar-logo">
-                  <ZieAdsLogo size={20} />
-                  <span>zieads</span>
-                </div>
-                <div className="lp-sidebar-links">
-                  <div className="lp-sidebar-link active">Dashboard</div>
-                  <div className="lp-sidebar-link">AI Audit</div>
-                  <div className="lp-sidebar-link">Creative Studio</div>
-                  <div className="lp-sidebar-link">Audience Builder</div>
-                </div>
-              </div>
-              <div className="lp-showcase-content">
-                <div className="lp-content-header">
-                  <h3>Strategy Report - Ready</h3>
-                </div>
-                <div className="lp-showcase-metrics">
-                  <div className="lp-metric-card">
-                    <span className="lp-metric-label">Readiness Score</span>
-                    <span className="lp-metric-value">87/100</span>
-                  </div>
-                  <div className="lp-metric-card">
-                    <span className="lp-metric-label">Est. ROAS Increase</span>
-                    <span className="lp-metric-value">+42%</span>
-                  </div>
-                  <div className="lp-metric-card">
-                    <span className="lp-metric-label">AI Agent Audit</span>
-                    <span className="lp-metric-value">5/5 Done</span>
-                  </div>
-                </div>
-                <div className="lp-chat-mock">
-                  <div className="lp-chat-bubble lp-ai">
-                    <span className="lp-ai-avatar">AI</span>
-                    <p>I've detected Meta pixel gaps on your cart page. Here is the recommended targeting strategy...</p>
-                  </div>
-                  <div className="lp-chat-bubble lp-user">
-                    <p>Generate 3 image ad hooks for our SaaS launch.</p>
-                  </div>
-                </div>
-              </div>
+            <div className="lp-showcase-body" style={{ height: 'auto' }}>
+              <img 
+                src="/zieads-dashboard.png" 
+                alt="ZieAds Real Dashboard Screenshot" 
+                style={{ 
+                  width: '100%', 
+                  height: 'auto', 
+                  display: 'block',
+                  borderBottomLeftRadius: 'inherit',
+                  borderBottomRightRadius: 'inherit'
+                }} 
+              />
             </div>
           </div>
         </div>
