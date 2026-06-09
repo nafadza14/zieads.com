@@ -13,6 +13,8 @@ import AgentChat from './pages/AgentChat';
 import BusinessProfile from './pages/BusinessProfile';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
+import SuperadminLogin from './pages/superadmin/SuperadminLogin';
+import SuperadminDashboard from './pages/superadmin/SuperadminDashboard';
 import { supabase } from './lib/supabaseClient';
 import { CreditProvider } from './lib/creditStore';
 
@@ -90,6 +92,8 @@ export default function App() {
         <Route path="/tools" element={<Navigate to="/clients" replace />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/superadmin/login" element={<SuperadminLogin />} />
+        <Route path="/superadmin" element={<SuperadminDashboard />} />
       </Routes>
     </Router>
   );

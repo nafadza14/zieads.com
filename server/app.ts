@@ -23,6 +23,7 @@ import { publicApiRouter } from "./routes/api-public.js";
 import { adsLibraryRouter } from "./routes/api-ads-library.js";
 import { agentRouter } from "./routes/api-agent.js";
 import { creditsRouter } from "./routes/api-credits.js";
+import { superadminRouter } from "./routes/api-superadmin.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
 
@@ -50,7 +51,7 @@ async function enrichContextFromProfile(
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-superadmin-session-token");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
@@ -66,6 +67,9 @@ app.use("/api/ads-library", adsLibraryRouter);
 
 // ─── AI Agent Chat ─────────────────────────────────────
 app.use("/api/agent", agentRouter);
+
+// ─── Superadmin Dashboard API ──────────────────────────
+app.use("/api/superadmin/v1", superadminRouter);
 
 // ─── Health Check ──────────────────────────────────────
 app.get("/api/health", (_req, res) => {
