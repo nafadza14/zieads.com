@@ -146,7 +146,7 @@ superadminRouter.post('/auth/login', async (req, res) => {
       .maybeSingle();
 
     if (error) {
-      return res.status(401).json({ error: `Database error: ${error.message} (Code: ${error.code || 'none'}). Details: ${error.details || 'none'}` });
+      return res.status(401).json({ error: `Database error: ${error.message} (Code: ${error.code || 'none'}) [Server URL: ${process.env.VITE_SUPABASE_URL || 'none'}]. Details: ${error.details || 'none'}` });
     }
     if (!admin) {
       return res.status(401).json({ error: `Admin user account '${email}' not found or inactive in the database.` });
