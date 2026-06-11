@@ -143,15 +143,18 @@ superadminRouter.post('/auth/login', async (req, res) => {
       .select('*')
       .eq('email', email)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (error || !admin) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    if (error) {
+      return res.status(401).json({ error: `Database error: ${error.message} (Code: ${error.code || 'none'}). Details: ${error.details || 'none'}` });
+    }
+    if (!admin) {
+      return res.status(401).json({ error: `Admin user account '${email}' not found or inactive in the database.` });
     }
 
     const passwordMatch = verifyPassword(password, admin.password_hash);
     if (!passwordMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Password verification failed. Incorrect password.' });
     }
 
     // Check if TOTP is enabled
