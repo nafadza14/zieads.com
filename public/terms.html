@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — ZieAds</title>
+  <meta name="description" content="ZieAds Terms of Service — agreements governing the access to and usage of the ZieAds AI platform.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="canonical" href="https://zieads.com/terms">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       ZieAds Redesign Theme — Cream Editorial AI Style
+       ═══════════════════════════════════════════════════════ */
+    :root {
+      --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+      --font-primary: 'General Sans', ui-sans-serif, system-ui, sans-serif;
+      --font-mono: monospace;
+
+      --bg: #F7F5F0;
+      --bg-inset: #FAF8F3;
+      --bg-card: #FFFFFF;
+      --border: #DDD6C8;
+      --border-subtle: #EBE6DC;
+      
+      --text: #0B1B2B;
+      --text-secondary: #3D4F62;
+      --text-muted: #9AA6B2;
+      --text-tertiary: #6B7A89;
+      
+      --accent: #1E7BFF;
+      --radius-card: 20px;
+      --radius-pill: 9999px;
+      
+      --shadow-navbar: 0 4px 24px rgba(11, 27, 43, 0.06);
+      --shadow-card: 0 2px 8px rgba(11, 27, 43, 0.04), 0 1px 3px rgba(11, 27, 43, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-primary);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ─── GRID CONSTRUCTION LINES ─── */
+    .lp-grid-line {
+      position: absolute;
+      background-image: linear-gradient(to bottom, var(--border) 40%, rgba(255,255,255,0) 0%);
+      background-position: left;
+      background-size: 1px 10px;
+      background-repeat: repeat-y;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    
+    .lp-line-left {
+      left: calc(50% - 620px);
+      top: 0;
+      bottom: 0;
+      width: 1px;
+    }
+    
+    .lp-line-right {
+      right: calc(50% - 620px);
+      top: 0;
+      bottom: 0;
+      width: 1px;
+    }
+
+    .lp-line-top {
+      position: absolute;
+      top: 88px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background-image: linear-gradient(to right, var(--border) 40%, rgba(255,255,255,0) 0%);
+      background-position: top;
+      background-size: 10px 1px;
+      background-repeat: repeat-x;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 1280px) {
+      .lp-line-left { left: 20px; }
+      .lp-line-right { right: 20px; }
+    }
+
+    /* ─── FLOATING NAVBAR ─── */
+    nav {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: var(--radius-pill);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: var(--shadow-navbar);
+      padding: 8px 12px 8px 24px;
+      height: 56px;
+      width: calc(100% - 40px);
+      max-width: 1200px;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 100%;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-link {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-login {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 8px 16px;
+      transition: color 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-login:hover {
+      color: var(--text);
+    }
+
+    .btn-get-started {
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%);
+      border: none;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      padding: 10px 20px;
+      transition: opacity 0.2s;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(30, 123, 255, 0.2);
+    }
+
+    .btn-get-started:hover {
+      opacity: 0.9;
+    }
+
+    /* ─── MAIN WRAPPER ─── */
+    .main-container {
+      padding-top: 100px;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      background-color: var(--bg-inset);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 64px 24px;
+      position: relative;
+    }
+
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero-content {
+      max-width: 800px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent);
+      border-radius: 50%;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .hero-meta {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-intro {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ─── CONTENT GRID ─── */
+    .content-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 64px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+      position: relative;
+    }
+
+    @media (min-width: 1024px) {
+      .content-grid {
+        flex-direction: row;
+      }
+    }
+
+    /* ─── STICKY SIDEBAR ─── */
+    aside {
+      width: 100%;
+    }
+
+    @media (min-width: 1024px) {
+      aside {
+        position: sticky;
+        top: 110px;
+        width: 280px;
+        shrink: 0;
+        border-right: 1px solid var(--border-subtle);
+        padding-right: 24px;
+        align-self: flex-start;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+      }
+    }
+
+    .aside-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      font-family: monospace;
+    }
+
+    .sidebar-list {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sidebar-link {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      display: block;
+      text-align: left;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .sidebar-link:hover {
+      color: var(--text);
+      background-color: var(--bg-inset);
+    }
+
+    .sidebar-link.active {
+      color: white;
+      background-color: var(--text);
+      font-weight: 600;
+      box-shadow: var(--shadow-card);
+    }
+
+    /* ─── CONTENT AREA ─── */
+    .content-area {
+      flex: 1;
+      max-width: 800px;
+    }
+
+    .content-area section {
+      scroll-margin-top: 120px;
+      margin-bottom: 64px;
+    }
+
+    .content-area section:last-child {
+      margin-bottom: 0;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-num {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+
+    strong {
+      color: var(--text);
+    }
+
+    /* ─── LISTS ─── */
+    ul.check-list {
+      list-style-type: none;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    ul.check-list li {
+      position: relative;
+      padding-left: 24px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    ul.check-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      top: 1px;
+      color: var(--text);
+      font-weight: bold;
+    }
+
+    .legal-box {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 480px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .highlight-card {
+      background-color: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      border-left: 4px solid var(--text);
+      padding: 24px;
+      border-radius: 0 16px 16px 0;
+      margin-top: 16px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .highlight-card p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .highlight-card p.font-semibold {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .highlight-card p.flex {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      background-color: var(--bg);
+      border-top: 1px solid var(--border-subtle);
+      padding: 64px 24px 32px;
+      position: relative;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 48px;
+    }
+
+    @media (min-width: 768px) {
+      .footer-inner {
+        grid-template-columns: 2fr repeat(3, 1fr);
+      }
+    }
+
+    .footer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .footer-brand-col {
+      max-width: 320px;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--text);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 24px;
+    }
+
+    .footer-tagline {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .footer-social-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .footer-social-links a {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-social-links a:hover {
+      color: var(--text);
+    }
+
+    .footer-col-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .footer-col a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: var(--text);
+    }
+
+    .footer-bottom-bar {
+      max-width: 1200px;
+      margin: 48px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-copy {
+      font-weight: 500;
+      color: var(--text-tertiary);
+    }
+
+    .footer-trust-note {
+      line-height: 1.6;
+    }
+
+    /* ─── PRINT OPTIMIZATION ─── */
+    @media print {
+      body {
+        background-color: #ffffff;
+        color: #000000;
+      }
+      nav, aside, footer, .lp-grid-line {
+        display: none !important;
+      }
+      .main-container {
+        padding-top: 0;
+      }
+      .content-grid {
+        padding: 0;
+      }
+      .highlight-card, .legal-box {
+        border-color: #000000;
+        background-color: #ffffff;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- GRID LINES BACKGROUND -->
+  <div class="lp-grid-line lp-line-left"></div>
+  <div class="lp-grid-line lp-line-right"></div>
+  <div class="lp-line-top"></div>
+
+  <!-- Header Navbar -->
+  <nav>
+    <div class="nav-inner">
+      <a href="https://zieads.com" class="nav-brand">
+        <svg width="32" height="32" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="112" height="112" rx="28" fill="#09090B" />
+          <path d="M35 78 C35 78, 60 95, 85 78" stroke="white" stroke-width="7" stroke-linecap="round" fill="none" />
+        </svg>
+        <span class="brand-name">zieads</span>
+      </a>
+      <div class="nav-links">
+        <a href="https://zieads.com/#how-it-works" class="nav-link">How It Works</a>
+        <a href="https://zieads.com/#pricing" class="nav-link">Pricing</a>
+        <a href="https://zieads.com/#faq" class="nav-link">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <a href="https://zieads.com/sign-in" class="btn-login">Log in</a>
+        <a href="https://zieads.com/sign-up" class="btn-get-started">Get Started Free</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Terms & Agreements
+          </div>
+          <h1 class="hero-title">Terms of Service</h1>
+          <div class="hero-meta">Last updated: June 23, 2026 &bull; PT. Bantu Indonesia Technology</div>
+          <p class="hero-intro">
+            Please read these Terms of Service carefully before using our software platform. These terms govern your rights and responsibilities when using ZieAds.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Container -->
+    <div class="content-grid">
+      
+      <!-- Sticky Navigation Sidebar -->
+      <aside>
+        <div class="aside-title">Document Sections</div>
+        <ul class="sidebar-list">
+          <li><button class="sidebar-link active" onclick="scrollToSection('acceptance')">1. Acceptance of Terms</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('service-description')">2. Description of Service</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('account')">3. Account Registration & Security</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('third-party-connections')">4. Third-Party Connections</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('acceptable-use')">5. Acceptable Use</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('ai-recommendations')">6. AI Recommendations</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('credits-payment')">7. Credits & Payments</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('ip')">8. Intellectual Property</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('disclaimer')">9. Disclaimers</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('liability')">10. Limitation of Liability</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('termination')">11. Termination</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('governing-law')">12. Governing Law & Disputes</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('changes')">13. Changes to Terms</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('contact')">14. Contact</button></li>
+        </ul>
+      </aside>
+
+      <!-- Main Content Body -->
+      <div class="content-area">
+        
+        <!-- Section 1 -->
+        <section id="acceptance">
+          <h2>
+            <span>1. Acceptance of Terms</span>
+            <span class="section-num">01</span>
+          </h2>
+          <p>
+            By accessing or using ZieAds, you confirm that you are at least 18 years old, have the legal authority to enter into this agreement, and agree to comply with these Terms and our Privacy Policy. If you are using ZieAds on behalf of a company or organization, you represent that you have the authority to bind that entity to these Terms.
+          </p>
+        </section>
+
+        <!-- Section 2 -->
+        <section id="service-description">
+          <h2>
+            <span>2. Description of Service</span>
+            <span class="section-num">02</span>
+          </h2>
+          <p>
+            ZieAds provides an AI-powered platform that connects to your advertising accounts (Meta, Google, TikTok) to analyze campaign performance, identify optimization opportunities, and assist you in executing improvements. The service includes: AI analysis of your ad account data, performance diagnostics (ROAS analysis, creative fatigue detection, budget optimization), AI-generated campaign recommendations, optional execution of approved optimizations via connected ad platform APIs, and a credit-based access system for premium features.
+          </p>
+        </section>
+
+        <!-- Section 3 -->
+        <section id="account">
+          <h2>
+            <span>3. Account Registration and Security</span>
+            <span class="section-num">03</span>
+          </h2>
+          <p>To use our services, you must register for an account. You agree to the following terms:</p>
+          <ul class="check-list">
+            <li>You must provide accurate and complete information when registering.</li>
+            <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+            <li>You are responsible for all activity that occurs under your account.</li>
+            <li>You must notify us immediately at support@zieads.com if you suspect unauthorized access.</li>
+            <li>We reserve the right to suspend or terminate accounts that violate these Terms.</li>
+          </ul>
+        </section>
+
+        <!-- Section 4 -->
+        <section id="third-party-connections">
+          <h2>
+            <span>4. Third-Party Platform Connections (Meta, Google, TikTok)</span>
+            <span class="section-num">04</span>
+          </h2>
+          <div class="highlight-card">
+            <p class="font-semibold">
+              When you connect your advertising accounts to ZieAds:
+            </p>
+            <ul class="check-list" style="margin-top:16px;">
+              <li>You authorize ZieAds to access your ad account data as described in our Privacy Policy and as permitted by the relevant platform&apos;s terms.</li>
+              <li>You remain solely responsible for your advertising accounts, campaigns, budgets, and compliance with each platform&apos;s advertising policies.</li>
+              <li>ZieAds is a tool to assist your decision-making. All final decisions regarding campaign changes remain yours unless you explicitly authorize automated execution.</li>
+              <li>For Meta: you authorize us to use the ads_read and ads_management permissions as described in our Privacy Policy. We comply with Meta&apos;s Platform Terms (https://developers.facebook.com/terms).</li>
+              <li>ZieAds is not affiliated with, endorsed by, or officially connected to Meta, Google, or TikTok.</li>
+              <li>You can revoke ZieAds access to any connected account at any time from your ZieAds account settings or directly from the third-party platform.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section id="acceptable-use">
+          <h2>
+            <span>5. Acceptable Use</span>
+            <span class="section-num">05</span>
+          </h2>
+          <p>You agree NOT to use ZieAds to:</p>
+          <ul class="check-list">
+            <li>Violate any applicable law, regulation, or third-party rights.</li>
+            <li>Run ads that violate Meta&apos;s, Google&apos;s, or TikTok&apos;s advertising policies.</li>
+            <li>Attempt to reverse-engineer, decompile, or extract source code from ZieAds.</li>
+            <li>Resell, sublicense, or transfer access to ZieAds without written permission.</li>
+            <li>Use ZieAds to build a competing product or service.</li>
+            <li>Scrape, crawl, or extract data from ZieAds in bulk.</li>
+            <li>Attempt to gain unauthorized access to ZieAds systems or other users&apos; accounts.</li>
+            <li>Use ZieAds for any fraudulent, deceptive, or misleading advertising.</li>
+          </ul>
+        </section>
+
+        <!-- Section 6 -->
+        <section id="ai-recommendations">
+          <h2>
+            <span>6. AI Recommendations and Execution</span>
+            <span class="section-num">06</span>
+          </h2>
+          <div class="highlight-card">
+            <p class="font-semibold flex">
+              ⚠️ ZieAds uses artificial intelligence to generate recommendations. You understand and agree that:
+            </p>
+            <ul class="check-list" style="margin-top:16px;">
+              <li>AI recommendations are based on data patterns and are not guarantees of advertising performance.</li>
+              <li>ZieAds does not guarantee specific ROAS, conversion rates, or business outcomes.</li>
+              <li>When ZieAds executes changes to your ad account (e.g., budget adjustments, campaign pausing) via API, it does so only upon your explicit approval of each action.</li>
+              <li>You are responsible for reviewing AI recommendations before approving their execution.</li>
+              <li>ZieAds is not liable for losses resulting from AI recommendations you choose to implement.</li>
+              <li>AI outputs may contain errors or inaccuracies. Always apply your own judgment.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Section 7 -->
+        <section id="credits-payment">
+          <h2>
+            <span>7. Credits, Plans, and Payment</span>
+            <span class="section-num">07</span>
+          </h2>
+          <p>Payment terms and systems are governed as follows:</p>
+          <ul class="check-list">
+            <li>ZieAds operates on a credit-based and/or subscription pricing model. Plan details are described on our pricing page.</li>
+            <li>Credits are non-refundable once consumed unless otherwise stated.</li>
+            <li>Subscription fees are billed in advance and are non-refundable except as required by law.</li>
+            <li>We reserve the right to change pricing with 30 days&apos; notice to active subscribers.</li>
+            <li>Failure to pay may result in suspension of your account.</li>
+            <li>All prices are in USD unless otherwise stated.</li>
+          </ul>
+        </section>
+
+        <!-- Section 8 -->
+        <section id="ip">
+          <h2>
+            <span>8. Intellectual Property</span>
+            <span class="section-num">08</span>
+          </h2>
+          <p>
+            ZieAds and its original content, features, AI models, and functionality are and will remain the exclusive property of ZieAds and its licensors. You retain all ownership of your advertising data. You grant ZieAds a limited, non-exclusive license to access and process your data solely to provide the service. You may not use ZieAds&apos;s name, logo, or branding without written permission.
+          </p>
+        </section>
+
+        <!-- Section 9 -->
+        <section id="disclaimer">
+          <h2>
+            <span>9. Disclaimers</span>
+            <span class="section-num">09</span>
+          </h2>
+          <p>
+            ZieAds is provided &ldquo;as is&rdquo; and &ldquo;as available&rdquo; without warranties of any kind, express or implied. We do not warrant that: the service will be uninterrupted or error-free, AI recommendations will be accurate or achieve specific results, or the service will meet your specific requirements. Use of ZieAds is at your own risk.
+          </p>
+        </section>
+
+        <!-- Section 10 -->
+        <section id="liability">
+          <h2>
+            <span>10. Limitation of Liability</span>
+            <span class="section-num">10</span>
+          </h2>
+          <p>
+            To the maximum extent permitted by law, ZieAds and its affiliates, officers, employees, and partners shall not be liable for: indirect, incidental, special, or consequential damages, loss of profits or revenue, loss of advertising spend resulting from AI recommendations, data loss or corruption, or unauthorized access to your ad accounts by third parties. Our total liability to you for any claim shall not exceed the amount you paid to ZieAds in the 3 months preceding the claim.
+          </p>
+        </section>
+
+        <!-- Section 11 -->
+        <section id="termination">
+          <h2>
+            <span>11. Termination</span>
+            <span class="section-num">11</span>
+          </h2>
+          <p>
+            You may terminate your account at any time by contacting support@zieads.com or via your account settings. We may suspend or terminate your access if you violate these Terms, with or without notice. Upon termination, your right to use ZieAds immediately ceases. We will delete your data in accordance with our Privacy Policy.
+          </p>
+        </section>
+
+        <!-- Section 12 -->
+        <section id="governing-law">
+          <h2>
+            <span>12. Governing Law and Disputes</span>
+            <span class="section-num">12</span>
+          </h2>
+          <p>
+            These Terms are governed by the laws of <strong>Indonesia</strong>. Any disputes arising from these Terms will be resolved through good-faith negotiation first. If unresolved, disputes will be submitted to the courts of Indonesia, as permitted by applicable law.
+          </p>
+        </section>
+
+        <!-- Section 13 -->
+        <section id="changes">
+          <h2>
+            <span>13. Changes to Terms</span>
+            <span class="section-num">13</span>
+          </h2>
+          <p>
+            We reserve the right to modify these Terms. Material changes will be communicated via email and in-app notice at least 14 days before taking effect. Continued use of ZieAds after the effective date constitutes your acceptance of the revised Terms.
+          </p>
+        </section>
+
+        <!-- Section 14 -->
+        <section id="contact">
+          <h2>
+            <span>14. Contact</span>
+            <span class="section-num">14</span>
+          </h2>
+          <p>
+            For questions about these Terms of Service:
+          </p>
+          <div class="legal-box">
+            <strong style="display:block; margin-bottom:6px;">PT. Bantu Indonesia Technology</strong>
+            Email: <a href="mailto:legal@zieads.com" style="color:var(--text); font-weight:600;">legal@zieads.com</a><br>
+            Website: <a href="https://zieads.com" style="color:var(--text); font-weight:600;">https://zieads.com</a><br>
+            Location: Jakarta, Indonesia
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-col footer-brand-col">
+          <a href="https://zieads.com" class="footer-brand">
+            <svg width="32" height="32" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="4" width="112" height="112" rx="28" fill="#09090B" />
+              <path d="M35 78 C35 78, 60 95, 85 78" stroke="white" stroke-width="7" stroke-linecap="round" fill="none" />
+            </svg>
+            <span>zieads</span>
+          </a>
+          <p class="footer-tagline">AI-powered paid ads strategy for marketers and agencies.</p>
+          <div class="footer-social-links">
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter/X</a>
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+            <a href="https://producthunt.com" target="_blank" rel="noopener noreferrer">Product Hunt</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-col-title">Product</h4>
+          <a href="https://zieads.com/#how-it-works">How It Works</a>
+          <a href="https://zieads.com/#sample-report">All 15 Skills</a>
+          <a href="https://zieads.com/#sample-report">Sample Report</a>
+          <a href="https://zieads.com/#pricing">Pricing</a>
+          <a href="https://zieads.com/clients">Agency Plan</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-col-title">Resources</h4>
+          <a href="https://zieads.com/#pricing">Paid Ads Readiness Guide</a>
+          <a href="https://zieads.com/#sample-report">Platform Comparison</a>
+          <a href="https://zieads.com/#faq">FAQ</a>
+          <a href="https://zieads.com/terms">Blog</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-col-title">Legal</h4>
+          <a href="https://zieads.com/privacy-policy">Privacy Policy</a>
+          <a href="https://zieads.com/terms">Terms of Service</a>
+        </div>
+      </div>
+      <div class="footer-bottom-bar">
+        <p class="footer-copy">© 2026 ZieAds. All rights reserved.</p>
+        <p class="footer-trust-note">ZieAds does not access, store, or transmit your ad account credentials. Audits are based on publicly visible page data only.</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    // Scroll tracking to update sidebar active classes
+    window.addEventListener('scroll', () => {
+      const scrollPosition = window.scrollY + 140;
+      const sections = document.querySelectorAll('.content-area section');
+      const sidebarLinks = document.querySelectorAll('.sidebar-link');
+      
+      let activeSectionId = '';
+      
+      sections.forEach(section => {
+        const top = section.offsetTop;
+        const height = section.offsetHeight;
+        if (scrollPosition >= top && scrollPosition < top + height) {
+          activeSectionId = section.getAttribute('id');
+        }
+      });
+      
+      if (activeSectionId) {
+        sidebarLinks.forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('onclick').includes(activeSectionId)) {
+            link.classList.add('active');
+          }
+        });
+      }
+    });
+
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        const top = el.offsetTop - 110;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    }
+  </script>
+</body>
+</html>

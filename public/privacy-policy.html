@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — ZieAds</title>
+  <meta name="description" content="ZieAds Privacy Policy — how we collect, use, and protect your data including Meta Ads account information.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="canonical" href="https://zieads.com/privacy-policy">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       ZieAds Redesign Theme — Cream Editorial AI Style
+       ═══════════════════════════════════════════════════════ */
+    :root {
+      --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+      --font-primary: 'General Sans', ui-sans-serif, system-ui, sans-serif;
+      --font-mono: monospace;
+
+      --bg: #F7F5F0;
+      --bg-inset: #FAF8F3;
+      --bg-card: #FFFFFF;
+      --border: #DDD6C8;
+      --border-subtle: #EBE6DC;
+      
+      --text: #0B1B2B;
+      --text-secondary: #3D4F62;
+      --text-muted: #9AA6B2;
+      --text-tertiary: #6B7A89;
+      
+      --accent: #1E7BFF;
+      --radius-card: 20px;
+      --radius-pill: 9999px;
+      
+      --shadow-navbar: 0 4px 24px rgba(11, 27, 43, 0.06);
+      --shadow-card: 0 2px 8px rgba(11, 27, 43, 0.04), 0 1px 3px rgba(11, 27, 43, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-primary);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ─── GRID CONSTRUCTION LINES ─── */
+    .lp-grid-line {
+      position: absolute;
+      background-image: linear-gradient(to bottom, var(--border) 40%, rgba(255,255,255,0) 0%);
+      background-position: left;
+      background-size: 1px 10px;
+      background-repeat: repeat-y;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    
+    .lp-line-left {
+      left: calc(50% - 620px);
+      top: 0;
+      bottom: 0;
+      width: 1px;
+    }
+    
+    .lp-line-right {
+      right: calc(50% - 620px);
+      top: 0;
+      bottom: 0;
+      width: 1px;
+    }
+
+    .lp-line-top {
+      position: absolute;
+      top: 88px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background-image: linear-gradient(to right, var(--border) 40%, rgba(255,255,255,0) 0%);
+      background-position: top;
+      background-size: 10px 1px;
+      background-repeat: repeat-x;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 1280px) {
+      .lp-line-left { left: 20px; }
+      .lp-line-right { right: 20px; }
+    }
+
+    /* ─── FLOATING NAVBAR ─── */
+    nav {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: var(--radius-pill);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: var(--shadow-navbar);
+      padding: 8px 12px 8px 24px;
+      height: 56px;
+      width: calc(100% - 40px);
+      max-width: 1200px;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 100%;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-link {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-login {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 8px 16px;
+      transition: color 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-login:hover {
+      color: var(--text);
+    }
+
+    .btn-get-started {
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%);
+      border: none;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      padding: 10px 20px;
+      transition: opacity 0.2s;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(30, 123, 255, 0.2);
+    }
+
+    .btn-get-started:hover {
+      opacity: 0.9;
+    }
+
+    /* ─── MAIN WRAPPER ─── */
+    .main-container {
+      padding-top: 100px;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      background-color: var(--bg-inset);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 64px 24px;
+      position: relative;
+    }
+
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero-content {
+      max-width: 800px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent);
+      border-radius: 50%;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .hero-meta {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-intro {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ─── CONTENT GRID ─── */
+    .content-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 64px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+      position: relative;
+    }
+
+    @media (min-width: 1024px) {
+      .content-grid {
+        flex-direction: row;
+      }
+    }
+
+    /* ─── STICKY SIDEBAR ─── */
+    aside {
+      width: 100%;
+    }
+
+    @media (min-width: 1024px) {
+      aside {
+        position: sticky;
+        top: 110px;
+        width: 280px;
+        shrink: 0;
+        border-right: 1px solid var(--border-subtle);
+        padding-right: 24px;
+        align-self: flex-start;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+      }
+    }
+
+    .aside-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      font-family: monospace;
+    }
+
+    .sidebar-list {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sidebar-link {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      display: block;
+      text-align: left;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .sidebar-link:hover {
+      color: var(--text);
+      background-color: var(--bg-inset);
+    }
+
+    .sidebar-link.active {
+      color: white;
+      background-color: var(--text);
+      font-weight: 600;
+      box-shadow: var(--shadow-card);
+    }
+
+    /* ─── CONTENT AREA ─── */
+    .content-area {
+      flex: 1;
+      max-width: 800px;
+    }
+
+    .content-area section {
+      scroll-margin-top: 120px;
+      margin-bottom: 64px;
+    }
+
+    .content-area section:last-child {
+      margin-bottom: 0;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-num {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+
+    strong {
+      color: var(--text);
+    }
+
+    /* ─── CARDS ─── */
+    .info-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .info-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent);
+      border-radius: 50%;
+    }
+
+    .disclosure-box {
+      font-size: 13.5px;
+      color: var(--text-tertiary);
+      background-color: var(--bg-inset);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      margin-top: 12px;
+    }
+
+    .disclosure-box p {
+      font-size: 13.5px;
+      margin-bottom: 8px;
+      color: var(--text-tertiary);
+    }
+
+    .disclosure-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ─── LISTS ─── */
+    ul.check-list {
+      list-style-type: none;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    ul.check-list li {
+      position: relative;
+      padding-left: 24px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    ul.check-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      top: 1px;
+      color: var(--text);
+      font-weight: bold;
+    }
+
+    .legal-box {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 480px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .highlight-card {
+      background-color: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      border-left: 4px solid var(--text);
+      padding: 24px;
+      border-radius: 0 16px 16px 0;
+      margin-top: 16px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .highlight-card p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .highlight-card p.font-semibold {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .highlight-list {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .highlight-list li {
+      position: relative;
+      padding-left: 36px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .highlight-list li::before {
+      content: attr(data-index);
+      position: absolute;
+      left: 0;
+      top: 2px;
+      font-size: 10px;
+      font-family: monospace;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      width: 24px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--bg-card);
+    }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      background-color: var(--bg);
+      border-top: 1px solid var(--border-subtle);
+      padding: 64px 24px 32px;
+      position: relative;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 48px;
+    }
+
+    @media (min-width: 768px) {
+      .footer-inner {
+        grid-template-columns: 2fr repeat(3, 1fr);
+      }
+    }
+
+    .footer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .footer-brand-col {
+      max-width: 320px;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--text);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 24px;
+    }
+
+    .footer-tagline {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .footer-social-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .footer-social-links a {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-social-links a:hover {
+      color: var(--text);
+    }
+
+    .footer-col-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .footer-col a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: var(--text);
+    }
+
+    .footer-bottom-bar {
+      max-width: 1200px;
+      margin: 48px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-copy {
+      font-weight: 500;
+      color: var(--text-tertiary);
+    }
+
+    .footer-trust-note {
+      line-height: 1.6;
+    }
+
+    /* ─── PRINT OPTIMIZATION ─── */
+    @media print {
+      body {
+        background-color: #ffffff;
+        color: #000000;
+      }
+      nav, aside, footer, .lp-grid-line {
+        display: none !important;
+      }
+      .main-container {
+        padding-top: 0;
+      }
+      .content-grid {
+        padding: 0;
+      }
+      .info-card, .highlight-card, .legal-box {
+        border-color: #000000;
+        background-color: #ffffff;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- GRID LINES BACKGROUND -->
+  <div class="lp-grid-line lp-line-left"></div>
+  <div class="lp-grid-line lp-line-right"></div>
+  <div class="lp-line-top"></div>
+
+  <!-- Header Navbar -->
+  <nav>
+    <div class="nav-inner">
+      <a href="https://zieads.com" class="nav-brand">
+        <svg width="32" height="32" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="112" height="112" rx="28" fill="#09090B" />
+          <path d="M35 78 C35 78, 60 95, 85 78" stroke="white" stroke-width="7" stroke-linecap="round" fill="none" />
+        </svg>
+        <span class="brand-name">zieads</span>
+      </a>
+      <div class="nav-links">
+        <a href="https://zieads.com/#how-it-works" class="nav-link">How It Works</a>
+        <a href="https://zieads.com/#pricing" class="nav-link">Pricing</a>
+        <a href="https://zieads.com/#faq" class="nav-link">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <a href="https://zieads.com/sign-in" class="btn-login">Log in</a>
+        <a href="https://zieads.com/sign-up" class="btn-get-started">Get Started Free</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Legal Documents
+          </div>
+          <h1 class="hero-title">Privacy Policy</h1>
+          <div class="hero-meta">Last updated: June 23, 2026 &bull; PT. Bantu Indonesia Technology</div>
+          <p class="hero-intro">
+            PT. Bantu Indonesia Technology (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) operates ZieAds. This document details how we handle, collect, secure, and disclose campaign performance metrics and platform configurations when you connect your advertising accounts.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Container -->
+    <div class="content-grid">
+      
+      <!-- Sticky Navigation Sidebar -->
+      <aside>
+        <div class="aside-title">Document Sections</div>
+        <ul class="sidebar-list">
+          <li><button class="sidebar-link active" onclick="scrollToSection('who-we-are')">1. Who We Are</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('information-we-collect')">2. Information We Collect</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('how-we-use')">3. How We Use Your Information</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('meta-data-usage')">4. Meta Platform Data Disclosures</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('data-storage')">5. Data Storage & Security</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('data-sharing')">6. Data Sharing & Third Parties</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('your-rights')">7. Your Rights</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('cookies')">8. Cookies & Tracking</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('children')">9. Children's Privacy</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('international')">10. International Transfers</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('changes')">11. Changes to This Policy</button></li>
+          <li><button class="sidebar-link" onclick="scrollToSection('contact')">12. Contact Us</button></li>
+        </ul>
+      </aside>
+
+      <!-- Main Content Body -->
+      <div class="content-area">
+        
+        <!-- Section 1 -->
+        <section id="who-we-are">
+          <h2>
+            <span>1. Who We Are</span>
+            <span class="section-num">01</span>
+          </h2>
+          <p>
+            ZieAds is an AI-powered paid ads optimization platform operated by <strong>PT. Bantu Indonesia Technology</strong>, a technology company registered and based in <strong>Indonesia</strong>. Our platform helps advertisers analyze, inspect, and optimize campaign layouts and ROI using advanced artificial intelligence algorithms.
+          </p>
+          <p>
+            For any privacy inquiries, data deletion requests, or questions, contact us:
+          </p>
+          <div class="legal-box">
+            <strong style="display:block; margin-bottom:6px;">PT. Bantu Indonesia Technology</strong>
+            Email: <a href="mailto:privacy@zieads.com" style="color:var(--text); font-weight:600;">privacy@zieads.com</a><br>
+            Website: <a href="https://zieads.com" style="color:var(--text); font-weight:600;">https://zieads.com</a><br>
+            Office: Jakarta, Indonesia
+          </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section id="information-we-collect">
+          <h2>
+            <span>2. Information We Collect</span>
+            <span class="section-num">02</span>
+          </h2>
+          
+          <div class="info-card">
+            <div class="card-title">
+              <span class="card-title-dot"></span>
+              2.1 Account Information
+            </div>
+            <p style="margin-bottom:0;">
+              When you register, we collect your name, email address, and password. Passwords are fully hashed and encrypted using industry standard protocols (we never store passwords in plaintext).
+            </p>
+          </div>
+
+          <div class="info-card">
+            <div class="card-title">
+              <span class="card-title-dot"></span>
+              2.2 Advertising Account Data (Meta, Google, TikTok)
+            </div>
+            <p>
+              When you connect your advertising accounts, we access campaign performance data including: campaign names and IDs, ad set and ad-level metrics (impressions, clicks, spend, ROAS, CTR, CPC, CPM, conversion events), audience targeting configurations, creative metadata (ad names, formats &mdash; not the creative files themselves), and budget and bid settings.
+            </p>
+            <div class="disclosure-box">
+              <p>&bull; This data is accessed solely to generate AI-powered optimization recommendations for you.</p>
+              <p>&bull; We do <strong>NOT</strong> access personal data of your ad audiences.</p>
+              <p>&bull; We do <strong>NOT</strong> access your personal Facebook profile, messages, friends list, or any non-ads data.</p>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="card-title">
+              <span class="card-title-dot"></span>
+              2.3 Usage Data
+            </div>
+            <p style="margin-bottom:0;">
+              We collect logs of how you interact with ZieAds, including pages visited, features used, analysis modes run, and session timestamps. This is used to improve the product.
+            </p>
+          </div>
+
+          <div class="info-card">
+            <div class="card-title">
+              <span class="card-title-dot"></span>
+              2.4 Payment Information
+            </div>
+            <p style="margin-bottom:0;">
+              Payment is processed by our third-party provider (Stripe). We do not store your full card number. We store basic transaction records (amount, date, billing plan) for billing purposes.
+            </p>
+          </div>
+
+          <div class="info-card">
+            <div class="card-title">
+              <span class="card-title-dot"></span>
+              2.5 Communications
+            </div>
+            <p style="margin-bottom:0;">
+              If you contact us via email or support, we store the content of that communication to respond and improve our service.
+            </p>
+          </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section id="how-we-use">
+          <h2>
+            <span>3. How We Use Your Information</span>
+            <span class="section-num">03</span>
+          </h2>
+          <p>We use your information for the following purposes only:</p>
+          <ul class="check-list">
+            <li>To provide the ZieAds service: analyzing your ad account data and generating AI-powered recommendations.</li>
+            <li>To display your campaign performance history within ZieAds.</li>
+            <li>To send you product updates, alerts (e.g., ROAS drop notifications), and account-related emails.</li>
+            <li>To improve our AI models using aggregated, anonymized, and de-identified performance benchmarks. We never use your identifiable campaign data to train models without explicit consent.</li>
+            <li>To comply with legal obligations.</li>
+            <li>To prevent fraud and abuse of our platform.</li>
+          </ul>
+          <div class="disclosure-box" style="margin-top:24px; font-weight:500; color:var(--text-secondary);">
+            We do <strong>NOT</strong> sell your data to third parties. We do <strong>NOT</strong> use your data for advertising purposes unrelated to delivering our service to you.
+          </div>
+        </section>
+
+        <!-- Section 4 -->
+        <section id="meta-data-usage">
+          <h2>
+            <span>4. Meta Platform Data — Specific Disclosures</span>
+            <span class="section-num">04</span>
+          </h2>
+          <div class="highlight-card">
+            <p class="font-semibold">
+              This section specifically addresses our use of data obtained via Meta&apos;s Marketing API, in compliance with Meta&apos;s Platform Terms and Developer Policies:
+            </p>
+            <ul class="highlight-list" style="margin-top:16px;">
+              <li data-index="4.1">We access Meta Ads data only after you explicitly authorize ZieAds via Facebook OAuth.</li>
+              <li data-index="4.2">We request only the permissions required: ads_read (to read campaign performance data) and ads_management (to apply optimizations you explicitly approve).</li>
+              <li data-index="4.3">Meta Ads data is used solely to provide the ZieAds optimization service to you — the authenticated user who granted access.</li>
+              <li data-index="4.4">We do not transfer Meta user data to third parties, including advertising networks, data brokers, or analytics companies.</li>
+              <li data-index="4.5">We do not use Meta data to target or retarget users on Meta or other platforms.</li>
+              <li data-index="4.6">We do not use Meta data for surveillance, profiling, or any purpose not disclosed in this policy.</li>
+              <li data-index="4.7">We do not store Meta access tokens beyond what is necessary for the OAuth session or long-lived token as permitted by Meta's policies.</li>
+              <li data-index="4.8">You can revoke ZieAds access to your Meta account at any time via Facebook Settings → Apps and Websites.</li>
+              <li data-index="4.9">We comply with Meta&apos;s Platform Terms: https://developers.facebook.com/terms</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section id="data-storage">
+          <h2>
+            <span>5. Data Storage and Security</span>
+            <span class="section-num">05</span>
+          </h2>
+          <p>
+            Your data is stored on secure cloud servers. We implement the following security measures:
+          </p>
+          <ul class="check-list" style="margin-bottom:16px;">
+            <li>Encryption at rest (AES-256)</li>
+            <li>Encryption in transit (TLS 1.2+)</li>
+            <li>Access controls limited to authorized personnel only</li>
+            <li>Regular security reviews</li>
+          </ul>
+          <p>
+            We retain your advertising account data for as long as your account is active. If you delete your account, we delete your data within 30 days, except where required by law.
+          </p>
+        </section>
+
+        <!-- Section 6 -->
+        <section id="data-sharing">
+          <h2>
+            <span>6. Data Sharing and Third Parties</span>
+            <span class="section-num">06</span>
+          </h2>
+          <p>We share data only in the following limited circumstances:</p>
+          <ul class="check-list">
+            <li><strong>Service providers:</strong> We use trusted third-party providers (e.g., cloud hosting, payment processing, error monitoring) who are contractually bound to protect your data and use it only to provide services to us.</li>
+            <li><strong>Legal requirements:</strong> We may disclose data if required by law, court order, or government authority.</li>
+            <li><strong>Business transfers:</strong> If ZieAds is acquired or merged, your data may be transferred. We will notify you in advance.</li>
+            <li><strong>With your consent:</strong> We will share data with other parties only if you explicitly authorize it.</li>
+          </ul>
+        </section>
+
+        <!-- Section 7 -->
+        <section id="your-rights">
+          <h2>
+            <span>7. Your Rights</span>
+            <span class="section-num">07</span>
+          </h2>
+          <div class="highlight-card">
+            <p class="font-semibold">
+              You have the following rights regarding your personal data:
+            </p>
+            <ul class="check-list" style="margin-top:16px; margin-bottom:16px;">
+              <li><strong>Access:</strong> Request a copy of all personal data we hold about you.</li>
+              <li><strong>Correction:</strong> Request correction of inaccurate data.</li>
+              <li><strong>Deletion:</strong> Request deletion of your account and all associated data.</li>
+              <li><strong>Portability:</strong> Request your data in a machine-readable format.</li>
+              <li><strong>Opt-out:</strong> Opt out of non-essential communications at any time.</li>
+              <li><strong>Revoke third-party access:</strong> Disconnect your Meta, Google, or TikTok accounts from ZieAds at any time from your account settings.</li>
+            </ul>
+            <p style="margin-bottom:0;">
+              To exercise any of these rights, email: <a href="mailto:privacy@zieads.com" style="color:var(--text); font-weight:600;">privacy@zieads.com</a>. We will respond within 30 days.
+            </p>
+          </div>
+        </section>
+
+        <!-- Section 8 -->
+        <section id="cookies">
+          <h2>
+            <span>8. Cookies and Tracking</span>
+            <span class="section-num">08</span>
+          </h2>
+          <p>
+            We use cookies and similar technologies for: authentication (keeping you logged in), session management, and product analytics (aggregate usage patterns). We do not use advertising cookies or cross-site tracking. You can disable cookies in your browser settings, but this may affect your ability to use ZieAds.
+          </p>
+        </section>
+
+        <!-- Section 9 -->
+        <section id="children">
+          <h2>
+            <span>9. Children's Privacy</span>
+            <span class="section-num">09</span>
+          </h2>
+          <p>
+            ZieAds is not directed at individuals under the age of 18. We do not knowingly collect personal data from children. If you believe we have collected data from a child, contact us immediately at <a href="mailto:privacy@zieads.com" style="color:var(--text); font-weight:500;">privacy@zieads.com</a>.
+          </p>
+        </section>
+
+        <!-- Section 10 -->
+        <section id="international">
+          <h2>
+            <span>10. International Data Transfers</span>
+            <span class="section-num">10</span>
+          </h2>
+          <p>
+            ZieAds operates globally. Your data may be processed in countries outside your own. We ensure that international transfers comply with applicable data protection laws and that appropriate safeguards are in place.
+          </p>
+        </section>
+
+        <!-- Section 11 -->
+        <section id="changes">
+          <h2>
+            <span>11. Changes to This Policy</span>
+            <span class="section-num">11</span>
+          </h2>
+          <p>
+            We may update this Privacy Policy. If we make material changes, we will notify you by email and display a prominent notice in the app at least 14 days before the changes take effect. Continued use of ZieAds after that date constitutes acceptance of the updated policy.
+          </p>
+        </section>
+
+        <!-- Section 12 -->
+        <section id="contact">
+          <h2>
+            <span>12. Contact Us</span>
+            <span class="section-num">12</span>
+          </h2>
+          <p>
+            For privacy-related questions, requests, or complaints:
+          </p>
+          <div class="legal-box">
+            <strong style="display:block; margin-bottom:6px;">PT. Bantu Indonesia Technology</strong>
+            Email: <a href="mailto:privacy@zieads.com" style="color:var(--text); font-weight:600;">privacy@zieads.com</a><br>
+            Website: <a href="https://zieads.com" style="color:var(--text); font-weight:600;">https://zieads.com</a><br>
+            Location: Jakarta, Indonesia
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-col footer-brand-col">
+          <a href="https://zieads.com" class="footer-brand">
+            <svg width="32" height="32" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="4" width="112" height="112" rx="28" fill="#09090B" />
+              <path d="M35 78 C35 78, 60 95, 85 78" stroke="white" stroke-width="7" stroke-linecap="round" fill="none" />
+            </svg>
+            <span>zieads</span>
+          </a>
+          <p class="footer-tagline">AI-powered paid ads strategy for marketers and agencies.</p>
+          <div class="footer-social-links">
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter/X</a>
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+            <a href="https://producthunt.com" target="_blank" rel="noopener noreferrer">Product Hunt</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-col-title">Product</h4>
+          <a href="https://zieads.com/#how-it-works">How It Works</a>
+          <a href="https://zieads.com/#sample-report">All 15 Skills</a>
+          <a href="https://zieads.com/#sample-report">Sample Report</a>
+          <a href="https://zieads.com/#pricing">Pricing</a>
+          <a href="https://zieads.com/clients">Agency Plan</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-col-title">Resources</h4>
+          <a href="https://zieads.com/#pricing">Paid Ads Readiness Guide</a>
+          <a href="https://zieads.com/#sample-report">Platform Comparison</a>
+          <a href="https://zieads.com/#faq">FAQ</a>
+          <a href="https://zieads.com/terms">Blog</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-col-title">Legal</h4>
+          <a href="https://zieads.com/privacy-policy">Privacy Policy</a>
+          <a href="https://zieads.com/terms">Terms of Service</a>
+        </div>
+      </div>
+      <div class="footer-bottom-bar">
+        <p class="footer-copy">© 2026 ZieAds. All rights reserved.</p>
+        <p class="footer-trust-note">ZieAds does not access, store, or transmit your ad account credentials. Audits are based on publicly visible page data only.</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    // Scroll tracking to update sidebar active classes
+    window.addEventListener('scroll', () => {
+      const scrollPosition = window.scrollY + 140;
+      const sections = document.querySelectorAll('.content-area section');
+      const sidebarLinks = document.querySelectorAll('.sidebar-link');
+      
+      let activeSectionId = '';
+      
+      sections.forEach(section => {
+        const top = section.offsetTop;
+        const height = section.offsetHeight;
+        if (scrollPosition >= top && scrollPosition < top + height) {
+          activeSectionId = section.getAttribute('id');
+        }
+      });
+      
+      if (activeSectionId) {
+        sidebarLinks.forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('onclick').includes(activeSectionId)) {
+            link.classList.add('active');
+          }
+        });
+      }
+    });
+
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        const top = el.offsetTop - 110;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    }
+  </script>
+</body>
+</html>
