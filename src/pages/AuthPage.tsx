@@ -28,7 +28,14 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isSignUp = location.pathname.includes('/sign-up');
-  const from = (location.state as any)?.from || '/clients';
+  const queryParams = new URLSearchParams(location.search);
+  const targetPlan = queryParams.get('plan');
+  const targetYearly = queryParams.get('yearly');
+  let redirectFrom = (location.state as any)?.from;
+  if (!redirectFrom && targetPlan) {
+    redirectFrom = `/pricing?plan=${targetPlan}&yearly=${targetYearly || 'false'}`;
+  }
+  const from = redirectFrom || '/clients';
 
   const [email, setEmail]       = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');

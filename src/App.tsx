@@ -11,6 +11,10 @@ import PricingPage from './pages/PricingPage';
 import SkillReport from './pages/SkillReport';
 import AgentChat from './pages/AgentChat';
 import BusinessProfile from './pages/BusinessProfile';
+import ConnectionsPage from './pages/v3/ConnectionsPage';
+import AnalystPage from './pages/v3/AnalystPage';
+import StudioPage from './pages/v3/StudioPage';
+import HuntPage from './pages/v3/HuntPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
 import SuperadminLogin from './pages/superadmin/SuperadminLogin';
@@ -89,6 +93,10 @@ export default function App() {
         <Route path="/skill-report/:skillName" element={<ProtectedRoute><SkillReport /></ProtectedRoute>} />
         <Route path="/agent" element={<ProtectedRoute><AgentChat /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><BusinessProfile /></ProtectedRoute>} />
+        <Route path="/connections" element={<ProtectedRoute><ConnectionsPage /></ProtectedRoute>} />
+        <Route path="/analyst" element={<ProtectedRoute><AnalystPage /></ProtectedRoute>} />
+        <Route path="/studio" element={<ProtectedRoute><StudioPage /></ProtectedRoute>} />
+        <Route path="/hunt" element={<ProtectedRoute><HuntPage /></ProtectedRoute>} />
         <Route path="/tools" element={<Navigate to="/clients" replace />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms" element={<TermsPage />} />

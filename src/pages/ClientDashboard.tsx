@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid, Sparkles, Calendar, Target, Link2 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import NounIcon from '../components/NounIcon';
 import { useCreditStore } from '../lib/creditStore';
@@ -53,7 +53,15 @@ interface Props {
 
 export default function ClientDashboard({ reportData }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
   const creditStore = useCreditStore();
+
+  useEffect(() => {
+    if (location.state && (location.state as any).defaultTab) {
+      setSidebarNav((location.state as any).defaultTab);
+    }
+  }, [location.state]);
+
   const [selectedSkill, setSelectedSkill] = useState('audit');
   const [urlInput, setUrlInput] = useState('');
   const [checkedFindings, setCheckedFindings] = useState<Set<number>>(new Set());
@@ -260,10 +268,28 @@ export default function ClientDashboard({ reportData }: Props) {
             )}
           </div>
 
+          {/* Daily Operations */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>Daily Operations</div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[
+                { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#8B5CF6' }} /> },
+                { k: '/studio', l: 'Content Studio', icon: <Calendar size={15} style={{ color: '#ec4899' }} /> },
+                { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} style={{ color: '#ef4444' }} /> },
+                { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#10b981' }} /> },
+              ].map(n => (
+                <li key={n.k} onClick={() => navigate(n.k)} style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {n.icon}
+                  {n.l}
+                </li>
+              ))}
+            </ul>
+          </div>
+
           {/* Nav */}
           {['home', 'skills'].map(section => (
             <div key={section} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>{section === 'home' ? 'MAIN' : 'SKILLS'}</div>
+              <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>{section === 'home' ? 'TOOLS & REPORTS' : 'SKILLS'}</div>
               {section === 'home' ? (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {[{k:'home',l:'Home'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'profile-page',l:'Business Profile'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (

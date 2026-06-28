@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { supabaseAdmin, getUserIdFromRequest } from '../supabaseServer.js';
 import {
   PLANS,
@@ -304,6 +305,330 @@ creditsRouter.post('/refund', async (req, res) => {
 
     return res.json({ success: true, new_balance: after });
   } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Dodo Payments Checkout ───────────────────────────────────────────────────
+
+creditsRouter.post('/checkout', async (req, res) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { planId, billingCycle } = req.body;
+  if (!planId || !billingCycle) {
+    return res.status(400).json({ error: 'planId and billingCycle are required' });
+  }
+
+  if (planId !== 'starter' && planId !== 'pro' && planId !== 'agency') {
+    return res.status(400).json({ error: 'Invalid planId for checkout' });
+  }
+  if (billingCycle !== 'monthly' && billingCycle !== 'yearly') {
+    return res.status(400).json({ error: 'Invalid billingCycle' });
+  }
+
+  const productKey = `DODO_PRODUCT_${planId.toUpperCase()}_${billingCycle.toUpperCase()}`;
+  const productId = process.env[productKey];
+
+  if (!productId) {
+    return res.status(400).json({ error: `Product ID for ${planId} (${billingCycle}) is not configured on the server.` });
+  }
+
+  try {
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (userError || !userData?.user) {
+      return res.status(404).json({ error: 'User auth record not found' });
+    }
+
+    const email = userData.user.email;
+    const name = userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || '';
+
+    const isLive = process.env.DODO_PAYMENTS_SECRET_KEY?.startsWith('sk_live_') || process.env.DODO_PAYMENTS_ENVIRONMENT === 'live';
+    const baseUrl = isLive ? 'https://live.dodopayments.com' : 'https://test.dodopayments.com';
+
+    const origin = req.headers.origin || process.env.APP_URL || 'http://localhost:5173';
+    const returnUrl = `${origin}/clients`;
+
+    const response = await fetch(`${baseUrl}/api/v1/checkout-sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.DODO_PAYMENTS_SECRET_KEY}`,
+      },
+      body: JSON.stringify({
+        product_cart: [
+          {
+            product_id: productId,
+            quantity: 1,
+          },
+        ],
+        customer: {
+          email,
+          name,
+        },
+        return_url: returnUrl,
+        metadata: {
+          user_id: userId,
+          plan_id: planId,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: `Dodo Payments error: ${errorText}` });
+    }
+
+    const session = await response.json();
+    return res.json({ checkout_url: session.checkout_url });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Dodo Payments Webhook ────────────────────────────────────────────────────
+
+function verifyDodoSignature(
+  rawBody: string,
+  headers: Record<string, any>,
+  secret: string
+): boolean {
+  const webhookId = headers['webhook-id'];
+  const webhookTimestamp = headers['webhook-timestamp'];
+  const webhookSignature = headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    return false;
+  }
+
+  // Check timestamp age (within 5 minutes)
+  const now = Math.floor(Date.now() / 1000);
+  const timestamp = parseInt(webhookTimestamp, 10);
+  if (isNaN(timestamp) || Math.abs(now - timestamp) > 300) {
+    return false;
+  }
+
+  const signedContent = `${webhookId}.${webhookTimestamp}.${rawBody}`;
+  const signatures = webhookSignature.split(' ');
+  const secretPart = secret.startsWith('whsec_') ? secret.substring(6) : secret;
+  const secretBytes = Buffer.from(secretPart, 'base64');
+
+  for (const sig of signatures) {
+    const parts = sig.split(',');
+    if (parts.length !== 2 || parts[0] !== 'v1') continue;
+    const signatureHash = parts[1];
+
+    const expectedSignature = crypto
+      .createHmac('sha256', secretBytes)
+      .update(signedContent)
+      .digest('base64');
+
+    try {
+      const sigBytes = Buffer.from(signatureHash, 'base64');
+      const expBytes = Buffer.from(expectedSignature, 'base64');
+      if (sigBytes.length === expBytes.length && crypto.timingSafeEqual(sigBytes, expBytes)) {
+        return true;
+      }
+    } catch {
+      // Ignore conversion/comparison errors for invalid formats
+    }
+  }
+
+  return false;
+}
+
+creditsRouter.post('/webhook/dodo', async (req, res) => {
+  const secret = process.env.DODO_PAYMENTS_WEBHOOK_SECRET;
+  
+  if (secret) {
+    const rawBody = (req as any).rawBody;
+    if (!rawBody) {
+      console.error('[Webhook] Raw body is missing. Verify middleware configuration in app.ts.');
+      return res.status(400).json({ error: 'Missing raw body' });
+    }
+    const verified = verifyDodoSignature(rawBody, req.headers, secret);
+    if (!verified) {
+      console.warn('[Webhook] Invalid signature received from Dodo Payments.');
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+  } else {
+    console.warn('[Webhook] DODO_PAYMENTS_WEBHOOK_SECRET is not set. Skipping signature verification.');
+  }
+
+  const event = req.body;
+  const eventType = event.type;
+  const eventData = event.data;
+
+  if (!eventType || !eventData) {
+    return res.status(400).json({ error: 'Invalid event payload' });
+  }
+
+  try {
+    if (
+      eventType === 'subscription.active' ||
+      eventType === 'subscription.renewed' ||
+      eventType === 'subscription.plan_changed'
+    ) {
+      const userId = eventData.metadata?.user_id;
+      const planId = eventData.metadata?.plan_id;
+
+      if (!userId || !planId) {
+        console.warn(`[Webhook] Missing user_id (${userId}) or plan_id (${planId}) in metadata.`);
+        return res.status(200).json({ received: true, warning: 'Missing metadata' });
+      }
+
+      const plan = PLANS[planId as PlanId];
+      if (!plan) {
+        console.error(`[Webhook] Unknown planId: ${planId}`);
+        return res.status(400).json({ error: `Unknown planId: ${planId}` });
+      }
+
+      // Fetch credits before change
+      const { data: beforeCreds } = await supabaseAdmin
+        .from('user_credits')
+        .select('ai_chat_daily_remaining, skill_run_monthly_remaining')
+        .eq('user_id', userId)
+        .single();
+
+      const aiBefore = beforeCreds?.ai_chat_daily_remaining ?? 0;
+      const skillBefore = beforeCreds?.skill_run_monthly_remaining ?? 0;
+
+      // Update user plan details
+      const { error: planErr } = await supabaseAdmin
+        .from('user_plan')
+        .update({
+          plan_id: planId,
+          stripe_subscription_id: eventData.subscription_id,
+          billing_anchor_day: eventData.next_billing_date
+            ? new Date(eventData.next_billing_date).getUTCDate()
+            : new Date().getUTCDate(),
+          plan_started_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (planErr) throw planErr;
+
+      // Update user credits
+      const { error: creditErr } = await supabaseAdmin
+        .from('user_credits')
+        .update({
+          ai_chat_daily_remaining: plan.aiChatDailyLimit,
+          skill_run_monthly_remaining: plan.skillRunMonthlyLimit,
+        })
+        .eq('user_id', userId);
+
+      if (creditErr) throw creditErr;
+
+      // Insert transaction logs for financial/usage tracking
+      await Promise.all([
+        supabaseAdmin.from('credit_transactions').insert({
+          user_id: userId,
+          transaction_type: 'upgrade_adjustment',
+          credit_pool: 'ai_chat_daily',
+          operation_id: 'plan_upgrade',
+          credits_delta: plan.aiChatDailyLimit - aiBefore,
+          credits_before: aiBefore,
+          credits_after: plan.aiChatDailyLimit,
+          plan_id_at_time: planId,
+          metadata: { subscription_id: eventData.subscription_id, event_type: eventType },
+        }),
+        supabaseAdmin.from('credit_transactions').insert({
+          user_id: userId,
+          transaction_type: 'upgrade_adjustment',
+          credit_pool: 'skill_run_monthly',
+          operation_id: 'plan_upgrade',
+          credits_delta: plan.skillRunMonthlyLimit === -1 ? 0 : plan.skillRunMonthlyLimit - skillBefore,
+          credits_before: skillBefore,
+          credits_after: plan.skillRunMonthlyLimit,
+          plan_id_at_time: planId,
+          metadata: { subscription_id: eventData.subscription_id, event_type: eventType },
+        }),
+      ]);
+
+      console.log(`[Webhook] Successfully activated/updated subscription ${eventData.subscription_id} for user ${userId} to plan ${planId}.`);
+    } else if (eventType === 'subscription.cancelled' || eventType === 'subscription.expired') {
+      let userId = eventData.metadata?.user_id;
+      if (!userId && eventData.subscription_id) {
+        const { data: planData } = await supabaseAdmin
+          .from('user_plan')
+          .select('user_id')
+          .eq('stripe_subscription_id', eventData.subscription_id)
+          .single();
+        userId = planData?.user_id;
+      }
+
+      if (!userId) {
+        console.warn(`[Webhook] Could not determine user_id for subscription cancellation ${eventData.subscription_id}.`);
+        return res.status(200).json({ received: true, warning: 'User not found' });
+      }
+
+      const freePlan = PLANS['free'];
+
+      // Fetch credits before change
+      const { data: beforeCreds } = await supabaseAdmin
+        .from('user_credits')
+        .select('ai_chat_daily_remaining, skill_run_monthly_remaining')
+        .eq('user_id', userId)
+        .single();
+
+      const aiBefore = beforeCreds?.ai_chat_daily_remaining ?? 0;
+      const skillBefore = beforeCreds?.skill_run_monthly_remaining ?? 0;
+
+      // Reset plan back to free
+      const { error: planErr } = await supabaseAdmin
+        .from('user_plan')
+        .update({
+          plan_id: 'free',
+          stripe_subscription_id: null,
+          billing_anchor_day: 0,
+        })
+        .eq('user_id', userId);
+
+      if (planErr) throw planErr;
+
+      // Reset credits back to free
+      const { error: creditErr } = await supabaseAdmin
+        .from('user_credits')
+        .update({
+          ai_chat_daily_remaining: freePlan.aiChatDailyLimit,
+          skill_run_monthly_remaining: freePlan.skillRunMonthlyLimit,
+        })
+        .eq('user_id', userId);
+
+      if (creditErr) throw creditErr;
+
+      // Insert transaction logs
+      await Promise.all([
+        supabaseAdmin.from('credit_transactions').insert({
+          user_id: userId,
+          transaction_type: 'upgrade_adjustment',
+          credit_pool: 'ai_chat_daily',
+          operation_id: 'plan_downgrade',
+          credits_delta: freePlan.aiChatDailyLimit - aiBefore,
+          credits_before: aiBefore,
+          credits_after: freePlan.aiChatDailyLimit,
+          plan_id_at_time: 'free',
+          metadata: { subscription_id: eventData.subscription_id, event_type: eventType },
+        }),
+        supabaseAdmin.from('credit_transactions').insert({
+          user_id: userId,
+          transaction_type: 'upgrade_adjustment',
+          credit_pool: 'skill_run_monthly',
+          operation_id: 'plan_downgrade',
+          credits_delta: freePlan.skillRunMonthlyLimit - skillBefore,
+          credits_before: skillBefore,
+          credits_after: freePlan.skillRunMonthlyLimit,
+          plan_id_at_time: 'free',
+          metadata: { subscription_id: eventData.subscription_id, event_type: eventType },
+        }),
+      ]);
+
+      console.log(`[Webhook] Successfully cancelled subscription ${eventData.subscription_id} for user ${userId}. Downgraded to free.`);
+    }
+
+    return res.json({ received: true });
+  } catch (err: any) {
+    console.error('[Webhook] Failed to process webhook event:', err.message);
     return res.status(500).json({ error: err.message });
   }
 });

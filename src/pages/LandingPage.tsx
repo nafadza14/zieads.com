@@ -972,6 +972,7 @@ export default function LandingPage({ onScanComplete }: Props) {
         <div className="pricing-grid">
           {[
             {
+              id: 'free',
               tier: 'Free',
               tagline: 'Find out what is actually wrong.',
               price: '$0',
@@ -986,6 +987,7 @@ export default function LandingPage({ onScanComplete }: Props) {
               highlight: false,
             },
             {
+              id: 'starter',
               tier: 'Starter',
               tagline: 'For one brand running its own ads.',
               price: '$29',
@@ -1002,6 +1004,7 @@ export default function LandingPage({ onScanComplete }: Props) {
               highlight: false,
             },
             {
+              id: 'pro',
               tier: 'Pro',
               tagline: 'For freelancers and practitioners working on client accounts.',
               price: '$79',
@@ -1018,6 +1021,7 @@ export default function LandingPage({ onScanComplete }: Props) {
               highlight: true,
             },
             {
+              id: 'agency',
               tier: 'Agency',
               tagline: 'For agencies managing paid media across multiple client accounts.',
               price: '$199',
@@ -1050,9 +1054,16 @@ export default function LandingPage({ onScanComplete }: Props) {
                   </li>
                 ))}
               </ul>
-              <button className="plan-cta" style={{ cursor: 'pointer' }}>{plan.cta}</button>
+              <button 
+                className="plan-cta" 
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(plan.id === 'free' ? '/sign-up' : `/pricing?plan=${plan.id}`)}
+              >
+                {plan.cta}
+              </button>
             </div>
           ))}
+
         </div>
 
         {/* ROI Framing */}

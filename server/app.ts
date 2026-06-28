@@ -24,11 +24,18 @@ import { adsLibraryRouter } from "./routes/api-ads-library.js";
 import { agentRouter } from "./routes/api-agent.js";
 import { creditsRouter } from "./routes/api-credits.js";
 import { superadminRouter } from "./routes/api-superadmin.js";
+import { apiV3Router } from "./routes/api-v3.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
 
 const app = express();
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf.toString('utf-8');
+    },
+  })
+);
 
 // ─── Enrich BusinessContext from saved profile ─────────────
 async function enrichContextFromProfile(
@@ -70,6 +77,9 @@ app.use("/api/agent", agentRouter);
 
 // ─── Superadmin Dashboard API ──────────────────────────
 app.use("/api/superadmin/v1", superadminRouter);
+
+// ─── ZieAds v0.3 Analyst Layer API ─────────────────────
+app.use("/api/v3", apiV3Router);
 
 // ─── Health Check ──────────────────────────────────────
 app.get("/api/health", (_req, res) => {

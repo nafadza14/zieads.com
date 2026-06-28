@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { MessageSquare, Zap } from 'lucide-react';
+import { useCreditStore } from '../lib/creditStore';
+import { supabase } from '../lib/supabaseClient';
 
 // ─── Plan Data ────────────────────────────────────────────────────────────────
 
@@ -155,9 +157,89 @@ function XIcon() {
 
 export default function PricingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { plan_id: currentPlanId } = useCreditStore();
+  const [session, setSession] = useState<any>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [yearly, setYearly] = useState(false);
   const [showTable, setShowTable] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setSessionLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleCheckout = async (planId: string, isYearly: boolean) => {
+    if (!session) {
+      navigate(`/sign-up?plan=${planId}&yearly=${isYearly}`);
+      return;
+    }
+
+    setCheckoutLoadingPlan(planId);
+    setErrorMessage(null);
+
+    try {
+      const token = session.access_token;
+      const API_BASE = import.meta.env.VITE_API_URL || '';
+      
+      const res = await fetch(`${API_BASE}/api/v1/credits/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          planId,
+          billingCycle: isYearly ? 'yearly' : 'monthly',
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Failed to create checkout session');
+      }
+
+      const { checkout_url } = await res.json();
+      if (checkout_url) {
+        window.location.href = checkout_url;
+      } else {
+        throw new Error('No checkout URL returned from server.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'An error occurred. Please try again.');
+      setCheckoutLoadingPlan(null);
+    }
+  };
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    
+    const queryParams = new URLSearchParams(location.search);
+    const targetPlan = queryParams.get('plan');
+    const targetYearly = queryParams.get('yearly') === 'true';
+
+    if (session && targetPlan && (targetPlan === 'starter' || targetPlan === 'pro' || targetPlan === 'agency')) {
+      if (currentPlanId === targetPlan) {
+        navigate('/pricing', { replace: true });
+        return;
+      }
+      setYearly(targetYearly);
+      handleCheckout(targetPlan, targetYearly);
+    }
+  }, [session, sessionLoading, currentPlanId]);
 
   return (
     <div className="landing-page" style={{ minHeight: '100vh', background: 'var(--lp-bg-canvas)', color: 'var(--lp-text-primary)', fontFamily: 'var(--font-primary, sans-serif)', position: 'relative', overflow: 'hidden' }}>
@@ -297,6 +379,22 @@ export default function PricingPage() {
             </span>
           </button>
         </div>
+        {errorMessage && (
+          <div style={{
+            maxWidth: 600,
+            margin: '24px auto 0',
+            padding: '12px 20px',
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: 12,
+            color: '#ef4444',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            textAlign: 'center'
+          }}>
+            {errorMessage}
+          </div>
+        )}
       </section>
 
       {/* ── Plan Cards ─────────────────────────────── */}
@@ -383,23 +481,59 @@ export default function PricingPage() {
                 </div>
 
                 {/* CTA Button */}
-                <button
-                  id={`plan-cta-${plan.id}`}
-                  onClick={() => navigate(plan.ctaRoute)}
-                  className={plan.recommended ? "btn-lp-primary-gradient" : "plan-cta"}
-                  style={{
-                    width: '100%',
-                    padding: '12px 0',
-                    borderRadius: 'var(--lp-radius-button)',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    marginBottom: 24,
-                    border: plan.recommended ? 'none' : '1px solid var(--lp-border-default)',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {plan.ctaText} →
-                </button>
+                {(() => {
+                  const isCurrentPlan = session && currentPlanId === plan.id;
+                  const isLowerTier = session && (
+                    (currentPlanId === 'starter' && plan.id === 'free') ||
+                    (currentPlanId === 'pro' && (plan.id === 'free' || plan.id === 'starter')) ||
+                    (currentPlanId === 'agency' && plan.id !== 'agency')
+                  );
+                  
+                  let btnText = plan.ctaText;
+                  let isBtnDisabled = false;
+                  
+                  if (isCurrentPlan) {
+                    btnText = 'Current Plan';
+                    isBtnDisabled = true;
+                  } else if (isLowerTier) {
+                    btnText = 'Contact Support to Downgrade';
+                    isBtnDisabled = true;
+                  } else if (checkoutLoadingPlan === plan.id) {
+                    btnText = 'Loading...';
+                    isBtnDisabled = true;
+                  } else if (session && plan.id !== 'free') {
+                    btnText = `Upgrade to ${plan.name}`;
+                  }
+
+                  return (
+                    <button
+                      id={`plan-cta-${plan.id}`}
+                      onClick={() => {
+                        if (isBtnDisabled) return;
+                        if (plan.id === 'free') {
+                          navigate('/sign-up');
+                        } else {
+                          handleCheckout(plan.id, yearly);
+                        }
+                      }}
+                      disabled={isBtnDisabled}
+                      className={plan.recommended ? "btn-lp-primary-gradient" : "plan-cta"}
+                      style={{
+                        width: '100%',
+                        padding: '12px 0',
+                        borderRadius: 'var(--lp-radius-button)',
+                        fontWeight: 700,
+                        cursor: isBtnDisabled ? 'not-allowed' : 'pointer',
+                        marginBottom: 24,
+                        border: plan.recommended ? 'none' : '1px solid var(--lp-border-default)',
+                        transition: 'all 0.2s',
+                        opacity: isBtnDisabled ? 0.6 : 1,
+                      }}
+                    >
+                      {btnText} {(!isBtnDisabled && plan.id !== 'free') && '→'}
+                    </button>
+                  );
+                })()}
 
                 {/* Divider */}
                 <div style={{ height: 1, background: 'var(--lp-border-subtle)', marginBottom: 20 }} />

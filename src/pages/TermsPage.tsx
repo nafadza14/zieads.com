@@ -132,23 +132,23 @@ export default function TermsPage() {
       </nav>
 
       {/* Main Page Layout (Spacing for Floating Navbar) */}
-      <div className="pt-[100px]">
+      <div className="pt-[140px] md:pt-[160px] pb-12">
         
         {/* Hero Section */}
-        <section className="bg-[var(--lp-bg-inset)] border-b border-[var(--lp-border-subtle)] py-16 px-6 relative">
+        <section className="bg-[var(--lp-bg-inset)] border-b border-[var(--lp-border-subtle)] py-12 md:py-16 px-6 relative">
           <div className="max-w-6xl mx-auto">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-[var(--lp-border-default)] text-[var(--lp-text-secondary)] text-[11px] font-mono font-semibold rounded-full uppercase tracking-wider mb-4 shadow-sm">
-                <Scale size={12} className="text-[var(--lp-accent)]" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--lp-bg-canvas-alt)] border border-[var(--lp-border-default)] text-[var(--lp-text-secondary)] text-[11px] font-mono font-semibold rounded-full uppercase tracking-wider mb-4">
+                <Scale size={12} className="text-[var(--lp-text-primary)]" />
                 Terms & Agreements
               </div>
-              <h1 className="text-4xl sm:text-[48px] font-extrabold text-[var(--lp-text-primary)] tracking-tight leading-tight mb-4">
+              <h1 className="text-3xl sm:text-4xl md:text-[42px] font-extrabold text-[var(--lp-text-primary)] tracking-tight leading-tight mb-4">
                 Terms of Service
               </h1>
-              <p className="text-[var(--lp-text-muted)] text-sm font-mono uppercase tracking-widest mb-6">
+              <p className="text-[var(--lp-text-muted)] text-xs sm:text-sm font-mono uppercase tracking-widest mb-6">
                 Last updated: June 23, 2026 &bull; PT. Bantu Indonesia Technology
               </p>
-              <p className="text-[var(--lp-text-secondary)] text-base sm:text-lg leading-relaxed">
+              <p className="text-[var(--lp-text-secondary)] text-base leading-relaxed">
                 Please read these Terms of Service carefully before using our software platform. These terms govern your rights and responsibilities when using ZieAds.
               </p>
             </div>
@@ -156,7 +156,7 @@ export default function TermsPage() {
         </section>
 
         {/* Content Container (GoMarble-style Two Column Grid) */}
-        <section className="max-w-6xl mx-auto px-6 py-16 relative">
+        <section className="max-w-6xl mx-auto px-6 py-12 md:py-16 relative">
           <div className="flex flex-col lg:flex-row gap-12 items-start relative">
             
             {/* Sticky Navigation Sidebar */}
@@ -164,16 +164,17 @@ export default function TermsPage() {
               <div className="text-[11px] font-bold text-[var(--lp-text-muted)] uppercase tracking-widest mb-4 font-mono">
                 Document Sections
               </div>
-              <ul className="space-y-1.5">
+              <ul className="space-y-1">
                 {sections.map((sec) => (
                   <li key={sec.id}>
                     <button
                       onClick={() => scrollToSection(sec.id)}
-                      className={`w-full text-left py-2 px-3 text-[13.5px] rounded-xl transition-all duration-200 font-medium ${
+                      className={`w-full text-left py-2 px-3 text-[13.5px] transition-all duration-250 font-medium border-l-2 ${
                         activeSection === sec.id
-                          ? 'bg-[var(--lp-text-primary)] text-white font-semibold shadow-sm'
-                          : 'text-[var(--lp-text-secondary)] hover:text-[var(--lp-text-primary)] hover:bg-[var(--lp-bg-canvas-alt)]'
+                          ? 'border-[var(--lp-text-primary)] text-[var(--lp-text-primary)] font-semibold pl-4'
+                          : 'border-transparent text-[var(--lp-text-secondary)] hover:text-[var(--lp-text-primary)] pl-4'
                       }`}
+                      style={{ borderRadius: '0px' }}
                     >
                       {sec.title}
                     </button>
@@ -242,7 +243,7 @@ export default function TermsPage() {
                   <span>4. Third-Party Platform Connections (Meta, Google, TikTok)</span>
                   <span className="text-xs text-[var(--lp-text-muted)] font-mono">04</span>
                 </h2>
-                <div className="bg-[var(--lp-bg-inset)] border border-[var(--lp-border-subtle)] border-l-4 border-l-[var(--lp-text-primary)] p-6 rounded-r-2xl text-[15px] text-[var(--lp-text-secondary)] space-y-4 shadow-[var(--lp-shadow-subtle)]">
+                <div className="bg-[var(--lp-bg-canvas-alt)] border border-[var(--lp-border-subtle)] border-l-4 border-l-[var(--lp-text-primary)] p-6 rounded-r-xl text-[15px] text-[var(--lp-text-secondary)] space-y-4">
                   <p className="font-semibold text-[var(--lp-text-primary)]">
                     When you connect your advertising accounts to ZieAds:
                   </p>
@@ -284,7 +285,7 @@ export default function TermsPage() {
                   <span>6. AI Recommendations and Execution</span>
                   <span className="text-xs text-[var(--lp-text-muted)] font-mono">06</span>
                 </h2>
-                <div className="bg-[var(--lp-bg-inset)] border border-[var(--lp-border-subtle)] border-l-4 border-l-[var(--lp-text-primary)] p-6 rounded-r-2xl text-[15px] text-[var(--lp-text-secondary)] space-y-4 shadow-[var(--lp-shadow-subtle)]">
+                <div className="bg-[var(--lp-bg-canvas-alt)] border border-[var(--lp-border-subtle)] border-l-4 border-l-[var(--lp-text-primary)] p-6 rounded-r-xl text-[15px] text-[var(--lp-text-secondary)] space-y-4">
                   <p className="font-semibold text-[var(--lp-text-primary)] flex items-center gap-2">
                     <AlertTriangle size={18} className="text-[var(--lp-text-primary)] shrink-0" />
                     ZieAds uses artificial intelligence to generate recommendations. You understand and agree that:
@@ -399,16 +400,16 @@ export default function TermsPage() {
               {/* Section 14 */}
               <section id="contact" className="scroll-mt-28">
                 <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between">
-                  <span>14. Contact</span>
+                  <span>14. Contact Us</span>
                   <span className="text-xs text-[var(--lp-text-muted)] font-mono">14</span>
                 </h2>
                 <div className="text-[15px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
                   <p>
                     For questions about these Terms of Service:
                   </p>
-                  <div className="bg-white border border-[var(--lp-border-subtle)] rounded-[var(--lp-radius-card)] p-6 text-[14px] text-[var(--lp-text-secondary)] space-y-2 max-w-md shadow-[var(--lp-shadow-subtle)]">
+                  <div className="border-l-2 border-[var(--lp-border-strong)] pl-4 text-[14px] text-[var(--lp-text-secondary)] space-y-1.5 mt-4 max-w-md">
                     <p className="font-semibold text-[var(--lp-text-primary)]">PT. Bantu Indonesia Technology</p>
-                    <p>✉️ Email: <a href="mailto:legal@zieads.com" className="text-[var(--lp-text-primary)] underline font-medium hover:text-[var(--lp-accent)]">legal@zieads.com</a></p>
+                    <p>✉️ Email: <a href="mailto:legal@zieads.com" className="text-[var(--lp-text-primary)] underline hover:text-[var(--lp-accent)]">legal@zieads.com</a></p>
                     <p>🌐 Website: <a href="https://zieads.com" target="_blank" rel="noopener noreferrer" className="text-[var(--lp-text-primary)] underline font-medium hover:text-[var(--lp-accent)]">https://zieads.com</a></p>
                     <p>📍 Location: Jakarta, Indonesia</p>
                   </div>
