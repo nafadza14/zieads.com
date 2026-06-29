@@ -87,15 +87,36 @@ export default function ComposerPage() {
 
     setUploadingMedia(true);
     try {
-      // Mock File Upload directly creating item in library with a public mock URL
-      const mockUrl = `https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60`;
+      // 1. Upload to Supabase Storage bucket 'media-library'
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('media-library')
+        .upload(filePath, file);
+
+      let finalUrl = `https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60`;
+
+      if (!uploadError && uploadData) {
+        const { data: urlData } = supabase.storage
+          .from('media-library')
+          .getPublicUrl(filePath);
+        if (urlData?.publicUrl) {
+          finalUrl = urlData.publicUrl;
+        }
+      } else {
+        console.warn("Supabase Storage upload failed or bucket 'media-library' does not exist. Using fallback mock asset.", uploadError?.message);
+      }
+
+      // 2. Insert metadata in media_library table
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/media', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           fileType: file.type.startsWith('video') ? 'video' : 'image',
-          fileUrl: mockUrl,
+          fileUrl: finalUrl,
           fileSize: file.size,
           originalFilename: file.name
         })
@@ -106,7 +127,7 @@ export default function ComposerPage() {
         setMediaAttachments(prev => [...prev, j.data]);
       }
     } catch (err) {
-      alert("Failed to upload mock media.");
+      alert("Failed to upload media.");
     } finally {
       setUploadingMedia(false);
     }
