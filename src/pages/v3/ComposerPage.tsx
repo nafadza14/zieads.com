@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
+import { useDemoMode } from '../../lib/demoStore';
+import { sampleConnections } from '../../data/sample-data';
 import { 
   Send, 
   Calendar as CalendarIcon, 
@@ -17,9 +19,11 @@ import {
 const P = 'var(--primary)';
 const G = 'var(--text-muted)';
 const B = 'var(--border)';
+const D = 'var(--text)';
 
 export default function ComposerPage() {
   const navigate = useNavigate();
+  const demo = useDemoMode();
   const [connections, setConnections] = useState<any[]>([]);
   const [mediaLibrary, setMediaLibrary] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +46,17 @@ export default function ComposerPage() {
   const [submitting, setSubmitting] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  const characterLimits: Record<string, number> = {
+    universal: 2200,
+    instagram: 2200,
+    tiktok: 2200,
+    linkedin: 3000,
+    x: 280,
+    facebook: 63206,
+    youtube: 5000
+  };
 
   const getAuthHeaders = async () => {
     const { data } = await supabase.auth.getSession();
@@ -52,6 +67,12 @@ export default function ComposerPage() {
   };
 
   const loadData = async () => {
+    if (demo.isActive) {
+      setConnections(sampleConnections);
+      setLoading(false);
+      return;
+    }
+
     try {
       const headers = await getAuthHeaders();
       const [connRes, mediaRes] = await Promise.all([
@@ -73,6 +94,12 @@ export default function ComposerPage() {
 
   useEffect(() => {
     loadData();
+  }, [demo.isActive]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleAccountToggle = (id: string) => {
@@ -87,7 +114,6 @@ export default function ComposerPage() {
 
     setUploadingMedia(true);
     try {
-      // 1. Upload to Supabase Storage bucket 'media-library'
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${fileName}`;
@@ -109,7 +135,6 @@ export default function ComposerPage() {
         console.warn("Supabase Storage upload failed or bucket 'media-library' does not exist. Using fallback mock asset.", uploadError?.message);
       }
 
-      // 2. Insert metadata in media_library table
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/media', {
         method: 'POST',
@@ -141,8 +166,51 @@ export default function ComposerPage() {
     }
   };
 
+  const getActiveLimit = () => {
+    if (activeTab === 'universal') {
+      if (selectedAccounts.length === 0) return 2200;
+      const limits = selectedAccounts.map(id => {
+        const conn = connections.find(c => c.id === id);
+        return characterLimits[conn?.platform || 'instagram'] || 2200;
+      });
+      return Math.min(...limits);
+    }
+    const activeConn = connections.find(c => c.id === activeTab);
+    return characterLimits[activeConn?.platform || 'instagram'] || 2200;
+  };
+
+  const getActiveText = () => {
+    if (activeTab === 'universal') return contentText;
+    return customOverrides[activeTab] !== undefined ? customOverrides[activeTab] : contentText;
+  };
+
+  const currentLength = getActiveText().length;
+  const currentLimit = getActiveLimit();
+  const percentage = (currentLength / currentLimit) * 100;
+  let counterColor = G;
+  if (percentage >= 100) {
+    counterColor = '#EF4444';
+  } else if (percentage >= 80) {
+    counterColor = '#F59E0B';
+  }
+
+  const handleTextChange = (val: string) => {
+    if (activeTab === 'universal') {
+      setContentText(val);
+    } else {
+      setCustomOverrides(prev => ({ ...prev, [activeTab]: val }));
+    }
+  };
+
+  const isInheriting = activeTab !== 'universal' && customOverrides[activeTab] === undefined;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (demo.isActive) {
+      setComposerError("Demo Mode — Cannot Publish");
+      return;
+    }
+
     if (selectedAccounts.length === 0) {
       setComposerError("Please select at least one social media account to post to.");
       return;
@@ -170,7 +238,7 @@ export default function ComposerPage() {
 
       if (scheduleType === 'now') {
         scheduledTime = new Date().toISOString();
-        targetStatus = 'scheduled'; // publish cron will pick it up immediately
+        targetStatus = 'scheduled';
       } else if (scheduleType === 'schedule') {
         if (!scheduleDate || !scheduleTime) {
           throw new Error("Please specify date and time for scheduling.");
@@ -178,7 +246,7 @@ export default function ComposerPage() {
         scheduledTime = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
         targetStatus = 'scheduled';
       } else if (scheduleType === 'queue') {
-        targetStatus = 'queued'; // server will calculate time from slots
+        targetStatus = 'queued';
       }
 
       const headers = await getAuthHeaders();
@@ -224,11 +292,11 @@ export default function ComposerPage() {
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 360px', overflow: 'hidden' }}>
+      {/* Responsive Main Layout */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflowY: 'auto' }}>
         
         {/* Editor Area */}
-        <div style={{ padding: 40, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ flex: 1, padding: isMobile ? '20px' : '40px', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {composerSuccess && (
             <div style={{ background: '#D1FAE5', color: '#065F46', padding: 16, borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
               <CheckCircle size={16} /> Post successfully scheduled! Redirecting to Content Calendar...
@@ -278,24 +346,26 @@ export default function ComposerPage() {
             )}
           </div>
 
-          {/* Tabs for Universal and platform overrides */}
-          {selectedAccounts.length > 1 && (
-            <div style={{ display: 'flex', borderBottom: `1px solid ${B}`, gap: 16 }}>
+          {/* Platform Customization Tabs */}
+          {selectedAccounts.length > 0 && (
+            <div style={{ display: 'flex', borderBottom: `1px solid ${B}`, gap: 16, overflowX: 'auto', paddingBottom: 2 }}>
               <button 
                 onClick={() => setActiveTab('universal')} 
-                style={{ padding: '8px 4px', border: 'none', background: 'none', borderBottom: activeTab === 'universal' ? `2px solid ${P}` : 'none', fontWeight: activeTab === 'universal' ? 700 : 400, color: activeTab === 'universal' ? D : G, cursor: 'pointer', fontSize: '0.85rem' }}
+                style={{ padding: '8px 4px', border: 'none', background: 'none', borderBottom: activeTab === 'universal' ? `2px solid ${P}` : 'none', fontWeight: activeTab === 'universal' ? 700 : 400, color: activeTab === 'universal' ? D : G, cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}
               >
-                Universal
+                Default
               </button>
               {selectedAccounts.map(id => {
                 const conn = connections.find(c => c.id === id);
+                const hasOverride = customOverrides[id] !== undefined;
                 return (
                   <button 
                     key={id}
                     onClick={() => setActiveTab(id)} 
-                    style={{ padding: '8px 4px', border: 'none', background: 'none', borderBottom: activeTab === id ? `2px solid ${P}` : 'none', fontWeight: activeTab === id ? 700 : 400, color: activeTab === id ? D : G, cursor: 'pointer', fontSize: '0.85rem' }}
+                    style={{ padding: '8px 4px', border: 'none', background: 'none', borderBottom: activeTab === id ? `2px solid ${P}` : 'none', fontWeight: activeTab === id ? 700 : 400, color: activeTab === id ? D : G, cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}
                   >
                     {conn?.platform.toUpperCase()}
+                    {hasOverride && <span style={{ width: 6, height: 6, borderRadius: '50%', background: P }} />}
                   </button>
                 );
               })}
@@ -304,18 +374,38 @@ export default function ComposerPage() {
 
           {/* Editor Body */}
           <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, display: 'flex', flexDirection: 'column' }}>
-            <textarea 
-              value={activeTab === 'universal' ? contentText : (customOverrides[activeTab] !== undefined ? customOverrides[activeTab] : contentText)}
-              onChange={e => {
-                if (activeTab === 'universal') {
-                  setContentText(e.target.value);
-                } else {
-                  setCustomOverrides(prev => ({ ...prev, [activeTab]: e.target.value }));
-                }
-              }}
-              placeholder="What would you like to share today?"
-              style={{ minHeight: 180, border: 'none', outline: 'none', padding: 20, fontSize: '0.9rem', lineHeight: 1.5, resize: 'vertical', borderRadius: '8px 8px 0 0' }}
-            />
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+              {isInheriting && (
+                <div style={{ padding: '8px 20px', background: '#EFF6FF', borderBottom: `1px solid ${B}`, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#1E40AF', fontWeight: 600 }}>
+                    ✨ Inheriting from Default. Start typing below to customize for this platform.
+                  </span>
+                </div>
+              )}
+              {activeTab !== 'universal' && !isInheriting && (
+                <div style={{ padding: '8px 20px', background: '#FEF3C7', borderBottom: `1px solid ${B}`, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#92400E', fontWeight: 600 }}>
+                    ⚠️ Custom override active for this platform.
+                  </span>
+                  <button 
+                    onClick={() => {
+                      const updated = { ...customOverrides };
+                      delete updated[activeTab];
+                      setCustomOverrides(updated);
+                    }}
+                    style={{ border: 'none', background: 'none', color: '#B45309', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'underline' }}
+                  >
+                    Reset to Default
+                  </button>
+                </div>
+              )}
+              <textarea 
+                value={isInheriting ? contentText : (customOverrides[activeTab] || '')}
+                onChange={e => handleTextChange(e.target.value)}
+                placeholder="What would you like to share today?"
+                style={{ minHeight: 180, border: 'none', outline: 'none', padding: 20, fontSize: '0.9rem', lineHeight: 1.5, resize: 'vertical', borderRadius: '8px 8px 0 0' }}
+              />
+            </div>
 
             {/* Editor Footer Tools */}
             <div style={{ padding: '12px 20px', borderTop: `1px solid ${B}`, background: 'var(--bg-soft)', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', borderRadius: '0 0 8px 8px' }}>
@@ -327,8 +417,8 @@ export default function ComposerPage() {
                   <ImageIcon size={14} /> Add Media
                 </button>
               </div>
-              <span style={{ fontSize: '0.75rem', color: G }}>
-                {contentText.length} characters
+              <span style={{ fontSize: '0.75rem', color: counterColor, fontWeight: 600 }}>
+                {currentLength} / {currentLimit} characters
               </span>
             </div>
           </div>
@@ -369,7 +459,7 @@ export default function ComposerPage() {
         </div>
 
         {/* Sidebar Controls Area */}
-        <div style={{ background: '#fff', borderLeft: `1px solid ${B}`, padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ width: isMobile ? '100%' : '360px', background: '#fff', borderLeft: isMobile ? 'none' : `1px solid ${B}`, borderTop: isMobile ? `1px solid ${B}` : 'none', padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
           
           {/* Scheduling Configuration */}
           <div>
@@ -449,7 +539,7 @@ export default function ComposerPage() {
             disabled={submitting}
             style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '12px 0', borderRadius: 6, fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 'auto' }}
           >
-            <Send size={14} /> {submitting ? 'Scheduling...' : scheduleType === 'now' ? 'Publish Now' : 'Queue Post'}
+            <Send size={14} /> {submitting ? 'Scheduling...' : demo.isActive ? 'Demo Mode — Cannot Publish' : scheduleType === 'now' ? 'Publish Now' : 'Queue Post'}
           </button>
         </div>
 
@@ -458,7 +548,7 @@ export default function ComposerPage() {
       {/* Media Library Picker Modal */}
       {showMediaModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, width: 500, maxHeight: 500, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, width: '90%', maxWidth: 500, maxHeight: 500, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Choose from Media Library</h3>
               <span onClick={() => setShowMediaModal(false)} style={{ cursor: 'pointer', color: G, fontSize: '0.9rem' }}>✕</span>

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
+import { useDemoMode } from '../../lib/demoStore';
+import { sampleConnections, sampleDailyBriefing } from '../../data/sample-data';
 import { 
   Sparkles, 
   TrendingUp, 
@@ -20,11 +22,13 @@ const B = 'var(--border)';
 
 export default function AnalystPage() {
   const navigate = useNavigate();
+  const demo = useDemoMode();
   const [briefing, setBriefing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [connections, setConnections] = useState<any[]>([]);
   const [activeAlerts, setActiveAlerts] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const getAuthHeaders = async () => {
     const { data } = await supabase.auth.getSession();
@@ -35,6 +39,15 @@ export default function AnalystPage() {
   };
 
   const loadData = async () => {
+    if (demo.isActive) {
+      setUserProfile({ business_name: "Acme Coffee Co", primary_url: "https://acmecoffee.com", primary_goal: "Increase sales & reach" });
+      setConnections(sampleConnections);
+      setActiveAlerts([]);
+      setBriefing(sampleDailyBriefing);
+      setLoading(false);
+      return;
+    }
+
     try {
       const headers = await getAuthHeaders();
       
@@ -67,14 +80,27 @@ export default function AnalystPage() {
   };
 
   useEffect(() => {
-    loadData();
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [demo.isActive]);
+
   const triggerOnDemandBriefing = async () => {
+    if (demo.isActive) {
+      alert("Daily briefing is pre-populated in Demo Mode!");
+      return;
+    }
     setLoading(true);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/analyst/briefing', { headers });
+      const res = await fetch('/api/v3/analyst/briefing', {
+        method: 'POST', // triggers re-generate
+        headers
+      });
       const j = await res.json();
       if (j.success) setBriefing(j.data);
     } catch (err) {
@@ -161,7 +187,7 @@ export default function AnalystPage() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 32, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: 32, alignItems: 'start' }}>
             
             {/* Left Content Area */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -177,7 +203,7 @@ export default function AnalystPage() {
               </div>
 
               {/* Wins & Concerns */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 24 }}>
                 
                 {/* Wins */}
                 <div>

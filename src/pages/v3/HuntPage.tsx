@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
+import { useDemoMode } from '../../lib/demoStore';
+import { sampleCompetitor } from '../../data/sample-data';
 import { 
   Target, 
   Plus, 
@@ -18,11 +20,13 @@ const G = 'var(--text-muted)';
 const B = 'var(--border)';
 
 export default function HuntPage() {
+  const demo = useDemoMode();
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingCompetitor, setAddingCompetitor] = useState(false);
   const [auditingId, setAuditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Form State
   const [url, setUrl] = useState('');
@@ -37,6 +41,21 @@ export default function HuntPage() {
   };
 
   const fetchCompetitors = async () => {
+    if (demo.isActive) {
+      setCompetitors([
+        {
+          id: "demo_comp_1",
+          competitor_name: sampleCompetitor.competitor_name,
+          competitor_url: sampleCompetitor.competitor_url,
+          latest_audit_score: sampleCompetitor.latest_audit_score,
+          last_audited_at: sampleCompetitor.last_audited_at,
+          audit_history: sampleCompetitor.audit_history
+        }
+      ]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/hunt/competitors', { headers });
@@ -50,11 +69,21 @@ export default function HuntPage() {
   };
 
   useEffect(() => {
-    fetchCompetitors();
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    fetchCompetitors();
+  }, [demo.isActive]);
 
   const handleAddCompetitor = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (demo.isActive) {
+      alert("Please exit Demo Mode to add competitors.");
+      return;
+    }
     if (!url.trim() || !name.trim()) return;
 
     setAddingCompetitor(true);
@@ -85,6 +114,10 @@ export default function HuntPage() {
   };
 
   const handleAudit = async (id: string) => {
+    if (demo.isActive) {
+      alert("Auditing is disabled in Demo Mode.");
+      return;
+    }
     setAuditingId(id);
     try {
       const headers = await getAuthHeaders();
@@ -121,7 +154,7 @@ export default function HuntPage() {
       </div>
 
       {/* Main Body */}
-      <div style={{ padding: 40, overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: '320px 1fr', gap: 32, alignItems: 'start' }}>
+      <div style={{ padding: isMobile ? 20 : 40, overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '320px 1fr', gap: 32, alignItems: 'start' }}>
         
         {/* Left Form Panel */}
         <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, boxShadow: 'var(--shadow-sm)' }}>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
+import { useDemoMode } from '../../lib/demoStore';
+import { sampleOrganicPosts, sampleScheduledPosts } from '../../data/sample-data';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -17,9 +19,11 @@ const P = 'var(--primary)';
 const G = 'var(--text-muted)';
 
 export default function CalendarPage() {
+  const demo = useDemoMode();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Modal / Detail state
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -34,6 +38,32 @@ export default function CalendarPage() {
   };
 
   const fetchEvents = async () => {
+    if (demo.isActive) {
+      const eventsList = [
+        ...sampleScheduledPosts.map(p => ({
+          id: p.id,
+          title: p.title,
+          start: p.start,
+          type: "scheduled",
+          status: p.status,
+          platforms: p.platforms,
+          media: p.media
+        })),
+        ...sampleOrganicPosts.map(p => ({
+          id: p.id,
+          title: p.title,
+          start: p.start,
+          type: "published",
+          status: "published",
+          platforms: p.platforms,
+          media: p.media
+        }))
+      ];
+      setEvents(eventsList);
+      setLoading(false);
+      return;
+    }
+
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/calendar/events', { headers });
@@ -47,10 +77,20 @@ export default function CalendarPage() {
   };
 
   useEffect(() => {
-    fetchEvents();
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    fetchEvents();
+  }, [demo.isActive]);
+
   const handleDeletePost = async (id: string) => {
+    if (demo.isActive) {
+      alert("Cannot delete items in Demo Mode.");
+      return;
+    }
     if (!confirm("Are you sure you want to cancel and delete this scheduled post?")) return;
     setDeletingId(id);
     try {
@@ -167,10 +207,10 @@ export default function CalendarPage() {
       </div>
 
       {/* Main Grid split with Instagram Feed Preview */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 340px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflowY: 'auto' }}>
         
         {/* Calendar Grid Area */}
-        <div style={{ padding: 32, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ flex: 1, padding: isMobile ? 16 : 32, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
           
           {/* Calendar Controller Header */}
           <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -261,7 +301,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Right Preview Side Panel: Instagram Feed Mockup */}
-        <div style={{ background: '#fff', borderLeft: `1px solid ${B}`, padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ width: isMobile ? '100%' : '340px', background: '#fff', borderLeft: isMobile ? 'none' : `1px solid ${B}`, borderTop: isMobile ? `1px solid ${B}` : 'none', padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div>
             <h3 style={{ margin: '0 0 4px', fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Instagram size={16} style={{ color: '#E1306C' }} /> Visual Feed Preview

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
+import { useDemoMode } from '../../lib/demoStore';
+import { sampleConnections } from '../../data/sample-data';
 import { 
   Instagram, 
   Link2, 
@@ -19,6 +21,7 @@ const D = 'var(--text)';
 const B = 'var(--border)';
 
 export default function ConnectionsPage() {
+  const demo = useDemoMode();
   const [connections, setConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -44,6 +47,18 @@ export default function ConnectionsPage() {
   };
 
   const fetchConnections = async () => {
+    if (demo.isActive) {
+      setConnections(sampleConnections.map(c => ({
+        id: c.id,
+        platform: c.platform,
+        account_handle: c.account_handle,
+        is_demo: true,
+        connected_at: new Date().toISOString()
+      })));
+      setLoading(false);
+      return;
+    }
+
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/connections', { headers });
@@ -58,10 +73,14 @@ export default function ConnectionsPage() {
 
   useEffect(() => {
     fetchConnections();
-  }, []);
+  }, [demo.isActive]);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (demo.isActive) {
+      alert("Please exit Demo Mode to connect real accounts.");
+      return;
+    }
     if (!platformToConnect || !accountHandle.trim()) return;
 
     setConnecting(true);
@@ -90,6 +109,10 @@ export default function ConnectionsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (demo.isActive) {
+      alert("Cannot disconnect demo accounts.");
+      return;
+    }
     if (!confirm("Are you sure you want to disconnect this account?")) return;
     try {
       const headers = await getAuthHeaders();
@@ -138,6 +161,10 @@ export default function ConnectionsPage() {
   };
 
   const handleUploadAds = async () => {
+    if (demo.isActive) {
+      alert("CSV Upload is disabled in Demo Mode.");
+      return;
+    }
     if (!uploadPlatform || parsedRows.length === 0) return;
 
     setUploadingAds(true);

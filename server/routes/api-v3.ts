@@ -582,7 +582,33 @@ apiV3Router.post("/inbox/comments/:id/archive", requireAuth, async (req: any, re
 // ─── Best Time to Post heatmap ────────────────────────────────────────────────
 apiV3Router.get("/analytics/best-times", requireAuth, async (req: any, res) => {
   try {
-    // Top deterministic posting times
+    // 1. Check connected accounts
+    const { count: accountCount, error: acctErr } = await supabaseAdmin
+      .from("connected_accounts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId);
+
+    if (acctErr) throw acctErr;
+
+    if (!accountCount || accountCount === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // 2. Count posts in last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const { count: postCount, error: postErr } = await supabaseAdmin
+      .from("social_posts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId)
+      .gte("posted_at", thirtyDaysAgo);
+
+    if (postErr) throw postErr;
+
+    if (!postCount || postCount < 30) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Top deterministic posting times if data is sufficient
     const bestTimes = [
       { day: "Tuesday", time: "11:00 AM", confidence: 0.94 },
       { day: "Thursday", time: "02:00 PM", confidence: 0.88 },
@@ -1024,3 +1050,34 @@ apiV3Router.post("/jobs/run", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── User Onboarding ─────────────────────────────────────────────────────────
+apiV3Router.get("/profile/onboarding", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("has_completed_onboarding")
+      .eq("id", req.userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    res.json({ success: true, hasCompletedOnboarding: data?.has_completed_onboarding || false });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/profile/onboarding/complete", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ has_completed_onboarding: true })
+      .eq("id", req.userId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+

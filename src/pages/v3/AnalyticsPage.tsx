@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
+import { useDemoMode } from '../../lib/demoStore';
+import { sampleBestPostingTimes, sampleOrganicPosts } from '../../data/sample-data';
 import { 
   TrendingUp, 
   Users, 
@@ -18,6 +21,8 @@ const B = 'var(--border)';
 const D = 'var(--text)';
 
 export default function AnalyticsPage() {
+  const navigate = useNavigate();
+  const demo = useDemoMode();
   const [summary, setSummary] = useState<any>(null);
   const [bestTimes, setBestTimes] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
@@ -32,6 +37,22 @@ export default function AnalyticsPage() {
   };
 
   const loadData = async () => {
+    if (demo.isActive) {
+      setSummary({
+        totalPosts: 30,
+        totalLikes: 1480,
+        totalComments: 184,
+        totalImpressions: 24500,
+        latestFollowers: 23700,
+        followerGrowth: 148,
+        engagementRate: 0.057
+      });
+      setBestTimes(sampleBestPostingTimes);
+      setPosts(sampleOrganicPosts.slice(0, 10));
+      setLoading(false);
+      return;
+    }
+
     try {
       const headers = await getAuthHeaders();
       const [sumRes, timesRes, calendarRes] = await Promise.all([
@@ -63,7 +84,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [demo.isActive]);
 
   return (
     <V3Layout>
@@ -76,7 +97,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Main Container */}
-      <div style={{ padding: 40, overflowY: 'auto', flex: 1 }}>
+      <div className="analytics-container" style={{ padding: '20px 40px', overflowY: 'auto', flex: 1 }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: G, marginTop: 40 }}>Analyzing cross-platform performance metrics...</div>
         ) : !summary ? (
@@ -85,7 +106,7 @@ export default function AnalyticsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
             
             {/* Top Stat Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+            <div className="analytics-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
               
               {/* Followers */}
               <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
@@ -138,7 +159,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Split layout: Best Time to Post and Post stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 32, alignItems: 'start' }}>
+            <div className="analytics-split-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32, alignItems: 'start' }}>
               
               {/* Top Performing Posts */}
               <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, boxShadow: 'var(--shadow-sm)' }}>
@@ -189,19 +210,43 @@ export default function AnalyticsPage() {
                   <Clock size={16} style={{ color: P }} /> Best Posting Windows
                 </h3>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {bestTimes.map((bt, i) => (
-                    <div key={i} style={{ padding: '12px 14px', background: 'var(--bg-soft)', borderRadius: 6, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{bt.day}</div>
-                        <div style={{ fontSize: '0.73rem', color: G, marginTop: 2 }}>{bt.time}</div>
+                {bestTimes.length === 0 ? (
+                  <div style={{ padding: '12px 4px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
+                      Best posting windows require at least 30 days of post history to compute. Connect your accounts and start posting to unlock this insight.
+                    </p>
+                    <button 
+                      onClick={() => navigate('/connections')}
+                      style={{ 
+                        background: P, 
+                        color: '#fff', 
+                        border: 'none', 
+                        padding: '8px 14px', 
+                        borderRadius: 6, 
+                        fontSize: '0.78rem', 
+                        fontWeight: 600, 
+                        cursor: 'pointer',
+                        alignSelf: 'flex-start'
+                      }}
+                    >
+                      Connect an Account
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {bestTimes.map((bt, i) => (
+                      <div key={i} style={{ padding: '12px 14px', background: 'var(--bg-soft)', borderRadius: 6, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{bt.day}</div>
+                          <div style={{ fontSize: '0.73rem', color: G, marginTop: 2 }}>{bt.time}</div>
+                        </div>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: P }}>
+                          {Math.round(bt.confidence * 100)}% Confidence
+                        </span>
                       </div>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 800, color: P }}>
-                        {Math.round(bt.confidence * 100)}% Confidence
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </div>
