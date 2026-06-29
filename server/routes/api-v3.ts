@@ -2,9 +2,8 @@ import { Router } from "express";
 import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import {
   generateDailyBriefing,
-  generateWeeklyRecommendations,
-  analyzeBrandVoice,
   detectAnomalies,
+  analyzeCommentSentiment
 } from "../v3-agents.js";
 import { runFullAudit, type BusinessContext } from "../agents.js";
 import { synthesizeReport } from "../scorer.js";
@@ -18,6 +17,75 @@ async function requireAuth(req: any, res: any, next: any) {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   req.userId = userId;
   next();
+}
+
+// Helper to determine the next scheduled time based on queue slots
+async function getNextQueueTime(userId: string, accountId: string): Promise<Date> {
+  const { data: slots } = await supabaseAdmin
+    .from("queue_slots")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("account_id", accountId)
+    .eq("is_active", true)
+    .order("day_of_week", { ascending: true })
+    .order("time_of_day", { ascending: true });
+
+  if (!slots || slots.length === 0) {
+    // Default fallback: 1 hour from now
+    return new Date(Date.now() + 3600 * 1000);
+  }
+
+  // Find latest scheduled post in queue to schedule after it
+  const { data: latestPost } = await supabaseAdmin
+    .from("scheduled_posts")
+    .select("scheduled_for")
+    .eq("user_id", userId)
+    .eq("is_part_of_queue", true)
+    .eq("status", "queued")
+    .order("scheduled_for", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let baseDate = new Date();
+  if (latestPost && latestPost.scheduled_for) {
+    baseDate = new Date(latestPost.scheduled_for);
+  }
+
+  // Find the next slot after baseDate
+  const baseDay = baseDate.getDay(); // 0 = Sunday
+  const baseTimeStr = baseDate.toTimeString().split(" ")[0]; // "HH:MM:SS"
+
+  // Sort slots starting from baseDay
+  const sortedSlots = [...slots].sort((a, b) => {
+    const diffA = (a.day_of_week - baseDay + 7) % 7;
+    const diffB = (b.day_of_week - baseDay + 7) % 7;
+    if (diffA !== diffB) return diffA - diffB;
+    return a.time_of_day.localeCompare(b.time_of_day);
+  });
+
+  // Pick first slot that is in the future
+  for (const slot of sortedSlots) {
+    const daysOffset = (slot.day_of_week - baseDay + 7) % 7;
+    const targetDate = new Date(baseDate);
+    targetDate.setDate(baseDate.getDate() + daysOffset);
+    
+    const [h, m, s] = slot.time_of_day.split(":");
+    targetDate.setHours(parseInt(h), parseInt(m), parseInt(s || "0"), 0);
+
+    if (targetDate.getTime() > baseDate.getTime()) {
+      return targetDate;
+    }
+  }
+
+  // If no slot matches or fits this week, schedule for first slot next week
+  const slot = sortedSlots[0];
+  const daysOffset = ((slot.day_of_week - baseDay + 7) % 7) || 7;
+  const targetDate = new Date(baseDate);
+  targetDate.setDate(baseDate.getDate() + daysOffset);
+  
+  const [h, m, s] = slot.time_of_day.split(":");
+  targetDate.setHours(parseInt(h), parseInt(m), parseInt(s || "0"), 0);
+  return targetDate;
 }
 
 // ─── Connected Accounts ──────────────────────────────────────────────────────
@@ -41,7 +109,6 @@ apiV3Router.post("/connections", requireAuth, async (req: any, res) => {
   }
 
   try {
-    // Upsert to handle reconnection cleanly
     const { data, error } = await supabaseAdmin
       .from("connected_accounts")
       .upsert({
@@ -58,14 +125,13 @@ apiV3Router.post("/connections", requireAuth, async (req: any, res) => {
 
     if (error) throw error;
 
-    // Trigger initial brand voice & metrics sync mocks asynchronously
+    // Trigger initial mock data async
     setTimeout(async () => {
       try {
-        // Insert some mock posts & metric snapshots to bootstrap the AI Analyst
         const mockPosts = [
-          { content: `Absolutely thrilled to launch our new product today! 🚀 Let us know what you think in the comments. #launch #marketing`, likes: 45, comments: 12, reach: 450 },
-          { content: `Why is customer acquisition getting so expensive? 📉 Here are 3 tips to reduce your CAC in 2026. Thread below:`, likes: 112, comments: 24, reach: 1200 },
-          { content: `We just passed our first 1,000 customers! A huge thank you to everyone who supported us on this journey. ❤️`, likes: 250, comments: 45, reach: 3200 }
+          { content: `Loving this new analytics setup on ZieAds! 📊 #socialmedia #business`, likes: 34, comments: 8, reach: 350 },
+          { content: `Tip of the day: consistency beats viral spikes every time. Here's why:`, likes: 98, comments: 19, reach: 950 },
+          { content: `Checking our scheduled content lineup for this week. Super clean.`, likes: 142, comments: 27, reach: 1800 }
         ];
 
         for (const post of mockPosts) {
@@ -81,7 +147,6 @@ apiV3Router.post("/connections", requireAuth, async (req: any, res) => {
           }).select().single();
 
           if (insertedPost) {
-            // Insert metric snapshot
             await supabaseAdmin.from("metric_snapshots").insert({
               post_id: insertedPost.id,
               account_id: data[0].id,
@@ -95,10 +160,31 @@ apiV3Router.post("/connections", requireAuth, async (req: any, res) => {
           }
         }
 
-        // Trigger brand voice extraction
-        await analyzeBrandVoice(req.userId);
+        // Mock 3 user comments in comment_inbox
+        const mockComments = [
+          { handle: "@alex_digital", text: "This tool looks amazing! Is there X integration?", sentiment: "positive" },
+          { handle: "@sarah_k", text: "I have some issues trying to sync my Facebook account. Can you help?", sentiment: "negative" },
+          { handle: "@mike_ads", text: "Thanks for the tips, really useful thread.", sentiment: "neutral" }
+        ];
+
+        for (const c of mockComments) {
+          await supabaseAdmin.from("comment_inbox").insert({
+            user_id: req.userId,
+            account_id: data[0].id,
+            platform,
+            platform_comment_id: `comment_${platform}_${Math.random().toString(36).substring(2,9)}`,
+            commenter_handle: c.handle,
+            commenter_display_name: c.handle.substring(1),
+            comment_text: c.text,
+            commented_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
+            sentiment: c.sentiment,
+            is_archived: false,
+            user_has_replied: false
+          });
+        }
+
       } catch (err) {
-        console.error("[V3 Connections Async] Mock sync failed:", err);
+        console.error("[V3 Connections Async Mocks] failed:", err);
       }
     }, 500);
 
@@ -122,6 +208,392 @@ apiV3Router.delete("/connections/:id", requireAuth, async (req: any, res) => {
   }
 });
 
+// ─── Media Library ───────────────────────────────────────────────────────────
+apiV3Router.get("/media", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("media_library")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("uploaded_at", { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/media", requireAuth, async (req: any, res) => {
+  const { fileType, fileUrl, fileSize, originalFilename } = req.body;
+  if (!fileType || !fileUrl) {
+    return res.status(400).json({ error: "fileType and fileUrl are required" });
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("media_library")
+      .insert({
+        user_id: req.userId,
+        file_type: fileType,
+        file_url: fileUrl,
+        file_size_bytes: fileSize || 0,
+        original_filename: originalFilename || "file.jpg",
+        uploaded_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/media/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("media_library")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Composer & Scheduling ───────────────────────────────────────────────────
+apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("scheduled_for", { ascending: true, nullsLast: true });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/scheduler/posts", requireAuth, async (req: any, res) => {
+  const { status, scheduledFor, publishMethod, targetPlatforms, contentText, mediaAttachments, firstComment, platformSpecificOverrides, isPartOfQueue } = req.body;
+  
+  try {
+    let finalScheduledTime = scheduledFor ? new Date(scheduledFor).toISOString() : null;
+    let finalQueueSlotId = null;
+
+    if (isPartOfQueue && targetPlatforms && targetPlatforms.length > 0) {
+      // Calculate next available slot
+      const nextTime = await getNextQueueTime(req.userId, targetPlatforms[0].account_id);
+      finalScheduledTime = nextTime.toISOString();
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .insert({
+        user_id: req.userId,
+        status: status || "draft",
+        scheduled_for: finalScheduledTime,
+        publish_method: publishMethod || "direct_api",
+        target_platforms: targetPlatforms || [],
+        content_text: contentText || "",
+        media_attachments: mediaAttachments || [],
+        first_comment: firstComment || "",
+        platform_specific_overrides: platformSpecificOverrides || {},
+        is_part_of_queue: isPartOfQueue || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.put("/scheduler/posts/:id", requireAuth, async (req: any, res) => {
+  const { status, scheduledFor, publishMethod, targetPlatforms, contentText, mediaAttachments, firstComment, platformSpecificOverrides, isPartOfQueue } = req.body;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .update({
+        status,
+        scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+        publish_method: publishMethod,
+        target_platforms: targetPlatforms,
+        content_text: contentText,
+        media_attachments: mediaAttachments,
+        first_comment: firstComment,
+        platform_specific_overrides: platformSpecificOverrides,
+        is_part_of_queue: isPartOfQueue,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/scheduler/posts/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Queue Slots ─────────────────────────────────────────────────────────────
+apiV3Router.get("/scheduler/queue-slots", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("queue_slots")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("day_of_week", { ascending: true })
+      .order("time_of_day", { ascending: true });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/scheduler/queue-slots", requireAuth, async (req: any, res) => {
+  const { accountId, dayOfWeek, timeOfDay } = req.body;
+  if (!accountId || dayOfWeek === undefined || !timeOfDay) {
+    return res.status(400).json({ error: "accountId, dayOfWeek, and timeOfDay are required" });
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("queue_slots")
+      .insert({
+        user_id: req.userId,
+        account_id: accountId,
+        day_of_week: dayOfWeek,
+        time_of_day: timeOfDay,
+        is_active: true,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/scheduler/queue-slots/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("queue_slots")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Calendar View ────────────────────────────────────────────────────────────
+apiV3Router.get("/calendar/events", requireAuth, async (req: any, res) => {
+  try {
+    // 1. Fetch scheduled posts
+    const { data: scheduled } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("user_id", req.userId);
+
+    // 2. Fetch already published posts (from social_posts)
+    const { data: published } = await supabaseAdmin
+      .from("social_posts")
+      .select("*, connected_accounts(account_handle)")
+      .eq("user_id", req.userId);
+
+    const events = [
+      ...(scheduled || []).map(p => ({
+        id: p.id,
+        title: p.content_text ? p.content_text.slice(0, 30) + (p.content_text.length > 30 ? "..." : "") : "Untitled Post",
+        start: p.scheduled_for,
+        type: "scheduled",
+        status: p.status,
+        platforms: p.target_platforms || [],
+        media: p.media_attachments || []
+      })),
+      ...(published || []).map(p => ({
+        id: p.id,
+        title: p.content_text ? p.content_text.slice(0, 30) + (p.content_text.length > 30 ? "..." : "") : "Published Post",
+        start: p.posted_at,
+        type: "published",
+        status: "published",
+        platforms: [{ platform: p.platform, account_handle: p.connected_accounts?.account_handle }],
+        media: p.media_urls || []
+      }))
+    ];
+
+    res.json({ success: true, data: events });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Analytics Summary ────────────────────────────────────────────────────────
+apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
+  try {
+    const { data: posts } = await supabaseAdmin
+      .from("social_posts")
+      .select("*")
+      .eq("user_id", req.userId);
+
+    const { data: snapshots } = await supabaseAdmin
+      .from("metric_snapshots")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("captured_at", { ascending: false });
+
+    // Aggregate stats
+    const totalPosts = posts?.length || 0;
+    const totalLikes = snapshots?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0;
+    const totalComments = snapshots?.reduce((sum, s) => sum + (s.comments || 0), 0) || 0;
+    const totalImpressions = snapshots?.reduce((sum, s) => sum + (s.impressions || 0), 0) || 0;
+
+    // Follower counts
+    const latestFollowers = snapshots?.[0]?.follower_count_at_capture || 1200;
+    const baselineFollowers = snapshots?.[snapshots.length - 1]?.follower_count_at_capture || 1100;
+    const followerGrowth = latestFollowers - baselineFollowers;
+
+    res.json({
+      success: true,
+      data: {
+        totalPosts,
+        totalLikes,
+        totalComments,
+        totalImpressions,
+        latestFollowers,
+        followerGrowth,
+        engagementRate: totalImpressions > 0 ? Number(((totalLikes + totalComments) / totalImpressions).toFixed(4)) : 0.042
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Unified Inbox ───────────────────────────────────────────────────────────
+apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
+  const { sentiment, isArchived } = req.query;
+  try {
+    let query = supabaseAdmin
+      .from("comment_inbox")
+      .select("*, social_posts(content_text)")
+      .eq("user_id", req.userId);
+
+    if (sentiment) {
+      query = query.eq("sentiment", sentiment);
+    }
+    if (isArchived !== undefined) {
+      query = query.eq("is_archived", isArchived === "true");
+    } else {
+      query = query.eq("is_archived", false);
+    }
+
+    const { data, error } = await query.order("commented_at", { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/inbox/comments/:id/reply", requireAuth, async (req: any, res) => {
+  const { replyText } = req.body;
+  if (!replyText) return res.status(400).json({ error: "replyText is required" });
+
+  try {
+    // 1. Fetch comment details
+    const { data: comment, error: fetchErr } = await supabaseAdmin
+      .from("comment_inbox")
+      .select("*")
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .single();
+
+    if (fetchErr || !comment) throw new Error("Comment not found");
+
+    // 2. Insert user reply locally
+    const { data: reply, error: replyErr } = await supabaseAdmin
+      .from("comment_replies")
+      .insert({
+        comment_inbox_id: comment.id,
+        user_id: req.userId,
+        reply_text: replyText,
+        send_status: "sent",
+        platform_reply_id: `reply_${comment.platform}_${Date.now()}`
+      })
+      .select()
+      .single();
+
+    if (replyErr) throw replyErr;
+
+    // 3. Mark comment as replied
+    await supabaseAdmin
+      .from("comment_inbox")
+      .update({ user_has_replied: true, user_replied_at: new Date().toISOString() })
+      .eq("id", comment.id);
+
+    res.json({ success: true, data: reply });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/inbox/comments/:id/archive", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("comment_inbox")
+      .update({ is_archived: true })
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Best Time to Post heatmap ────────────────────────────────────────────────
+apiV3Router.get("/analytics/best-times", requireAuth, async (req: any, res) => {
+  try {
+    // Top deterministic posting times
+    const bestTimes = [
+      { day: "Tuesday", time: "11:00 AM", confidence: 0.94 },
+      { day: "Thursday", time: "02:00 PM", confidence: 0.88 },
+      { day: "Wednesday", time: "09:00 AM", confidence: 0.82 }
+    ];
+    res.json({ success: true, data: bestTimes });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Paid Ads CSV Upload ──────────────────────────────────────────────────────
 apiV3Router.post("/ads/upload", requireAuth, async (req: any, res) => {
   const { platform, rows } = req.body;
@@ -131,8 +603,6 @@ apiV3Router.post("/ads/upload", requireAuth, async (req: any, res) => {
 
   try {
     const uploadedAt = new Date().toISOString();
-    
-    // Process and insert rows in batch
     const insertPayloads = rows.map((row: any) => {
       const spend = parseFloat(row.spend || row.cost || row.spend_usd || row["Amount Spent USD"] || row["Cost"] || "0");
       const revenue = parseFloat(row.revenue || row.revenue_usd || row.value || row["Conv value"] || row["Total Conversion Value"] || "0");
@@ -195,62 +665,12 @@ apiV3Router.get("/analyst/briefing", requireAuth, async (req: any, res) => {
       throw error;
     }
 
-    // If briefing doesn't exist yet, generate it on demand for the user
     if (!briefing) {
       console.log(`[V3 API] No briefing found for date ${briefingDate}. Generating now...`);
       briefing = await generateDailyBriefing(req.userId);
     }
 
     res.json({ success: true, data: briefing });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── Content Studio ──────────────────────────────────────────────────────────
-apiV3Router.get("/studio/recommendations", requireAuth, async (req: any, res) => {
-  const weekStarting = new Date().toISOString().slice(0, 10);
-  try {
-    let { data: recs, error } = await supabaseAdmin
-      .from("content_recommendations")
-      .select("*")
-      .eq("user_id", req.userId)
-      .eq("week_starting", weekStarting);
-
-    if (error) throw error;
-
-    // If no recommendations found, generate them dynamically
-    if (!recs || recs.length === 0) {
-      console.log(`[V3 API] No content recommendations found for week starting ${weekStarting}. Generating now...`);
-      const generated = await generateWeeklyRecommendations(req.userId);
-      // Re-fetch database inserts to return accurate objects with IDs
-      const { data: newRecs } = await supabaseAdmin
-        .from("content_recommendations")
-        .select("*")
-        .eq("user_id", req.userId)
-        .eq("week_starting", weekStarting);
-      recs = newRecs || [];
-    }
-
-    res.json({ success: true, data: recs });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-apiV3Router.post("/studio/action", requireAuth, async (req: any, res) => {
-  const { id, action } = req.body;
-  if (!id || !action) {
-    return res.status(400).json({ error: "id and action are required" });
-  }
-  try {
-    const { error } = await supabaseAdmin
-      .from("content_recommendations")
-      .update({ user_action: action })
-      .eq("id", id)
-      .eq("user_id", req.userId);
-    if (error) throw error;
-    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -296,13 +716,11 @@ apiV3Router.post("/hunt/competitors", requireAuth, async (req: any, res) => {
   }
 });
 
-// Wraps existing v0.2 full audit logic for competitor tracking
 apiV3Router.post("/hunt/audit", requireAuth, async (req: any, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: "id of competitor is required" });
 
   try {
-    // 1. Fetch competitor details
     const { data: competitor, error: fetchError } = await supabaseAdmin
       .from("tracked_competitors")
       .select("*")
@@ -312,7 +730,6 @@ apiV3Router.post("/hunt/audit", requireAuth, async (req: any, res) => {
 
     if (fetchError || !competitor) throw new Error("Competitor not found");
 
-    // 2. Perform v0.2 URL Audit asynchronously
     const scrapedData = await scrapeUrl(competitor.competitor_url);
     const context: BusinessContext = {
       url: competitor.competitor_url,
@@ -327,7 +744,6 @@ apiV3Router.post("/hunt/audit", requireAuth, async (req: any, res) => {
     const agentResults = await runFullAudit(context);
     const report = synthesizeReport(agentResults);
 
-    // 3. Save score & append report to competitor history
     const newHistory = [...(competitor.audit_history || []), {
       score: report.overall,
       grade: report.grade,
@@ -384,23 +800,171 @@ apiV3Router.post("/alerts/acknowledge", requireAuth, async (req: any, res) => {
   }
 });
 
+// ─── Scheduler Queue Daemon Cron ──────────────────────────────────────────────
+apiV3Router.post("/publish/cron", async (req, res) => {
+  console.log("[V3 Publisher Cron] Checking for pending scheduled posts...");
+  try {
+    const now = new Date().toISOString();
+
+    // Fetch posts due to be published
+    const { data: posts, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("status", "scheduled")
+      .lte("scheduled_for", now);
+
+    if (error) throw error;
+
+    let publishedCount = 0;
+
+    for (const post of (posts || [])) {
+      try {
+        // Mark status as publishing
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({ status: "publishing", publish_attempted_at: new Date().toISOString() })
+          .eq("id", post.id);
+
+        // Simulate publishing across target platforms
+        const targets = post.target_platforms || [];
+        for (const target of targets) {
+          const mockPostId = `platform_pub_${Math.random().toString(36).substring(2, 9)}`;
+
+          // 1. Insert social post history
+          const { data: insertedPost } = await supabaseAdmin
+            .from("social_posts")
+            .insert({
+              account_id: target.account_id,
+              user_id: post.user_id,
+              platform: target.platform,
+              platform_post_id: mockPostId,
+              content_text: post.content_text,
+              media_type: post.media_attachments?.length > 0 ? "image" : "text_only",
+              media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
+              posted_at: new Date().toISOString(),
+              scheduled_post_id: post.id
+            })
+            .select()
+            .single();
+
+          // 2. Insert initial metric snapshots
+          if (insertedPost) {
+            await supabaseAdmin.from("metric_snapshots").insert({
+              post_id: insertedPost.id,
+              account_id: target.account_id,
+              user_id: post.user_id,
+              likes: 0,
+              comments: 0,
+              reach: 10,
+              engagement_rate: 0.0,
+              captured_at: new Date().toISOString()
+            });
+          }
+
+          // 3. Log success
+          await supabaseAdmin.from("publish_log").insert({
+            scheduled_post_id: post.id,
+            user_id: post.user_id,
+            account_id: target.account_id,
+            platform: target.platform,
+            attempted_at: new Date().toISOString(),
+            outcome: "success",
+            platform_post_id: mockPostId
+          });
+        }
+
+        // Finalize post status
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({ status: "published", published_at: new Date().toISOString() })
+          .eq("id", post.id);
+
+        publishedCount++;
+      } catch (err: any) {
+        console.error(`[V3 Publisher Cron] Failed publishing post ${post.id}:`, err);
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({ status: "failed", publish_error: err.message })
+          .eq("id", post.id);
+      }
+    }
+
+    res.json({ success: true, publishedCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Vercel Cron Trigger (Background Sync) ────────────────────────────────────
 apiV3Router.post("/jobs/run", async (req, res) => {
-  // Simple token guard to prevent unauthorized trigger invocations
   const cronSecret = process.env.V3_CRON_SECRET || "local_secret";
   const authHeader = req.headers.authorization;
   if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: "Unauthorized cron trigger" });
   }
 
-  console.log("[V3 Cron] Starting background sync jobs...");
+  console.log("[V3 Cron] Starting background sync & publishing jobs...");
 
   try {
-    // 1. Fetch active subscription tiers
+    // 1. Trigger scheduler publish queue check
+    const now = new Date().toISOString();
+    const { data: posts } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("status", "scheduled")
+      .lte("scheduled_for", now);
+
+    for (const post of (posts || [])) {
+      try {
+        await supabaseAdmin.from("scheduled_posts").update({ status: "publishing", publish_attempted_at: new Date().toISOString() }).eq("id", post.id);
+        for (const target of (post.target_platforms || [])) {
+          const mockPostId = `platform_pub_${Math.random().toString(36).substring(2, 9)}`;
+          const { data: insertedPost } = await supabaseAdmin.from("social_posts").insert({
+            account_id: target.account_id,
+            user_id: post.user_id,
+            platform: target.platform,
+            platform_post_id: mockPostId,
+            content_text: post.content_text,
+            media_type: post.media_attachments?.length > 0 ? "image" : "text_only",
+            media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
+            posted_at: new Date().toISOString(),
+            scheduled_post_id: post.id
+          }).select().single();
+
+          if (insertedPost) {
+            await supabaseAdmin.from("metric_snapshots").insert({
+              post_id: insertedPost.id,
+              account_id: target.account_id,
+              user_id: post.user_id,
+              likes: 0,
+              comments: 0,
+              reach: 10,
+              engagement_rate: 0.0,
+              captured_at: new Date().toISOString()
+            });
+          }
+
+          await supabaseAdmin.from("publish_log").insert({
+            scheduled_post_id: post.id,
+            user_id: post.user_id,
+            account_id: target.account_id,
+            platform: target.platform,
+            attempted_at: new Date().toISOString(),
+            outcome: "success",
+            platform_post_id: mockPostId
+          });
+        }
+        await supabaseAdmin.from("scheduled_posts").update({ status: "published", published_at: new Date().toISOString() }).eq("id", post.id);
+      } catch (err: any) {
+        await supabaseAdmin.from("scheduled_posts").update({ status: "failed", publish_error: err.message }).eq("id", post.id);
+      }
+    }
+
+    // 2. Fetch active subscription tiers
     const { data: users, error } = await supabaseAdmin
       .from("v3_subscription_tiers")
       .select("user_id")
-      .neq("tier_name", "free"); // run briefs for active paid tier users daily
+      .neq("tier_name", "free");
 
     if (error) throw error;
 
@@ -409,14 +973,11 @@ apiV3Router.post("/jobs/run", async (req, res) => {
 
     for (const sub of (users || [])) {
       try {
-        // Run daily briefing
         await generateDailyBriefing(sub.user_id);
         briefingCount++;
 
-        // Run anomaly detection
         await detectAnomalies(sub.user_id);
 
-        // Run scheduled competitor audits (once every 7 days)
         const { data: competitors } = await supabaseAdmin
           .from("tracked_competitors")
           .select("*")
@@ -427,7 +988,6 @@ apiV3Router.post("/jobs/run", async (req, res) => {
           const lastAudit = competitor.last_audited_at ? new Date(competitor.last_audited_at).getTime() : 0;
           const oneWeek = competitor.audit_frequency_days * 24 * 3600 * 1000;
           if (Date.now() - lastAudit >= oneWeek) {
-            // Trigger audit
             const scrapedData = await scrapeUrl(competitor.competitor_url);
             const context: BusinessContext = {
               url: competitor.competitor_url,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid, Sparkles, Calendar, Target, Link2 } from 'lucide-react';
+import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid, Sparkles, Calendar, Target, Link2, PenTool, BarChart3, Inbox } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import NounIcon from '../components/NounIcon';
 import { useCreditStore } from '../lib/creditStore';
@@ -274,9 +274,12 @@ export default function ClientDashboard({ reportData }: Props) {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {[
                 { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#8B5CF6' }} /> },
-                { k: '/studio', l: 'Content Studio', icon: <Calendar size={15} style={{ color: '#ec4899' }} /> },
+                { k: '/composer', l: 'Composer', icon: <PenTool size={15} style={{ color: '#ec4899' }} /> },
+                { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} style={{ color: '#2563eb' }} /> },
+                { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} style={{ color: '#10b981' }} /> },
+                { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} style={{ color: '#eab308' }} /> },
                 { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} style={{ color: '#ef4444' }} /> },
-                { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#10b981' }} /> },
+                { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#6366f1' }} /> },
               ].map(n => (
                 <li key={n.k} onClick={() => navigate(n.k)} style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
                   {n.icon}

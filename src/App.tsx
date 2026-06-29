@@ -13,7 +13,10 @@ import AgentChat from './pages/AgentChat';
 import BusinessProfile from './pages/BusinessProfile';
 import ConnectionsPage from './pages/v3/ConnectionsPage';
 import AnalystPage from './pages/v3/AnalystPage';
-import StudioPage from './pages/v3/StudioPage';
+import ComposerPage from './pages/v3/ComposerPage';
+import CalendarPage from './pages/v3/CalendarPage';
+import AnalyticsPage from './pages/v3/AnalyticsPage';
+import InboxPage from './pages/v3/InboxPage';
 import HuntPage from './pages/v3/HuntPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
@@ -95,7 +98,10 @@ export default function App() {
         <Route path="/profile" element={<ProtectedRoute><BusinessProfile /></ProtectedRoute>} />
         <Route path="/connections" element={<ProtectedRoute><ConnectionsPage /></ProtectedRoute>} />
         <Route path="/analyst" element={<ProtectedRoute><AnalystPage /></ProtectedRoute>} />
-        <Route path="/studio" element={<ProtectedRoute><StudioPage /></ProtectedRoute>} />
+        <Route path="/composer" element={<ProtectedRoute><ComposerPage /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
         <Route path="/hunt" element={<ProtectedRoute><HuntPage /></ProtectedRoute>} />
         <Route path="/tools" element={<Navigate to="/clients" replace />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

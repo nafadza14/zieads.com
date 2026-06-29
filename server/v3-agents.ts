@@ -152,8 +152,14 @@ export async function generateDailyBriefing(userId: string): Promise<any> {
   // 1. Gather all required context
   // Profile
   const { data: profile } = await supabaseAdmin.from("profiles").select("*").eq("id", userId).single();
-  // Brand Voice
-  const { data: voice } = await supabaseAdmin.from("brand_voice_profiles").select("*").eq("id", userId).single();
+  // Brand Voice (safe query)
+  let voiceSummary = "Default professional marketing tone.";
+  try {
+    const { data: voice } = await supabaseAdmin.from("brand_voice_profiles").select("*").eq("id", userId).maybeSingle();
+    if (voice) voiceSummary = voice.voice_summary;
+  } catch (err) {
+    // table removed
+  }
   // Recent social posts (last 7 days)
   const { data: posts } = await supabaseAdmin
     .from("social_posts")
@@ -176,7 +182,6 @@ export async function generateDailyBriefing(userId: string): Promise<any> {
     .eq("is_active", true);
 
   // Compile context summaries
-  const voiceSummary = voice ? voice.voice_summary : "No brand voice profile loaded yet.";
   const postsSummary = (posts || []).map(p => `- [Platform: ${p.platform}] Handle: ${p.connected_accounts?.account_handle || 'n/a'} | Date: ${p.posted_at.slice(0,10)} | Content: ${p.content_text?.slice(0,60)}... | Metrics: ${JSON.stringify(p.raw_metrics)}`).join("\n");
   const adsSummary = (ads || []).slice(0, 5).map(a => `- Campaign: ${a.campaign_name} | Spend: $${a.spend_usd} | Impressions: ${a.impressions} | Click: ${a.clicks} | Conv: ${a.conversions} | ROAS: ${a.roas}`).join("\n");
   const competitorSummary = (competitors || []).map(c => `- Competitor: ${c.competitor_name} (${c.competitor_url}) | Score: ${c.latest_audit_score || 'N/A'}`).join("\n");
@@ -399,4 +404,17 @@ export async function detectAnomalies(userId: string): Promise<any[]> {
   }
 
   return anomalies;
+}
+
+export async function analyzeCommentSentiment(commentText: string): Promise<"positive" | "neutral" | "negative"> {
+  try {
+    const systemPrompt = `You are a sentiment analyzer. Classify the user comment as exactly "positive", "neutral", or "negative". Respond with one word only.`;
+    const response = await callAI(systemPrompt, commentText);
+    const word = response.trim().toLowerCase();
+    if (word.includes("positive")) return "positive";
+    if (word.includes("negative")) return "negative";
+    return "neutral";
+  } catch {
+    return "neutral";
+  }
 }

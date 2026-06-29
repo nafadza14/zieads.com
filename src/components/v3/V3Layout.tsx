@@ -11,7 +11,10 @@ import {
   User, 
   Share2, 
   Settings as SettingsIcon, 
-  LayoutGrid 
+  LayoutGrid,
+  PenTool,
+  BarChart3,
+  Inbox
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useCreditStore } from '../../lib/creditStore';
@@ -49,9 +52,12 @@ export default function V3Layout({ children }: Props) {
 
   const dailyItems = [
     { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#8B5CF6' }} /> },
-    { k: '/studio', l: 'Content Studio', icon: <Calendar size={15} style={{ color: '#ec4899' }} /> },
+    { k: '/composer', l: 'Composer', icon: <PenTool size={15} style={{ color: '#ec4899' }} /> },
+    { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} style={{ color: '#2563eb' }} /> },
+    { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} style={{ color: '#10b981' }} /> },
+    { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} style={{ color: '#eab308' }} /> },
     { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} style={{ color: '#ef4444' }} /> },
-    { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#10b981' }} /> },
+    { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#6366f1' }} /> },
   ];
 
   const toolItems = [
