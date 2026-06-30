@@ -1,1267 +1,809 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
-import { 
-  Shield, 
-  Lock, 
-  ExternalLink, 
-  Mail, 
-  FileText, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Globe,
-  Clock,
-  Printer,
-  ArrowUp,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Check,
-  User,
-  Database,
-  CreditCard,
-  Sparkles
-} from 'lucide-react';
-
-/* ═══════════════════════════════════════════════════════
-   Design Lineage (Extracted from Landing Page):
-   - Typography: Font 'Geist', Headings 'Bricolage Grotesque' or 'General Sans'
-   - Colors: Primary #09090B, Accent Gradient, Border #E4E4E7
-   - Borders: Radius 8px (var(--radius)), Radius pill
-   - Shadows: var(--shadow-sm), var(--shadow-md), var(--shadow-lg)
-   ═══════════════════════════════════════════════════════ */
 
 export default function PrivacyPolicyPage() {
   const navigate = useNavigate();
   const [lang, setLang] = useState<'en' | 'id'>('en');
-  const [activeSection, setActiveSection] = useState('who-we-are');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-  const [isTocMobileOpen, setIsTocMobileOpen] = useState(false);
 
-  const sections = {
-    en: [
-      { id: 'who-we-are', title: '1. Introduction & Who We Are' },
-      { id: 'info-collected', title: '2. Information We Collect' },
-      { id: 'how-we-use', title: '3. How We Use Your Information' },
-      { id: 'legal-basis', title: '4. Legal Basis for Processing' },
-      { id: 'subprocessors', title: '5. Third-Party Services & Sub-processors' },
-      { id: 'social-integrations', title: '6. Social Media API Integrations' },
-      { id: 'ai-disclosure', title: '7. AI Processing Disclosure' },
-      { id: 'retention', title: '8. Data Retention & Deletion' },
-      { id: 'your-rights', title: '9. Your Rights & Frameworks' },
-      { id: 'transfers', title: '10. International Data Transfers' },
-      { id: 'security', title: '11. Data Security Measures' },
-      { id: 'cookies', title: '12. Cookies & Tracking' },
-      { id: 'children', title: '13. Children\'s Privacy' },
-      { id: 'breach-notif', title: '14. Data Breach Notification' },
-      { id: 'changes', title: '15. Changes to This Policy' },
-      { id: 'contact', title: '16. Contact Information' }
-    ],
-    id: [
-      { id: 'who-we-are', title: '1. Pendahuluan & Siapa Kami' },
-      { id: 'info-collected', title: '2. Informasi Yang Kami Kumpulkan' },
-      { id: 'how-we-use', title: '3. Bagaimana Kami Menggunakan Informasi' },
-      { id: 'legal-basis', title: '4. Dasar Hukum Pemrosesan' },
-      { id: 'subprocessors', title: '5. Layanan Pihak Ketiga & Sub-prosesor' },
-      { id: 'social-integrations', title: '6. Integrasi API Media Sosial' },
-      { id: 'ai-disclosure', title: '7. Pengungkapan Pemrosesan AI' },
-      { id: 'retention', title: '8. Retensi & Penghapusan Data' },
-      { id: 'your-rights', title: '9. Hak-Hak Anda & Kerangka Hukum' },
-      { id: 'transfers', title: '10. Transfer Data Internasional' },
-      { id: 'security', title: '11. Tindakan Keamanan Data' },
-      { id: 'cookies', title: '12. Cookie & Pelacakan' },
-      { id: 'children', title: '13. Privasi Anak-Anak' },
-      { id: 'breach-notif', title: '14. Pemberitahuan Kebocoran Data' },
-      { id: 'changes', title: '15. Perubahan Kebijakan Ini' },
-      { id: 'contact', title: '16. Informasi Kontak' }
-    ]
-  };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      // Calculate Scroll Progress
-      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-      if (totalHeight > 0) {
-        setScrollProgress((window.scrollY / totalHeight) * 100);
-      }
-
-      // Show/Hide back-to-top button
-      setShowScrollTop(window.scrollY > 400);
-
-      // TOC active item tracking
-      const scrollPosition = window.scrollY + 140;
-      for (const section of sections[lang]) {
-        const el = document.getElementById(section.id);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveSection(section.id);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lang]);
-
-  const scrollToSection = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      const top = el.offsetTop - 110;
-      window.scrollTo({ top, behavior: 'smooth' });
-      setActiveSection(id);
-      setIsTocMobileOpen(false);
-    }
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
-  };
-
-  const handleCopyLink = (sectionId: string) => {
-    const link = `${window.location.origin}${window.location.pathname}#${sectionId}`;
-    navigator.clipboard.writeText(link).then(() => {
-      triggerToast(lang === 'en' ? 'Section link copied to clipboard!' : 'Tautan bagian berhasil disalin!');
-    });
-  };
-
+  // Maintain scroll position when changing language
   const handleLangSwitch = (newLang: 'en' | 'id') => {
+    const scrollPos = window.scrollY;
     setLang(newLang);
-    if (activeSection) {
-      setTimeout(() => {
-        scrollToSection(activeSection);
-      }, 80);
-    }
-  };
-
-  const toggleCard = (cardId: string) => {
-    setExpandedCards(prev => ({ ...prev, [cardId]: !prev[cardId] }));
+    setTimeout(() => {
+      window.scrollTo(0, scrollPos);
+    }, 10);
   };
 
   return (
-    <div className="landing-page min-h-screen antialiased bg-white text-[#09090B]">
-      <style>{`
-        @media print {
-          nav, aside, footer, .back-to-top, .print-btn, .lang-switcher, .toc-btn, .progress-bar-container, .no-print {
-            display: none !important;
-          }
-          .main-content-container {
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          body {
-            background: white !important;
-            color: black !important;
-            font-size: 12pt !important;
-            line-height: 1.6 !important;
-          }
-          h2 {
-            page-break-before: always;
-            border-bottom: 1.5px solid #000 !important;
-            padding-bottom: 8px !important;
-          }
-          .print-card {
-            border: 1px solid #ccc !important;
-            break-inside: avoid !important;
-            padding: 12px !important;
-            margin-bottom: 10px !important;
-          }
-        }
-      `}</style>
-
-      {/* Progress Bar */}
-      <div className="progress-bar-container" style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 3, background: 'rgba(0,0,0,0.06)', zIndex: 1010 }}>
-        <div style={{ width: `${scrollProgress}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.1s' }} />
-      </div>
-
-      <div className="lp-grid-line lp-line-left"></div>
-      <div className="lp-grid-line lp-line-right"></div>
-      <div className="lp-line-top"></div>
+    <div className="min-h-screen bg-white text-[#1A1A1A] antialiased selection:bg-zinc-200" style={{ fontFamily: "'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif" }}>
       
-      {/* NAVBAR */}
-      <nav className="navbar" style={{ top: 3 }}>
-        <div className="nav-inner relative w-full h-full flex items-center justify-between">
-          <div className="nav-brand" onClick={() => navigate('/')}>
-            <ZieAdsLogo size={32} />
-            <span className="brand-name">zieads</span>
+      {/* HEADER */}
+      <header className="border-b border-zinc-200 bg-white/90 backdrop-blur-md fixed top-0 left-0 right-0 z-50 h-16 no-print">
+        <div className="max-w-[800px] mx-auto h-full px-6 flex items-center justify-between">
+          <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="flex items-center gap-2 font-bold text-lg text-black decoration-none">
+            <ZieAdsLogo size={24} />
+            <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>zieads</span>
+          </a>
+          <div className="flex items-center gap-4 text-xs font-semibold text-zinc-500">
+            <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }} className="hover:text-black transition-colors decoration-none">Terms of Service</a>
+            <span className="text-zinc-300">|</span>
+            <button 
+              onClick={() => handleLangSwitch(lang === 'en' ? 'id' : 'en')} 
+              className="hover:text-black transition-colors"
+              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 'inherit', fontWeight: 'inherit', padding: 0 }}
+            >
+              {lang === 'en' ? 'Bahasa Indonesia' : 'English'}
+            </button>
           </div>
-          <div className="nav-links hidden md:flex">
-            <a href="/#how-it-works">How It Works</a>
-            <a href="/#pricing">Pricing</a>
-            <a href="/#faq">FAQ</a>
-          </div>
-          <div className="nav-actions hidden md:flex">
-            <button className="btn-login" onClick={() => navigate('/sign-in')}>Log in</button>
-            <button className="btn-get-started" onClick={() => navigate('/sign-up')}>Get Started Free</button>
-          </div>
-
-          <button
-            className="flex md:hidden p-2 text-gray-700 hover:text-gray-950 focus:outline-none transition-colors ml-auto"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle Menu"
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-          >
-            {isMobileMenuOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-
-          {isMobileMenuOpen && (
-            <div className="absolute top-[60px] left-0 right-0 w-full bg-white/95 border border-gray-100 rounded-3xl shadow-xl p-6 flex flex-col gap-4 text-left z-50 backdrop-blur-xl md:hidden">
-              <div className="flex flex-col gap-3 font-semibold text-gray-750 text-[15px] pl-2">
-                <a href="/#how-it-works" onClick={() => setIsMobileMenuOpen(false)}>How It Works</a>
-                <a href="/#pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</a>
-                <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)}>FAQ</a>
-              </div>
-              <hr className="border-gray-100 my-1" />
-              <div className="flex flex-col gap-3">
-                <button
-                  className="w-full py-3.5 border border-gray-200 hover:border-gray-300 rounded-xl font-bold text-[14px] text-gray-750 text-center bg-white hover:bg-gray-50 transition-all"
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-in'); }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Log in
-                </button>
-                <button
-                  className="w-full py-3.5 btn-lp-primary-gradient text-white rounded-xl font-bold text-[14px] text-center transition-all"
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-up'); }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Start Free
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      </nav>
+      </header>
 
-      {/* Main Page Layout */}
-      <div className="pt-[140px] md:pt-[160px] pb-12">
+      {/* CONTENT */}
+      <main className="max-w-[800px] mx-auto px-6 pt-32 pb-24">
         
-        {/* Page Hero Section */}
-        <section className="bg-[var(--lp-bg-inset)] border-b border-[var(--lp-border-subtle)] py-12 md:py-20 px-6 relative">
-          <div className="max-w-6xl mx-auto flex flex-col gap-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--lp-bg-canvas-alt)] border border-[var(--lp-border-default)] text-[var(--lp-text-secondary)] text-[10px] font-mono font-semibold rounded-full uppercase tracking-wider mb-4">
-                  <Shield size={12} className="text-[var(--lp-text-primary)]" />
-                  Legal Document
-                </div>
-                <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-3xl sm:text-4xl md:text-[48px] font-extrabold text-[var(--lp-text-primary)] tracking-tight leading-none mb-3">
-                  {lang === 'en' ? 'Privacy Policy' : 'Kebijakan Privasi'}
-                </h1>
-                <p className="text-[var(--lp-text-secondary)] text-sm sm:text-base max-w-xl leading-relaxed">
-                  {lang === 'en' 
-                    ? 'How PT. Bantu Indonesia Technology collects, uses, and protects your personal data when you use ZieAds.'
-                    : 'Bagaimana PT. Bantu Indonesia Technology mengumpulkan, menggunakan, dan melindungi data pribadi Anda saat menggunakan ZieAds.'}
-                </p>
-              </div>
-              
-              {/* Language Selector */}
-              <div className="flex items-center gap-1 bg-zinc-100 border border-zinc-200 p-1 rounded-full self-start md:self-center shadow-sm lang-switcher">
-                <Globe size={13} className="text-zinc-500 ml-2.5 mr-1" />
-                <button 
-                  onClick={() => handleLangSwitch('en')}
-                  style={{
-                    border: 'none',
-                    background: lang === 'en' ? '#09090B' : 'transparent',
-                    color: lang === 'en' ? '#fff' : '#52525B',
-                    padding: '6px 14px',
-                    borderRadius: 99,
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  EN
-                </button>
-                <button 
-                  onClick={() => handleLangSwitch('id')}
-                  style={{
-                    border: 'none',
-                    background: lang === 'id' ? '#09090B' : 'transparent',
-                    color: lang === 'id' ? '#fff' : '#52525B',
-                    padding: '6px 14px',
-                    borderRadius: 99,
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  ID
-                </button>
-              </div>
-            </div>
-
-            {/* Metadata strip */}
-            <div className="border-t border-zinc-200 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-[var(--lp-text-secondary)]">
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-4">
-                <span><strong>Effective Date:</strong> June 30, 2026</span>
-                <span className="hidden sm:inline text-zinc-300">|</span>
-                <span><strong>Last Updated:</strong> June 30, 2026</span>
-                <span className="hidden sm:inline text-zinc-300">|</span>
-                <span><strong>Version:</strong> 1.0 (UU PDP & API Audited)</span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 print-btn">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-50 border border-zinc-200 rounded text-zinc-650 font-mono">
-                  <Clock size={12} /> ~15 min read
-                </span>
-                <button 
-                  onClick={() => window.print()}
-                  style={{ background: '#fff', border: '1px solid var(--border)', cursor: 'pointer', borderRadius: 4, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
-                >
-                  <Printer size={12} /> {lang === 'en' ? 'Print / PDF' : 'Cetak / PDF'}
-                </button>
-              </div>
+        {/* Title Zone */}
+        <div className="mb-16">
+          <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-4xl sm:text-[44px] font-extrabold text-black tracking-tight leading-tight mb-4">
+            {lang === 'en' ? 'Privacy Policy' : 'Kebijakan Privasi'}
+          </h1>
+          <div className="text-sm text-zinc-500 space-y-1 font-mono">
+            <div>Effective Date: June 30, 2026</div>
+            <div>Last Updated: June 30, 2026 &bull; Version 2.0.0</div>
+            <div className="italic text-zinc-400 mt-2">
+              {lang === 'en' 
+                ? 'This policy was published on June 30, 2026 with an effective date of June 30, 2026.'
+                : 'Kebijakan ini diterbitkan pada 30 Juni 2026 dengan tanggal efektif mulai 30 Juni 2026.'}
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Content Container */}
-        <section className="max-w-6xl mx-auto px-6 py-12 md:py-16 relative">
-          <div className="flex flex-col lg:flex-row gap-12 items-start relative">
-            
-            {/* TOC Desktop Sidebar */}
-            <aside className="lg:sticky lg:top-28 w-full lg:w-72 shrink-0 pr-4 pb-6 border-b lg:border-b-0 lg:border-r border-[var(--lp-border-subtle)] hidden lg:block self-start max-h-[calc(100vh-140px)] overflow-y-auto">
-              <div className="text-[10px] font-bold text-[var(--lp-text-muted)] uppercase tracking-wider mb-4 font-mono">
-                {lang === 'en' ? 'Document Sections' : 'Daftar Bagian'}
-              </div>
-              <ul className="space-y-1">
-                {sections[lang].map((sec) => (
-                  <li key={sec.id}>
-                    <button
-                      onClick={() => scrollToSection(sec.id)}
-                      className={`w-full text-left py-2 px-3 text-[13px] transition-all font-medium border-l-2 ${
-                        activeSection === sec.id
-                          ? 'border-[var(--lp-text-primary)] text-[var(--lp-text-primary)] font-bold pl-4'
-                          : 'border-transparent text-[var(--lp-text-secondary)] hover:text-[var(--lp-text-primary)] pl-4'
-                      }`}
-                      style={{ borderRadius: '0px', background: 'transparent', cursor: 'pointer' }}
-                    >
-                      {sec.title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </aside>
-
-            {/* Mobile TOC accordion */}
-            <div className="w-full lg:hidden no-print" style={{ marginBottom: 20 }}>
-              <button 
-                onClick={() => setIsTocMobileOpen(!isTocMobileOpen)}
-                style={{ width: '100%', background: '#fff', border: '1px solid var(--border)', borderRadius: 6, padding: '12px 16px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                <span>📖 {lang === 'en' ? 'Table of Contents' : 'Daftar Isi'}</span>
-                {isTocMobileOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-              {isTocMobileOpen && (
-                <div style={{ background: '#fff', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 6px 6px', padding: 12, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
-                  {sections[lang].map((sec) => (
-                    <button 
-                      key={sec.id}
-                      onClick={() => scrollToSection(sec.id)}
-                      style={{ textAlignment: 'left', border: 'none', background: 'none', padding: '6px 8px', fontSize: '0.8rem', color: activeSection === sec.id ? P : 'var(--text-secondary)', fontWeight: activeSection === sec.id ? 700 : 400, cursor: 'pointer', textAlign: 'left' }}
-                    >
-                      {sec.title}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Main Content Body */}
-            <div className="flex-1 max-w-3xl main-content-container" style={{ margin: '0 auto' }}>
-              
-              {/* Section 1 */}
-              <section id="who-we-are" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>1. {lang === 'en' ? 'Introduction & Who We Are' : 'Pendahuluan & Siapa Kami'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('who-we-are')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">01</span>
-                  </div>
+        {/* Dynamic Prose Column */}
+        <div className="text-[16px] leading-[1.75] text-[#1A1A1A] space-y-12">
+          
+          {lang === 'en' ? (
+            <>
+              {/* SECTION 1 */}
+              <section id="introduction" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  1. Introduction & Who We Are
                 </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-[1.65] space-y-4">
-                  {lang === 'en' ? (
-                    <>
-                      <p>
-                        Welcome to ZieAds. This Privacy Policy explains how <strong>PT. Bantu Indonesia Technology</strong>, operating as <strong>ZieAds</strong> ("we", "us", "our"), collects, processes, stores, and protects your personal data when you use the website and the social media management application accessible at <strong>zieads.com</strong>.
-                      </p>
-                      <p>
-                        PT. Bantu Indonesia Technology acts as the <strong>Data Controller</strong> (<em>Pengendali Data Pribadi</em>) under Law of the Republic of Indonesia No. 27 of 2022 concerning Personal Data Protection (<strong>UU PDP</strong>), and as Data Controller under the General Data Protection Regulation (<strong>GDPR</strong>) for users residing within the EU/EEA.
-                      </p>
-                      <p>
-                        <strong>ZieAds Summary:</strong> ZieAds is a social media management platform that helps solopreneurs and small businesses schedule posts, analyze performance, and receive AI-generated marketing insights across Instagram, TikTok, and LinkedIn, as well as a marketing audit toolkit for paid advertising.
-                      </p>
-                      <p>
-                        By creating an account, connecting social media channels, or using the ZieAds platform, you explicitly consent to the collection and processing of your personal data as outlined in this Privacy Policy.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p>
-                        Selamat datang di ZieAds. Kebijakan Privasi ini menjelaskan bagaimana <strong>PT. Bantu Indonesia Technology</strong>, yang beroperasi sebagai <strong>ZieAds</strong> ("kami", "kita", "milik kami"), mengumpulkan, memproses, menyimpan, dan melindungi data pribadi Anda saat menggunakan situs web dan aplikasi manajemen media sosial di <strong>zieads.com</strong>.
-                      </p>
-                      <p>
-                        PT. Bantu Indonesia Technology bertindak sebagai <strong>Pengendali Data Pribadi</strong> berdasarkan Undang-Undang Republik Indonesia No. 27 Tahun 2022 tentang Perlindungan Data Pribadi (<strong>UU PDP</strong>), serta sebagai Pengendali Data berdasarkan General Data Protection Regulation (<strong>GDPR</strong>) untuk pengguna di wilayah Uni Eropa.
-                      </p>
-                      <p>
-                        <strong>Ringkasan ZieAds:</strong> ZieAds adalah platform manajemen media sosial yang membantu wirausahawan dan bisnis kecil dalam menjadwalkan konten, menganalisis performa, dan menerima wawasan pemasaran berbasis kecerdasan buatan (AI) di Instagram, TikTok, dan LinkedIn, serta kit audit untuk performa iklan berbayar.
-                      </p>
-                      <p>
-                        Dengan membuat akun, menghubungkan saluran media sosial, atau menggunakan platform ZieAds, Anda memberikan persetujuan eksplisit atas pengumpulan dan pemrosesan data pribadi Anda sesuai dengan Kebijakan Privasi ini.
-                      </p>
-                    </>
-                  )}
-                </div>
+                <p>
+                  Welcome to ZieAds. This Privacy Policy explains how <strong>PT. Bantu Indonesia Technology</strong>, an Indonesian limited liability company registered in the Special Region of Yogyakarta, Indonesia, operating under the brand name <strong>ZieAds</strong> ("we", "us", "our"), collects, processes, stores, and protects your personal data when you use the website and the social media management application accessible at <strong>zieads.com</strong>. We build software tools that help solopreneurs, small business owners, and marketing teams analyze their advertising performance and manage their organic social channels through advanced artificial intelligence.
+                </p>
+                <p>
+                  PT. Bantu Indonesia Technology acts as the <strong>Data Controller</strong> (<em>Pengendali Data Pribadi</em>) under Law of the Republic of Indonesia No. 27 of 2022 concerning Personal Data Protection (<strong>UU PDP</strong>), and as Data Controller under the General Data Protection Regulation (<strong>GDPR</strong>) for users residing within the EU/EEA. By creating a ZieAds account, connecting social media channels, or using the platform, you confirm that you have read, understood, and explicitly consented to the collection and processing of your personal data as outlined in this Privacy Policy.
+                </p>
+                <p>
+                  This Privacy Policy covers all visitors to our public marketing website, registered users on all subscription plans (Free, Solo, Pro, and Studio), and legacy users from earlier versions of the product. It does not cover content that we process on behalf of business customers under separate enterprise contracts, nor does it apply to third-party web domains that may link to or from our service.
+                </p>
               </section>
 
-              {/* Section 2 */}
-              <section id="info-collected" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>2. {lang === 'en' ? 'Information We Collect' : 'Informasi Yang Kami Kumpulkan'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('info-collected')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">02</span>
-                  </div>
+              {/* SECTION 2 */}
+              <section id="info-collected" className="space-y-6">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  2. Information We Collect
                 </h2>
-                
-                {/* Visual Card Grid Treatment (TOC / cards showing categories) */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
-                  {[
-                    {
-                      id: 'acc',
-                      title: lang === 'en' ? 'A. Account Information' : 'A. Informasi Akun',
-                      icon: <User size={16} />,
-                      summary: lang === 'en' ? 'Basic profile inputs provided at sign up' : 'Profil dasar yang dimasukkan saat pendaftaran',
-                      content: lang === 'en' 
-                        ? ['First and last name', 'Email address and securely hashed password (bcrypt)', 'Business profile metadata (brand name, primary URL, niche)']
-                        : ['Nama depan dan belakang', 'Alamat email dan kata sandi yang di-hash secara aman (bcrypt)', 'Metadata profil bisnis (nama brand, URL utama, kategori)']
-                    },
-                    {
-                      id: 'v02',
-                      title: lang === 'en' ? 'B. Marketing Audits Data (v0.2)' : 'B. Data Audit Pemasaran (v0.2)',
-                      icon: <FileText size={16} />,
-                      summary: lang === 'en' ? 'Analyses generated via AI audit prompts' : 'Analisis kesiapan iklan yang dihasilkan oleh mesin AI',
-                      content: lang === 'en'
-                        ? ['URLs of websites submitted for advertising audits', 'Generated audit scores (0-100 rating across 6 core dimensions)', 'AI Agent conversation logs and white-label PDF reports generated']
-                        : ['URL situs web yang diserahkan untuk audit periklanan', 'Skor kesiapan iklan (skor 0-100 di 6 dimensi utama)', 'Log riwayat obrolan AI Agent dan laporan PDF hasil audit']
-                    },
-                    {
-                      id: 'v03_org',
-                      title: lang === 'en' ? 'C. Organic Social Media Channels (v0.3)' : 'C. Data Saluran Media Sosial Organik (v0.3)',
-                      icon: <Globe size={16} />,
-                      summary: lang === 'en' ? 'Metrics and assets via OAuth connections' : 'Metrik dan berkas yang terhubung via OAuth',
-                      content: lang === 'en'
-                        ? ['Instagram profile stats, follower counts, and post engagement insights', 'TikTok creator statistics and video list metrics', 'LinkedIn member profile details and updates sent via Composer']
-                        : ['Statistik profil Instagram, jumlah pengikut, dan metrik keterlibatan konten', 'Statistik kreator TikTok dan daftar video beserta kinerjanya', 'Detail profil LinkedIn dan postingan yang dikirim melalui Composer']
-                    },
-                    {
-                      id: 'v03_paid',
-                      title: lang === 'en' ? 'D. Paid Advertising Statistics (v0.3)' : 'D. Statistik Iklan Berbayar (v0.3)',
-                      icon: <TrendingUp size={16} />,
-                      summary: lang === 'en' ? 'Performance metrics via CSV spreadsheet uploads' : 'Metrik kinerja dari unggahan berkas CSV',
-                      content: lang === 'en'
-                        ? ['Campaign performance rows containing spend, impressions, CTR, conversions', 'Anonymized benchmark records used to generate briefings']
-                        : ['Baris kinerja kampanye berisi pengeluaran, tayangan, CTR, dan konversi', 'Catatan tolok ukur anonim yang dianalisis untuk ringkasan harian']
-                    },
-                    {
-                      id: 'ai_an',
-                      title: lang === 'en' ? 'E. AI Analyst Daily Metrics' : 'E. Data Kinerja AI Analyst',
-                      icon: <Sparkles size={16} />,
-                      summary: lang === 'en' ? 'Wants and actions compiled by AI models' : 'Rekomendasi taktis yang disusun oleh model AI',
-                      content: lang === 'en'
-                        ? ['Wins identified, anomaly alerts, and actions history', 'Platform timing indices for calendar posts']
-                        : ['Wawasan kemenangan, pemberitahuan anomali, dan riwayat tindakan rekomendasi', 'Indeks waktu publikasi konten terbaik untuk kalender']
-                    },
-                    {
-                      id: 'tech',
-                      title: lang === 'en' ? 'F. Technical & Usage Logs' : 'F. Data Teknis & Penggunaan',
-                      icon: <Database size={16} />,
-                      summary: lang === 'en' ? 'Security diagnostics and system events' : 'Log diagnostik sistem dan peristiwa keamanan',
-                      content: lang === 'en'
-                        ? ['IP addresses, browser client configurations, OS, and timestamped actions', 'Performance tracking stats and error crash logs']
-                        : ['Alamat IP, tipe peramban, OS, dan waktu aksi penggunaan', 'Statistik pelacakan kinerja halaman dan log kesalahan crash']
-                    },
-                    {
-                      id: 'pay',
-                      title: lang === 'en' ? 'G. Payment Transaction Data' : 'G. Catatan Pembayaran & Transaksi',
-                      icon: <CreditCard size={16} />,
-                      summary: lang === 'en' ? 'Subscription levels managed via Stripe' : 'Tingkat langganan yang dikelola oleh Stripe',
-                      content: lang === 'en'
-                        ? ['Customer ID, subscription statuses, and invoice records', 'Card number last 4 digits (full card info goes direct to Stripe)']
-                        : ['ID pelanggan, status langganan, dan catatan transaksi faktur', '4 digit terakhir nomor kartu (detail kartu lengkap langsung dikirim ke Stripe)']
-                    }
-                  ].map(card => {
-                    const isExpanded = expandedCards[card.id];
-                    return (
-                      <div 
-                        key={card.id}
-                        className="print-card"
-                        style={{ 
-                          background: '#fff', 
-                          border: '1px solid var(--border)', 
-                          borderRadius: 8, 
-                          padding: 16,
-                          boxShadow: 'var(--shadow-sm)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                        onClick={() => toggleCard(card.id)}
-                      >
-                        <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: P }}>
-                              {card.icon}
-                            </div>
-                            <div>
-                              <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700 }}>{card.title}</h4>
-                              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{card.summary}</p>
-                            </div>
-                          </div>
-                          <div className="no-print">
-                            {isExpanded ? <ChevronUp size={16} style={{ color: G }} /> : <ChevronDown size={16} style={{ color: G }} />}
-                          </div>
-                        </div>
+                <p>
+                  We collect personal data in three ways: information you provide directly to us, information we receive automatically as you interact with our platform, and information we receive from third-party services you choose to connect. We collect only the data necessary to provide our services, secure our platform, comply with legal obligations, and improve the product. We do not sell personal data to third parties under any circumstances.
+                </p>
 
-                        {/* Expandable bullets */}
-                        {(isExpanded || window.matchMedia('(max-width: 768px)').matches || window.location.href.includes('print')) && (
-                          <div style={{ marginTop: 12, borderTop: '1px solid var(--border-light)', paddingTop: 12 }}>
-                            <ul style={{ paddingLeft: 16, margin: 0, listStyleType: 'disc', fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              {card.content.map((bullet, idx) => (
-                                <li key={idx}>{bullet}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-xl text-xs sm:text-sm text-[var(--lp-text-secondary)] leading-relaxed">
-                  {lang === 'en' ? (
-                    <p>
-                      <strong>Our Promise:</strong> We collect only the data necessary to provide our optimization services. We do not sell your personal data, nor do we share audit scopes with competitor clients.
+                <div className="space-y-4 pl-4 border-l border-zinc-200">
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.1 Account Information</h3>
+                    <p className="text-zinc-650">
+                      When you create a ZieAds account, we collect your full name and email address, which serve as your primary identifiers and the channels through which we send transactional communications. We also collect and securely store your password, which is hashed using bcrypt with a per-user salt before storage. We do not store passwords in plaintext, and our staff cannot access your password. If you sign in using a third-party authentication provider (such as Google or LinkedIn OAuth), we store an account linkage record rather than a password.
                     </p>
-                  ) : (
-                    <p>
-                      <strong>Komitmen Kami:</strong> Kami hanya mengumpulkan data yang mutlak diperlukan untuk menyediakan layanan optimasi kami. Kami tidak menjual data Anda, dan kami tidak membagikan cakupan audit Anda kepada kompetitor.
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.2 Advertising Account Data</h3>
+                    <p className="text-zinc-650">
+                      When you upload advertising performance data via CSV file from Meta Ads Manager, Google Ads, or TikTok Ads Manager, we parse the file and store the campaign performance information. The data we extract from your uploaded CSV files includes campaign names, ad group configurations, ad names, impressions, clicks, total spend, conversion counts, return on ad spend (ROAS), click-through rate (CTR), cost per click (CPC), and cost per thousand impressions (CPM). We explicitly do not access or collect personal data of the end users who viewed your ads, your custom audience source data, or any individual ad account credentials.
                     </p>
-                  )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.3 Organic Social Media Data</h3>
+                    <p className="text-zinc-650">
+                      When you connect your Instagram Business, TikTok, or LinkedIn profile to ZieAds via OAuth authorization, we receive data from those platforms strictly limited to the permission scopes you grant. From Instagram we receive your profile information (username, account type, follower count), published media posts, and post engagement insights. From TikTok we receive your profile display name, avatar, bio, follower counts, videos, and engagement metrics. From LinkedIn we receive your basic profile headline and posts you choose to publish. When you schedule posts or reply to comments, we store the post content and comment texts.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.4 Technical & Usage Data</h3>
+                    <p className="text-zinc-650">
+                      When you use ZieAds, our servers automatically log information about your interactions with the platform, including the dates and times of access, the features and pages you use, the audit reports and analysis modes you run, the AI briefings you open, errors you encounter, and your browser, operating system, and IP address. We use this technical data to maintain service reliability, diagnose bugs, prevent abuse, monitor system performance, and protect our infrastructure.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.5 Payment Information</h3>
+                    <p className="text-zinc-650">
+                      If you subscribe to a paid ZieAds tier, payment is processed by Stripe, Inc., a PCI-DSS compliant payment processor. Stripe collects and handles your full payment card information directly through their secure infrastructure — these details never pass through or get stored on ZieAds servers. We receive from Stripe only the information necessary to manage your subscription: your Stripe customer identifier, billing email, the last four digits of your payment card, and transaction history records.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.6 Communications Data</h3>
+                    <p className="text-zinc-650">
+                      When you contact us by email (such as legal@zieads.com or privacy@zieads.com) or through support channels, we collect and retain the content of your communications. This includes messages, your name, contact information, timestamps, and any attachments. We use this information to respond to your inquiries and improve our support services.
+                    </p>
+                  </div>
                 </div>
               </section>
 
-              {/* Section 3 */}
-              <section id="how-we-use" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>3. {lang === 'en' ? 'How We Use Your Information' : 'Bagaimana Kami Menggunakan Informasi'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('how-we-use')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">03</span>
-                  </div>
+              {/* SECTION 3 */}
+              <section id="how-we-use" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  3. How We Use Your Information
                 </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  {lang === 'en' ? (
-                    <>
-                      <p>We process your data to fulfill our contract with you, specifically to:</p>
-                      <ul className="space-y-3.5 pl-1">
-                        {[
-                          "Authenticate accounts and secure your dashboard workspace.",
-                          "Enable scheduling, publishing, and unified commenting pipelines.",
-                          "Compile daily AI briefings, post timing windows, and competitor benchmarks.",
-                          "Deliver transactional system emails (e.g. system warnings, notifications, receipts).",
-                          "Generate PDF audit files and perform ROAS audits."
-                        ].map((item, idx) => (
-                          <li key={idx} className="flex items-start gap-3">
-                            <CheckCircle2 size={16} className="text-zinc-900 shrink-0 mt-1" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p><strong>Negative Disclosures:</strong> We do not publish your content to platforms you have not explicitly authorized. We do not share your engagement metrics with third-party advertising networks.</p>
-                    </>
-                  ) : (
-                    <>
-                      <p>Kami memproses data Anda untuk memenuhi kontrak kami dengan Anda, khususnya untuk:</p>
-                      <ul className="space-y-3.5 pl-1">
-                        {[
-                          "Mengautentikasi akun dan mengamankan dasbor kerja Anda.",
-                          "Mengaktifkan penjadwalan, publikasi, dan alur komentar terpadu.",
-                          "Menyusun ringkasan AI harian, waktu posting terbaik, dan tolok ukur pesaing.",
-                          "Mengirimkan email sistem transaksional (seperti peringatan sistem, pemberitahuan, kuitansi).",
-                          "Menghasilkan berkas audit PDF dan melakukan audit ROAS."
-                        ].map((item, idx) => (
-                          <li key={idx} className="flex items-start gap-3">
-                            <CheckCircle2 size={16} className="text-zinc-900 shrink-0 mt-1" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p><strong>Pengungkapan Negatif:</strong> Kami tidak akan mempublikasikan konten Anda ke platform yang tidak Anda setujui secara eksplisit. Kami tidak membagikan metrik keterlibatan Anda dengan jaringan iklan pihak ketiga.</p>
-                    </>
-                  )}
+                <p>
+                  We use your personal data to fulfill our contract with you and to operate our services. Specifically, we use your account information to authenticate your login, establish your secure dashboard workspace, and maintain your billing plan. Your connected organic social media profiles and ad campaign metrics are processed to compile your daily AI briefings, calculate optimal posting times, and generate visual calendars.
+                </p>
+                <p>
+                  We also use usage and technical logs to monitor system stability, protect against malicious activities, and debug errors. If you opt-in to marketing communications, we use your contact details to share feature announcements or tutorials. We process communications logs to assist with technical support. All processing operations are conducted under strict row-level separation security to prevent cross-customer access.
+                </p>
+              </section>
+
+              {/* SECTION 4 */}
+              <section id="legal-basis" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  4. Legal Basis for Processing
+                </h2>
+                <p>
+                  Under international privacy laws, including the Indonesian PDP Law (Article 20) and the EU GDPR (Article 6), we must establish a valid legal ground to process your personal data. Most of our processing activities are grounded in <strong>Contractual Necessity</strong> — we process your account configuration, social channel tokens, and metric uploads to deliver the core SaaS features you requested.
+                </p>
+                <p>
+                  Where we process data to safeguard our database, detect abuse, or optimize performance, we rely on our <strong>Legitimate Interest</strong> to maintain a secure and functional application. Where processing requires explicit opt-in (such as marketing lists or tracking cookies), we rely on your <strong>Consent</strong>, which can be withdrawn at any time. We also process billing records under <strong>Legal Obligation</strong> to comply with national tax laws.
+                </p>
+              </section>
+
+              {/* SECTION 5 */}
+              <section id="subprocessors" className="space-y-6">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  5. Third-Party Services & Sub-processors
+                </h2>
+                <p>
+                  We transfer personal data to external sub-processors only when necessary to perform services. All sub-processors are bound by contract to enforce data security standards matching this policy. Below is the list of our current sub-processors:
+                </p>
+
+                <div className="space-y-4 pl-4 border-l border-zinc-200 text-sm">
+                  <div>
+                    <strong>Anthropic, PBC (United States)</strong>
+                    <p className="text-zinc-650">We share campaign statistics and content prompts via Claude API to compile daily AI briefings and ad readiness diagnosis. Anthropic does not use ZieAds data to train public models.</p>
+                  </div>
+                  <div>
+                    <strong>Meta Platforms, Inc. (United States)</strong>
+                    <p className="text-zinc-650">Handles Instagram Business profile syncing, publishing posts, and reading insights via official Graph APIs.</p>
+                  </div>
+                  <div>
+                    <strong>TikTok Pte. Ltd. (Singapore / United States)</strong>
+                    <p className="text-zinc-650">Used to publish video assets and retrieve account metrics via TikTok Creator APIs.</p>
+                  </div>
+                  <div>
+                    <strong>LinkedIn Corporation (United States)</strong>
+                    <p className="text-zinc-650">Enables OAuth authentication and feeds publishing for LinkedIn personal profiles.</p>
+                  </div>
+                  <div>
+                    <strong>Stripe, Inc. (United States)</strong>
+                    <p className="text-zinc-650">Processes billing details, payment card tokens, and subscription invoicing.</p>
+                  </div>
+                  <div>
+                    <strong>Supabase, Inc. (United States / Global Hosting)</strong>
+                    <p className="text-zinc-650">Provides database services, authentication infrastructure, and secure encryption vaults for API tokens.</p>
+                  </div>
+                  <div>
+                    <strong>Vercel, Inc. (United States / Global Hosting)</strong>
+                    <p className="text-zinc-650">Hosts the user interface and serves front-end assets securely.</p>
+                  </div>
+                  <div>
+                    <strong>Resend, Inc. (United States)</strong>
+                    <p className="text-zinc-650">Delivers transactional and verification emails directly to users.</p>
+                  </div>
                 </div>
               </section>
 
-              {/* Section 4 */}
-              <section id="legal-basis" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>4. {lang === 'en' ? 'Legal Basis for Processing' : 'Dasar Hukum Pemrosesan'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('legal-basis')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">04</span>
-                  </div>
+              {/* SECTION 6 */}
+              <section id="social-integrations" className="space-y-6">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  6. Social Media API Integrations
                 </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  {lang === 'en' ? (
-                    <>
-                      <p>We process data based on the following grounds:</p>
-                      <ul className="list-disc list-inside space-y-2 pl-2">
-                        <li><strong>UU PDP Article 20:</strong> Processing is based on explicit consent, contract performance, legitimate interests (security and product improvement), and statutory compliance.</li>
-                        <li><strong>GDPR Article 6:</strong> Contractual necessity, user consent, and legitimate operations.</li>
-                      </ul>
-                      <p>Consent can be withdrawn at any time by disconnecting accounts or requesting deletion of your ZieAds account via email.</p>
-                    </>
-                  ) : (
-                    <>
-                      <p>Kami memproses data berdasarkan dasar hukum berikut:</p>
-                      <ul className="list-disc list-inside space-y-2 pl-2">
-                        <li><strong>UU PDP Pasal 20:</strong> Pemrosesan didasarkan pada persetujuan eksplisit, pelaksanaan kontrak, kepentingan sah (keamanan dan peningkatan produk), dan kepatuhan hukum.</li>
-                        <li><strong>GDPR Pasal 6:</strong> Kebutuhan kontraktual, persetujuan pengguna, dan operasi yang sah.</li>
-                      </ul>
-                      <p>Persetujuan dapat ditarik kapan saja dengan memutuskan hubungan akun atau meminta penghapusan akun ZieAds Anda melalui email.</p>
-                    </>
-                  )}
+                <p>
+                  ZieAds connects programmatically to third-party social networks through secure OAuth authorization protocols. We do not store your passwords for these platforms. You grant permissions explicitly through the respective network’s authorization screen, and you can revoke access at any time.
+                </p>
+
+                <div className="space-y-4 pl-4 border-l border-zinc-200">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-black">6.1 Meta (Instagram Graph API)</h3>
+                    <p className="text-zinc-650">
+                      We request access to <code>instagram_business_basic</code> to read your profile info, <code>instagram_business_manage_insights</code> to analyze post engagement rates, and <code>instagram_business_content_publish</code> to post scheduled visual contents. Data is stored until you disconnect the channel or delete your account. REVOCATION: You can revoke access through your Instagram account settings under Apps and Websites.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-black">6.2 TikTok API Integration</h3>
+                    <p className="text-zinc-650">
+                      We use TikTok display scopes to read creator stats (follower count, post list) and publishing scopes (<code>video.publish</code>) to post scheduled videos. We adhere to TikTok's UX flow, allowing you to select privacy settings and commercial designations for each post. REVOCATION: Revoke permissions in the TikTok app settings under Security &gt; Manage App Access.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-black">6.3 LinkedIn API Integration</h3>
+                    <p className="text-zinc-650">
+                      We request <code>openid</code>, <code>profile</code>, and <code>w_member_social</code> scopes to share scheduled updates directly to your personal LinkedIn profile feed. We do not access company page administration rights unless explicitly requested. REVOCATION: You can revoke access through your LinkedIn account under Permitted Services.
+                    </p>
+                  </div>
                 </div>
               </section>
 
-              {/* Section 5 */}
-              <section id="subprocessors" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>5. {lang === 'en' ? 'Third-Party Services & Sub-processors' : 'Layanan Pihak Ketiga & Sub-prosesor'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('subprocessors')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">05</span>
-                  </div>
+              {/* SECTION 7 */}
+              <section id="ai-disclosure" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  7. AI Processing Disclosure
                 </h2>
-                
-                {/* Table for sub-processors */}
-                <div style={{ overflowX: 'auto', marginBottom: 20 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                <p>
+                  ZieAds utilizes artificial intelligence models powered by Anthropic's Claude API to compile daily briefings, anomaly alerts, and ad audits. When you upload campaign logs or use chat diagnostics, data points are transmitted securely to Anthropic for real-time analysis.
+                </p>
+                <p>
+                  Per Anthropic's developer policy, data transmitted via the Claude API is processed temporarily, is not stored permanently by them, and is explicitly not used to train public LLM models. The generated insights represent suggestions; you retain full control and responsibility over verify and editing recommendations before taking action.
+                </p>
+              </section>
+
+              {/* SECTION 8 */}
+              <section id="retention" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  8. Data Retention & Deletion
+                </h2>
+                <p>
+                  We retain personal data only for the period necessary to deliver services or comply with laws. When you delete your account, we initiate an automated scrub to permanently erase your profile, campaign uploads, and connected OAuth tokens within 90 days.
+                </p>
+                <p>
+                  Billing and transaction records are retained for ten years to satisfy Indonesian national tax recordkeeping requirements (<em>Undang-Undang Ketentuan Umum dan Tata Cara Perpajakan</em>). Backup database archives are rotated and overwritten every 30 days.
+                </p>
+              </section>
+
+              {/* SECTION 9 */}
+              <section id="your-rights" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  9. Your Rights & How to Exercise Them
+                </h2>
+                <p>
+                  Under UU PDP (Indonesia) and GDPR (Europe), you hold specific rights regarding your personal data. These include the right to access a copy of your records, correct incorrect profile data, request deletion (the right to be forgotten), withdraw your consent for future processing, or obtain your data in a portable JSON format.
+                </p>
+                <p>
+                  To exercise any of these rights, contact our privacy desk at <strong>privacy@zieads.com</strong> or <strong>legal@zieads.com</strong>. We require identity verification to prevent unauthorized disclosures and respond to all validated requests within 30 days.
+                </p>
+              </section>
+
+              {/* SECTION 10 */}
+              <section id="legal-bases-table" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  10. Legal Bases for Processing
+                </h2>
+                <p>
+                  The following table maps our processing activities, the data types involved, and their legal grounds under UU PDP and GDPR:
+                </p>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }} className="min-w-full">
                     <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-soft)' }}>
-                        <th style={{ padding: 12 }}>Name</th>
-                        <th style={{ padding: 12 }}>Location</th>
-                        <th style={{ padding: 12 }}>Purpose</th>
-                        <th style={{ padding: 12 }}>Link</th>
+                      <tr style={{ borderBottom: '2px solid #E4E4E7', background: '#FAFAFA' }}>
+                        <th style={{ padding: '10px 12px' }}>Purpose</th>
+                        <th style={{ padding: '10px 12px' }}>Data Type</th>
+                        <th style={{ padding: '10px 12px' }}>Legal Basis</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: 12 }}><strong>Anthropic, PBC</strong></td>
-                        <td style={{ padding: 12 }}>USA</td>
-                        <td style={{ padding: 12 }}>AI API for daily briefings, competitor analysis, chat context</td>
-                        <td style={{ padding: 12 }}><a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noreferrer" className="text-zinc-950 underline flex items-center gap-1">Privacy <ExternalLink size={10} /></a></td>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Service Delivery (v0.2/v0.3 features)</td>
+                        <td style={{ padding: '10px 12px' }}>Account Info, Metrics, OAuth Tokens</td>
+                        <td style={{ padding: '10px 12px' }}>Contract (UU PDP Art. 20.b, GDPR Art. 6(1)(b))</td>
                       </tr>
-                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: 12 }}><strong>Stripe, Inc.</strong></td>
-                        <td style={{ padding: 12 }}>USA</td>
-                        <td style={{ padding: 12 }}>Secure payment billing processes</td>
-                        <td style={{ padding: 12 }}><a href="https://stripe.com/privacy" target="_blank" rel="noreferrer" className="text-zinc-950 underline flex items-center gap-1">Privacy <ExternalLink size={10} /></a></td>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Payment and Invoicing</td>
+                        <td style={{ padding: '10px 12px' }}>Identity details, Stripe ID</td>
+                        <td style={{ padding: '10px 12px' }}>Contract</td>
                       </tr>
-                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: 12 }}><strong>Supabase, Inc.</strong></td>
-                        <td style={{ padding: 12 }}>USA / Global</td>
-                        <td style={{ padding: 12 }}>Database storage, encrypted profiles, OAuth token vaults</td>
-                        <td style={{ padding: 12 }}><a href="https://supabase.com/privacy" target="_blank" rel="noreferrer" className="text-zinc-950 underline flex items-center gap-1">Privacy <ExternalLink size={10} /></a></td>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Security & Abuse Prevention</td>
+                        <td style={{ padding: '10px 12px' }}>IP address, Usage log files</td>
+                        <td style={{ padding: '10px 12px' }}>Legitimate Interest (UU PDP Art. 20.f, GDPR Art. 6(1)(f))</td>
                       </tr>
-                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: 12 }}><strong>Vercel, Inc.</strong></td>
-                        <td style={{ padding: 12 }}>USA / Global</td>
-                        <td style={{ padding: 12 }}>Cloud hosting deployment platforms</td>
-                        <td style={{ padding: 12 }}><a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noreferrer" className="text-zinc-950 underline flex items-center gap-1">Privacy <ExternalLink size={10} /></a></td>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Tax compliance</td>
+                        <td style={{ padding: '10px 12px' }}>Billing logs</td>
+                        <td style={{ padding: '10px 12px' }}>Legal Obligation (UU PDP Art. 20.c, GDPR Art. 6(1)(c))</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '10px 12px' }}>Product Updates Newsletter</td>
+                        <td style={{ padding: '10px 12px' }}>Email address</td>
+                        <td style={{ padding: '10px 12px' }}>Consent (UU PDP Art. 20.a, GDPR Art. 6(1)(a))</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
               </section>
 
-              {/* Section 6 */}
-              <section id="social-integrations" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>6. {lang === 'en' ? 'Social Media API Integrations' : 'Integrasi API Media Sosial'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('social-integrations')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">06</span>
-                  </div>
+              {/* SECTION 11 */}
+              <section id="regional-disclosures" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  11. Regional Supplemental Disclosures
                 </h2>
                 
-                {/* 3 Platforms Branded Scopes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 20 }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '0.95rem', fontWeight: 800, color: '#E1306C' }}>Instagram (Meta Platforms, Inc.)</h4>
-                    <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {lang === 'en' 
-                        ? 'We request authorized scopes to read credentials, metrics, and manage automated posting scheduling:' 
-                        : 'Kami meminta otorisasi scope untuk membaca metrik kinerja dan mengelola penjadwalan postingan otomatis:'}
+                <div className="space-y-4 pl-4 border-l border-zinc-200">
+                  <div className="space-y-1">
+                    <strong>11.1 Indonesia (UU PDP)</strong>
+                    <p className="text-zinc-650">
+                      Pursuant to Law No. 27 of 2022, all communications regarding your rights can be processed in Bahasa Indonesia. Supervisory authority resides with the Indonesian Data Protection Institution (<em>Lembaga Pelaksana Pelindungan Data Pribadi</em>).
                     </p>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-soft)' }}>
-                          <th style={{ padding: 8 }}>Scope</th>
-                          <th style={{ padding: 8 }}>Purpose</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 8 }}><code>instagram_business_basic</code></td>
-                          <td style={{ padding: 8 }}>Retrieve creator handle, follower count, and channel profile ID.</td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 8 }}><code>instagram_business_manage_insights</code></td>
-                          <td style={{ padding: 8 }}>Retrieve post reach, impressions, likes, and engagement percentages.</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: 8 }}><code>instagram_business_content_publish</code></td>
-                          <td style={{ padding: 8 }}>Auto-publish post contents scheduled by the user in calendar dashboard.</td>
-                        </tr>
-                      </tbody>
-                    </table>
                   </div>
-
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 20 }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '0.95rem', fontWeight: 800, color: '#000000' }}>TikTok (TikTok Pte. Ltd.)</h4>
-                    <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {lang === 'en'
-                        ? 'We integrate with the following authorized scopes to publish calendar updates:'
-                        : 'Kami berintegrasi dengan scope terotorisasi berikut untuk mempublikasikan video kalender:'}
+                  <div className="space-y-1">
+                    <strong>11.2 EU/EEA (GDPR) & United Kingdom</strong>
+                    <p className="text-zinc-650">
+                      For EU/EEA residents, you have the right to lodge a complaint with your local Data Protection Authority (DPA). In the UK, complains can be directed to the Information Commissioner's Office (ICO).
                     </p>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-soft)' }}>
-                          <th style={{ padding: 8 }}>Scope</th>
-                          <th style={{ padding: 8 }}>Purpose</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 8 }}><code>user.info.basic</code>, <code>user.info.profile</code></td>
-                          <td style={{ padding: 8 }}>Retrieve creator handle, profile name, and display avatars.</td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 8 }}><code>user.info.stats</code>, <code>video.list</code></td>
-                          <td style={{ padding: 8 }}>Track follow counts, post views, likes, and total video metrics.</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: 8 }}><code>video.publish</code></td>
-                          <td style={{ padding: 8 }}>Auto-publish scheduled video contents. Fully displays branded content checks.</td>
-                        </tr>
-                      </tbody>
-                    </table>
                   </div>
-
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 20 }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '0.95rem', fontWeight: 800, color: '#0077B5' }}>LinkedIn (LinkedIn Corporation)</h4>
-                    <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {lang === 'en'
-                        ? 'We fetch profiles and publish personal updates through standard OAuth:'
-                        : 'Kami mengambil profil dan menerbitkan pembaruan status personal melalui OAuth standar:'}
+                  <div className="space-y-1">
+                    <strong>11.3 California, US (CCPA)</strong>
+                    <p className="text-zinc-650">
+                      We do not sell your personal information. Under CCPA, you have the right to request access, erasure, and non-discrimination for exercising your rights.
                     </p>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-soft)' }}>
-                          <th style={{ padding: 8 }}>Scope</th>
-                          <th style={{ padding: 8 }}>Purpose</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 8 }}><code>openid</code>, <code>profile</code>, <code>email</code></td>
-                          <td style={{ padding: 8 }}>Allow sign in and basic profile matching.</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: 8 }}><code>w_member_social</code></td>
-                          <td style={{ padding: 8 }}>Publish text/media updates directly to personal LinkedIn member feed.</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  </div>
+                  <div className="space-y-1">
+                    <strong>11.4 Canada (PIPEDA)</strong>
+                    <p className="text-zinc-650">
+                      We store and process data in cloud servers located in the US/Global nodes. Your data may be subject to disclosure under local laws of those jurisdictions.
+                    </p>
                   </div>
                 </div>
               </section>
 
-              {/* Section 7 */}
-              <section id="ai-disclosure" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>7. {lang === 'en' ? 'AI Processing Disclosure' : 'Pengungkapan Pemrosesan AI'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('ai-disclosure')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">07</span>
-                  </div>
+              {/* SECTION 12 */}
+              <section id="cookies" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  12. Cookies & Tracking
                 </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  <p>
-                    {lang === 'en'
-                      ? "ZieAds utilizes artificial intelligence models powered by Anthropic's Claude API to generate daily briefings and audit summaries. Your metrics and data are processed through safe API channels. Per Anthropic's API policy, your content is not stored permanently or used to train public LLM structures. AI reports are suggestions; you retain full control over editing and publishing."
-                      : "ZieAds menggunakan model kecerdasan buatan (AI) yang didukung oleh API Claude Anthropic untuk menghasilkan ringkasan harian dan laporan audit. Metrik dan data Anda diproses melalui saluran API yang aman. Sesuai dengan kebijakan API Anthropic, konten Anda tidak disimpan secara permanen atau digunakan untuk melatih struktur LLM publik. Laporan AI bersifat saran; Anda tetap memiliki kendali penuh atas penyuntingan dan publikasi."}
-                  </p>
-                </div>
+                <p>
+                  We use cookies for session authentication, keeping you logged in across dashboard navigations, and recalling timezone offsets. We also run anonymized, self-hosted analytics metrics (PostHog) to track dashboard performance without recording individual browser histories. We do not use advertising or profiling tracking cookies.
+                </p>
               </section>
 
-              {/* Section 8 */}
-              <section id="retention" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>8. {lang === 'en' ? 'Data Retention & Deletion' : 'Retensi & Penghapusan Data'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('retention')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">08</span>
-                  </div>
+              {/* SECTION 13 */}
+              <section id="children" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  13. Children's Privacy
                 </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  <p>
-                    {lang === 'en'
-                      ? 'We retain your personal data only as long as necessary to provide the services or satisfy legal obligations. Deletion retention periods are mapped as follows:'
-                      : 'Kami menyimpan data pribadi Anda hanya selama diperlukan untuk menyediakan layanan kami atau memenuhi kewajiban hukum. Rincian retensi data kami adalah sebagai berikut:'}
-                  </p>
-                  
-                  {/* Retention Table */}
-                  <div style={{ overflowX: 'auto', marginBottom: 20 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-soft)' }}>
-                          <th style={{ padding: 10 }}>Data Category</th>
-                          <th style={{ padding: 10 }}>Retention Duration</th>
-                          <th style={{ padding: 10 }}>Deletion Trigger</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 10 }}><strong>Account Details & Profile</strong></td>
-                          <td style={{ padding: 10 }}>Life of subscription + 90 days</td>
-                          <td style={{ padding: 10 }}>Account deletion request or billing cancellation</td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 10 }}><strong>OAuth Tokens (Meta/TikTok/LinkedIn)</strong></td>
-                          <td style={{ padding: 10 }}>Immediate deletion</td>
-                          <td style={{ padding: 10 }}>Channel disconnected or account deleted</td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 10 }}><strong>Paid Ads CSV Files Data</strong></td>
-                          <td style={{ padding: 10 }}>Life of subscription + 90 days</td>
-                          <td style={{ padding: 10 }}>Account deletion</td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          <td style={{ padding: 10 }}><strong>Daily Briefings & AI Audits</strong></td>
-                          <td style={{ padding: 10 }}>Life of subscription + 90 days</td>
-                          <td style={{ padding: 10 }}>Account deletion</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: 10 }}><strong>Payment invoices / metadata</strong></td>
-                          <td style={{ padding: 10 }}>10 years (Indonesian Tax Law)</td>
-                          <td style={{ padding: 10 }}>Statutory audit completion</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                <p>
+                  ZieAds is designed for business operators, solopreneurs, and marketing professionals. We do not knowingly collect personal data of minors under 18 years of age. If you believe a child has created an account, contact us at <strong>privacy@zieads.com</strong> and we will delete the profile immediately.
+                </p>
+              </section>
+
+              {/* SECTION 14 */}
+              <section id="breach-notif" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  14. Data Breach Notification
+                </h2>
+                <p>
+                  We maintain audit logging and security scans. Under UU PDP Article 46, in the event of any security breach compromising your personal records, we will notify you via registered email and inform the Indonesian Ministry of Communications (Kominfo/Lembaga PDP) within 72 hours of verification.
+                </p>
+              </section>
+
+              {/* SECTION 15 */}
+              <section id="changes" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  15. Changes to This Policy
+                </h2>
+                <p>
+                  We may adjust this Privacy Policy to reflect changing product features or regulatory updates. We will notify you of material changes by sending an email notification or posting a prominent notice in your account workspace 30 days before the changes take effect.
+                </p>
+              </section>
+
+              {/* SECTION 16 */}
+              <section id="contact" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  16. Contact Information
+                </h2>
+                <p>
+                  Inquiries, complaints, or exercises of data subject rights should be sent to:
+                </p>
+                <div className="font-mono text-sm leading-relaxed text-zinc-600 bg-zinc-50 border border-zinc-200 p-6 rounded-lg">
+                  <div>PT. Bantu Indonesia Technology</div>
+                  <div>Registered Office: Omah Dongeng, Somodaran, Purwomartani, Kalasan, Special Region of Yogyakarta, Indonesia</div>
+                  <div>Primary Email: legal@zieads.com</div>
+                  <div>Privacy Desk: privacy@zieads.com</div>
+                  <div>Phone: +62 851 5762 6264</div>
+                </div>
+              </section>
+            </>
+          ) : (
+            <>
+              {/* SECTION 1 */}
+              <section id="introduction" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  1. Pendahuluan & Siapa Kami
+                </h2>
+                <p>
+                  Selamat datang di ZieAds. Kebijakan Privasi ini menjelaskan bagaimana <strong>PT. Bantu Indonesia Technology</strong>, sebuah perseroan terbatas yang terdaftar di Daerah Istimewa Yogyakarta, Indonesia, yang beroperasi dengan nama merek <strong>ZieAds</strong> ("kami", "kita", "milik kami"), mengumpulkan, memproses, menyimpan, dan melindungi data pribadi Anda saat menggunakan situs web dan aplikasi manajemen media sosial di <strong>zieads.com</strong>. Kami membuat alat perangkat lunak yang membantu wirausahawan, pemilik bisnis kecil, dan tim pemasaran menganalisis kinerja iklan mereka dan mengelola saluran media sosial organik melalui kecerdasan buatan tingkat lanjut.
+                </p>
+                <p>
+                  PT. Bantu Indonesia Technology bertindak sebagai <strong>Pengendali Data Pribadi</strong> berdasarkan Undang-Undang Republik Indonesia No. 27 Tahun 2022 tentang Perlindungan Data Pribadi (<strong>UU PDP</strong>), dan sebagai Pengendali Data berdasarkan General Data Protection Regulation (<strong>GDPR</strong>) untuk pengguna yang tinggal di Uni Eropa. Dengan membuat akun ZieAds, menghubungkan saluran media sosial, atau menggunakan platform, Anda mengonfirmasi bahwa Anda telah membaca, memahami, dan menyetujui pengumpulan dan pemrosesan data pribadi Anda sebagaimana diuraikan dalam Kebijakan Privasi ini.
+                </p>
+                <p>
+                  Kebijakan Privasi ini mencakup semua pengunjung situs web pemasaran publik kami, pengguna terdaftar di semua paket langganan (Free, Solo, Pro, dan Studio), dan pengguna dari versi produk sebelumnya. Kebijakan ini tidak mencakup konten yang kami proses atas nama pelanggan bisnis di bawah kontrak korporasi terpisah, dan tidak berlaku untuk domain web pihak ketiga yang mungkin menautkan ke atau dari layanan kami.
+                </p>
+              </section>
+
+              {/* SECTION 2 */}
+              <section id="info-collected" className="space-y-6">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  2. Informasi Yang Kami Kumpulkan
+                </h2>
+                <p>
+                  Kami mengumpulkan data pribadi dengan tiga cara: informasi yang Anda berikan langsung kepada kami, informasi yang kami terima secara otomatis saat Anda berinteraksi dengan platform kami, dan informasi yang kami terima dari layanan pihak ketiga yang Anda pilih untuk hubungkan. Kami hanya mengumpulkan data yang diperlukan untuk menyediakan layanan kami, mengamankan platform kami, mematuhi kewajiban hukum, dan meningkatkan produk. Kami tidak menjual data pribadi kepada pihak ketiga dalam keadaan apa pun.
+                </p>
+
+                <div className="space-y-4 pl-4 border-l border-zinc-200">
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.1 Informasi Akun</h3>
+                    <p className="text-zinc-650">
+                      Saat Anda membuat akun ZieAds, kami mengumpulkan nama lengkap dan alamat email Anda, yang berfungsi sebagai pengenal utama Anda dan saluran tempat kami mengirimkan komunikasi transaksional. Kami juga mengumpulkan dan menyimpan kata sandi Anda dengan aman, yang di-hash menggunakan bcrypt dengan garam per pengguna sebelum disimpan. Kami tidak menyimpan kata sandi dalam teks biasa, dan staf kami tidak dapat mengakses kata sandi Anda. Jika Anda masuk menggunakan penyedia autentikasi pihak ketiga (seperti Google atau LinkedIn OAuth), kami menyimpan catatan tautan akun alih-alih kata sandi.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.2 Data Akun Periklanan</h3>
+                    <p className="text-zinc-650">
+                      Saat Anda mengunggah data kinerja iklan melalui file CSV dari Meta Ads Manager, Google Ads, atau TikTok Ads Manager, kami mengurai file tersebut dan menyimpan informasi kinerja kampanye. Data yang kami ekstrak dari file CSV yang Anda unggah meliputi nama kampanye, konfigurasi grup iklan, nama iklan, tayangan, klik, total pengeluaran, jumlah konversi, laba atas pengeluaran iklan (ROAS), rasio klik-tayang (CTR), biaya per klik (CPC), dan biaya per seribu tayangan (CPM). Kami secara tegas tidak mengakses atau mengumpulkan data pribadi pengguna akhir yang melihat iklan Anda, data sumber audiens khusus Anda, atau kredensial akun iklan individual apa pun.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.3 Data Media Sosial Organik</h3>
+                    <p className="text-zinc-650">
+                      Saat Anda menghubungkan profil Instagram Business, TikTok, atau LinkedIn Anda ke ZieAds melalui otorisasi OAuth, kami menerima data dari platform tersebut yang sangat terbatas pada cakupan izin yang Anda berikan. Dari Instagram kami menerima informasi profil Anda (nama pengguna, jenis akun, jumlah pengikut), postingan media yang dipublikasikan, dan wawasan keterlibatan postingan. Dari TikTok kami menerima nama tampilan profil, avatar, bio, jumlah pengikut, video, dan metrik keterlibatan. Dari LinkedIn kami menerima tajuk profil dasar dan postingan yang Anda pilih untuk diterbitkan. Saat Anda menjadwalkan postingan atau membalas komentar, kami menyimpan konten postingan dan teks komentar.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.4 Data Teknis & Penggunaan</h3>
+                    <p className="text-zinc-650">
+                      Saat Anda menggunakan ZieAds, server kami secara otomatis mencatat informasi tentang interaksi Anda dengan platform, termasuk tanggal dan waktu akses, fitur dan halaman yang Anda gunakan, laporan audit dan mode analisis yang Anda jalankan, ringkasan AI yang Anda buka, kesalahan yang Anda temui, serta browser, sistem operasi, dan alamat IP Anda. Kami menggunakan data teknis ini untuk menjaga keandalan layanan, mendiagnosis bug, mencegah penyalahgunaan, memantau kinerja sistem, dan melindungi infrastruktur kami.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.5 Informasi Pembayaran</h3>
+                    <p className="text-zinc-650">
+                      Jika Anda berlangganan paket berbayar ZieAds, pembayaran diproses oleh Stripe, Inc., pemroses pembayaran yang mematuhi PCI-DSS. Stripe mengumpulkan dan menangani informasi kartu pembayaran lengkap Anda secara langsung melalui infrastruktur aman mereka — detail ini tidak pernah melewati atau disimpan di server ZieAds. Kami menerima dari Stripe hanya informasi yang diperlukan untuk mengelola langganan Anda: pengenal pelanggan Stripe Anda, email penagihan, empat digit terakhir kartu pembayaran Anda, dan catatan riwayat transaksi.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-bold text-black">2.6 Data Komunikasi</h3>
+                    <p className="text-zinc-650">
+                      Saat Anda menghubungi kami melalui email (seperti legal@zieads.com atau privacy@zieads.com) atau melalui saluran dukungan, kami mengumpulkan dan menyimpan konten komunikasi Anda. Ini mencakup pesan, nama Anda, informasi kontak, stempel waktu, dan lampiran apa pun. Kami menggunakan informasi ini untuk merespons pertanyaan Anda dan meningkatkan layanan dukungan kami.
+                    </p>
                   </div>
                 </div>
               </section>
 
-              {/* Section 9 */}
-              <section id="your-rights" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>9. {lang === 'en' ? 'Your Rights & Frameworks' : 'Hak-Hak Anda & Kerangka Hukum'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('your-rights')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">09</span>
+              {/* SECTION 3 */}
+              <section id="how-we-use" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  3. Bagaimana Kami Menggunakan Informasi Anda
+                </h2>
+                <p>
+                  Kami menggunakan data pribadi Anda untuk memenuhi kontrak kami dengan Anda dan untuk mengoperasikan layanan kami. Secara khusus, kami menggunakan informasi akun Anda untuk mengautentikasi login Anda, menetapkan ruang kerja dasbor Anda yang aman, dan memelihara paket penagihan Anda. Profil media sosial organik yang terhubung dan metrik kampanye iklan Anda diproses untuk menyusun ringkasan AI harian Anda, menghitung waktu posting yang optimal, dan menghasilkan kalender visual.
+                </p>
+                <p>
+                  Kami juga menggunakan log penggunaan dan teknis untuk memantau stabilitas sistem, melindungi dari aktivitas berbahaya, dan mendiagnosis kesalahan. Jika Anda memilih untuk menerima komunikasi pemasaran, kami menggunakan detail kontak Anda untuk membagikan pengumuman fitur atau tutorial. Kami memproses log komunikasi untuk membantu dukungan teknis. Semua operasi pemrosesan dilakukan di bawah keamanan pemisahan tingkat baris yang ketat untuk mencegah akses lintas pelanggan.
+                </p>
+              </section>
+
+              {/* SECTION 4 */}
+              <section id="legal-basis" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  4. Dasar Hukum Pemrosesan
+                </h2>
+                <p>
+                  Berdasarkan undang-undang privasi internasional, termasuk Undang-Undang PDP Indonesia (Pasal 20) dan GDPR Uni Eropa (Pasal 6), kami harus menetapkan dasar hukum yang sah untuk memproses data pribadi Anda. Sebagian besar aktivitas pemrosesan kami didasarkan pada <strong>Kebutuhan Kontraktual</strong> — kami memproses konfigurasi akun Anda, token saluran sosial, dan unggahan metrik untuk memberikan fitur SaaS inti yang Anda minta.
+                </p>
+                <p>
+                  Jika kami memproses data untuk melindungi basis data kami, mendeteksi penyalahgunaan, atau mengoptimalkan kinerja, kami mengandalkan <strong>Kepentingan Sah</strong> kami untuk memelihara aplikasi yang aman dan fungsional. Jika pemrosesan memerlukan persetujuan eksplisit (seperti daftar pemasaran atau cookie pelacakan), kami mengandalkan <strong>Persetujuan</strong> Anda, yang dapat ditarik kapan saja. Kami juga memproses catatan penagihan di bawah <strong>Kewajiban Hukum</strong> untuk mematuhi undang-undang perpajakan nasional.
+                </p>
+              </section>
+
+              {/* SECTION 5 */}
+              <section id="subprocessors" className="space-y-6">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  5. Layanan Pihak Ketiga & Sub-prosesor
+                </h2>
+                <p>
+                  Kami mentransfer data pribadi ke sub-prosesor eksternal hanya jika diperlukan untuk melakukan layanan. Semua sub-prosesor terikat kontrak untuk menegakkan standar keamanan data yang sesuai dengan kebijakan ini. Berikut adalah daftar sub-prosesor kami saat ini:
+                </p>
+
+                <div className="space-y-4 pl-4 border-l border-zinc-200 text-sm">
+                  <div>
+                    <strong>Anthropic, PBC (Amerika Serikat)</strong>
+                    <p className="text-zinc-650">Kami membagikan statistik kampanye dan perintah konten melalui Claude API untuk menyusun ringkasan AI harian dan diagnosis kesiapan iklan. Anthropic tidak menggunakan data ZieAds untuk melatih model publik.</p>
                   </div>
+                  <div>
+                    <strong>Meta Platforms, Inc. (Amerika Serikat)</strong>
+                    <p className="text-zinc-650">Menangani sinkronisasi profil Instagram Business, memposting konten, dan membaca wawasan melalui API Graph resmi.</p>
+                  </div>
+                  <div>
+                    <strong>TikTok Pte. Ltd. (Singapura / Amerika Serikat)</strong>
+                    <p className="text-zinc-650">Digunakan untuk mempublikasikan aset video dan mengambil metrik akun melalui TikTok Creator API.</p>
+                  </div>
+                  <div>
+                    <strong>LinkedIn Corporation (Amerika Serikat)</strong>
+                    <p className="text-zinc-650">Memungkinkan autentikasi OAuth dan penerbitan umpan untuk profil pribadi LinkedIn.</p>
+                  </div>
+                  <div>
+                    <strong>Stripe, Inc. (Amerika Serikat)</strong>
+                    <p className="text-zinc-650">Memproses detail penagihan, token kartu pembayaran, dan faktur langganan.</p>
+                  </div>
+                  <div>
+                    <strong>Supabase, Inc. (Amerika Serikat / Hosting Global)</strong>
+                    <p className="text-zinc-650">Menyediakan layanan basis data, infrastruktur autentikasi, dan brankas enkripsi aman untuk token API.</p>
+                  </div>
+                  <div>
+                    <strong>Vercel, Inc. (Amerika Serikat / Hosting Global)</strong>
+                    <p className="text-zinc-650">Menghosting antarmuka pengguna dan menyajikan aset front-end dengan aman.</p>
+                  </div>
+                  <div>
+                    <strong>Resend, Inc. (Amerika Serikat)</strong>
+                    <p className="text-zinc-650">Mengirimkan email transaksional dan verifikasi langsung ke pengguna.</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* SECTION 6 */}
+              <section id="social-integrations" className="space-y-6">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  6. Integrasi API Media Sosial
+                </h2>
+                <p>
+                  ZieAds terhubung secara terprogram ke jaringan sosial pihak ketiga melalui protokol otorisasi OAuth yang aman. Kami tidak menyimpan kata sandi Anda untuk platform tersebut. Anda memberikan izin secara eksplisit melalui layar otorisasi jaringan masing-masing, dan Anda dapat mencabut akses kapan saja.
+                </p>
+
+                <div className="space-y-4 pl-4 border-l border-zinc-200">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-black">6.1 Meta (API Graph Instagram)</h3>
+                    <p className="text-zinc-650">
+                      Kami meminta akses ke <code>instagram_business_basic</code> untuk membaca info profil Anda, <code>instagram_business_manage_insights</code> untuk menganalisis tingkat keterlibatan postingan, dan <code>instagram_business_content_publish</code> untuk memposting konten visual terjadwal. Data disimpan hingga Anda memutuskan saluran atau menghapus akun Anda. PENCABUTAN: Anda dapat mencabut akses melalui pengaturan akun Instagram Anda di bawah Aplikasi dan Situs Web.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-black">6.2 Integrasi API TikTok</h3>
+                    <p className="text-zinc-650">
+                      Kami menggunakan cakupan tampilan TikTok untuk membaca statistik kreator (jumlah pengikut, daftar postingan) dan cakupan penerbitan (<code>video.publish</code>) untuk memposting video terjadwal. Kami mematuhi alur UX TikTok, memungkinkan Anda memilih pengaturan privasi dan penunjukan komersial untuk setiap postingan. PENCABUTAN: Cabut izin di pengaturan aplikasi TikTok di bawah Keamanan &gt; Kelola Akses Aplikasi.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-black">6.3 Integrasi API LinkedIn</h3>
+                    <p className="text-zinc-650">
+                      Kami meminta cakupan <code>openid</code>, <code>profile</code>, dan <code>w_member_social</code> untuk membagikan pembaruan terjadwal langsung ke umpan profil LinkedIn pribadi Anda. Kami tidak mengakses hak administrasi halaman perusahaan kecuali diminta secara eksplisit. PENCABUTAN: Anda dapat mencabut akses melalui akun LinkedIn Anda di bawah Layanan yang Diizinkan.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* SECTION 7 */}
+              <section id="ai-disclosure" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  7. Pengungkapan Pemrosesan AI
+                </h2>
+                <p>
+                  ZieAds menggunakan model kecerdasan buatan yang didukung oleh API Claude Anthropic untuk menyusun ringkasan harian, peringatan anomali, dan audit iklan. Saat Anda mengunggah log kampanye atau menggunakan obrolan diagnostik, poin data dikirimkan secara aman ke Anthropic untuk analisis real-time.
+                </p>
+                <p>
+                  Sesuai dengan kebijakan pengembang Anthropic, data yang dikirimkan melalui API Claude diproses sementara, tidak disimpan secara permanen oleh mereka, dan secara tegas tidak digunakan untuk melatih model LLM publik. Wawasan yang dihasilkan merupakan saran; Anda mempertahankan kendali dan tanggung jawab penuh atas verifikasi dan penyuntingan rekomendasi sebelum mengambil tindakan.
+                </p>
+              </section>
+
+              {/* SECTION 8 */}
+              <section id="retention" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  8. Retensi & Penghapusan Data
+                </h2>
+                <p>
+                  Kami menyimpan data pribadi hanya selama jangka waktu yang diperlukan untuk menyediakan layanan atau mematuhi hukum. Saat Anda menghapus akun Anda, kami memulai pembersihan otomatis untuk menghapus profil Anda, unggahan kampanye, dan token OAuth yang terhubung secara permanen dalam waktu 90 hari.
+                </p>
+                <p>
+                  Catatan penagihan dan transaksi disimpan selama sepuluh tahun untuk memenuhi persyaratan penyimpanan catatan pajak nasional Indonesia (<em>Undang-Undang Ketentuan Umum dan Tata Cara Perpajakan</em>). Arsip cadangan basis data diputar dan ditimpa setiap 30 hari.
+                </p>
+              </section>
+
+              {/* SECTION 9 */}
+              <section id="your-rights" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  9. Hak-Hak Anda & Cara Menggunakannya
+                </h2>
+                <p>
+                  Berdasarkan UU PDP (Indonesia) dan GDPR (Eropa), Anda memiliki hak khusus terkait data pribadi Anda. Ini termasuk hak untuk mengakses salinan catatan Anda, memperbaiki data profil yang salah, meminta penghapusan (hak untuk dilupakan), menarik persetujuan Anda untuk pemrosesan di masa mendatang, atau mendapatkan data Anda dalam format JSON yang portabel.
+                </p>
+                <p>
+                  Untuk menggunakan hak-hak ini, hubungi meja privasi kami di <strong>privacy@zieads.com</strong> atau <strong>legal@zieads.com</strong>. Kami memerlukan verifikasi identitas untuk mencegah pengungkapan yang tidak sah dan menanggapi semua permintaan yang sah dalam waktu 30 hari.
+                </p>
+              </section>
+
+              {/* SECTION 10 */}
+              <section id="legal-bases-table" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  10. Dasar Hukum Pemrosesan
+                </h2>
+                <p>
+                  Tabel berikut memetakan aktivitas pemrosesan kami, jenis data yang terlibat, dan dasar hukumnya berdasarkan UU PDP dan GDPR:
+                </p>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }} className="min-w-full">
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #E4E4E7', background: '#FAFAFA' }}>
+                        <th style={{ padding: '10px 12px' }}>Tujuan Pemrosesan</th>
+                        <th style={{ padding: '10px 12px' }}>Jenis Data</th>
+                        <th style={{ padding: '10px 12px' }}>Dasar Hukum</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Penyediaan Layanan (fitur v0.2/v0.3)</td>
+                        <td style={{ padding: '10px 12px' }}>Info Akun, Metrik, Token OAuth</td>
+                        <td style={{ padding: '10px 12px' }}>Kontrak (UU PDP Pasal 20.b, GDPR Pasal 6(1)(b))</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Pembayaran dan Faktur</td>
+                        <td style={{ padding: '10px 12px' }}>Detail identitas, ID Stripe</td>
+                        <td style={{ padding: '10px 12px' }}>Kontrak</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Keamanan & Pencegahan Penyalahgunaan</td>
+                        <td style={{ padding: '10px 12px' }}>Alamat IP, Log penggunaan</td>
+                        <td style={{ padding: '10px 12px' }}>Kepentingan Sah (UU PDP Pasal 20.f, GDPR Pasal 6(1)(f))</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #E4E4E7' }}>
+                        <td style={{ padding: '10px 12px' }}>Kepatuhan Pajak</td>
+                        <td style={{ padding: '10px 12px' }}>Log penagihan</td>
+                        <td style={{ padding: '10px 12px' }}>Kewajiban Hukum (UU PDP Pasal 20.c, GDPR Pasal 6(1)(c))</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '10px 12px' }}>Buletin Pembaruan Produk</td>
+                        <td style={{ padding: '10px 12px' }}>Alamat email</td>
+                        <td style={{ padding: '10px 12px' }}>Persetujuan (UU PDP Pasal 20.a, GDPR Pasal 6(1)(a))</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* SECTION 11 */}
+              <section id="regional-disclosures" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  11. Pengungkapan Tambahan Regional
                 </h2>
                 
-                {/* Rights Grid Callout box */}
-                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                  {[
-                    { t: lang === 'en' ? 'Right to Access' : 'Hak untuk Mengakses', d: lang === 'en' ? 'Obtain a full copy of all stored profile records and metrics.' : 'Mendapatkan salinan lengkap dari seluruh data profil dan metrik Anda.' },
-                    { t: lang === 'en' ? 'Right to Delete' : 'Hak untuk Menghapus', d: lang === 'en' ? 'Scrub all account identifiers from databases permanently (within 30 days).' : 'Menghapus identitas akun dari basis data secara permanen (dalam 30 hari).' },
-                    { t: lang === 'en' ? 'Right to Correct' : 'Hak untuk Memperbaiki', d: lang === 'en' ? 'Correct any errors in name, email, or company metadata fields.' : 'Memperbaiki kesalahan input nama, email, atau bidang profil bisnis.' },
-                    { t: lang === 'en' ? 'Right to Portability' : 'Hak untuk Portabilitas', d: lang === 'en' ? 'Export data rows in standard structured JSON formats.' : 'Mengekspor baris data dalam format terstruktur (JSON).' }
-                  ].map((right, idx) => (
-                    <div key={idx} style={{ background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
-                      <h4 style={{ margin: '0 0 6px', fontSize: '0.85rem', fontWeight: 700 }}>{right.t}</h4>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{right.d}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-xl text-xs sm:text-sm text-[var(--lp-text-secondary)]">
-                  {lang === 'en' ? (
-                    <p>
-                      <strong>How to exercise:</strong> Email your request directly to <a href="mailto:privacy@zieads.com" className="text-zinc-950 font-bold underline">privacy@zieads.com</a>. We require identity verification to prevent fraudulent requests and resolve all queries within 30 days.
+                <div className="space-y-4 pl-4 border-l border-zinc-200">
+                  <div className="space-y-1">
+                    <strong>11.1 Indonesia (UU PDP)</strong>
+                    <p className="text-zinc-650">
+                      Sesuai dengan Undang-Undang No. 27 Tahun 2022, semua komunikasi mengenai hak-hak Anda dapat diproses dalam Bahasa Indonesia. Otoritas pengawas berada pada Lembaga Pelaksana Pelindungan Data Pribadi (Lembaga PDP).
                     </p>
-                  ) : (
-                    <p>
-                      <strong>Cara mengajukan:</strong> Kirimkan permintaan Anda ke <a href="mailto:privacy@zieads.com" className="text-zinc-950 font-bold underline">privacy@zieads.com</a>. Kami memerlukan verifikasi identitas untuk mencegah penipuan dan menyelesaikan semua permohonan dalam waktu 30 hari.
+                  </div>
+                  <div className="space-y-1">
+                    <strong>11.2 Uni Eropa & Inggris</strong>
+                    <p className="text-zinc-650">
+                      Bagi penduduk Uni Eropa, Anda berhak mengajukan pengaduan ke Otoritas Perlindungan Data (DPA) setempat. Di Inggris, pengaduan dapat ditujukan ke Information Commissioner's Office (ICO).
                     </p>
-                  )}
-                </div>
-              </section>
-
-              {/* Section 10 */}
-              <section id="transfers" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>10. {lang === 'en' ? 'International Data Transfers' : 'Transfer Data Internasional'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('transfers')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">10</span>
                   </div>
-                </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  <p>
-                    {lang === 'en'
-                      ? "Since PT. Bantu Indonesia Technology is based in Indonesia, your data will be hosted locally and in global server nodes operated by Cloud providers (Vercel/Supabase). Trans-border transfers satisfy safeguards listed under UU PDP Article 56, utilizing strict encryption in transit."
-                      : "Karena PT. Bantu Indonesia Technology berbasis di Indonesia, data Anda akan disimpan secara lokal serta di simpul server global yang dioperasikan oleh penyedia Cloud (Vercel/Supabase). Transfer lintas batas mematuhi ketentuan UU PDP Pasal 56, menggunakan enkripsi transit yang ketat."}
-                  </p>
-                </div>
-              </section>
-
-              {/* Section 11 */}
-              <section id="security" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>11. {lang === 'en' ? 'Data Security Measures' : 'Tindakan Keamanan Data'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('security')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">11</span>
-                  </div>
-                </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  <p>
-                    {lang === 'en'
-                      ? 'We enforce AES-256 standard encryption for OAuth tokens, passwords (hashed), and sensitive campaign metrics. Database systems run Row-Level Security (RLS) policies to prevent cross-account leaks.'
-                      : 'Kami menerapkan standar enkripsi AES-256 untuk token OAuth, kata sandi (di-hash), dan metrik kampanye yang sensitif. Sistem basis data menjalankan kebijakan Row-Level Security (RLS) untuk mencegah kebocoran lintas akun.'}
-                  </p>
-                </div>
-              </section>
-
-              {/* Section 12 */}
-              <section id="cookies" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>12. {lang === 'en' ? 'Cookies & Tracking' : 'Cookie & Pelacakan'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('cookies')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">12</span>
-                  </div>
-                </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  <p>
-                    {lang === 'en'
-                      ? 'We use session cookies for dashboard authentication, timezone preferences, and product statistics (PostHog). We do not share tracking configurations with third-party advertisers.'
-                      : 'Kami menggunakan cookie sesi untuk autentikasi dasbor, preferensi zona waktu, dan statistik produk (PostHog). Kami tidak membagikan konfigurasi pelacakan dengan pengiklan pihak ketiga.'}
-                  </p>
-                </div>
-              </section>
-
-              {/* Section 13 */}
-              <section id="children" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>13. {lang === 'en' ? 'Children\'s Privacy' : 'Privasi Anak-Anak'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('children')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">13</span>
-                  </div>
-                </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  <p>
-                    {lang === 'en'
-                      ? 'ZieAds is meant for business professionals. Under UU PDP Article 25, parents hold processing rights. If a minor below 18 is registered, contact us and we will delete the account immediately.'
-                      : 'ZieAds ditujukan untuk profesional bisnis. Berdasarkan UU PDP Pasal 25, pemrosesan data anak memerlukan persetujuan orang tua. Jika anak di bawah 18 tahun terdaftar, hubungi kami dan kami akan segera menghapus akun tersebut.'}
-                  </p>
-                </div>
-              </section>
-
-              {/* Section 14 */}
-              <section id="breach-notif" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>14. {lang === 'en' ? 'Data Breach Notification' : 'Pemberitahuan Kebocoran Data'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('breach-notif')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">14</span>
-                  </div>
-                </h2>
-                
-                {/* Data Breach Response callout box */}
-                <div style={{ background: '#FEE2E2', borderLeft: '4px solid #EF4444', borderRadius: '0 8px 8px 0', padding: 20, marginBottom: 20 }}>
-                  <h4 style={{ margin: '0 0 8px', fontSize: '0.85rem', fontWeight: 800, color: '#991B1B', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <AlertTriangle size={15} /> 72-Hour Response Window
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#991B1B', lineHeight: 1.5 }}>
-                    {lang === 'en'
-                      ? 'In the event of a security breach affecting your records, we notify you and current Indonesian telecommunication regulators (Komdigi/Lembaga PDP) within 72 hours under UU PDP Article 46.'
-                      : 'Jika terjadi kebocoran keamanan yang memengaruhi catatan Anda, kami akan memberi tahu Anda dan regulator komunikasi Indonesia (Komdigi/Lembaga PDP) dalam waktu 72 jam berdasarkan ketentuan UU PDP Pasal 46.'}
-                  </p>
-                </div>
-              </section>
-
-              {/* Section 15 */}
-              <section id="changes" style={{ scrollMarginTop: 110, marginBottom: 80 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>15. {lang === 'en' ? 'Changes to This Policy' : 'Perubahan Kebijakan Ini'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('changes')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">15</span>
-                  </div>
-                </h2>
-                <div className="text-[15.5px] text-[var(--lp-text-secondary)] leading-relaxed space-y-4">
-                  <p>
-                    {lang === 'en'
-                      ? 'We may update this policy. Material adjustments will be notified to your registered email 30 days before taking effect.'
-                      : 'Kami dapat memperbarui kebijakan ini dari waktu ke waktu. Penyesuaian material akan diberitahukan ke email Anda yang terdaftar 30 hari sebelum diberlakukan.'}
-                  </p>
-                </div>
-              </section>
-
-              {/* Section 16 */}
-              <section id="contact" style={{ scrollMarginTop: 110, marginBottom: 40 }}>
-                <h2 className="text-xl sm:text-[22px] font-extrabold text-[var(--lp-text-primary)] mb-5 border-b border-[var(--lp-border-subtle)] pb-3 flex items-center justify-between group">
-                  <span>16. {lang === 'en' ? 'Contact Information' : 'Informasi Kontak'}</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => handleCopyLink('contact')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-100 rounded no-print"
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy size={13} className="text-zinc-400 hover:text-zinc-950" />
-                    </button>
-                    <span className="text-xs text-[var(--lp-text-muted)] font-mono">16</span>
-                  </div>
-                </h2>
-                
-                {/* Hero-style Contact Information Card */}
-                <div style={{ background: '#09090B', color: '#fff', borderRadius: 12, padding: '32px 40px', boxShadow: 'var(--shadow-lg)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                    <ZieAdsLogo size={28} />
-                    <span style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em' }}>zieads</span>
-                  </div>
-                  
-                  <h4 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 700 }}>PT. Bantu Indonesia Technology</h4>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.85rem', color: '#A1A1AA' }}>
-                    <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      📍 <span>Omah Dongeng, Somodaran, Purwomartani, Kalasan, Sleman, Yogyakarta, Indonesia</span>
+                  <div className="space-y-1">
+                    <strong>11.3 California, AS (CCPA)</strong>
+                    <p className="text-zinc-650">
+                      Kami tidak menjual informasi pribadi Anda. Di bawah CCPA, Anda berhak meminta akses, penghapusan, dan non-diskriminasi karena menggunakan hak-hak Anda.
                     </p>
-                    <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      ✉️ <span><strong>Privacy Inquiries:</strong> privacy@zieads.com</span>
-                    </p>
-                    <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      ✉️ <span><strong>Legal:</strong> legal@zieads.com</span>
-                    </p>
-                    <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      📞 <span>+62 851 5762 6264</span>
+                  </div>
+                  <div className="space-y-1">
+                    <strong>11.4 Kanada (PIPEDA)</strong>
+                    <p className="text-zinc-650">
+                      Kami menyimpan dan memproses data di server cloud yang berlokasi di simpul AS/Global. Data Anda mungkin tunduk pada pengungkapan di bawah hukum setempat dari yurisdiksi tersebut.
                     </p>
                   </div>
                 </div>
               </section>
 
+              {/* SECTION 12 */}
+              <section id="cookies" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  12. Cookie & Pelacakan
+                </h2>
+                <p>
+                  Kami menggunakan cookie untuk autentikasi sesi, membuat Anda tetap masuk di seluruh navigasi dasbor, dan mengingat zona waktu. Kami juga menjalankan metrik analitik yang dihosting sendiri secara anonim (PostHog) untuk melacak kinerja dasbor tanpa mencatat riwayat browser individu. Kami tidak menggunakan cookie pelacakan iklan.
+                </p>
+              </section>
+
+              {/* SECTION 13 */}
+              <section id="children" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  13. Privasi Anak-Anak
+                </h2>
+                <p>
+                  ZieAds dirancang untuk operator bisnis, wirausahawan, dan profesional pemasaran. Kami tidak dengan sengaja mengumpulkan data pribadi anak di bawah usia 18 tahun. Jika Anda yakin seorang anak telah membuat akun, hubungi kami di <strong>privacy@zieads.com</strong> dan kami akan segera menghapus profil tersebut.
+                </p>
+              </section>
+
+              {/* SECTION 14 */}
+              <section id="breach-notif" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  14. Pemberitahuan Kebocoran Data
+                </h2>
+                <p>
+                  Kami memelihara log audit dan pemindaian keamanan. Di bawah UU PDP Pasal 46, jika terjadi kebocoran keamanan yang mengompromikan catatan pribadi Anda, kami akan memberi tahu Anda melalui email terdaftar dan menginformasikan Kementerian Komunikasi dan Informatika (Kominfo/Lembaga PDP) dalam waktu 72 jam setelah verifikasi.
+                </p>
+              </section>
+
+              {/* SECTION 15 */}
+              <section id="changes" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  15. Perubahan Kebijakan Ini
+                </h2>
+                <p>
+                  Kami dapat menyesuaikan Kebijakan Privasi ini untuk mencerminkan perubahan fitur produk atau pembaruan peraturan. Kami akan memberi tahu Anda tentang perubahan material dengan mengirimkan pemberitahuan email atau memposting pemberitahuan menonjol di dasbor kerja akun Anda 30 hari sebelum perubahan berlaku.
+                </p>
+              </section>
+
+              {/* SECTION 16 */}
+              <section id="contact" className="space-y-4">
+                <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-2xl font-bold text-black tracking-tight border-b border-zinc-200 pb-2">
+                  16. Informasi Kontak
+                </h2>
+                <p>
+                  Pertanyaan, keluhan, atau pelaksanaan hak data subjek harus dikirim ke:
+                </p>
+                <div className="font-mono text-sm leading-relaxed text-zinc-650 bg-zinc-50 border border-zinc-200 p-6 rounded-lg">
+                  <div>PT. Bantu Indonesia Technology</div>
+                  <div>Kantor Terdaftar: Omah Dongeng, Somodaran, Purwomartani, Kalasan, Daerah Istimewa Yogyakarta, Indonesia</div>
+                  <div>Email Utama: legal@zieads.com</div>
+                  <div>Meja Privasi: privacy@zieads.com</div>
+                  <div>Telepon: +62 851 5762 6264</div>
+                </div>
+              </section>
+            </>
+          )}
+
+        </div>
+
+      </main>
+
+      {/* FOOTER */}
+      <footer className="border-t border-zinc-200 bg-zinc-50 py-16 px-6 no-print">
+        <div className="max-w-[800px] mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 text-sm">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 font-bold text-black" onClick={scrollToTop} style={{ cursor: 'pointer' }}>
+              <ZieAdsLogo size={24} />
+              <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }} className="text-lg">zieads</span>
             </div>
+            <p className="text-zinc-500 leading-relaxed text-xs">
+              PT. Bantu Indonesia Technology. AI-powered social media management and ad audit layers for creators and agencies.
+            </p>
           </div>
-        </section>
-
-        {/* Floating Back to Top Button */}
-        {showScrollTop && (
-          <button 
-            onClick={scrollToTop}
-            className="back-to-top no-print"
-            style={{
-              position: 'fixed',
-              bottom: 24,
-              right: 24,
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
-              background: '#09090B',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 'var(--shadow-lg)',
-              zIndex: 1000,
-              transition: 'opacity 0.2s'
-            }}
-          >
-            <ArrowUp size={16} />
-          </button>
-        )}
-
-        {/* Dynamic Toast Alerts */}
-        {toastMessage && (
-          <div style={{
-            position: 'fixed',
-            bottom: 24,
-            left: 24,
-            background: '#09090B',
-            color: '#fff',
-            padding: '12px 20px',
-            borderRadius: 8,
-            boxShadow: 'var(--shadow-lg)',
-            zIndex: 1010,
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}>
-            <CheckCircle2 size={16} className="text-green-500" />
-            {toastMessage}
+          <div>
+            <h4 className="font-bold text-black mb-3">Links</h4>
+            <ul className="space-y-2 text-zinc-500 text-xs pl-0 list-none">
+              <li><a href="/#how-it-works" className="hover:text-black transition-colors decoration-none">How It Works</a></li>
+              <li><a href="/#pricing" className="hover:text-black transition-colors decoration-none">Pricing</a></li>
+              <li><a href="/#faq" className="hover:text-black transition-colors decoration-none">FAQ</a></li>
+            </ul>
           </div>
-        )}
-
-        {/* FOOTER */}
-        <footer className="footer border-t border-[var(--lp-border-subtle)] mt-12">
-          <div className="footer-inner footer-grid-layout">
-            <div className="footer-col footer-brand-col">
-              <div className="footer-brand" onClick={scrollToTop}>
-                <ZieAdsLogo size={32} />
-                <span className="brand-name">zieads</span>
-              </div>
-              <p className="footer-tagline">AI-powered paid ads strategy for marketers and agencies.</p>
-              <div className="footer-social-links">
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Twitter/X</a>
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> LinkedIn</a>
-              </div>
-            </div>
-            <div className="footer-col">
-              <h4 className="footer-col-title">Product</h4>
-              <a href="/#how-it-works">How It Works</a>
-              <a href="/#pricing">Pricing</a>
-            </div>
-            <div className="footer-col">
-              <h4 className="footer-col-title">Resources</h4>
-              <a href="/#faq">FAQ</a>
-            </div>
-            <div className="footer-col">
-              <h4 className="footer-col-title">Legal</h4>
-              <a href="#" onClick={(e) => { e.preventDefault(); navigate('/privacy-policy'); }}>Privacy Policy</a>
-              <a href="#" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms of Service</a>
-            </div>
+          <div>
+            <h4 className="font-bold text-black mb-3">Legal</h4>
+            <ul className="space-y-2 text-zinc-500 text-xs pl-0 list-none">
+              <li><a href="/privacy-policy" className="font-semibold text-black decoration-none">Privacy Policy</a></li>
+              <li><a href="/terms" className="hover:text-black transition-colors decoration-none">Terms of Service</a></li>
+            </ul>
           </div>
-          <div className="footer-bottom-bar">
-            <p className="footer-copy">© 2026 ZieAds. All rights reserved.</p>
-          </div>
-        </footer>
+        </div>
+        <div className="max-w-[800px] mx-auto border-t border-zinc-200 mt-12 pt-6 text-center text-xs text-zinc-400 font-mono">
+          © 2026 PT. Bantu Indonesia Technology. All rights reserved. Registered Office: Somodaran, Purwomartani, Kalasan, Yogyakarta, Indonesia.
+        </div>
+      </footer>
 
-      </div>
     </div>
   );
 }
