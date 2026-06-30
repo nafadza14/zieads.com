@@ -105,7 +105,12 @@ export default function App() {
         <Route path="/hunt" element={<ProtectedRoute><HuntPage /></ProtectedRoute>} />
         <Route path="/tools" element={<Navigate to="/clients" replace />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
+        <Route path="/privacy.html" element={<Navigate to="/privacy-policy" replace />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+        <Route path="/tos" element={<Navigate to="/terms" replace />} />
+        <Route path="/terms.html" element={<Navigate to="/terms" replace />} />
         <Route path="/superadmin/login" element={<SuperadminLogin />} />
         <Route path="/superadmin" element={<SuperadminDashboard />} />
       </Routes>
