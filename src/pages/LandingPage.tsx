@@ -449,11 +449,12 @@ export default function LandingPage({ onScanComplete }: Props) {
               <span>runs your social media.</span>
             ) : (
               <span 
-                className={`inline-flex flex-wrap transition-all duration-300 ${
+                className={`inline-flex flex-wrap justify-center transition-all duration-300 ${
                   animationPhase === 'exit' 
                     ? 'opacity-0 translate-y-[-10px] blur-sm' 
                     : 'opacity-100 translate-y-0 blur-0'
                 }`}
+                style={{ columnGap: '0.28em', rowGap: '0.15em' }}
               >
                 {phraseWords.map((word, wIdx) => (
                   <span
@@ -464,7 +465,7 @@ export default function LandingPage({ onScanComplete }: Props) {
                       animationFillMode: 'forwards'
                     }}
                   >
-                    {word}{' '}
+                    {word}
                   </span>
                 ))}
               </span>
