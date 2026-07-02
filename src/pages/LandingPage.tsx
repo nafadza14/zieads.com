@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
@@ -41,6 +41,47 @@ export default function LandingPage({ onScanComplete }: Props) {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+ 
+  /* ── Hero Rotating Headline Animation State ── */
+  const rotatingPhrases = [
+    "runs your social media.",
+    "never misses what's working.",
+    "briefs you every morning.",
+    "turns your data into decisions.",
+    "watches while you sleep."
+  ];
+ 
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [animationPhase, setAnimationPhase] = useState<'enter' | 'exit'>('enter');
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+ 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+ 
+    const listener = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }, []);
+ 
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+ 
+    const interval = setInterval(() => {
+      setAnimationPhase('exit');
+      setTimeout(() => {
+        setPhraseIndex((prev) => (prev + 1) % rotatingPhrases.length);
+        setAnimationPhase('enter');
+      }, 400); // Wait for exit transition (400ms)
+    }, 4500); // 4.5 seconds per cycle
+ 
+    return () => clearInterval(interval);
+  }, [prefersReducedMotion]);
+ 
+  const currentPhrase = rotatingPhrases[phraseIndex];
+  const phraseWords = currentPhrase.split(' ');
 
   const handleQuickScan = async () => {
     if (!url.trim()) return;
@@ -398,19 +439,165 @@ export default function LandingPage({ onScanComplete }: Props) {
       {/* ══════════════════════════════════ S1: HERO ══════════════════════════════════ */}
       <section className="hero-section">
         <div className="lp-hero-eyebrow">
-          <span className="lp-rating-text">Your AI marketing agent, working daily</span>
+          <span className="lp-rating-text">Your marketing, handled</span>
         </div>
         
-        <h1 className="hero-title">
-          The AI Marketing Agent that <br />
-          <span className="lp-pill-highlight">runs your social media.</span>
+        <h1 className="hero-title flex flex-col items-center">
+          <span>The AI Marketing Agent that</span>
+          <span className="lp-pill-highlight mt-2 rotating-container relative inline-block text-[#1A1A1A] min-h-[50px] sm:min-h-[60px] md:min-h-[70px] align-middle">
+            {prefersReducedMotion ? (
+              <span>runs your social media.</span>
+            ) : (
+              <span 
+                className={`inline-flex flex-wrap transition-all duration-300 ${
+                  animationPhase === 'exit' 
+                    ? 'opacity-0 translate-y-[-10px] blur-sm' 
+                    : 'opacity-100 translate-y-0 blur-0'
+                }`}
+              >
+                {phraseWords.map((word, wIdx) => (
+                  <span
+                    key={wIdx}
+                    className="inline-block mr-[0.25em] opacity-0 translate-y-[8px] animate-word-reveal"
+                    style={{
+                      animationDelay: `${wIdx * 0.25}s`,
+                      animationFillMode: 'forwards'
+                    }}
+                  >
+                    {word}
+                  </span>
+                ))}
+              </span>
+            )}
+          </span>
         </h1>
         
         <p className="hero-subtitle">
-          ZieAds connects to your social accounts and ad data, then works like a marketing analyst that never sleeps. Every morning it tells you what worked, what is slipping, and exactly what to do today. You approve. It handles the rest.
+          ZieAds connects to your social accounts and ad data, then works like a marketing analyst who never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. You approve. It takes it from there.
         </p>
 
         <div className="hero-input-wrapper">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              className="btn-lp-primary-gradient"
+              onClick={() => { const el = document.getElementById('free-audit-try'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }}
+              style={{ cursor: 'pointer', padding: '14px 28px', fontSize: '15px', fontWeight: 600, border: 'none', borderRadius: '12px', color: 'white', transition: 'all 0.2s' }}
+            >
+              Start Free
+            </button>
+            <button
+              className="btn-lp-secondary"
+              onClick={() => { const el = document.getElementById('dashboard-preview'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }}
+              style={{ cursor: 'pointer', padding: '14px 28px', fontSize: '15px', fontWeight: 600, border: '1px solid var(--lp-border-strong)', borderRadius: '12px', background: 'transparent', transition: 'all 0.2s' }}
+            >
+              Watch a 90-second tour
+            </button>
+          </div>
+          <div className="final-cta-trust-strip mt-6 justify-center flex gap-6 text-[13px] text-zinc-500">
+            <span><Shield size={14} className="inline mr-1" /> Free plan, no card</span>
+            <span><Check size={14} className="inline mr-1" /> Connects in 2 minutes</span>
+            <span><Clock size={14} className="inline mr-1" /> First briefing tomorrow morning</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Dynamic Style for Word Reveal Animation */}
+      <style>{`
+        @keyframes wordReveal {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-word-reveal {
+          animation: wordReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .rotating-container {
+          display: inline-block;
+          min-height: 50px;
+          vertical-align: middle;
+        }
+        @media (min-width: 640px) {
+          .rotating-container {
+            min-height: 60px;
+          }
+        }
+        @media (min-width: 768px) {
+          .rotating-container {
+            min-height: 70px;
+          }
+        }
+      `}</style>
+
+      {/* ══════════════════════════════════ S2: DASHBOARD PREVIEW ══════════════════════════════════ */}
+      <section id="dashboard-preview" className="ai-strategist-section" style={{ padding: '100px 24px', background: 'var(--lp-bg-canvas)', textAlign: 'center' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>See it work</span>
+        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>This is what waits for you every morning.</h2>
+        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px' }}>No dashboards to decode. No charts to interpret. The agent has already done the reading and tells you where to spend your attention today.</p>
+
+        {/* SHOWCASE CARD */}
+        <div className="lp-showcase-container" style={{ marginTop: 0, marginBottom: 48 }}>
+          <div className="lp-rainbow-glow"></div>
+          <div className="lp-showcase-card">
+            <div className="lp-showcase-header">
+              <div className="lp-chrome-dots">
+                <span className="lp-dot-red"></span>
+                <span className="lp-dot-yellow"></span>
+                <span className="lp-dot-green"></span>
+              </div>
+              <div className="lp-chrome-title">app.zieads.com — your morning briefing</div>
+            </div>
+            <div className="lp-showcase-body" style={{ height: 'auto' }}>
+              <img 
+                src="/zieads-dashboard.png" 
+                alt="app.zieads.com — your morning briefing" 
+                style={{ 
+                  width: '100%', 
+                  height: 'auto', 
+                  display: 'block',
+                  borderBottomLeftRadius: 'inherit',
+                  borderBottomRightRadius: 'inherit'
+                }} 
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="ai-strategist-explanation" style={{ maxWidth: '780px', margin: '0 auto 48px', textAlign: 'left', fontSize: '16px', lineHeight: '1.7', color: 'var(--lp-text-secondary)', background: 'var(--lp-bg-card)', border: '1px solid var(--lp-border-subtle)', borderRadius: '16px', padding: '32px', boxShadow: 'var(--lp-shadow-card)' }}>
+          <p style={{ margin: 0 }}>
+            The briefing opens with a headline read on your accounts, the three to five moves worth making today ranked by impact, the wins worth repeating, and the problems worth fixing before they cost you. Tap any item to act on it, or ask the agent why.
+          </p>
+        </div>
+
+        {/* Supporting stat row */}
+        <div className="proof-stats animate-fade-in" style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '40px', marginTop: '40px' }}>
+          <div className="stat">
+            <span className="stat-number mono-num">Under 3 min</span>
+            <span className="stat-label">From connect to first insight</span>
+          </div>
+          <div className="stat-divider"></div>
+          <div className="stat">
+            <span className="stat-number mono-num">Every morning</span>
+            <span className="stat-label">A fresh briefing, before your coffee</span>
+          </div>
+          <div className="stat-divider"></div>
+          <div className="stat">
+            <span className="stat-number mono-num">One place</span>
+            <span className="stat-label">Organic and paid, together</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════ S3: FREE AUDIT TRY ══════════════════════════════════ */}
+      <section id="free-audit-try" className="scoring-section" style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '100px' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em', display: 'block', textAlign: 'center', marginBottom: 8 }}>Try it free, no signup</span>
+        <h2 className="section-title">Curious what the agent sees? Paste a URL.</h2>
+        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px', textAlign: 'center' }}>
+          Before you connect anything, drop in any website and the agent reads it like a strategist would. Your offer, your funnel, your tracking setup, your creative angles, and how you stack up, scored across six dimensions in under three minutes. It is free, it needs no account, and it is the fastest way to understand what having an agent actually feels like.
+        </p>
+
+        {/* Inline URL Input */}
+        <div className="hero-input-wrapper" style={{ maxWidth: '640px', margin: '0 auto 48px' }}>
           <div className="hero-input-container">
             <Search className="input-icon" size={20} />
             <input
@@ -430,169 +617,50 @@ export default function LandingPage({ onScanComplete }: Props) {
               {loading ? (
                 <span className="spinner-inline"></span>
               ) : (
-                "Start Free"
+                "Get My Free Audit"
               )}
             </button>
           </div>
           {error && <p className="hero-error">{error}</p>}
-          <p className="hero-note">Connects in 2 minutes. Free plan, no card required. Your first briefing tomorrow morning.</p>
+          <p className="hero-note" style={{ textAlign: 'center', marginTop: 12 }}>No signup. No ad account access. Your score in under 3 minutes.</p>
         </div>
 
-        {/* SHOWCASE CARD WITH RAINBOW GLOW */}
-        <div className="lp-showcase-container">
-          <div className="lp-rainbow-glow"></div>
-          <div className="lp-showcase-card">
-            <div className="lp-showcase-header">
-              <div className="lp-chrome-dots">
-                <span className="lp-dot-red"></span>
-                <span className="lp-dot-yellow"></span>
-                <span className="lp-dot-green"></span>
-              </div>
-              <div className="lp-chrome-title">app.zieads.com — your daily briefing</div>
+        {/* Tabbed Report Preview Visual */}
+        <div className="report-preview-section" style={{ padding: '0', background: 'transparent' }}>
+          <div className="report-preview-container">
+            <div className="report-tabs">
+              {reportTabs.map((tab, i) => (
+                <button
+                  key={i}
+                  className={`report-tab ${activeReportTab === i ? 'active' : ''}`}
+                  onClick={() => setActiveReportTab(i)}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            <div className="lp-showcase-body" style={{ height: 'auto' }}>
-              <img 
-                src="/zieads-dashboard.png" 
-                alt="app.zieads.com — your daily briefing" 
-                style={{ 
-                  width: '100%', 
-                  height: 'auto', 
-                  display: 'block',
-                  borderBottomLeftRadius: 'inherit',
-                  borderBottomRightRadius: 'inherit'
-                }} 
-              />
+            <div className="report-tab-content">
+              {reportTabs[activeReportTab].content}
             </div>
           </div>
         </div>
       </section>
- 
-      {/* ══════════════════════════════════ S2: STATS BAR ══════════════════════════════════ */}
-      <section className="social-proof">
-        <div className="proof-stats">
-          <div className="stat">
-            <span className="stat-number mono-num">2 minutes</span>
-            <span className="stat-label">To connect your social channels</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat">
-            <span className="stat-number mono-num">Every morning</span>
-            <span className="stat-label">A marketing briefing waiting for you</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat">
-            <span className="stat-number mono-num">15</span>
-            <span className="stat-label">AI skills covering your marketing stack</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat">
-            <span className="stat-number mono-num">Free</span>
-            <span className="stat-label">To start with no card required</span>
-          </div>
-        </div>
-      </section>
- 
-      {/* ══════════════════════════════════ S3: PAIN SECTION (NEW) ══════════════════════════════════ */}
-      <section className="pain-section">
-        <h2 className="section-title">You are not bad at marketing. You are doing five jobs at once.</h2>
-        <div className="pain-body">
-          <p>You run the ads. You write the posts. You schedule them across three platforms. You check the numbers on Monday, forget by Wednesday, and try to remember what actually worked last month.</p>
-          <p>Every morning there is a decision waiting. Which post to boost. Whether that campaign is still working. What to post today when you already posted the obvious things. You make these calls between meetings, on your phone, with half the information.</p>
-          <p>The tools you have do not help with this. A scheduler tells you when a post goes out, not whether it should. An analytics dashboard shows you charts, then leaves you to figure out what they mean. Your ad manager reports numbers after the money is already spent.</p>
-          <p>What you actually need is not another dashboard. It is someone who watches everything, understands your specific setup, and tells you what to do next. A marketing analyst. Except you cannot afford one, and you do not have time to brief one every morning.</p>
-        </div>
-        <p className="pain-transition">That is what the agent is for.</p>
-        <div className="pain-grid">
-          <div className="pain-card">
-            <div className="pain-icon-wrap"><Clock size={24} /></div>
-            <h3>Hiring a marketing analyst</h3>
-            <p>A good one costs $4,000 a month and needs two weeks to understand your accounts. By then the campaign you were worried about has already spent its budget.</p>
-          </div>
-          <div className="pain-card">
-            <div className="pain-icon-wrap"><Shuffle size={24} /></div>
-            <h3>Figuring it out yourself</h3>
-            <p>You test one thing at a time and wait a week per test. Every wrong guess is real money and real time you do not get back.</p>
-          </div>
-          <div className="pain-card">
-            <div className="pain-icon-wrap"><HelpCircle size={24} /></div>
-            <h3>Asking a generic AI</h3>
-            <p>ChatGPT gives you advice that sounds right but has never seen your accounts, your numbers, or what you posted last week. It starts from zero every time you open it.</p>
-          </div>
-        </div>
-      </section>
- 
-      {/* ══════════════════════════════════ S4: HOW IT WORKS ══════════════════════════════════ */}
-      <section id="how-it-works" className="how-section">
-        <h2 className="section-title">Connect once. Get briefed every morning.</h2>
-        <p className="section-subtitle">Two minutes to set up. Then the agent works whether you are watching or not.</p>
-        <div className="steps-grid">
-          <div className="step-card">
-            <div className="step-number mono-num">01</div>
-            <div className="step-icon-wrap"><Link2 size={24} /></div>
-            <h3>Start with a free audit</h3>
-            <p>Paste any URL and the agent reads your setup like a strategist would. Your offer, your funnel, your tracking, your creative angles, scored across six dimensions in under three minutes. This is how the agent learns your business, and it is free with no signup.</p>
-            <span className="step-time-estimate">Your entry point. No card required.</span>
-          </div>
-          <div className="step-card">
-            <div className="step-number mono-num">02</div>
-            <div className="step-icon-wrap"><Bot size={24} /></div>
-            <h3>Connect your accounts</h3>
-            <p>Link Instagram, TikTok, and LinkedIn, and upload your ad performance from Meta, Google, or TikTok. The agent now sees your organic and paid marketing in one place, the way your customers actually experience your brand.</p>
-            <span className="step-time-estimate">Connects in about two minutes</span>
-          </div>
-          <div className="step-card">
-            <div className="step-number mono-num">03</div>
-            <div className="step-icon-wrap"><TrendingUp size={24} /></div>
-            <h3>Get your daily briefing</h3>
-            <p>Every morning the agent delivers a briefing: what worked yesterday, what is slipping, and the three to five things worth doing today, ranked by impact. You approve what matters. Schedule the posts, run the deep dives, act on the alerts.</p>
-            <span className="step-time-estimate">Your first briefing lands tomorrow</span>
-          </div>
-        </div>
-      </section>
 
-      {/* ══════════════════════════════════ S5: SAMPLE REPORT PREVIEW ══════════════════════════════════ */}
-      <section id="sample-report" className="report-preview-section">
-        <span className="report-preview-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>What you actually get</span>
-        <h2 className="section-title" style={{ marginTop: 8 }}>This is a real ZieAds audit.</h2>
-        <p className="section-subtitle">Not a mock-up. Every field below comes from a live scan. Your agent uses this audit as its baseline memory to track your setup's improvement over time.</p>
-        
-        <div className="report-preview-container">
-          <div className="report-tabs">
-            {reportTabs.map((tab, i) => (
-              <button
-                key={i}
-                className={`report-tab ${activeReportTab === i ? 'active' : ''}`}
-                onClick={() => setActiveReportTab(i)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="report-tab-content">
-            {reportTabs[activeReportTab].content}
-          </div>
-        </div>
+      {/* ══════════════════════════════════ S4: PILLAR: DAILY BRIEFING ══════════════════════════════════ */}
+      <section className="ai-strategist-section" style={{ padding: '120px 24px', background: 'var(--lp-bg-canvas)', borderTop: '1px solid var(--lp-border-subtle)' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em', display: 'block', textAlign: 'center' }}>The daily briefing</span>
+        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16, textAlign: 'center' }}>A marketing analyst's report. Every single morning.</h2>
+        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px', textAlign: 'center' }}>
+          Most tools hand you data and walk away. The agent reads that data in the context of your specific setup and hands you decisions.
+        </p>
 
-        <div className="report-preview-cta">
-          <button className="btn-lp-primary-gradient" onClick={scrollToHero} style={{ cursor: 'pointer', padding: '14px 28px', fontSize: '15px', fontWeight: 600, border: 'none', borderRadius: '12px', color: 'white', transition: 'all 0.2s' }}>
-            See yours
-          </button>
-          <p className="report-preview-microcopy" style={{ marginTop: 12, fontSize: '13px', color: 'var(--lp-text-muted)' }}>Free scan takes 3 minutes. No signup.</p>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════ S6: AI STRATEGIST SECTION ══════════════════════════════════ */}
-      <section className="ai-strategist-section" style={{ padding: '120px 24px', background: 'var(--lp-bg-canvas)', textAlign: 'center' }}>
-        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>What the agent does</span>
-        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>It already knows your setup. That is the whole point.</h2>
-        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px' }}>Most AI tools answer questions. Your agent answers your questions, about your accounts, with everything it already knows about you.</p>
-        
-        <div className="ai-strategist-explanation" style={{ maxWidth: '780px', margin: '0 auto 48px', textAlign: 'left', fontSize: '16px', lineHeight: '1.7', color: 'var(--lp-text-secondary)', background: 'var(--lp-bg-card)', border: '1px solid var(--lp-border-subtle)', borderRadius: '16px', padding: '32px', boxShadow: 'var(--lp-shadow-card)' }}>
+        <div className="ai-strategist-explanation" style={{ maxWidth: '780px', margin: '0 auto 48px', textAlign: 'left', fontSize: '15.5px', lineHeight: '1.75', color: 'var(--lp-text-secondary)', background: 'var(--lp-bg-card)', border: '1px solid var(--lp-border-subtle)', borderRadius: '16px', padding: '32px', boxShadow: 'var(--lp-shadow-card)' }}>
           <p style={{ margin: 0 }}>
-            When you ask why last week was slow, the agent already knows your pixel was misfiring on checkout, that your best-performing angle has been problem-first, and that you have been running cold audiences only. The answer reflects all of that. It does not start from zero. It picks up where yesterday left off.
+            It knows your pixel was misfiring last week. It knows your best angle has been problem-first. It knows you have been running cold audiences only. So when it says boost the Tuesday Reel and pause ad set three, it is not guessing. It is reasoning from everything it already knows about you.
           </p>
         </div>
 
+        {/* 6 Grid Cards */}
         <div className="pain-grid" style={{ marginBottom: 48 }}>
           {[
             {
@@ -635,106 +703,106 @@ export default function LandingPage({ onScanComplete }: Props) {
             </div>
           ))}
         </div>
+      </section>
 
-        <div className="ai-context-callout" style={{ maxWidth: '780px', margin: '0 auto', textAlign: 'left', background: 'var(--lp-bg-inset)', borderLeft: '4px solid var(--lp-accent)', padding: '24px', borderRadius: '0 12px 12px 0' }}>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 700, color: 'var(--lp-text-primary)' }}>What makes this different from generic AI assistants</h4>
-          <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
-            Your agent reads your briefing history and connected account statistics before generating responses. It knows what you have posted, what you scheduled, and what ad creatives are fatiguing. ChatGPT starts from zero every time.
-          </p>
+      {/* ══════════════════════════════════ S5: PILLAR: SCHEDULING ══════════════════════════════════ */}
+      <section className="pain-section" style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'white' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em', display: 'block', textAlign: 'center', marginBottom: 8 }}>Publishing and scheduling</span>
+        <h2 className="section-title">Draft once. The agent handles every platform.</h2>
+        <div className="pain-body" style={{ marginBottom: 40 }}>
+          <p>Write your post once and the agent adapts it for Instagram, TikTok, and LinkedIn, respecting what each platform rewards. It suggests the times your audience actually shows up, based on your own history rather than a generic best-time chart.</p>
+          <p>Queue a week in one sitting, or let the agent propose a schedule and approve it with one tap. Nothing goes live without your say-so.</p>
+        </div>
+
+        {/* Mock Composer UI Visual */}
+        <div style={{ maxWidth: '640px', margin: '0 auto', background: 'var(--lp-bg-card)', border: '1px solid var(--lp-border-subtle)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--lp-shadow-card)', textAlign: 'left' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <span style={{ background: '#3B7FF5', color: 'white', fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '6px' }}>Instagram</span>
+            <span style={{ background: '#E4E4E7', color: '#3F3F46', fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '6px' }}>TikTok</span>
+            <span style={{ background: '#E4E4E7', color: '#3F3F46', fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '6px' }}>LinkedIn</span>
+          </div>
+          <div style={{ background: 'var(--lp-bg-inset)', padding: '16px', borderRadius: '12px', minHeight: '80px', fontSize: '14px', color: 'var(--lp-text-primary)', border: '1px solid var(--lp-border-subtle)' }}>
+            We've analyzed your engagement profiles. Recommended post adjustments: Add vertical captions for TikTok viewport safety, and move the call-to-action link to client bio.
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--lp-accent)', fontWeight: 600 }}>Suggested Time: Tuesday, 5:45 PM (Local)</span>
+            <button className="btn-lp-primary-gradient" style={{ border: 'none', borderRadius: '8px', color: 'white', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Approve & Schedule</button>
+          </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════ S7: 15 SKILLS SECTION ══════════════════════════════════ */}
-      <section className="skills-section" style={{ padding: '120px 24px', background: 'var(--lp-bg-canvas-alt)', textAlign: 'center' }}>
-        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>One agent. Fifteen skills.</span>
-        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>Every play your marketing needs, on command.</h2>
-        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px' }}>
-          Run any of them yourself, or let the agent trigger them when the data calls for it. Each one draws from your accounts and history, so the output is about your setup, not generic to your industry.
+      {/* ══════════════════════════════════ S6: PILLAR: ANALYTICS ══════════════════════════════════ */}
+      <section className="scoring-section" style={{ borderTop: '1px solid var(--lp-border-subtle)' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em', display: 'block', textAlign: 'center', marginBottom: 8 }}>Analytics that decide, not just display</span>
+        <h2 className="section-title">Your numbers, already interpreted.</h2>
+        <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px', textAlign: 'center' }}>
+          Follower growth, engagement, reach, top and worst performers, best posting windows, all in one view across every connected account.
         </p>
+        <div className="pain-body" style={{ maxWidth: '780px', margin: '0 auto 48px', fontSize: '15.5px', lineHeight: '1.75', color: 'var(--lp-text-secondary)' }}>
+          <p>
+            But the agent does not stop at showing you the chart. It tells you the Tuesday Reel format is fatiguing, the LinkedIn carousels are your quiet winners, and the paid campaign you are about to scale is built on a creative angle your organic audience already ignored. Organic and paid, read together, because your customers never saw them as separate.
+          </p>
+        </div>
 
-        <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--lp-text-primary)', marginBottom: 32 }}>
-          Tap any command. Get a structured output in under 3 minutes.
-        </p>
-
-        <div className="pain-grid" style={{ marginBottom: 32 }}>
+        {/* 6 Dimension Bars */}
+        <div className="score-dimensions" style={{ maxWidth: '640px', margin: '0 auto' }}>
           {[
-            {
-              command: '/ads audit',
-              name: 'Full Audit',
-              description: '5 specialists. All 6 dimensions. Your most complete readiness picture.',
-            },
-            {
-              command: '/ads quick',
-              name: 'Quick Scan',
-              description: '60-second readiness snapshot when you need a fast check before a decision.',
-            },
-            {
-              command: '/ads copy',
-              name: 'Ad Copy',
-              description: 'Platform-specific headlines and body copy for Google, Meta, TikTok, and LinkedIn.',
-            },
-            {
-              command: '/ads creatives',
-              name: 'Creative Brief',
-              description: 'Three creative directions per platform with angles, hooks, and visual frameworks.',
-            },
-            {
-              command: '/ads landing',
-              name: 'Landing Page CRO',
-              description: '8-dimension audit of your landing page conversion setup.',
-            },
-            {
-              command: '/ads audiences',
-              name: 'Audience Targeting',
-              description: 'ICP definition, cold/warm/hot tiers, and platform-specific targeting matrices.',
-            },
-            {
-              command: '/ads competitors',
-              name: 'Competitor Intel',
-              description: 'Three-tier competitor map: who they are, what they are spending, where they are leaving gaps.',
-            },
-            {
-              command: '/ads funnel',
-              name: 'Funnel Architecture',
-              description: 'TOFU, MOFU, BOFU mapping with gap diagnosis and routing logic.',
-            },
-            {
-              command: '/ads budget',
-              name: 'Budget Model',
-              description: 'Platform allocation, KPI benchmarks, and spend recommendations by funnel stage.',
-            },
-            {
-              command: '/ads google',
-              name: 'Google Ads Strategy',
-              description: 'Search, Shopping, and Display campaign structures with match type recommendations.',
-            },
-            {
-              command: '/ads meta',
-              name: 'Meta Ads Strategy',
-              description: 'Facebook and Instagram campaign structure, creative format, and objective selection.',
-            },
-            {
-              command: '/ads tiktok',
-              name: 'TikTok Ads Strategy',
-              description: 'UGC angles, Spark Ads setup, and creative hooks that perform on short-form.',
-            },
-          ].map((skill, i) => (
-            <div key={i} className="pain-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <span className="mono-num" style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--lp-accent)', background: 'var(--lp-pill-bg)', padding: '4px 10px', borderRadius: '6px', display: 'inline-block', marginBottom: '16px' }}>
-                  {skill.command}
-                </span>
-                <h3 style={{ fontSize: '17px', fontWeight: 600, marginBottom: '8px', color: 'var(--lp-text-primary)' }}>{skill.name}</h3>
-                <p style={{ fontSize: '13.5px', color: 'var(--lp-text-secondary)', lineHeight: '1.5', margin: 0 }}>{skill.description}</p>
+            { name: 'Creative and Offer', weight: '25%', color: 'var(--lp-accent)' },
+            { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)' },
+            { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)' },
+            { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)' },
+            { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)' },
+            { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)' },
+          ].map((dim, i) => (
+            <div key={i} className="dimension-bar">
+              <div className="dim-info">
+                <span className="dim-name">{dim.name}</span>
+                <span className="dim-weight mono-num">{dim.weight}</span>
+              </div>
+              <div className="dim-track">
+                <div className="dim-fill" style={{ width: `${70 + i * 4}%`, backgroundColor: dim.color }}></div>
               </div>
             </div>
           ))}
         </div>
-
-        <p style={{ fontSize: '14px', fontStyle: 'italic', color: 'var(--lp-text-muted)' }}>
-          Plus 3 additional skills available inside the platform.
-        </p>
       </section>
+
+      {/* ══════════════════════════════════ S7: PILLAR: INBOX & WATCH ══════════════════════════════════ */}
+      <section className="pain-section" style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'var(--lp-bg-canvas)' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em', display: 'block', textAlign: 'center', marginBottom: 8 }}>Nothing slips past it</span>
+        <h2 className="section-title">It watches the conversations and the competition.</h2>
+        <div className="pain-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', maxWidth: '960px', margin: '0 auto' }}>
+          <div className="pain-card">
+            <div className="pain-icon-wrap" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', background: 'var(--lp-pill-bg)', color: 'var(--lp-accent)', marginBottom: '20px' }}><Users size={24} /></div>
+            <h3>Unified inbox</h3>
+            <p>Every comment across every connected account in one place, sorted by sentiment. Reply to what matters, skip the noise, and never lose a warm lead in a notification pile again.</p>
+          </div>
+          <div className="pain-card">
+            <div className="pain-icon-wrap" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', background: 'var(--lp-pill-bg)', color: 'var(--lp-accent)', marginBottom: '20px' }}><Radar size={24} /></div>
+            <h3>Competitor watch</h3>
+            <p>Point the agent at the accounts you care about and it tracks what they post, where they are gaining, and where the gaps are for you. You find out what is working in your market before it becomes obvious to everyone.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════ S8: CONSOLIDATION ══════════════════════════════════ */}
+      <section className="pain-section" style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'white', textAlign: 'center' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em', display: 'block', textAlign: 'center', marginBottom: 8 }}>One agent, not five tools</span>
+        <h2 className="section-title">Stop paying for five tools that don't talk to each other.</h2>
+        <div className="pain-body" style={{ maxWidth: '780px', margin: '0 auto 40px' }}>
+          <p>A scheduler here. An analytics dashboard there. An ad reporting tool. A spreadsheet you update on Mondays. A generic AI you re-explain your business to every morning. Five subscriptions, five tabs, and still no one telling you what to actually do.</p>
+          <p>The agent replaces the whole stack with one thing that sees everything and gives you the answer.</p>
+        </div>
+
+        {/* Five generic tool tags */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px' }}>
+          {['Scheduler', 'Analytics', 'Ad Reporting', 'Spreadsheets', 'Generic AI'].map((tool, i) => (
+            <span key={i} style={{ border: '1px solid var(--lp-border-subtle)', padding: '10px 20px', borderRadius: '9999px', fontSize: '14px', fontWeight: 600, color: 'var(--lp-text-secondary)', background: 'var(--lp-bg-canvas)' }}>{tool}</span>
+          ))}
+        </div>
+      </section>
+
+
 
       {/* ══════════════════════════════════ S8: COMPARISON TABLE (NEW) ══════════════════════════════════ */}
       <section className="comparison-section">
@@ -816,53 +884,7 @@ export default function LandingPage({ onScanComplete }: Props) {
         </div>
       </section>
 
-      {/* ══════════════════════════════════ S9: READINESS SCORE EXPLAINED ══════════════════════════════════ */}
-      <section className="scoring-section">
-        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em', display: 'block', textAlign: 'center', marginBottom: 8 }}>The score behind the audit</span>
-        <h2 className="section-title">Your score tells you where to start, not just how you rank.</h2>
-        <p className="section-subtitle">Six dimensions, each weighted by how much it actually moves performance. The agent tracks this over time, so you see your setup improve as you act on what it finds.</p>
-        <div className="score-dimensions">
-          {[
-            { name: 'Creative and Offer', weight: '25%', color: 'var(--lp-accent)', tooltip: 'The heaviest weight because if your offer is unclear or your creative hook is weak, nothing else can save the campaign. This is where most problems start.' },
-            { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)', tooltip: 'You cannot target the right people if you have not defined who they are. A fuzzy ICP leads to wasted spend from the first impression.' },
-            { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)', tooltip: 'Your ad brings traffic. Your page either earns it or loses it. Tracking gaps and weak above-fold content are the two most common killers here.' },
-            { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)', tooltip: 'Not every business belongs on every platform at the start. This dimension checks whether your product, budget, and format match the platform you are planning to use.' },
-            { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)', tooltip: 'Most small businesses run top-of-funnel only and then wonder why ROAS is low. This checks whether you have warm and hot audience strategies in place.' },
-            { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)', tooltip: 'Understanding where your competitors are positioned changes how you write your ads. This surfaces the positioning gaps worth owning.' },
-          ].map((dim, i) => (
-            <div key={i} className="dimension-bar" title={dim.tooltip}>
-              <div className="dim-info">
-                <span className="dim-name">{dim.name}</span>
-                <span className="dim-weight mono-num">{dim.weight}</span>
-              </div>
-              <div className="dim-track">
-                <div className="dim-fill" style={{ width: `${60 + i * 5}%`, backgroundColor: dim.color }}></div>
-              </div>
-            </div>
-          ))}
-        </div>
 
-        {/* Score Interpretation Block */}
-        <div className="score-interpretation">
-          <h3 className="score-interp-title">What your score means in practice</h3>
-          <div className="score-grade-grid">
-            {[
-              { range: '80 to 100', grade: 'A', meaning: 'Your setup is solid. Focus on creative testing and scaling what works.', color: '#15803D' },
-              { range: '60 to 79', grade: 'B or C', meaning: 'Specific gaps are capping your performance. Fix the highest-weight issues before increasing spend.', color: '#1E7BFF' },
-              { range: '40 to 59', grade: 'D', meaning: 'Running campaigns at this score will burn budget. Structural fixes come before spend increases.', color: '#A16207' },
-              { range: '0 to 39', grade: 'F', meaning: 'Several foundational issues need attention. Start with tracking and offer clarity.', color: '#B91C1C' },
-            ].map((g, i) => (
-              <div key={i} className="score-grade-row">
-                <div className="score-grade-badge" style={{ backgroundColor: g.color }}>{g.grade}</div>
-                <div className="score-grade-info">
-                  <span className="score-grade-range mono-num">{g.range}</span>
-                  <p className="score-grade-meaning">{g.meaning}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ══════════════════════════════════ S11: TESTIMONIALS (NEW) ══════════════════════════════════ */}
       <section className="testimonials-section">
@@ -1068,7 +1090,7 @@ export default function LandingPage({ onScanComplete }: Props) {
         <div className="pricing-roi-block">
           <h3>A marketing analyst costs $4,000 a month.</h3>
           <p>The agent starts free and runs from $29. If it catches one bad spend decision, flags one fatiguing campaign, or saves you one Sunday of planning, it has already paid for itself for the year.</p>
-          <button className="btn-lp-primary-gradient" onClick={() => { const el = document.getElementById('sample-report'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }} style={{ cursor: 'pointer' }}>
+          <button className="btn-lp-primary-gradient" onClick={() => { const el = document.getElementById('free-audit-try'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }} style={{ cursor: 'pointer' }}>
             See what the agent finds
           </button>
         </div>
@@ -1104,18 +1126,18 @@ export default function LandingPage({ onScanComplete }: Props) {
         <div className="lp-grid-line lp-line-right"></div>
         <div className="final-cta-content">
           <h2 className="final-cta-title">
-            Meet the agent. <br /><span className="lp-pill-highlight">Get your first briefing tomorrow.</span>
+            Meet your agent. <br /><span className="lp-pill-highlight">First briefing tomorrow.</span>
           </h2>
           <p className="final-cta-subtitle">
-            Start with a free audit, no signup and no card. Connect your accounts when you are ready, and wake up to your first briefing tomorrow.
+            Start with a free audit, no signup and no card. Connect when you're ready and wake up to your first briefing.
           </p>
           <button className="btn-lp-primary-gradient final-cta-btn" onClick={scrollToHero} style={{ cursor: 'pointer' }}>
             Start Free
           </button>
           <div className="final-cta-trust-strip">
-            <span><Shield size={14} /> Connects in 2 minutes</span>
-            <span><Check size={14} /> Free plan, no card required</span>
-            <span><Clock size={14} /> First briefing tomorrow</span>
+            <span><Shield size={14} /> No ad account access to start</span>
+            <span><Check size={14} /> No card for the free audit</span>
+            <span><Clock size={14} /> First briefing in 24 hours</span>
           </div>
         </div>
       </section>
@@ -1144,15 +1166,14 @@ export default function LandingPage({ onScanComplete }: Props) {
           <div className="footer-col">
             <h4 className="footer-col-title">Product</h4>
             <a href="#how-it-works">How It Works</a>
-            <a href="#sample-report">All 15 Skills</a>
-            <a href="#sample-report">Sample Report</a>
+            <a href="#free-audit-try">Try Free Scan</a>
             <a href="#pricing">Pricing</a>
             <a href="#" onClick={(e) => { e.preventDefault(); navigate('/clients'); }}>Agency Plan</a>
           </div>
           <div className="footer-col">
             <h4 className="footer-col-title">Resources</h4>
             <a href="#pricing">Paid Ads Readiness Guide</a>
-            <a href="#sample-report">Platform Comparison</a>
+            <a href="#free-audit-try">Platform Comparison</a>
             <a href="#faq">FAQ</a>
             <a href="#" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Blog</a>
           </div>
