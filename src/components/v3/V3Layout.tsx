@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ZieAdsLogo from '../ZieAdsLogo';
 import { 
   Sparkles, 
   Calendar, 
@@ -164,7 +165,7 @@ export default function V3Layout({ children }: Props) {
   const renderSidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#fff' }}>
       <div style={{ padding: '24px 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${B}` }}>
-        <div style={{ width: 28, height: 28, borderRadius: '50%', background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff', flexShrink: 0 }}>Z</div>
+        <ZieAdsLogo size={28} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', color: D }}>
             ZieAds <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: '#F59E0B', color: '#fff', borderRadius: 4, marginLeft: 4 }}>v0.3</span>
@@ -322,7 +323,7 @@ export default function V3Layout({ children }: Props) {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
           <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 32, width: '90%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 20, boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff' }}>Z</div>
+              <ZieAdsLogo size={36} />
               <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Welcome to ZieAds</h2>
             </div>
             

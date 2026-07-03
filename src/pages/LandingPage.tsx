@@ -537,7 +537,7 @@ export default function LandingPage({ onScanComplete }: Props) {
         <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px' }}>No dashboards to decode. No charts to interpret. The agent has already done the reading and tells you where to spend your attention today.</p>
 
         {/* SHOWCASE CARD */}
-        <div className="lp-showcase-container" style={{ marginTop: 0, marginBottom: 48 }}>
+        <div className="lp-showcase-container" style={{ marginTop: 0, marginBottom: 48, marginLeft: 'auto', marginRight: 'auto' }}>
           <div className="lp-rainbow-glow"></div>
           <div className="lp-showcase-card">
             <div className="lp-showcase-header">

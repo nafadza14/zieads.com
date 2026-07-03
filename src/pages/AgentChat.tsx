@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, PlayCircle } from 'lucide-react';
+import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
   UilSearchAlt, UilBedDouble, UilChartDown, UilMoneyBill, UilEye, UilMedicalSquare, 
   UilFlask, UilAnalysis, UilCrosshairs, UilRocket, UilChat, UilBolt, UilArrowUp, UilArrowRight, UilPlay
@@ -342,7 +343,7 @@ export default function AgentChat() {
         {/* Logo + new */}
         <div style={{ padding: '18px 20px', borderBottom: `1px solid ${B}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }} onClick={() => navigate('/')}>
-            <div style={{ width: 26, height: 26, background: P, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 }}>Z</div>
+            <ZieAdsLogo size={26} />
             <span style={{ fontSize: '1.1rem', fontWeight: 800, color: D }}>ZieAds</span>
             <span style={{ fontSize: '0.7rem', background: PL, color: P, borderRadius: 4, padding: '2px 6px', fontWeight: 700, marginLeft: 2 }}>AI</span>
           </div>

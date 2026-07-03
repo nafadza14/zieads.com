@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid, Sparkles, Calendar, Target, Link2, PenTool, BarChart3, Inbox } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import NounIcon from '../components/NounIcon';
+import ZieAdsLogo from '../components/ZieAdsLogo';
 import { useCreditStore } from '../lib/creditStore';
 import CreditBadge from '../components/CreditBadge';
 import FeatureGateModal from '../components/FeatureGateModal';
@@ -242,7 +243,7 @@ export default function ClientDashboard({ reportData }: Props) {
       <aside style={{ width: 240, background: 'var(--bg-soft)', borderRight: `1px solid ${B}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '20px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 24, paddingLeft: 8 }} onClick={() => navigate('/')}>
-            <div style={{ width: 28, height: 28, background: P, borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Z</div>
+            <ZieAdsLogo size={28} />
             <span style={{ fontSize: '1rem', fontWeight: 600, color: D }}>ZieAds</span>
           </div>
 
