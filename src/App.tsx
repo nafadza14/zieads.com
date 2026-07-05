@@ -89,7 +89,7 @@ export default function App() {
             />
           }
         />
-        <Route path="/onboarding" element={<ProtectedRoute><OnboardingWizard scanData={scanData} onComplete={(ctx: any) => setBusinessContext(ctx)} /></ProtectedRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingWizard /></ProtectedRoute>} />
         <Route path="/audit/progress" element={<ProtectedRoute><AuditProgress businessContext={businessContext} /></ProtectedRoute>} />
         <Route path="/audit/report" element={<ProtectedRoute><ReportDashboard /></ProtectedRoute>} />
         <Route path="/clients" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />

@@ -18,7 +18,8 @@ import {
   Inbox,
   Menu,
   X,
-  AlertCircle
+  AlertCircle,
+  Search
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useCreditStore } from '../../lib/creditStore';
@@ -41,7 +42,7 @@ export default function V3Layout({ children }: Props) {
   const demo = useDemoMode();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  // Welcome modal removed
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -60,8 +61,7 @@ export default function V3Layout({ children }: Props) {
   useEffect(() => {
     // Check onboarding status
     const checkOnboarding = async () => {
-      const localCheck = sessionStorage.getItem('zieads_onboarding_check_done');
-      if (localCheck === 'true') return;
+      if (demo.isActive) return;
 
       try {
         const tokenData = await supabase.auth.getSession();
@@ -73,39 +73,15 @@ export default function V3Layout({ children }: Props) {
         });
         const j = await res.json();
         if (j.success && j.hasCompletedOnboarding === false) {
-          setShowWelcomeModal(true);
+          navigate('/onboarding');
         }
-        sessionStorage.setItem('zieads_onboarding_check_done', 'true');
       } catch (e) {
         console.error("Failed to check onboarding flag:", e);
       }
     };
 
     checkOnboarding();
-  }, []);
-
-  const handleStartTour = () => {
-    demo.setDemoMode(true);
-    setShowWelcomeModal(false);
-    navigate('/analyst');
-  };
-
-  const handleConnectAccounts = async () => {
-    setShowWelcomeModal(false);
-    try {
-      const tokenData = await supabase.auth.getSession();
-      const token = tokenData?.data?.session?.access_token;
-      if (token) {
-        await fetch('/api/v3/profile/onboarding/complete', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    navigate('/connections');
-  };
+  }, [demo.isActive, navigate]);
 
   const handleExitDemo = async () => {
     demo.setDemoMode(false);
@@ -131,23 +107,23 @@ export default function V3Layout({ children }: Props) {
   const currentPath = location.pathname;
 
   const dailyItems = [
-    { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#8B5CF6' }} /> },
-    { k: '/composer', l: 'Composer', icon: <PenTool size={15} style={{ color: '#ec4899' }} /> },
-    { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} style={{ color: '#2563eb' }} /> },
-    { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} style={{ color: '#10b981' }} /> },
-    { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} style={{ color: '#eab308' }} /> },
-    { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} style={{ color: '#ef4444' }} /> },
-    { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#6366f1' }} /> },
+    { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#71717A' }} /> },
+    { k: '/composer', l: 'Composer', icon: <PenTool size={15} style={{ color: '#71717A' }} /> },
+    { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} style={{ color: '#71717A' }} /> },
+    { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} style={{ color: '#71717A' }} /> },
+    { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} style={{ color: '#71717A' }} /> },
+    { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} style={{ color: '#71717A' }} /> },
+    { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#71717A' }} /> },
   ];
 
   const toolItems = [
-    { k: '/clients?tab=home', l: 'Home', icon: <Home size={15} style={{ color: '#6366F1' }} /> },
-    { k: '/clients?tab=reports', l: 'Reports', icon: <FileText size={15} style={{ color: '#0D9488' }} /> },
-    { k: '/agent', l: 'AI Agent', icon: <Bot size={15} style={{ color: '#8B5CF6' }} /> },
-    { k: '/profile', l: 'Business Profile', icon: <User size={15} style={{ color: '#F97316' }} /> },
-    { k: '/clients?tab=referrals', l: 'Referrals', icon: <Share2 size={15} style={{ color: '#EC4899' }} /> },
+    { k: '/clients?tab=home', l: 'Audit', icon: <Search size={15} style={{ color: '#71717A' }} /> },
+    { k: '/clients?tab=reports', l: 'Reports', icon: <FileText size={15} style={{ color: '#71717A' }} /> },
+    { k: '/agent', l: 'Deep Analysis', icon: <Bot size={15} style={{ color: '#71717A' }} /> },
+    { k: '/profile', l: 'Business Profile', icon: <User size={15} style={{ color: '#71717A' }} /> },
+    { k: '/clients?tab=referrals', l: 'Referrals', icon: <Share2 size={15} style={{ color: '#71717A' }} /> },
     { k: '/clients?tab=settings', l: 'Settings', icon: <SettingsIcon size={15} style={{ color: '#71717A' }} /> },
-    { k: '/clients?tab=skills', l: 'All Skills', icon: <LayoutGrid size={15} style={{ color: '#10B981' }} /> },
+    { k: '/clients?tab=skills', l: 'All Skills', icon: <LayoutGrid size={15} style={{ color: '#71717A' }} /> },
   ];
 
   const handleNavClick = (route: string) => {
@@ -318,36 +294,7 @@ export default function V3Layout({ children }: Props) {
         </div>
       </div>
 
-      {/* Welcome Onboarding Modal */}
-      {showWelcomeModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 32, width: '90%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 20, boxShadow: 'var(--shadow-lg)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <ZieAdsLogo size={36} />
-              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Welcome to ZieAds</h2>
-            </div>
-            
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Want to see how ZieAds works with sample data first, or jump straight to connecting your accounts?
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-              <button 
-                onClick={handleStartTour}
-                style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '12px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Start Tour with Sample Data
-              </button>
-              <button 
-                onClick={handleConnectAccounts}
-                style={{ width: '100%', background: 'none', border: `1px solid ${B}`, padding: '12px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}
-              >
-                Connect My Accounts Directly
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Welcome Onboarding Modal removed */}
     </div>
   );
 }

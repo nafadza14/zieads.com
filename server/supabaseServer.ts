@@ -105,20 +105,31 @@ export async function getLatestAudit(userId: string) {
 }
 
 export async function upsertProfile(userId: string, profile: any) {
-  const { error } = await supabaseAdmin.from("profiles").upsert(
-    {
-      id: userId,
-      business_name: profile.businessName,
-      business_type: profile.businessType,
-      primary_goal: profile.primaryGoal,
-      monthly_budget: profile.monthlyBudget,
-      platforms: profile.platforms || [],
-      primary_url: profile.primaryUrl || profile.primary_url || null,
-      challenge: profile.challenge || null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" }
-  );
+  const existing = await getProfile(userId);
+  const dataToUpsert = {
+    id: userId,
+    business_name: profile.businessName !== undefined ? profile.businessName : (existing?.business_name || null),
+    business_type: profile.businessType !== undefined ? profile.businessType : (existing?.business_type || null),
+    primary_goal: profile.primaryGoal !== undefined ? profile.primaryGoal : (existing?.primary_goal || null),
+    monthly_budget: profile.monthlyBudget !== undefined ? profile.monthlyBudget : (existing?.monthly_budget || null),
+    platforms: profile.platforms !== undefined ? (profile.platforms || []) : (existing?.platforms || []),
+    primary_url: profile.primaryUrl !== undefined ? profile.primaryUrl : (profile.primary_url !== undefined ? profile.primary_url : (existing?.primary_url || null)),
+    challenge: profile.challenge !== undefined ? profile.challenge : (existing?.challenge || null),
+    
+    // New 0.3 Onboarding fields
+    role: profile.role !== undefined ? profile.role : (existing?.role || null),
+    goals: profile.goals !== undefined ? (profile.goals || []) : (existing?.goals || []),
+    current_tools: profile.currentTools !== undefined ? (profile.currentTools || []) : (profile.current_tools !== undefined ? (profile.current_tools || []) : (existing?.current_tools || [])),
+    account_volume: profile.accountVolume !== undefined ? profile.accountVolume : (profile.account_volume !== undefined ? profile.account_volume : (existing?.account_volume || null)),
+    platforms_in_focus: profile.platformsInFocus !== undefined ? (profile.platformsInFocus || []) : (profile.platforms_in_focus !== undefined ? (profile.platforms_in_focus || []) : (existing?.platforms_in_focus || [])),
+    onboarding_completed_at: profile.onboardingCompletedAt !== undefined ? profile.onboardingCompletedAt : (profile.onboarding_completed_at !== undefined ? profile.onboarding_completed_at : (existing?.onboarding_completed_at || null)),
+    onboarding_step: profile.onboardingStep !== undefined ? profile.onboardingStep : (profile.onboarding_step !== undefined ? profile.onboarding_step : (existing?.onboarding_step || 1)),
+    has_completed_onboarding: profile.hasCompletedOnboarding !== undefined ? profile.hasCompletedOnboarding : (profile.has_completed_onboarding !== undefined ? profile.has_completed_onboarding : (existing?.has_completed_onboarding || false)),
+    
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabaseAdmin.from("profiles").upsert(dataToUpsert, { onConflict: "id" });
   if (error) console.error("[DB] Failed to upsert profile:", error.message);
   return !error;
 }

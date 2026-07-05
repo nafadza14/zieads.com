@@ -269,7 +269,7 @@ apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
       .from("scheduled_posts")
       .select("*")
       .eq("user_id", req.userId)
-      .order("scheduled_for", { ascending: true, nullsLast: true });
+      .order("scheduled_for", { ascending: true, nullsFirst: false });
     if (error) throw error;
     res.json({ success: true, data });
   } catch (err: any) {
@@ -1056,12 +1056,16 @@ apiV3Router.get("/profile/onboarding", requireAuth, async (req: any, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from("profiles")
-      .select("has_completed_onboarding")
+      .select("has_completed_onboarding, onboarding_step")
       .eq("id", req.userId)
       .maybeSingle();
 
     if (error) throw error;
-    res.json({ success: true, hasCompletedOnboarding: data?.has_completed_onboarding || false });
+    res.json({ 
+      success: true, 
+      hasCompletedOnboarding: data?.has_completed_onboarding || false,
+      onboardingStep: data?.onboarding_step || 1
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1071,7 +1075,10 @@ apiV3Router.post("/profile/onboarding/complete", requireAuth, async (req: any, r
   try {
     const { error } = await supabaseAdmin
       .from("profiles")
-      .update({ has_completed_onboarding: true })
+      .update({ 
+        has_completed_onboarding: true,
+        onboarding_completed_at: new Date().toISOString()
+      })
       .eq("id", req.userId);
 
     if (error) throw error;

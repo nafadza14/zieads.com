@@ -12,7 +12,10 @@ import {
   ArrowRight, 
   Flame, 
   Compass, 
-  Link2 
+  Link2,
+  X,
+  MessageSquare,
+  Search 
 } from 'lucide-react';
 
 const P = 'var(--primary)';
@@ -29,6 +32,14 @@ export default function AnalystPage() {
   const [activeAlerts, setActiveAlerts] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [firstStepsDismissed, setFirstStepsDismissed] = useState(() => {
+    return localStorage.getItem('zieads_first_steps_dismissed') === 'true';
+  });
+
+  const handleDismissFirstSteps = () => {
+    localStorage.setItem('zieads_first_steps_dismissed', 'true');
+    setFirstStepsDismissed(true);
+  };
 
   const getAuthHeaders = async () => {
     const { data } = await supabase.auth.getSession();
@@ -152,6 +163,166 @@ export default function AnalystPage() {
 
       {/* Main Container */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 40 }}>
+        {/* First Steps Checklist */}
+        {!firstStepsDismissed && (
+          <div style={{ 
+            background: '#fff', 
+            border: `1px dashed ${B}`, 
+            borderRadius: 12, 
+            padding: 24, 
+            marginBottom: 32,
+            position: 'relative'
+          }}>
+            <button 
+              onClick={handleDismissFirstSteps} 
+              style={{ 
+                position: 'absolute', 
+                top: 16, 
+                right: 16, 
+                background: 'none', 
+                border: 'none', 
+                color: G, 
+                cursor: 'pointer' 
+              }}
+              aria-label="Dismiss checklist"
+            >
+              <X size={16} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#1E7BFF' }}>Get Started</span>
+            </div>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 20px', letterSpacing: '-0.01em' }}>First Steps Checklist</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 20 }}>
+              {/* Card 1: Connect Accounts */}
+              <div style={{ 
+                background: 'rgba(30, 123, 255, 0.01)', 
+                border: '1px solid #1E7BFF', 
+                borderRadius: 12, 
+                padding: 20, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 16,
+                position: 'relative'
+              }}>
+                <span style={{ 
+                  position: 'absolute', 
+                  top: 10, 
+                  right: 12, 
+                  fontSize: '9px', 
+                  fontWeight: 700, 
+                  color: '#1E7BFF', 
+                  background: 'rgba(30, 123, 255, 0.1)', 
+                  padding: '2px 8px', 
+                  borderRadius: 100 
+                }}>Start here</span>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Link2 size={18} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>Connect your accounts</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: G, lineHeight: 1.4 }}>Link Instagram, TikTok, and LinkedIn so the agent can start watching.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => navigate('/connections')} 
+                  className="btn-lp-primary-gradient" 
+                  style={{ 
+                    border: 'none', 
+                    padding: '8px 16px', 
+                    fontSize: '0.82rem', 
+                    fontWeight: 600, 
+                    borderRadius: 8, 
+                    color: 'white', 
+                    cursor: 'pointer',
+                    marginTop: 'auto',
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  Connect
+                </button>
+              </div>
+
+              {/* Card 2: Try Free Audit */}
+              <div style={{ 
+                background: '#fff', 
+                border: `1px solid ${B}`, 
+                borderRadius: 12, 
+                padding: 20, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 16 
+              }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Search size={18} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>Try a free audit</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: G, lineHeight: 1.4 }}>Paste any URL and see the agent's readiness score in under 3 minutes.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => navigate('/clients', { state: { defaultTab: 'skills' } })} 
+                  style={{ 
+                    background: 'transparent', 
+                    border: `1px solid ${B}`, 
+                    padding: '8px 16px', 
+                    fontSize: '0.82rem', 
+                    fontWeight: 600, 
+                    borderRadius: 8, 
+                    color: D, 
+                    cursor: 'pointer',
+                    marginTop: 'auto',
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  Run audit
+                </button>
+              </div>
+
+              {/* Card 3: Meet the Agent */}
+              <div style={{ 
+                background: '#fff', 
+                border: `1px solid ${B}`, 
+                borderRadius: 12, 
+                padding: 20, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 16 
+              }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <MessageSquare size={18} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>Meet the agent</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: G, lineHeight: 1.4 }}>Ask a question to see how it reasons from your setup.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => navigate('/agent')} 
+                  style={{ 
+                    background: 'transparent', 
+                    border: `1px solid ${B}`, 
+                    padding: '8px 16px', 
+                    fontSize: '0.82rem', 
+                    fontWeight: 600, 
+                    borderRadius: 8, 
+                    color: D, 
+                    cursor: 'pointer',
+                    marginTop: 'auto',
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  Open agent
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div style={{ textAlign: 'center', color: G, marginTop: 40 }}>Analyzing your channels and compiling daily insights...</div>
         ) : !hasConnections ? (

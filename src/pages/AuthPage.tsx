@@ -35,7 +35,7 @@ export default function AuthPage() {
   if (!redirectFrom && targetPlan) {
     redirectFrom = `/pricing?plan=${targetPlan}&yearly=${targetYearly || 'false'}`;
   }
-  const from = redirectFrom || '/clients';
+  const from = redirectFrom || '/analyst';
 
   const [email, setEmail]       = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');
