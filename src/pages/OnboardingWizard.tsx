@@ -256,7 +256,7 @@ export default function OnboardingWizard() {
           onboardingStep: next
         };
 
-        await fetch('/api/profile', {
+        const res = await fetch('/api/profile', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -264,9 +264,20 @@ export default function OnboardingWizard() {
           },
           body: JSON.stringify(payload)
         });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('Failed to sync progress to profiles DB:', errText);
+          alert('Database Save Error: ' + errText);
+          setSavingStep(false);
+          return;
+        }
       }
     } catch (e) {
       console.warn('Could not sync progress step to profiles DB', e);
+      alert('Network Error saving profile: ' + e);
+      setSavingStep(false);
+      return;
     }
     setSavingStep(false);
     setStep(next);
@@ -279,14 +290,25 @@ export default function OnboardingWizard() {
       const token = sessionRes.data?.session?.access_token;
       if (token) {
         // Complete onboarding database flag
-        await fetch('/api/v3/profile/onboarding/complete', {
+        const res = await fetch('/api/v3/profile/onboarding/complete', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` }
         });
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('Failed to complete onboarding wizard session:', errText);
+          alert('Database Onboarding Complete Error: ' + errText);
+          setSavingStep(false);
+          return;
+        }
+        localStorage.setItem('zieads_onboarding_completed', 'true');
         sessionStorage.setItem('zieads_onboarding_check_done', 'true');
       }
     } catch (e) {
       console.error('Failed to complete onboarding wizard session', e);
+      alert('Network Error completing onboarding: ' + e);
+      setSavingStep(false);
+      return;
     }
     setSavingStep(false);
     navigate('/analyst');

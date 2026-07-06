@@ -63,6 +63,11 @@ export default function V3Layout({ children }: Props) {
     const checkOnboarding = async () => {
       if (demo.isActive) return;
 
+      // Client-side bypass check
+      if (localStorage.getItem('zieads_onboarding_completed') === 'true') {
+        return;
+      }
+
       try {
         const tokenData = await supabase.auth.getSession();
         const token = tokenData?.data?.session?.access_token;
@@ -72,6 +77,11 @@ export default function V3Layout({ children }: Props) {
           headers: { Authorization: `Bearer ${token}` }
         });
         const j = await res.json();
+        
+        if (j.success && j.hasCompletedOnboarding === true) {
+          localStorage.setItem('zieads_onboarding_completed', 'true');
+        }
+
         if (j.success && j.hasCompletedOnboarding === false) {
           navigate('/onboarding');
         }
@@ -93,6 +103,7 @@ export default function V3Layout({ children }: Props) {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` }
         });
+        localStorage.setItem('zieads_onboarding_completed', 'true');
       }
     } catch (e) {
       console.error(e);
@@ -100,6 +111,7 @@ export default function V3Layout({ children }: Props) {
   };
 
   const handleSignOut = async () => {
+    localStorage.removeItem('zieads_onboarding_completed');
     await supabase.auth.signOut();
     navigate('/sign-in');
   };

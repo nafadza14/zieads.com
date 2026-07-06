@@ -219,6 +219,7 @@ export default function ClientDashboard({ reportData }: Props) {
   };
 
   const handleSignOut = async () => {
+    localStorage.removeItem('zieads_onboarding_completed');
     await supabase.auth.signOut();
     navigate('/');
   };
