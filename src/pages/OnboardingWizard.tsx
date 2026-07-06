@@ -389,8 +389,8 @@ export default function OnboardingWizard() {
             <button 
               onClick={() => handleNextStep(2)}
               disabled={savingStep}
-              className="btn-lp-primary-gradient" 
               style={{ 
+                background: ACCENT_BLUE,
                 border: 'none', 
                 padding: '14px 32px', 
                 fontSize: '15px', 
@@ -496,8 +496,8 @@ export default function OnboardingWizard() {
                 <button 
                   onClick={() => handleNextStep(3)}
                   disabled={!answers.role || savingStep}
-                  className="btn-lp-primary-gradient" 
                   style={{ 
+                    background: ACCENT_BLUE,
                     border: 'none', 
                     padding: '12px 32px', 
                     fontSize: '0.9rem', 
@@ -618,8 +618,8 @@ export default function OnboardingWizard() {
                 <button 
                   onClick={() => handleNextStep(4)}
                   disabled={savingStep}
-                  className="btn-lp-primary-gradient" 
                   style={{ 
+                    background: ACCENT_BLUE,
                     border: 'none', 
                     padding: '12px 32px', 
                     fontSize: '0.9rem', 
@@ -739,8 +739,8 @@ export default function OnboardingWizard() {
                 <button 
                   onClick={() => handleNextStep(5)}
                   disabled={savingStep}
-                  className="btn-lp-primary-gradient" 
                   style={{ 
+                    background: ACCENT_BLUE,
                     border: 'none', 
                     padding: '12px 32px', 
                     fontSize: '0.9rem', 
@@ -845,8 +845,8 @@ export default function OnboardingWizard() {
                 <button 
                   onClick={() => handleNextStep(6)}
                   disabled={!answers.accountVolume || savingStep}
-                  className="btn-lp-primary-gradient" 
                   style={{ 
+                    background: ACCENT_BLUE,
                     border: 'none', 
                     padding: '12px 32px', 
                     fontSize: '0.9rem', 
@@ -984,8 +984,8 @@ export default function OnboardingWizard() {
                 <button 
                   onClick={() => handleNextStep(7)}
                   disabled={savingStep}
-                  className="btn-lp-primary-gradient" 
                   style={{ 
+                    background: ACCENT_BLUE,
                     border: 'none', 
                     padding: '12px 32px', 
                     fontSize: '0.9rem', 
@@ -1049,8 +1049,8 @@ export default function OnboardingWizard() {
                 <button 
                   onClick={handleCompleteFlow}
                   disabled={savingStep}
-                  className="btn-lp-primary-gradient" 
                   style={{ 
+                    background: ACCENT_BLUE,
                     border: 'none', 
                     padding: '14px 32px', 
                     fontSize: '15px', 

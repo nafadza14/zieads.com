@@ -1073,14 +1073,32 @@ apiV3Router.get("/profile/onboarding", requireAuth, async (req: any, res) => {
 
 apiV3Router.post("/profile/onboarding/complete", requireAuth, async (req: any, res) => {
   try {
-    const { error } = await supabaseAdmin
+    const { data: existing } = await supabaseAdmin
       .from("profiles")
-      .update({ 
-        has_completed_onboarding: true,
-        onboarding_completed_at: new Date().toISOString()
-      })
-      .eq("id", req.userId);
+      .select("id")
+      .eq("id", req.userId)
+      .maybeSingle();
 
+    let query;
+    if (existing) {
+      query = supabaseAdmin
+        .from("profiles")
+        .update({ 
+          has_completed_onboarding: true,
+          onboarding_completed_at: new Date().toISOString()
+        })
+        .eq("id", req.userId);
+    } else {
+      query = supabaseAdmin
+        .from("profiles")
+        .insert({ 
+          id: req.userId,
+          has_completed_onboarding: true,
+          onboarding_completed_at: new Date().toISOString()
+        });
+    }
+
+    const { error } = await query;
     if (error) throw error;
     res.json({ success: true });
   } catch (err: any) {
