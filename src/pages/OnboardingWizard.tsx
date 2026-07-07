@@ -1051,17 +1051,29 @@ export default function OnboardingWizard() {
                     <div 
                       key={idx}
                       style={{
-                        paddingLeft: 16,
-                        borderLeft: item.highlighted ? `3px solid ${ACCENT_BLUE}` : '3px solid transparent',
+                        padding: '16px 20px',
+                        background: item.highlighted ? 'rgba(30, 123, 255, 0.03)' : '#fff',
+                        border: item.highlighted ? `1px solid rgba(30, 123, 255, 0.2)` : '1px solid var(--border)',
+                        borderRadius: '14px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 2
+                        gap: 4,
+                        boxShadow: item.highlighted ? '0 4px 12px rgba(30,123,255,0.03)' : 'none',
+                        transition: 'all 0.2s ease'
                       }}
                     >
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: item.highlighted ? '#1A1A1A' : '#64748B' }}>
-                        {item.title}
-                      </h4>
-                      <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748B', lineHeight: 1.4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ 
+                          width: 8, 
+                          height: 8, 
+                          borderRadius: '50%', 
+                          background: item.highlighted ? ACCENT_BLUE : '#94A3B8' 
+                        }} />
+                        <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#1A1A1A' }}>
+                          {item.title}
+                        </h4>
+                      </div>
+                      <p style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem', color: '#64748B', lineHeight: 1.5 }}>
                         {item.body}
                       </p>
                     </div>
@@ -1074,81 +1086,75 @@ export default function OnboardingWizard() {
                   style={{ 
                     background: ACCENT_BLUE,
                     border: 'none', 
-                    padding: '14px 32px', 
-                    fontSize: '15px', 
+                    padding: '16px 36px', 
+                    fontSize: '16px', 
                     fontWeight: 600, 
                     borderRadius: '12px', 
                     color: 'white', 
                     cursor: 'pointer',
                     alignSelf: 'flex-start',
                     marginTop: 12,
-                    boxShadow: '0 4px 14px rgba(30,123,255,0.3)'
+                    boxShadow: '0 4px 14px rgba(30,123,255,0.35)'
                   }}
                 >
                   {savingStep ? 'Saving...' : 'Get Started'}
                 </button>
               </div>
 
-              {/* Right Column: visual card mockup */}
+              {/* Right Column: high-fidelity showcase card */}
               <div style={{ 
-                background: 'rgba(30, 123, 255, 0.04)', 
-                borderRadius: 24, 
-                padding: window.innerWidth < 640 ? 16 : 32,
+                position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                padding: '16px'
               }}>
+                {/* Rainbow Glow background */}
+                <div style={{
+                  position: 'absolute',
+                  top: '-12px',
+                  left: '-12px',
+                  right: '-12px',
+                  bottom: '-12px',
+                  background: 'linear-gradient(135deg, #1E7BFF 0%, #a78bfa 50%, #EC4899 100%)',
+                  filter: 'blur(32px)',
+                  opacity: 0.12,
+                  zIndex: 0,
+                  borderRadius: '30px'
+                }} />
+
+                {/* Browser Card Showcase */}
                 <div style={{ 
+                  position: 'relative',
                   background: '#fff',
                   border: '1px solid var(--border)',
-                  borderRadius: 16,
+                  borderRadius: 20,
                   width: '100%',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-                  overflow: 'hidden'
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.06)',
+                  overflow: 'hidden',
+                  zIndex: 1
                 }}>
                   {/* Browser Chrome Header */}
-                  <div style={{ background: '#FAF8F5', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ background: '#FAF8F5', borderBottom: '1px solid var(--border)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }}></span>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }}></span>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }}></span>
-                    <span style={{ marginLeft: 12, fontSize: '10px', color: '#64748B', fontFamily: 'monospace' }}>app.zieads.com</span>
+                    <span style={{ marginLeft: 12, fontSize: '10px', color: '#64748B', fontFamily: 'monospace', fontWeight: 500 }}>app.zieads.com</span>
                   </div>
 
-                  {/* Browser Mock Content */}
-                  <div style={{ padding: 20 }}>
-                    {/* Mock header row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                      <div>
-                        <div style={{ width: 100, height: 12, background: '#E2E8F0', borderRadius: 4, marginBottom: 4 }}></div>
-                        <div style={{ width: 60, height: 8, background: '#F1F5F9', borderRadius: 4 }}></div>
-                      </div>
-                      <div style={{ width: 80, height: 20, background: 'rgba(30,123,255,0.08)', borderRadius: 100 }}></div>
-                    </div>
-
-                    {/* Briefing summary block */}
-                    <div style={{ background: 'linear-gradient(135deg, rgba(30,123,255,0.06) 0%, rgba(255,255,255,1) 100%)', border: '1px solid var(--border)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '9px', fontWeight: 700, color: ACCENT_BLUE, textTransform: 'uppercase', marginBottom: 6 }}>
-                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: ACCENT_BLUE }}></span> Morning Briefing Summary
-                      </div>
-                      <div style={{ width: '90%', height: 10, background: '#1A1A1A', borderRadius: 4, marginBottom: 6 }}></div>
-                      <div style={{ width: '40%', height: 10, background: '#1A1A1A', borderRadius: 4 }}></div>
-                    </div>
-
-                    {/* Wins & concerns skeletons */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                      {/* Wins */}
-                      <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
-                        <div style={{ width: 40, height: 8, background: '#E2E8F0', borderRadius: 3, marginBottom: 6 }}></div>
-                        <div style={{ width: 60, height: 16, background: '#10B981', borderRadius: 4, marginBottom: 4 }}></div>
-                        <div style={{ width: '80%', height: 6, background: '#F1F5F9', borderRadius: 2 }}></div>
-                      </div>
-                      {/* Concerns */}
-                      <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
-                        <div style={{ width: 40, height: 8, background: '#E2E8F0', borderRadius: 3, marginBottom: 6 }}></div>
-                        <div style={{ width: 60, height: 16, background: '#F59E0B', borderRadius: 4, marginBottom: 4 }}></div>
-                        <div style={{ width: '80%', height: 6, background: '#F1F5F9', borderRadius: 2 }}></div>
-                      </div>
-                    </div>
+                  {/* Image Body */}
+                  <div style={{ background: '#FAF8F5', padding: 0 }}>
+                    <img 
+                      src="/zieads-dashboard.png" 
+                      alt="ZieAds Morning Briefing Dashboard Preview" 
+                      style={{ 
+                        width: '100%', 
+                        height: 'auto', 
+                        display: 'block',
+                        borderBottomLeftRadius: 'inherit',
+                        borderBottomRightRadius: 'inherit'
+                      }} 
+                    />
                   </div>
                 </div>
               </div>
