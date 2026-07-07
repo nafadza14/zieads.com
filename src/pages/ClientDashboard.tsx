@@ -177,12 +177,13 @@ export default function ClientDashboard({ reportData }: Props) {
     let u = urlInput.trim();
     if (!u.startsWith('http')) u = 'https://' + u;
 
-    if (skillId === 'audit') {
-      navigate('/onboarding', { state: { url: u } });
-      return;
-    }
-    if (skillId === 'quick') {
-      navigate('/onboarding', { state: { url: u } });
+    if (skillId === 'audit' || skillId === 'quick') {
+      localStorage.setItem('zieads_businessContext', JSON.stringify({
+        url: u,
+        businessName: userProfile?.business_name || 'My Business',
+        auditType: skillId === 'audit' ? 'full' : 'quick'
+      }));
+      window.location.href = '/audit/progress';
       return;
     }
 
@@ -451,7 +452,17 @@ export default function ClientDashboard({ reportData }: Props) {
                 </div>
 
                 <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #1e293b' }}>
-                  <button onClick={() => navigate('/onboarding', { state: { url: skillResult.data.url } })} style={{ background: P, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem('zieads_businessContext', JSON.stringify({
+                        url: skillResult.data.url,
+                        businessName: userProfile?.business_name || 'My Business',
+                        auditType: 'full'
+                      }));
+                      window.location.href = '/audit/progress';
+                    }} 
+                    style={{ background: P, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}
+                  >
                     Run Full 6-Dimension Audit
                   </button>
                 </div>
