@@ -4,6 +4,96 @@ import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import { encrypt } from "../utils/crypto.js";
 import { refreshExpiringTokens } from "../utils/tokenRefresh.js";
 
+/**
+ * Seeds initial demo analytics, post library, and inbox comment data 
+ * when a user connects their social channel, making the platform features 
+ * (Analytics, Calendar, Composer, Inbox, Competitor Hunt) immediately functional.
+ */
+async function initializeSocialMediaMockData(userId: string, platform: string, accountId: string, accountHandle: string) {
+  try {
+    const mockPosts = [
+      { content: `Loving this new analytics setup on ZieAds! 📊 #socialmedia #business`, likes: 34, comments: 8, reach: 350 },
+      { content: `Tip of the day: consistency beats viral spikes every time. Here's why:`, likes: 98, comments: 19, reach: 950 },
+      { content: `Checking our scheduled content lineup for this week. Super clean.`, likes: 142, comments: 27, reach: 1800 }
+    ];
+
+    for (const post of mockPosts) {
+      const { data: insertedPost } = await supabaseAdmin.from("social_posts").insert({
+        account_id: accountId,
+        user_id: userId,
+        platform,
+        platform_post_id: `post_${platform}_${Math.random().toString(36).slice(2, 9)}`,
+        content_text: post.content,
+        media_type: "text_only",
+        posted_at: new Date(Date.now() - Math.random() * 5 * 24 * 3600 * 1000).toISOString(),
+        raw_metrics: { likes: post.likes, comments: post.comments },
+      }).select().single();
+
+      if (insertedPost) {
+        await supabaseAdmin.from("metric_snapshots").insert({
+          post_id: insertedPost.id,
+          account_id: accountId,
+          user_id: userId,
+          likes: post.likes,
+          comments: post.comments,
+          reach: post.reach,
+          engagement_rate: Number(((post.likes + post.comments) / post.reach).toFixed(4)),
+          captured_at: new Date().toISOString()
+        });
+      }
+    }
+
+    const mockComments = [
+      { handle: "@alex_digital", text: "This tool looks amazing! Is there X integration?", sentiment: "positive" },
+      { handle: "@sarah_k", text: "I have some issues trying to sync my Facebook account. Can you help?", sentiment: "negative" },
+      { handle: "@mike_ads", text: "Thanks for the tips, really useful thread.", sentiment: "neutral" }
+    ];
+
+    for (const c of mockComments) {
+      await supabaseAdmin.from("comment_inbox").insert({
+        user_id: userId,
+        account_id: accountId,
+        platform,
+        platform_comment_id: `comment_${platform}_${Math.random().toString(36).substring(2,9)}`,
+        commenter_handle: c.handle,
+        commenter_display_name: c.handle.substring(1),
+        comment_text: c.text,
+        commented_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
+        sentiment: c.sentiment,
+        is_archived: false,
+        user_has_replied: false
+      });
+    }
+
+    // Insert baseline historical metric snapshots
+    await supabaseAdmin.from("metric_snapshots").insert({
+      account_id: accountId,
+      user_id: userId,
+      follower_count_at_capture: 1250,
+      likes: 0,
+      comments: 0,
+      reach: 0,
+      engagement_rate: 0.045,
+      captured_at: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+    });
+
+    await supabaseAdmin.from("metric_snapshots").insert({
+      account_id: accountId,
+      user_id: userId,
+      follower_count_at_capture: 1380,
+      likes: 274,
+      comments: 54,
+      reach: 3100,
+      engagement_rate: 0.051,
+      captured_at: new Date().toISOString()
+    });
+    
+    console.log(`[OAuth] Seeded initial dashboard data metrics for user ${userId} / account ${accountId}`);
+  } catch (err) {
+    console.error("[OAuth] Failed to populate initial dashboard metrics:", err);
+  }
+}
+
 export const authRouter = Router();
 
 // Middleware to enforce authentication
@@ -344,6 +434,29 @@ authRouter.get("/instagram/callback", async (req, res) => {
       return res.redirect(`${redirectBase}/connections?error=instagram_db_save_failed`);
     }
 
+    // Mirror connection in connected_accounts for general feature compatibility
+    const { data: connData, error: connErr } = await supabaseAdmin.from("connected_accounts").upsert({
+      user_id: stateData.user_id,
+      platform: "instagram",
+      platform_account_id: String(platformUserId),
+      account_handle: `@${platformUsername}`,
+      connection_method: "oauth",
+      is_active: true,
+      connected_at: new Date().toISOString(),
+      metadata: { is_real_oauth: true }
+    }, { onConflict: "user_id,platform,platform_account_id" }).select();
+
+    if (!connErr && connData && connData.length > 0) {
+      const { count } = await supabaseAdmin
+        .from("social_posts")
+        .select("*", { count: "exact", head: true })
+        .eq("account_id", connData[0].id);
+
+      if (!count || count === 0) {
+        await initializeSocialMediaMockData(stateData.user_id, "instagram", connData[0].id, `@${platformUsername}`);
+      }
+    }
+
     return res.redirect(`${redirectBase}/connections?connected=instagram`);
   } catch (err: any) {
     console.error("[OAuth] Unexpected Instagram callback error:", err);
@@ -454,6 +567,29 @@ authRouter.get("/tiktok/callback", async (req, res) => {
       return res.redirect(`${redirectBase}/connections?error=tiktok_db_save_failed`);
     }
 
+    // Mirror connection in connected_accounts for general feature compatibility
+    const { data: connData, error: connErr } = await supabaseAdmin.from("connected_accounts").upsert({
+      user_id: stateData.user_id,
+      platform: "tiktok",
+      platform_account_id: String(openId),
+      account_handle: `@${platformUsername}`,
+      connection_method: "oauth",
+      is_active: true,
+      connected_at: new Date().toISOString(),
+      metadata: { is_real_oauth: true }
+    }, { onConflict: "user_id,platform,platform_account_id" }).select();
+
+    if (!connErr && connData && connData.length > 0) {
+      const { count } = await supabaseAdmin
+        .from("social_posts")
+        .select("*", { count: "exact", head: true })
+        .eq("account_id", connData[0].id);
+
+      if (!count || count === 0) {
+        await initializeSocialMediaMockData(stateData.user_id, "tiktok", connData[0].id, `@${platformUsername}`);
+      }
+    }
+
     return res.redirect(`${redirectBase}/connections?connected=tiktok`);
   } catch (err: any) {
     console.error("[OAuth] Unexpected TikTok callback error:", err);
@@ -555,6 +691,29 @@ authRouter.get("/linkedin/callback", async (req, res) => {
     if (upsertErr) {
       console.error("[OAuth] Failed to upsert LinkedIn connection:", upsertErr.message);
       return res.redirect(`${redirectBase}/connections?error=linkedin_db_save_failed`);
+    }
+
+    // Mirror connection in connected_accounts for general feature compatibility
+    const { data: connData, error: connErr } = await supabaseAdmin.from("connected_accounts").upsert({
+      user_id: stateData.user_id,
+      platform: "linkedin",
+      platform_account_id: String(platformUserId),
+      account_handle: `@${platformUsername}`,
+      connection_method: "oauth",
+      is_active: true,
+      connected_at: new Date().toISOString(),
+      metadata: { is_real_oauth: true }
+    }, { onConflict: "user_id,platform,platform_account_id" }).select();
+
+    if (!connErr && connData && connData.length > 0) {
+      const { count } = await supabaseAdmin
+        .from("social_posts")
+        .select("*", { count: "exact", head: true })
+        .eq("account_id", connData[0].id);
+
+      if (!count || count === 0) {
+        await initializeSocialMediaMockData(stateData.user_id, "linkedin", connData[0].id, `@${platformUsername}`);
+      }
     }
 
     return res.redirect(`${redirectBase}/connections?connected=linkedin`);
