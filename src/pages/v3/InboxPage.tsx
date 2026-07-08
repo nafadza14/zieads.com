@@ -162,11 +162,12 @@ export default function InboxPage() {
       });
       const j = await res.json();
       if (j.success) {
+        const sentText = j.data?.reply_text || replyText.trim();
         setReplyText('');
         setComments(prev => 
-          prev.map(c => c.id === selectedComment.id ? { ...c, user_has_replied: true, user_replied_at: new Date().toISOString() } : c)
+          prev.map(c => c.id === selectedComment.id ? { ...c, user_has_replied: true, user_replied_at: new Date().toISOString(), comment_replies: [{ reply_text: sentText }] } : c)
         );
-        setSelectedComment(prev => ({ ...prev, user_has_replied: true, user_replied_at: new Date().toISOString() }));
+        setSelectedComment(prev => ({ ...prev, user_has_replied: true, user_replied_at: new Date().toISOString(), comment_replies: [{ reply_text: sentText }] }));
       }
     } catch (err) {
       alert("Failed to submit comment reply.");
@@ -459,7 +460,7 @@ export default function InboxPage() {
                       <span style={{ fontSize: '0.65rem', color: G }}>{selectedComment.user_replied_at ? new Date(selectedComment.user_replied_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: '#0288D1' }}>
-                      Replied successfully via direct publisher mock integration.
+                      {selectedComment.comment_replies?.[0]?.reply_text || "Reply sent successfully."}
                     </p>
                   </div>
                 ) : (

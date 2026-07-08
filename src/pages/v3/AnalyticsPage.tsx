@@ -23,7 +23,15 @@ const D = 'var(--text)';
 export default function AnalyticsPage() {
   const navigate = useNavigate();
   const demo = useDemoMode();
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<any>({
+    totalPosts: 0,
+    totalLikes: 0,
+    totalComments: 0,
+    totalImpressions: 0,
+    latestFollowers: 0,
+    followerGrowth: 0,
+    engagementRate: 0
+  });
   const [bestTimes, setBestTimes] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +134,7 @@ export default function AnalyticsPage() {
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: G, textTransform: 'uppercase' }}>Total Impressions</span>
                   <TrendingUp size={16} style={{ color: '#10B981' }} />
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{summary.totalImpressions || 3120}</div>
+                 <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{summary.totalImpressions || 0}</div>
                 <div style={{ fontSize: '0.73rem', color: G, marginTop: 4 }}>
                   Organic search + feed views
                 </div>
@@ -139,8 +147,8 @@ export default function AnalyticsPage() {
                   <Heart size={16} style={{ color: '#EF4444' }} />
                 </div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{(summary.engagementRate * 100).toFixed(2)}%</div>
-                <div style={{ fontSize: '0.73rem', color: '#10B981', marginTop: 4, fontWeight: 600 }}>
-                  Above industry average (3.2%)
+                <div style={{ fontSize: '0.73rem', color: (summary.engagementRate * 100) >= 3.2 ? '#10B981' : G, marginTop: 4, fontWeight: 600 }}>
+                  {(summary.engagementRate * 100) >= 3.2 ? "Above industry average (3.2%)" : "Industry average is 3.2%"}
                 </div>
               </div>
 
@@ -192,10 +200,10 @@ export default function AnalyticsPage() {
                         {/* Dummy metrics badges */}
                         <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
                           <span style={{ fontSize: '0.72rem', color: '#EF4444', display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Heart size={10} /> {Math.round(20 + Math.random() * 50)}
+                            <Heart size={10} /> {post.likes || 0}
                           </span>
                           <span style={{ fontSize: '0.72rem', color: G, display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <MessageCircle size={10} /> {Math.round(2 + Math.random() * 10)}
+                            <MessageCircle size={10} /> {post.comments || 0}
                           </span>
                         </div>
                       </div>

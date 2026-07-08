@@ -122,18 +122,19 @@ export default function ComposerPage() {
         .from('media-library')
         .upload(filePath, file);
 
-      let finalUrl = `https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60`;
-
-      if (!uploadError && uploadData) {
-        const { data: urlData } = supabase.storage
-          .from('media-library')
-          .getPublicUrl(filePath);
-        if (urlData?.publicUrl) {
-          finalUrl = urlData.publicUrl;
-        }
-      } else {
-        console.warn("Supabase Storage upload failed or bucket 'media-library' does not exist. Using fallback mock asset.", uploadError?.message);
+      if (uploadError || !uploadData) {
+        throw new Error(uploadError?.message || "Failed to upload file to storage bucket 'media-library'. Check if bucket is created and public.");
       }
+
+      const { data: urlData } = supabase.storage
+        .from('media-library')
+        .getPublicUrl(filePath);
+
+      if (!urlData?.publicUrl) {
+        throw new Error("Failed to get public URL for uploaded file.");
+      }
+
+      const finalUrl = urlData.publicUrl;
 
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/media', {
@@ -151,8 +152,8 @@ export default function ComposerPage() {
         setMediaLibrary(prev => [j.data, ...prev]);
         setMediaAttachments(prev => [...prev, j.data]);
       }
-    } catch (err) {
-      alert("Failed to upload media.");
+    } catch (err: any) {
+      alert("Upload failed: " + (err.message || "Unknown error"));
     } finally {
       setUploadingMedia(false);
     }

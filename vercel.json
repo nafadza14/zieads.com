@@ -1,4 +1,14 @@
 {
+  "crons": [
+    {
+      "path": "/api/v3/publish/cron",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/v3/jobs/run",
+      "schedule": "0 3 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",

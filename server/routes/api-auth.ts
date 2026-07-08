@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import { encrypt } from "../utils/crypto.js";
 import { refreshExpiringTokens } from "../utils/tokenRefresh.js";
+import { syncAll } from "../utils/sync-instagram.js";
 
 /**
  * Seeds initial demo analytics, post library, and inbox comment data 
@@ -453,7 +454,7 @@ authRouter.get("/instagram/callback", async (req, res) => {
         .eq("account_id", connData[0].id);
 
       if (!count || count === 0) {
-        await initializeSocialMediaMockData(stateData.user_id, "instagram", connData[0].id, `@${platformUsername}`);
+        await syncAll(stateData.user_id);
       }
     }
 

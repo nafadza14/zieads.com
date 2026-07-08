@@ -113,9 +113,13 @@ export default function AnalystPage() {
         headers
       });
       const j = await res.json();
-      if (j.success) setBriefing(j.data);
-    } catch (err) {
-      alert("Failed to compile today's briefing.");
+      if (j.success && j.data) {
+        setBriefing(j.data);
+      } else {
+        alert(j.error || "Briefing generation temporarily unavailable. Please try again in a few minutes.");
+      }
+    } catch (err: any) {
+      alert("Failed to compile briefing: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
     }

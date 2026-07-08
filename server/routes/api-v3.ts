@@ -8,6 +8,9 @@ import {
 import { runFullAudit, type BusinessContext } from "../agents.js";
 import { synthesizeReport } from "../scorer.js";
 import { scrapeUrl } from "../scraper.js";
+import { getDecryptedToken } from "../utils/tokenHelper.js";
+import { publishPost, replyToComment } from "../utils/instagramApi.js";
+import { syncAll, syncComments, syncRecentPosts } from "../utils/sync-instagram.js";
 
 export const apiV3Router = Router();
 
@@ -125,69 +128,6 @@ apiV3Router.post("/connections", requireAuth, async (req: any, res) => {
 
     if (error) throw error;
 
-    // Trigger initial mock data async
-    setTimeout(async () => {
-      try {
-        const mockPosts = [
-          { content: `Loving this new analytics setup on ZieAds! 📊 #socialmedia #business`, likes: 34, comments: 8, reach: 350 },
-          { content: `Tip of the day: consistency beats viral spikes every time. Here's why:`, likes: 98, comments: 19, reach: 950 },
-          { content: `Checking our scheduled content lineup for this week. Super clean.`, likes: 142, comments: 27, reach: 1800 }
-        ];
-
-        for (const post of mockPosts) {
-          const { data: insertedPost } = await supabaseAdmin.from("social_posts").insert({
-            account_id: data[0].id,
-            user_id: req.userId,
-            platform,
-            platform_post_id: `post_${platform}_${Math.random().toString(36).slice(2, 9)}`,
-            content_text: post.content,
-            media_type: "text_only",
-            posted_at: new Date(Date.now() - Math.random() * 5 * 24 * 3600 * 1000).toISOString(),
-            raw_metrics: { likes: post.likes, comments: post.comments },
-          }).select().single();
-
-          if (insertedPost) {
-            await supabaseAdmin.from("metric_snapshots").insert({
-              post_id: insertedPost.id,
-              account_id: data[0].id,
-              user_id: req.userId,
-              likes: post.likes,
-              comments: post.comments,
-              reach: post.reach,
-              engagement_rate: Number(((post.likes + post.comments) / post.reach).toFixed(4)),
-              captured_at: new Date().toISOString()
-            });
-          }
-        }
-
-        // Mock 3 user comments in comment_inbox
-        const mockComments = [
-          { handle: "@alex_digital", text: "This tool looks amazing! Is there X integration?", sentiment: "positive" },
-          { handle: "@sarah_k", text: "I have some issues trying to sync my Facebook account. Can you help?", sentiment: "negative" },
-          { handle: "@mike_ads", text: "Thanks for the tips, really useful thread.", sentiment: "neutral" }
-        ];
-
-        for (const c of mockComments) {
-          await supabaseAdmin.from("comment_inbox").insert({
-            user_id: req.userId,
-            account_id: data[0].id,
-            platform,
-            platform_comment_id: `comment_${platform}_${Math.random().toString(36).substring(2,9)}`,
-            commenter_handle: c.handle,
-            commenter_display_name: c.handle.substring(1),
-            comment_text: c.text,
-            commented_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
-            sentiment: c.sentiment,
-            is_archived: false,
-            user_has_replied: false
-          });
-        }
-
-      } catch (err) {
-        console.error("[V3 Connections Async Mocks] failed:", err);
-      }
-    }, 500);
-
     res.json({ success: true, data: data[0] });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -277,6 +217,183 @@ apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
   }
 });
 
+// Helpers for Instagram API direct publishing
+async function publishPostToInstagram(userId: string, accountId: string, contentText: string, mediaAttachments: any[], firstComment?: string): Promise<{ mediaId: string; permalink?: string }> {
+  // 1. Decrypt Instagram token
+  const conn = await getDecryptedToken(userId, "instagram");
+  if (!conn) {
+    throw new Error("No active Instagram connection found. Please connect your Instagram account first.");
+  }
+
+  // 2. Validate media
+  if (!mediaAttachments || mediaAttachments.length === 0) {
+    throw new Error("Instagram requires at least one image or video attachment to publish.");
+  }
+
+  const mediaUrl = mediaAttachments[0]?.file_url || mediaAttachments[0]?.url;
+  if (!mediaUrl) {
+    throw new Error("Media attachment is missing a valid public URL.");
+  }
+
+  const isVideo = mediaAttachments[0]?.file_type?.toLowerCase().includes("video") || 
+                  mediaUrl.toLowerCase().includes(".mp4") || 
+                  mediaUrl.toLowerCase().includes(".mov");
+
+  const params: any = {
+    caption: contentText || ""
+  };
+
+  if (isVideo) {
+    params.video_url = mediaUrl;
+    params.media_type = "REELS";
+  } else {
+    params.image_url = mediaUrl;
+  }
+
+  // 3. Call Instagram API
+  console.log(`[V3 Publisher] Publishing to Instagram for user ${userId} (isVideo: ${isVideo})...`);
+  const result = await publishPost(conn.token, conn.platformUserId, params);
+  
+  // 4. If first comment is provided, post it as a reply to the newly created media
+  if (firstComment && firstComment.trim().length > 0) {
+    try {
+      console.log(`[V3 Publisher] Adding first comment to post ${result.mediaId}...`);
+      // Wait a moment for post to be ready
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      await replyToComment(conn.token, result.mediaId, firstComment);
+    } catch (err: any) {
+      console.error(`[V3 Publisher] First comment failed:`, err.message);
+    }
+  }
+
+  return {
+    mediaId: result.mediaId,
+    permalink: `https://www.instagram.com/p/${result.mediaId}/`
+  };
+}
+
+async function publishPostToInstagramInBackground(postId: string, userId: string) {
+  try {
+    const { data: post } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("id", postId)
+      .single();
+
+    if (!post) return;
+
+    const targets = post.target_platforms || [];
+    for (const target of targets) {
+      if (target.platform === "instagram") {
+        const { mediaId, permalink } = await publishPostToInstagram(
+          userId,
+          target.account_id,
+          post.content_text,
+          post.media_attachments,
+          post.first_comment
+        );
+
+        // Insert into social_posts
+        const { data: insertedPost } = await supabaseAdmin
+          .from("social_posts")
+          .insert({
+            account_id: target.account_id,
+            user_id: userId,
+            platform: "instagram",
+            platform_post_id: mediaId,
+            content_text: post.content_text,
+            media_type: post.media_attachments?.[0]?.file_type?.toLowerCase().includes("video") ? "video" : "image",
+            media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
+            posted_at: new Date().toISOString(),
+            scheduled_post_id: post.id,
+            permalink: permalink
+          })
+          .select()
+          .single();
+
+        // Insert initial metric snapshots
+        if (insertedPost) {
+          await supabaseAdmin.from("metric_snapshots").insert({
+            post_id: insertedPost.id,
+            account_id: target.account_id,
+            user_id: userId,
+            likes: 0,
+            comments: 0,
+            reach: 10,
+            engagement_rate: 0.0,
+            captured_at: new Date().toISOString()
+          });
+        }
+
+        // Log success
+        await supabaseAdmin.from("publish_log").insert({
+          scheduled_post_id: post.id,
+          user_id: userId,
+          account_id: target.account_id,
+          platform: target.platform,
+          attempted_at: new Date().toISOString(),
+          outcome: "success",
+          platform_post_id: mediaId
+        });
+      } else {
+        // Mock fallback for other platforms
+        const mockPostId = `platform_pub_${Math.random().toString(36).substring(2, 9)}`;
+        const { data: insertedPost } = await supabaseAdmin
+          .from("social_posts")
+          .insert({
+            account_id: target.account_id,
+            user_id: userId,
+            platform: target.platform,
+            platform_post_id: mockPostId,
+            content_text: post.content_text,
+            media_type: post.media_attachments?.length > 0 ? "image" : "text_only",
+            media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
+            posted_at: new Date().toISOString(),
+            scheduled_post_id: post.id
+          })
+          .select()
+          .single();
+
+        if (insertedPost) {
+          await supabaseAdmin.from("metric_snapshots").insert({
+            post_id: insertedPost.id,
+            account_id: target.account_id,
+            user_id: userId,
+            likes: 0,
+            comments: 0,
+            reach: 10,
+            engagement_rate: 0.0,
+            captured_at: new Date().toISOString()
+          });
+        }
+
+        await supabaseAdmin.from("publish_log").insert({
+          scheduled_post_id: post.id,
+          user_id: userId,
+          account_id: target.account_id,
+          platform: target.platform,
+          attempted_at: new Date().toISOString(),
+          outcome: "success",
+          platform_post_id: mockPostId
+        });
+      }
+    }
+
+    // Finalize post status
+    await supabaseAdmin
+      .from("scheduled_posts")
+      .update({ status: "published", published_at: new Date().toISOString() })
+      .eq("id", post.id);
+
+  } catch (err: any) {
+    console.error(`[Background Publish Error] Post ${postId}:`, err.message);
+    await supabaseAdmin
+      .from("scheduled_posts")
+      .update({ status: "failed", publish_error: err.message })
+      .eq("id", postId);
+  }
+}
+
 apiV3Router.post("/scheduler/posts", requireAuth, async (req: any, res) => {
   const { status, scheduledFor, publishMethod, targetPlatforms, contentText, mediaAttachments, firstComment, platformSpecificOverrides, isPartOfQueue } = req.body;
   
@@ -285,16 +402,18 @@ apiV3Router.post("/scheduler/posts", requireAuth, async (req: any, res) => {
     let finalQueueSlotId = null;
 
     if (isPartOfQueue && targetPlatforms && targetPlatforms.length > 0) {
-      // Calculate next available slot
       const nextTime = await getNextQueueTime(req.userId, targetPlatforms[0].account_id);
       finalScheduledTime = nextTime.toISOString();
     }
+
+    const isPublishNow = status === "scheduled" && (!finalScheduledTime || new Date(finalScheduledTime).getTime() <= Date.now() + 5000);
+    const initialStatus = isPublishNow ? "publishing" : (status || "draft");
 
     const { data, error } = await supabaseAdmin
       .from("scheduled_posts")
       .insert({
         user_id: req.userId,
-        status: status || "draft",
+        status: initialStatus,
         scheduled_for: finalScheduledTime,
         publish_method: publishMethod || "direct_api",
         target_platforms: targetPlatforms || [],
@@ -310,6 +429,14 @@ apiV3Router.post("/scheduler/posts", requireAuth, async (req: any, res) => {
       .single();
 
     if (error) throw error;
+
+    if (isPublishNow && data) {
+      // Trigger real publish in background so function doesn't timeout
+      publishPostToInstagramInBackground(data.id, req.userId).catch(err => 
+        console.error("[Composer Publish Trigger Error]", err)
+      );
+    }
+
     res.json({ success: true, data });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -445,7 +572,9 @@ apiV3Router.get("/calendar/events", requireAuth, async (req: any, res) => {
         type: "published",
         status: "published",
         platforms: [{ platform: p.platform, account_handle: p.connected_accounts?.account_handle }],
-        media: p.media_urls || []
+        media: p.media_urls || [],
+        likes: p.raw_metrics?.likes || 0,
+        comments: p.raw_metrics?.comments || 0
       }))
     ];
 
@@ -458,15 +587,62 @@ apiV3Router.get("/calendar/events", requireAuth, async (req: any, res) => {
 // ─── Analytics Summary ────────────────────────────────────────────────────────
 apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
   try {
+    // 1. Check for active social connection
+    const { data: connection } = await supabaseAdmin
+      .from("social_connections")
+      .select("last_synced_at")
+      .eq("user_id", req.userId)
+      .eq("platform", "instagram")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!connection) {
+      return res.json({
+        success: true,
+        data: {
+          connected: false,
+          totalPosts: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalImpressions: 0,
+          latestFollowers: 0,
+          followerGrowth: 0,
+          engagementRate: 0
+        }
+      });
+    }
+
+    // 2. Trigger on-demand sync if never synced or synced > 1 hour ago
+    const lastSynced = connection.last_synced_at ? new Date(connection.last_synced_at).getTime() : 0;
+    const { count: postCount } = await supabaseAdmin
+      .from("social_posts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId)
+      .eq("platform", "instagram");
+
+    if (Date.now() - lastSynced > 3600 * 1000 || !postCount || postCount === 0) {
+      console.log(`[V3 API] Triggering on-demand sync for user ${req.userId}...`);
+      await syncAll(req.userId);
+    }
+
+    // 3. Query real data
     const { data: posts } = await supabaseAdmin
       .from("social_posts")
       .select("*")
-      .eq("user_id", req.userId);
+      .eq("user_id", req.userId)
+      .eq("platform", "instagram");
 
     const { data: snapshots } = await supabaseAdmin
       .from("metric_snapshots")
       .select("*")
       .eq("user_id", req.userId)
+      .not("post_id", "is", null);
+
+    const { data: followerSnapshots } = await supabaseAdmin
+      .from("metric_snapshots")
+      .select("follower_count_at_capture")
+      .eq("user_id", req.userId)
+      .is("post_id", null)
       .order("captured_at", { ascending: false });
 
     // Aggregate stats
@@ -474,22 +650,39 @@ apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
     const totalLikes = snapshots?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0;
     const totalComments = snapshots?.reduce((sum, s) => sum + (s.comments || 0), 0) || 0;
     const totalImpressions = snapshots?.reduce((sum, s) => sum + (s.impressions || 0), 0) || 0;
+    const totalReach = snapshots?.reduce((sum, s) => sum + (s.reach || 0), 0) || 0;
 
     // Follower counts
-    const latestFollowers = snapshots?.[0]?.follower_count_at_capture || 1200;
-    const baselineFollowers = snapshots?.[snapshots.length - 1]?.follower_count_at_capture || 1100;
+    let latestFollowers = followerSnapshots?.[0]?.follower_count_at_capture || 0;
+    let baselineFollowers = followerSnapshots?.[followerSnapshots.length - 1]?.follower_count_at_capture || 0;
+
+    // Fallback to connected_accounts metadata if no snapshots exist
+    if (latestFollowers === 0) {
+      const { data: connAcct } = await supabaseAdmin
+        .from("connected_accounts")
+        .select("metadata")
+        .eq("user_id", req.userId)
+        .eq("platform", "instagram")
+        .maybeSingle();
+      if (connAcct?.metadata) {
+        latestFollowers = connAcct.metadata.followers_count || 0;
+        baselineFollowers = latestFollowers;
+      }
+    }
+
     const followerGrowth = latestFollowers - baselineFollowers;
 
     res.json({
       success: true,
       data: {
+        connected: true,
         totalPosts,
         totalLikes,
         totalComments,
         totalImpressions,
         latestFollowers,
         followerGrowth,
-        engagementRate: totalImpressions > 0 ? Number(((totalLikes + totalComments) / totalImpressions).toFixed(4)) : 0.042
+        engagementRate: totalReach > 0 ? Number(((totalLikes + totalComments) / totalReach).toFixed(4)) : 0.0
       }
     });
   } catch (err: any) {
@@ -501,9 +694,27 @@ apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
 apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
   const { sentiment, isArchived } = req.query;
   try {
+    // Trigger on-demand sync of comments if connected and last sync was > 15 mins ago
+    const { data: conn } = await supabaseAdmin
+      .from("social_connections")
+      .select("last_synced_at")
+      .eq("user_id", req.userId)
+      .eq("platform", "instagram")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (conn) {
+      const lastSynced = conn.last_synced_at ? new Date(conn.last_synced_at).getTime() : 0;
+      if (Date.now() - lastSynced > 15 * 60 * 1000) {
+        console.log(`[V3 Inbox] Triggering on-demand comments sync for user ${req.userId}...`);
+        // Sync in background to not block response
+        syncComments(req.userId).catch(err => console.error("[V3 Inbox Sync Error]", err));
+      }
+    }
+
     let query = supabaseAdmin
       .from("comment_inbox")
-      .select("*, social_posts(content_text)")
+      .select("*, social_posts(content_text), comment_replies(reply_text)")
       .eq("user_id", req.userId);
 
     if (sentiment) {
@@ -538,7 +749,19 @@ apiV3Router.post("/inbox/comments/:id/reply", requireAuth, async (req: any, res)
 
     if (fetchErr || !comment) throw new Error("Comment not found");
 
-    // 2. Insert user reply locally
+    // 2. Post reply to real platform via API if connected
+    let platformReplyId = `reply_${comment.platform}_${Date.now()}`;
+    if (comment.platform === "instagram") {
+      const conn = await getDecryptedToken(req.userId, "instagram");
+      if (conn) {
+        const replyResult = await replyToComment(conn.token, comment.platform_comment_id, replyText);
+        platformReplyId = replyResult.id;
+      } else {
+        throw new Error("Instagram connection not found or expired. Please reconnect.");
+      }
+    }
+
+    // 3. Insert user reply locally
     const { data: reply, error: replyErr } = await supabaseAdmin
       .from("comment_replies")
       .insert({
@@ -546,14 +769,14 @@ apiV3Router.post("/inbox/comments/:id/reply", requireAuth, async (req: any, res)
         user_id: req.userId,
         reply_text: replyText,
         send_status: "sent",
-        platform_reply_id: `reply_${comment.platform}_${Date.now()}`
+        platform_reply_id: platformReplyId
       })
       .select()
       .single();
 
     if (replyErr) throw replyErr;
 
-    // 3. Mark comment as replied
+    // 4. Mark comment as replied
     await supabaseAdmin
       .from("comment_inbox")
       .update({ user_has_replied: true, user_replied_at: new Date().toISOString() })
@@ -692,12 +915,22 @@ apiV3Router.get("/analyst/briefing", requireAuth, async (req: any, res) => {
     }
 
     if (!briefing) {
-      console.log(`[V3 API] No briefing found for date ${briefingDate}. Generating now...`);
-      briefing = await generateDailyBriefing(req.userId);
+      return res.json({ success: true, data: null, needs_generation: true });
     }
 
     res.json({ success: true, data: briefing });
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/analyst/briefing", requireAuth, async (req: any, res) => {
+  try {
+    console.log(`[V3 API] Compiling daily briefing for user ${req.userId}...`);
+    const briefing = await generateDailyBriefing(req.userId);
+    res.json({ success: true, data: briefing });
+  } catch (err: any) {
+    console.error("[V3 API Briefing Error]", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -851,67 +1084,10 @@ apiV3Router.post("/publish/cron", async (req, res) => {
           .update({ status: "publishing", publish_attempted_at: new Date().toISOString() })
           .eq("id", post.id);
 
-        // Simulate publishing across target platforms
-        const targets = post.target_platforms || [];
-        for (const target of targets) {
-          const mockPostId = `platform_pub_${Math.random().toString(36).substring(2, 9)}`;
-
-          // 1. Insert social post history
-          const { data: insertedPost } = await supabaseAdmin
-            .from("social_posts")
-            .insert({
-              account_id: target.account_id,
-              user_id: post.user_id,
-              platform: target.platform,
-              platform_post_id: mockPostId,
-              content_text: post.content_text,
-              media_type: post.media_attachments?.length > 0 ? "image" : "text_only",
-              media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
-              posted_at: new Date().toISOString(),
-              scheduled_post_id: post.id
-            })
-            .select()
-            .single();
-
-          // 2. Insert initial metric snapshots
-          if (insertedPost) {
-            await supabaseAdmin.from("metric_snapshots").insert({
-              post_id: insertedPost.id,
-              account_id: target.account_id,
-              user_id: post.user_id,
-              likes: 0,
-              comments: 0,
-              reach: 10,
-              engagement_rate: 0.0,
-              captured_at: new Date().toISOString()
-            });
-          }
-
-          // 3. Log success
-          await supabaseAdmin.from("publish_log").insert({
-            scheduled_post_id: post.id,
-            user_id: post.user_id,
-            account_id: target.account_id,
-            platform: target.platform,
-            attempted_at: new Date().toISOString(),
-            outcome: "success",
-            platform_post_id: mockPostId
-          });
-        }
-
-        // Finalize post status
-        await supabaseAdmin
-          .from("scheduled_posts")
-          .update({ status: "published", published_at: new Date().toISOString() })
-          .eq("id", post.id);
-
+        await publishPostToInstagramInBackground(post.id, post.user_id);
         publishedCount++;
       } catch (err: any) {
         console.error(`[V3 Publisher Cron] Failed publishing post ${post.id}:`, err);
-        await supabaseAdmin
-          .from("scheduled_posts")
-          .update({ status: "failed", publish_error: err.message })
-          .eq("id", post.id);
       }
     }
 
@@ -943,50 +1119,31 @@ apiV3Router.post("/jobs/run", async (req, res) => {
     for (const post of (posts || [])) {
       try {
         await supabaseAdmin.from("scheduled_posts").update({ status: "publishing", publish_attempted_at: new Date().toISOString() }).eq("id", post.id);
-        for (const target of (post.target_platforms || [])) {
-          const mockPostId = `platform_pub_${Math.random().toString(36).substring(2, 9)}`;
-          const { data: insertedPost } = await supabaseAdmin.from("social_posts").insert({
-            account_id: target.account_id,
-            user_id: post.user_id,
-            platform: target.platform,
-            platform_post_id: mockPostId,
-            content_text: post.content_text,
-            media_type: post.media_attachments?.length > 0 ? "image" : "text_only",
-            media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
-            posted_at: new Date().toISOString(),
-            scheduled_post_id: post.id
-          }).select().single();
-
-          if (insertedPost) {
-            await supabaseAdmin.from("metric_snapshots").insert({
-              post_id: insertedPost.id,
-              account_id: target.account_id,
-              user_id: post.user_id,
-              likes: 0,
-              comments: 0,
-              reach: 10,
-              engagement_rate: 0.0,
-              captured_at: new Date().toISOString()
-            });
-          }
-
-          await supabaseAdmin.from("publish_log").insert({
-            scheduled_post_id: post.id,
-            user_id: post.user_id,
-            account_id: target.account_id,
-            platform: target.platform,
-            attempted_at: new Date().toISOString(),
-            outcome: "success",
-            platform_post_id: mockPostId
-          });
-        }
-        await supabaseAdmin.from("scheduled_posts").update({ status: "published", published_at: new Date().toISOString() }).eq("id", post.id);
+        await publishPostToInstagramInBackground(post.id, post.user_id);
       } catch (err: any) {
-        await supabaseAdmin.from("scheduled_posts").update({ status: "failed", publish_error: err.message }).eq("id", post.id);
+        console.error(`[V3 Cron Publish Error] Post ${post.id}:`, err.message);
       }
     }
 
-    // 2. Fetch active subscription tiers
+    // 2. Perform background Instagram sync for active connections
+    const { data: activeConnections } = await supabaseAdmin
+      .from("social_connections")
+      .select("user_id")
+      .eq("platform", "instagram")
+      .eq("is_active", true);
+
+    if (activeConnections) {
+      console.log(`[V3 Cron] Syncing Instagram data for ${activeConnections.length} users...`);
+      for (const conn of activeConnections) {
+        try {
+          await syncAll(conn.user_id);
+        } catch (err: any) {
+          console.error(`[V3 Cron Sync Error] User ${conn.user_id}:`, err.message);
+        }
+      }
+    }
+
+    // 3. Fetch active subscription tiers for AI daily briefing generation
     const { data: users, error } = await supabaseAdmin
       .from("v3_subscription_tiers")
       .select("user_id")
