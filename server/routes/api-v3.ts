@@ -136,11 +136,45 @@ apiV3Router.post("/connections", requireAuth, async (req: any, res) => {
 
 apiV3Router.delete("/connections/:id", requireAuth, async (req: any, res) => {
   try {
+    const { data: connAccount } = await supabaseAdmin
+      .from("connected_accounts")
+      .select("platform")
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
+    if (connAccount) {
+      const platform = connAccount.platform;
+      console.log(`[V3 Connections] Wiping all data for platform ${platform} for user ${req.userId}...`);
+      
+      // Delete from social_connections
+      await supabaseAdmin
+        .from("social_connections")
+        .delete()
+        .eq("platform", platform)
+        .eq("user_id", req.userId);
+
+      // Delete from social_posts (cascade deletes snapshots where post_id is linked)
+      await supabaseAdmin
+        .from("social_posts")
+        .delete()
+        .eq("platform", platform)
+        .eq("user_id", req.userId);
+
+      // Delete inbox comments
+      await supabaseAdmin
+        .from("comment_inbox")
+        .delete()
+        .eq("platform", platform)
+        .eq("user_id", req.userId);
+    }
+
     const { error } = await supabaseAdmin
       .from("connected_accounts")
       .delete()
       .eq("id", req.params.id)
       .eq("user_id", req.userId);
+
     if (error) throw error;
     res.json({ success: true });
   } catch (err: any) {
@@ -216,6 +250,32 @@ apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+async function checkAndCleanupMockData(userId: string) {
+  try {
+    const { data: mockPosts } = await supabaseAdmin
+      .from("social_posts")
+      .select("id")
+      .eq("user_id", userId)
+      .like("platform_post_id", "post_%")
+      .limit(1);
+
+    if (mockPosts && mockPosts.length > 0) {
+      console.log(`[V3 API] Mock posts detected for user ${userId}. Cleaning up mock data...`);
+      await supabaseAdmin.from("social_posts").delete().eq("user_id", userId);
+      await supabaseAdmin.from("metric_snapshots").delete().eq("user_id", userId);
+      await supabaseAdmin.from("comment_inbox").delete().eq("user_id", userId);
+      
+      // Reset last_synced_at to force sync
+      await supabaseAdmin
+        .from("social_connections")
+        .update({ last_synced_at: null })
+        .eq("user_id", userId);
+    }
+  } catch (err: any) {
+    console.error("[Cleanup Mock Check Failed]", err.message);
+  }
+}
 
 // Helpers for Instagram API direct publishing
 async function publishPostToInstagram(userId: string, accountId: string, contentText: string, mediaAttachments: any[], firstComment?: string): Promise<{ mediaId: string; permalink?: string }> {
@@ -543,6 +603,7 @@ apiV3Router.delete("/scheduler/queue-slots/:id", requireAuth, async (req: any, r
 // ─── Calendar View ────────────────────────────────────────────────────────────
 apiV3Router.get("/calendar/events", requireAuth, async (req: any, res) => {
   try {
+    await checkAndCleanupMockData(req.userId);
     // 1. Fetch scheduled posts
     const { data: scheduled } = await supabaseAdmin
       .from("scheduled_posts")
@@ -587,6 +648,7 @@ apiV3Router.get("/calendar/events", requireAuth, async (req: any, res) => {
 // ─── Analytics Summary ────────────────────────────────────────────────────────
 apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
   try {
+    await checkAndCleanupMockData(req.userId);
     // 1. Check for active social connection
     const { data: connection } = await supabaseAdmin
       .from("social_connections")
@@ -694,6 +756,7 @@ apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
 apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
   const { sentiment, isArchived } = req.query;
   try {
+    await checkAndCleanupMockData(req.userId);
     // Trigger on-demand sync of comments if connected and last sync was > 15 mins ago
     const { data: conn } = await supabaseAdmin
       .from("social_connections")
