@@ -25,6 +25,7 @@ import { agentRouter } from "./routes/api-agent.js";
 import { creditsRouter } from "./routes/api-credits.js";
 import { superadminRouter } from "./routes/api-superadmin.js";
 import { apiV3Router } from "./routes/api-v3.js";
+import { authRouter } from "./routes/api-auth.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
 
@@ -80,6 +81,9 @@ app.use("/api/superadmin/v1", superadminRouter);
 
 // ─── ZieAds v0.3 Analyst Layer API ─────────────────────
 app.use("/api/v3", apiV3Router);
+
+// ─── Social Media Platform Connections API ─────────────
+app.use("/api/auth", authRouter);
 
 // ─── Health Check ──────────────────────────────────────
 app.get("/api/health", (_req, res) => {

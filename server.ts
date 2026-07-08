@@ -2,6 +2,7 @@ import app from "./server/app.js";
 import { createServer as createViteServer } from "vite";
 import express from "express";
 import path from "path";
+import { refreshExpiringTokens } from "./server/utils/tokenRefresh.js";
 
 const PORT = 3000;
 
@@ -24,6 +25,11 @@ async function startServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  // Start 12-hour background token refresh interval (only runs in persistent local node dev environments)
+  setInterval(() => {
+    refreshExpiringTokens().catch(err => console.error("[Token Refresh Interval] Error:", err));
+  }, 12 * 60 * 60 * 1000);
 }
 
 if (!process.env.VERCEL) {

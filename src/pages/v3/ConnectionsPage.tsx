@@ -61,9 +61,44 @@ export default function ConnectionsPage() {
 
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/connections', { headers });
-      const j = await res.json();
-      if (j.success) setConnections(j.data);
+      const [realRes, mockRes] = await Promise.all([
+        fetch('/api/auth/connections', { headers }),
+        fetch('/api/v3/connections', { headers })
+      ]);
+
+      const realJ = await realRes.json();
+      const mockJ = await mockRes.json();
+      const mergedList: any[] = [];
+
+      // 1. Add active real OAuth connections
+      if (Array.isArray(realJ)) {
+        realJ.forEach((c: any) => {
+          if (c.connected) {
+            mergedList.push({
+              id: c.platform,
+              platform: c.platform,
+              account_handle: c.username || c.display_name || `@${c.platform}`,
+              connected_at: c.connected_at,
+              is_oauth: true
+            });
+          }
+        });
+      }
+
+      // 2. Add other mock/upload connections
+      if (mockJ.success && Array.isArray(mockJ.data)) {
+        mockJ.data.forEach((c: any) => {
+          const isRealConnected = mergedList.some(r => r.platform === c.platform);
+          if (!isRealConnected) {
+            mergedList.push({
+              ...c,
+              is_oauth: false
+            });
+          }
+        });
+      }
+
+      setConnections(mergedList);
     } catch (err) {
       console.error("Failed to fetch connections:", err);
     } finally {
@@ -74,6 +109,25 @@ export default function ConnectionsPage() {
   useEffect(() => {
     fetchConnections();
   }, [demo.isActive]);
+
+  // Hook to capture OAuth callback status parameters in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const error = params.get('error');
+
+    if (connected) {
+      alert(`${connected.toUpperCase()} connected successfully!`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error) {
+      if (error.includes('denied')) {
+        alert(`Connection request was cancelled.`);
+      } else {
+        alert(`Connection failed: ${error.replace(/_/g, ' ')}`);
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,20 +162,25 @@ export default function ConnectionsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (conn: any) => {
     if (demo.isActive) {
       alert("Cannot disconnect demo accounts.");
       return;
     }
-    if (!confirm("Are you sure you want to disconnect this account?")) return;
+    if (!confirm(`Are you sure you want to disconnect this ${conn.platform} account?`)) return;
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`/api/v3/connections/${id}`, {
-        method: 'DELETE',
-        headers
-      });
+      const res = await fetch(
+        conn.is_oauth 
+          ? `/api/auth/${conn.platform}/disconnect` 
+          : `/api/v3/connections/${conn.id}`,
+        {
+          method: conn.is_oauth ? 'POST' : 'DELETE',
+          headers
+        }
+      );
       const j = await res.json();
-      if (j.success) {
+      if (j.success || res.ok) {
         await fetchConnections();
       }
     } catch (err) {
@@ -248,7 +307,7 @@ export default function ConnectionsPage() {
                     </span>
                   </div>
                   <button 
-                    onClick={() => handleDelete(conn.id)}
+                    onClick={() => handleDelete(conn)}
                     style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
                   >
                     <Trash2 size={14} />
@@ -258,7 +317,7 @@ export default function ConnectionsPage() {
               {type === 'ads' && (
                 <button 
                   onClick={() => setUploadPlatform(id)}
-                  style={{ width: '100%', background: '#fff', border: `1px solid ${B}`, padding: '8px 0', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}
+                  style={{ width: '100%', background: '#fff', border: `1px solid ${B}`, padding: '8px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}
                 >
                   <Upload size={14} /> Upload Ads CSV
                 </button>
@@ -267,7 +326,22 @@ export default function ConnectionsPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button 
-                onClick={() => setPlatformToConnect(id)}
+                onClick={async () => {
+                  if (demo.isActive) {
+                    alert("Please exit Demo Mode to connect real accounts.");
+                    return;
+                  }
+                  if (id === 'instagram' || id === 'tiktok' || id === 'linkedin') {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) {
+                      alert("Please sign in first.");
+                      return;
+                    }
+                    window.location.href = `/api/auth/${id}/connect?token=${session.access_token}`;
+                  } else {
+                    setPlatformToConnect(id);
+                  }
+                }}
                 style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '10px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
               >
                 Connect {name}
