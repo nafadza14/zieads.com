@@ -10,15 +10,11 @@ const IV_LENGTH = 16;
 export function encrypt(text: string): string {
   if (!text) return '';
   const secretKeyHex = process.env.ENCRYPTION_KEY;
-  if (!secretKeyHex) {
-    throw new Error('ENCRYPTION_KEY environment variable is not set');
+  if (!secretKeyHex || secretKeyHex.length !== 64 || !/^[0-9a-f]+$/i.test(secretKeyHex)) {
+    throw new Error('ENCRYPTION_KEY environment variable must be exactly 64 hex characters (32 bytes)');
   }
 
   const key = Buffer.from(secretKeyHex, 'hex');
-  if (key.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be exactly 32 bytes (64 hex characters)');
-  }
-
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -34,8 +30,8 @@ export function encrypt(text: string): string {
 export function decrypt(encryptedText: string): string {
   if (!encryptedText) return '';
   const secretKeyHex = process.env.ENCRYPTION_KEY;
-  if (!secretKeyHex) {
-    throw new Error('ENCRYPTION_KEY environment variable is not set');
+  if (!secretKeyHex || secretKeyHex.length !== 64 || !/^[0-9a-f]+$/i.test(secretKeyHex)) {
+    throw new Error('ENCRYPTION_KEY environment variable must be exactly 64 hex characters (32 bytes)');
   }
 
   const parts = encryptedText.split(':');
@@ -46,9 +42,6 @@ export function decrypt(encryptedText: string): string {
   const iv = Buffer.from(parts[0], 'hex');
   const encrypted = Buffer.from(parts[1], 'hex');
   const key = Buffer.from(secretKeyHex, 'hex');
-  if (key.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be exactly 32 bytes (64 hex characters)');
-  }
 
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   let decrypted = decipher.update(encrypted, undefined, 'utf8');

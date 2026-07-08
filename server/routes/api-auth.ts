@@ -45,7 +45,33 @@ authRouter.get("/:platform/connect", async (req, res) => {
     return res.status(400).json({ error: "Invalid connection platform" });
   }
 
+  // Validate presence of required environment variables for the selected platform
+  const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
+  let authUrl = "";
+
+  console.log(`[OAuth] Connect request received for platform "${platform}". Checking runtime configuration...`);
+  console.log(`[OAuth] Redirect base URL: "${redirectBase}"`);
+  console.log(`[OAuth] Supabase URL exists: ${!!(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)}`);
+
   try {
+    if (platform === "instagram") {
+      const appId = process.env.INSTAGRAM_APP_ID;
+      if (!appId) {
+        throw new Error("INSTAGRAM_APP_ID environment variable is missing on the server.");
+      }
+      console.log(`[OAuth] Instagram App ID is present: "${appId}"`);
+    } else if (platform === "tiktok") {
+      const clientKey = process.env.TIKTOK_CLIENT_KEY;
+      if (!clientKey) {
+        throw new Error("TIKTOK_CLIENT_KEY environment variable is missing on the server.");
+      }
+    } else if (platform === "linkedin") {
+      const clientId = process.env.LINKEDIN_CLIENT_ID;
+      if (!clientId) {
+        throw new Error("LINKEDIN_CLIENT_ID environment variable is missing on the server.");
+      }
+    }
+
     // Generate secure CSRF state
     const state = crypto.randomBytes(16).toString("hex");
     let codeVerifier: string | undefined;
@@ -60,7 +86,7 @@ authRouter.get("/:platform/connect", async (req, res) => {
         .digest("base64url");
     }
 
-    // Save OAuth state in database (15 minute TTL handled programmatically during callback)
+    // Save OAuth state in database
     const { error: insertErr } = await supabaseAdmin.from("oauth_states").insert({
       state,
       user_id: userId,
@@ -69,12 +95,12 @@ authRouter.get("/:platform/connect", async (req, res) => {
     });
 
     if (insertErr) {
-      console.error("[OAuth] Failed to insert state:", insertErr.message);
-      return res.status(500).json({ error: "Failed to initialize secure connection handshake" });
+      console.error("[OAuth] Database insert failed for oauth_states:", insertErr.message, insertErr.details || "");
+      return res.status(500).json({ 
+        error: "Failed to initialize secure connection handshake", 
+        details: insertErr.message 
+      });
     }
-
-    const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
-    let authUrl = "";
 
     if (platform === "instagram") {
       authUrl = `https://www.instagram.com/oauth/authorize?client_id=${
@@ -97,10 +123,14 @@ authRouter.get("/:platform/connect", async (req, res) => {
     }
 
     // Since it's a GET redirect, send user directly to the platform
+    console.log(`[OAuth] Redirecting user to authorization URL: ${authUrl}`);
     return res.redirect(authUrl);
   } catch (err: any) {
-    console.error("[OAuth] Connection initiation error:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("[OAuth] Connection initiation error (GET):", err);
+    return res.status(500).json({ 
+      error: "Failed to initialize secure connection handshake", 
+      details: err.message 
+    });
   }
 });
 
@@ -112,7 +142,33 @@ authRouter.post("/:platform/connect", requireAuth, async (req: any, res) => {
     return res.status(400).json({ error: "Invalid platform" });
   }
 
+  // Validate presence of required environment variables for the selected platform
+  const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
+  let authUrl = "";
+
+  console.log(`[OAuth] Connect request (POST) received for platform "${platform}". Checking runtime configuration...`);
+  console.log(`[OAuth] Redirect base URL: "${redirectBase}"`);
+  console.log(`[OAuth] Supabase URL exists: ${!!(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)}`);
+
   try {
+    if (platform === "instagram") {
+      const appId = process.env.INSTAGRAM_APP_ID;
+      if (!appId) {
+        throw new Error("INSTAGRAM_APP_ID environment variable is missing on the server.");
+      }
+      console.log(`[OAuth] Instagram App ID is present: "${appId}"`);
+    } else if (platform === "tiktok") {
+      const clientKey = process.env.TIKTOK_CLIENT_KEY;
+      if (!clientKey) {
+        throw new Error("TIKTOK_CLIENT_KEY environment variable is missing on the server.");
+      }
+    } else if (platform === "linkedin") {
+      const clientId = process.env.LINKEDIN_CLIENT_ID;
+      if (!clientId) {
+        throw new Error("LINKEDIN_CLIENT_ID environment variable is missing on the server.");
+      }
+    }
+
     const state = crypto.randomBytes(16).toString("hex");
     let codeVerifier: string | undefined;
     let codeChallenge: string | undefined;
@@ -125,15 +181,20 @@ authRouter.post("/:platform/connect", requireAuth, async (req: any, res) => {
         .digest("base64url");
     }
 
-    await supabaseAdmin.from("oauth_states").insert({
+    const { error: insertErr } = await supabaseAdmin.from("oauth_states").insert({
       state,
       user_id: userId,
       platform,
       code_verifier: codeVerifier || null,
     });
 
-    const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
-    let authUrl = "";
+    if (insertErr) {
+      console.error("[OAuth] Database insert failed for oauth_states (POST):", insertErr.message, insertErr.details || "");
+      return res.status(500).json({ 
+        error: "Failed to initialize secure connection handshake", 
+        details: insertErr.message 
+      });
+    }
 
     if (platform === "instagram") {
       authUrl = `https://www.instagram.com/oauth/authorize?client_id=${
@@ -157,7 +218,11 @@ authRouter.post("/:platform/connect", requireAuth, async (req: any, res) => {
 
     return res.json({ url: authUrl });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error("[OAuth] Connection initiation error (POST):", err);
+    return res.status(500).json({ 
+      error: "Failed to initialize secure connection handshake", 
+      details: err.message 
+    });
   }
 });
 
