@@ -170,7 +170,7 @@ apiV3Router.delete("/connections/:id", requireAuth, async (req: any, res) => {
 
       // Delete inbox comments
       await supabaseAdmin
-        .from("comment_inbox")
+        .from("comments_inbox")
         .delete()
         .eq("platform", platform)
         .eq("user_id", req.userId);
@@ -1448,6 +1448,7 @@ apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
 
 async function checkAndCleanupMockData(userId: string) {
   try {
+    // Check for old mock-seeded social posts (IDs like 'post_instagram_1')
     const { data: mockPosts } = await supabaseAdmin
       .from("social_posts")
       .select("id")
@@ -1455,17 +1456,34 @@ async function checkAndCleanupMockData(userId: string) {
       .like("platform_post_id", "post_%")
       .limit(1);
 
+    // Check for old mock-seeded media library items (Unsplash URLs)
+    const { data: mockMedia } = await supabaseAdmin
+      .from("media_library")
+      .select("id")
+      .eq("user_id", userId)
+      .like("blob_url", "%unsplash%")
+      .limit(1);
+
     if (mockPosts && mockPosts.length > 0) {
-      console.log(`[V3 API] Mock posts detected for user ${userId}. Cleaning up mock data...`);
+      console.log(`[V3 API] Mock posts detected for user ${userId}. Cleaning up mock social data...`);
       await supabaseAdmin.from("social_posts").delete().eq("user_id", userId);
       await supabaseAdmin.from("metric_snapshots").delete().eq("user_id", userId);
-      await supabaseAdmin.from("comment_inbox").delete().eq("user_id", userId);
+      await supabaseAdmin.from("comments_inbox").delete().eq("user_id", userId);
       
-      // Reset last_synced_at to force sync
+      // Reset last_synced_at to force real sync
       await supabaseAdmin
         .from("social_connections")
         .update({ last_synced_at: null })
         .eq("user_id", userId);
+    }
+
+    if (mockMedia && mockMedia.length > 0) {
+      console.log(`[V3 API] Unsplash mock media detected for user ${userId}. Cleaning up media library...`);
+      await supabaseAdmin
+        .from("media_library")
+        .delete()
+        .eq("user_id", userId)
+        .like("blob_url", "%unsplash%");
     }
   } catch (err: any) {
     console.error("[Cleanup Mock Check Failed]", err.message);

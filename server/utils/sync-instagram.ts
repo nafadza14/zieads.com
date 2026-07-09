@@ -116,9 +116,10 @@ export async function syncRecentPosts(userId: string): Promise<void> {
           media_type: post.media_type?.toLowerCase() || 'image',
           media_urls: post.media_url ? [post.media_url] : [],
           posted_at: post.timestamp,
-          raw_metrics: {},
-          permalink: post.permalink,
-        }, { onConflict: 'user_id,platform_post_id' });
+          post_url: post.permalink || null,
+          raw_metrics: { permalink: post.permalink || '' },
+          fetched_at: new Date().toISOString(),
+        }, { onConflict: 'account_id,platform_post_id' });
 
       if (error) {
         console.error(`[Sync] Failed to upsert post ${post.id}:`, error.message);
@@ -191,10 +192,15 @@ export async function syncPostInsights(userId: string): Promise<void> {
           .update({ raw_metrics: metricsObj })
           .eq('id', post.id);
 
-        // Upsert metric_snapshots
+        // Delete old snapshot and insert fresh one
         await supabaseAdmin
           .from('metric_snapshots')
-          .upsert({
+          .delete()
+          .eq('post_id', post.id);
+
+        await supabaseAdmin
+          .from('metric_snapshots')
+          .insert({
             post_id: post.id,
             account_id: account.id,
             user_id: userId,
@@ -206,7 +212,7 @@ export async function syncPostInsights(userId: string): Promise<void> {
             shares,
             engagement_rate: reach > 0 ? Number(((likes + comments + saves + shares) / reach).toFixed(4)) : 0,
             captured_at: new Date().toISOString(),
-          }, { onConflict: 'post_id' });
+          });
 
       } catch (err: any) {
         console.error(`[Sync] Insights fetch failed for post ${post.platform_post_id}:`, err.message);
@@ -261,21 +267,19 @@ export async function syncComments(userId: string): Promise<void> {
         incrementRateLimit(userId);
 
         for (const comment of comments) {
-          // Upsert main comment
+          // Upsert main comment into comments_inbox (new schema)
           const { data: upserted, error } = await supabaseAdmin
-            .from('comment_inbox')
+            .from('comments_inbox')
             .upsert({
               user_id: userId,
-              account_id: account.id,
               platform: 'instagram',
               platform_comment_id: comment.id,
-              post_id: post.id,
-              commenter_handle: `@${comment.username}`,
-              commenter_display_name: comment.username,
-              comment_text: comment.text,
-              commented_at: comment.timestamp,
-              is_archived: false,
-              user_has_replied: false,
+              platform_media_id: post.platform_post_id,
+              author_username: comment.username,
+              author_platform_id: comment.id,
+              text: comment.text,
+              posted_at: comment.timestamp,
+              status: 'unread',
             }, { onConflict: 'user_id,platform,platform_comment_id', ignoreDuplicates: false })
             .select('id, sentiment')
             .single();
@@ -285,7 +289,7 @@ export async function syncComments(userId: string): Promise<void> {
             newCommentsCount++;
             analyzeCommentSentiment(comment.text).then(sentiment => {
               supabaseAdmin
-                .from('comment_inbox')
+                .from('comments_inbox')
                 .update({ sentiment })
                 .eq('id', upserted.id)
                 .then(() => {});
@@ -296,19 +300,18 @@ export async function syncComments(userId: string): Promise<void> {
           if (comment.replies?.data) {
             for (const reply of comment.replies.data) {
               await supabaseAdmin
-                .from('comment_inbox')
+                .from('comments_inbox')
                 .upsert({
                   user_id: userId,
-                  account_id: account.id,
                   platform: 'instagram',
                   platform_comment_id: reply.id,
-                  post_id: post.id,
-                  commenter_handle: `@${reply.username}`,
-                  commenter_display_name: reply.username,
-                  comment_text: reply.text,
-                  commented_at: reply.timestamp,
-                  is_archived: false,
-                  user_has_replied: false,
+                  platform_media_id: post.platform_post_id,
+                  parent_comment_id: comment.id,
+                  author_username: reply.username,
+                  author_platform_id: reply.id,
+                  text: reply.text,
+                  posted_at: reply.timestamp,
+                  status: 'unread',
                 }, { onConflict: 'user_id,platform,platform_comment_id', ignoreDuplicates: true });
             }
           }
