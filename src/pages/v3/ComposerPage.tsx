@@ -77,14 +77,21 @@ export default function ComposerPage() {
       const headers = await getAuthHeaders();
       const [connRes, mediaRes] = await Promise.all([
         fetch('/api/v3/connections', { headers }),
-        fetch('/api/v3/media', { headers })
+        fetch('/api/v3/media/library', { headers })
       ]);
 
       const connJ = await connRes.json();
       if (connJ.success) setConnections(connJ.data.filter((c: any) => c.platform !== 'meta_ads' && c.platform !== 'google_ads' && c.platform !== 'tiktok_ads'));
 
       const mediaJ = await mediaRes.json();
-      if (mediaJ.success) setMediaLibrary(mediaJ.data);
+      if (mediaJ.success) {
+        setMediaLibrary(mediaJ.data.map((m: any) => ({
+          id: m.id,
+          file_url: m.blob_url,
+          file_name: m.file_name,
+          mime_type: m.mime_type
+        })));
+      }
     } catch (err) {
       console.error("Failed to load Composer data:", err);
     } finally {
@@ -114,43 +121,30 @@ export default function ComposerPage() {
 
     setUploadingMedia(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const token = (await supabase.auth.getSession()).data?.session?.access_token;
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('media-library')
-        .upload(filePath, file);
-
-      if (uploadError || !uploadData) {
-        throw new Error(uploadError?.message || "Failed to upload file to storage bucket 'media-library'. Check if bucket is created and public.");
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('media-library')
-        .getPublicUrl(filePath);
-
-      if (!urlData?.publicUrl) {
-        throw new Error("Failed to get public URL for uploaded file.");
-      }
-
-      const finalUrl = urlData.publicUrl;
-
-      const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/media', {
+      const res = await fetch('/api/v3/media/upload', {
         method: 'POST',
-        headers,
-        body: JSON.stringify({
-          fileType: file.type.startsWith('video') ? 'video' : 'image',
-          fileUrl: finalUrl,
-          fileSize: file.size,
-          originalFilename: file.name
-        })
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData
       });
+
       const j = await res.json();
+      if (!res.ok) {
+        throw new Error(j.error || "Upload failed");
+      }
+
       if (j.success) {
-        setMediaLibrary(prev => [j.data, ...prev]);
-        setMediaAttachments(prev => [...prev, j.data]);
+        const newMedia = {
+          id: j.data.id,
+          file_url: j.data.url,
+          file_name: j.data.file_name,
+          mime_type: j.data.mime_type
+        };
+        setMediaLibrary(prev => [newMedia, ...prev]);
+        setMediaAttachments(prev => [...prev, newMedia]);
       }
     } catch (err: any) {
       alert("Upload failed: " + (err.message || "Unknown error"));
@@ -216,6 +210,13 @@ export default function ComposerPage() {
       setComposerError("Please select at least one social media account to post to.");
       return;
     }
+
+    const hasInstagram = selectedAccounts.some(id => connections.find(c => c.id === id)?.platform === 'instagram');
+    if (!hasInstagram) {
+      setComposerError("ZieAds v0.3 currently supports publishing to connected Instagram Business accounts only.");
+      return;
+    }
+
     if (!contentText.trim() && mediaAttachments.length === 0) {
       setComposerError("Please add some content or attach an image/video.");
       return;
@@ -225,56 +226,53 @@ export default function ComposerPage() {
     setComposerError(null);
 
     try {
-      const targets = selectedAccounts.map(id => {
-        const conn = connections.find(c => c.id === id);
-        return {
-          account_id: id,
-          platform: conn?.platform,
-          custom_content: customOverrides[id] || contentText
-        };
-      });
-
-      let scheduledTime = null;
-      let targetStatus = 'draft';
+      const media_ids = mediaAttachments.map(m => m.id);
+      const hashtags = contentText.match(/#\w+/g)?.map(h => h.slice(1)) || [];
+      const headers = await getAuthHeaders();
+      let res;
 
       if (scheduleType === 'now') {
-        scheduledTime = new Date().toISOString();
-        targetStatus = 'scheduled';
-      } else if (scheduleType === 'schedule') {
+        res = await fetch('/api/v3/posts/publish-now', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            platform: 'instagram',
+            caption: contentText,
+            media_ids,
+            hashtags
+          })
+        });
+      } else {
         if (!scheduleDate || !scheduleTime) {
           throw new Error("Please specify date and time for scheduling.");
         }
-        scheduledTime = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
-        targetStatus = 'scheduled';
-      } else if (scheduleType === 'queue') {
-        targetStatus = 'queued';
+        const scheduled_for = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+        
+        res = await fetch('/api/v3/posts/schedule', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            platform: 'instagram',
+            caption: contentText,
+            media_ids,
+            hashtags,
+            scheduled_for
+          })
+        });
       }
 
-      const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/scheduler/posts', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          status: targetStatus,
-          scheduledFor: scheduledTime,
-          publishMethod,
-          targetPlatforms: targets,
-          contentText,
-          mediaAttachments,
-          firstComment,
-          platformSpecificOverrides: customOverrides,
-          isPartOfQueue: scheduleType === 'queue'
-        })
-      });
-
       const j = await res.json();
+      if (!res.ok) {
+        throw new Error(j.message || j.error || "Failed to submit post.");
+      }
+
       if (j.success) {
         setComposerSuccess(true);
         setTimeout(() => {
           navigate('/calendar');
         }, 1500);
       } else {
-        throw new Error(j.error || "Failed to schedule post.");
+        throw new Error(j.error || "Failed to submit post.");
       }
     } catch (err: any) {
       setComposerError(err.message || "An unexpected error occurred.");

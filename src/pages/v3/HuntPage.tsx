@@ -45,11 +45,11 @@ export default function HuntPage() {
       setCompetitors([
         {
           id: "demo_comp_1",
-          competitor_name: sampleCompetitor.competitor_name,
-          competitor_url: sampleCompetitor.competitor_url,
-          latest_audit_score: sampleCompetitor.latest_audit_score,
+          name: sampleCompetitor.competitor_name,
+          website_url: sampleCompetitor.competitor_url,
+          audit_score: sampleCompetitor.latest_audit_score,
           last_audited_at: sampleCompetitor.last_audited_at,
-          audit_history: sampleCompetitor.audit_history
+          audit_report: (sampleCompetitor as any).audit_history?.[0]?.report
         }
       ]);
       setLoading(false);
@@ -58,7 +58,7 @@ export default function HuntPage() {
 
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/hunt/competitors', { headers });
+      const res = await fetch('/api/v3/competitors', { headers });
       const j = await res.json();
       if (j.success) setCompetitors(j.data);
     } catch (err) {
@@ -92,19 +92,21 @@ export default function HuntPage() {
       if (!formattedUrl.startsWith('http')) formattedUrl = 'https://' + formattedUrl;
 
       const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/hunt/competitors', {
+      const res = await fetch('/api/v3/competitors', {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          competitorUrl: formattedUrl,
-          competitorName: name.trim()
+          name: name.trim(),
+          website_url: formattedUrl
         })
       });
       const j = await res.json();
-      if (j.success) {
+      if (res.ok && j.success) {
         setUrl('');
         setName('');
         await fetchCompetitors();
+      } else {
+        alert(j.error || "Failed to track competitor.");
       }
     } catch (err) {
       alert("Failed to track competitor.");
@@ -121,19 +123,43 @@ export default function HuntPage() {
     setAuditingId(id);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/hunt/audit', {
+      const res = await fetch(`/api/v3/competitors/${id}/audit`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ id })
+        headers
       });
       const j = await res.json();
       if (j.success) {
         await fetchCompetitors();
+      } else {
+        alert(j.error || "Failed to run competitor audit.");
       }
     } catch (err) {
       alert("Failed to run competitor audit.");
     } finally {
       setAuditingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string, competitorName: string) => {
+    if (demo.isActive) {
+      alert("Deleting is disabled in Demo Mode.");
+      return;
+    }
+    if (!confirm(`Stop tracking ${competitorName}? This will delete all audit history.`)) return;
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/v3/competitors/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      const j = await res.json();
+      if (j.success) {
+        setCompetitors(prev => prev.filter(c => c.id !== id));
+        if (expandedId === id) setExpandedId(null);
+      }
+    } catch (err) {
+      alert("Failed to delete competitor.");
     }
   };
 
@@ -208,9 +234,9 @@ export default function HuntPage() {
           ) : (
             competitors.map(comp => {
               const isExpanded = expandedId === comp.id;
-              const hasScore = comp.latest_audit_score !== null;
+              const hasScore = comp.audit_score !== null && comp.audit_score !== undefined;
               const isAuditing = auditingId === comp.id;
-              const latestAuditDetails = comp.audit_history?.[comp.audit_history.length - 1];
+              const auditReportObj = comp.audit_report;
 
               return (
                 <div key={comp.id} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
@@ -219,35 +245,35 @@ export default function HuntPage() {
                   <div style={{ padding: '20px 24px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                       
-                      {/* Circular/Pill Score Badge */}
+                      {/* Circular Score Badge */}
                       <div 
                         style={{ 
                           width: 48, 
                           height: 48, 
                           borderRadius: '50%', 
-                          background: hasScore ? `${getScoreColor(comp.latest_audit_score)}1F` : 'var(--bg-soft)', 
-                          border: `2px solid ${hasScore ? getScoreColor(comp.latest_audit_score) : B}`,
+                          background: hasScore ? `${getScoreColor(comp.audit_score)}1F` : 'var(--bg-soft)', 
+                          border: `2px solid ${hasScore ? getScoreColor(comp.audit_score) : B}`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontWeight: 800,
                           fontSize: '1rem',
                           fontFamily: 'monospace',
-                          color: hasScore ? getScoreColor(comp.latest_audit_score) : G
+                          color: hasScore ? getScoreColor(comp.audit_score) : G
                         }}
                       >
-                        {hasScore ? comp.latest_audit_score : '--'}
+                        {hasScore ? comp.audit_score : '--'}
                       </div>
 
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{comp.competitor_name}</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{comp.name}</div>
                         <a 
-                          href={comp.competitor_url} 
+                          href={comp.website_url} 
                           target="_blank" 
                           rel="noreferrer"
                           style={{ fontSize: '0.75rem', color: P, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none', marginTop: 2 }}
                         >
-                          {comp.competitor_url} <ExternalLink size={10} />
+                          {comp.website_url} <ExternalLink size={10} />
                         </a>
                       </div>
 
@@ -263,6 +289,12 @@ export default function HuntPage() {
                         {isAuditing ? 'Scanning...' : 'Audit Now'}
                       </button>
                       <button 
+                        onClick={() => handleDelete(comp.id, comp.name)}
+                        style={{ border: 'none', background: 'none', color: '#EF4444', padding: 6, cursor: 'pointer' }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <button 
                         onClick={() => setExpandedId(isExpanded ? null : comp.id)}
                         style={{ border: 'none', background: 'none', color: G, padding: 6, cursor: 'pointer' }}
                       >
@@ -272,18 +304,17 @@ export default function HuntPage() {
 
                   </div>
 
-                  {/* Expanded Audit Report Details panel */}
+                  {/* Expanded Report Details Panel */}
                   {isExpanded && (
                     <div style={{ borderTop: `1px solid ${B}`, background: 'var(--bg-soft)', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
                       {!hasScore ? (
                         <div style={{ textAlign: 'center', color: G, fontSize: '0.8rem' }}>No audit history available. Click "Audit Now" to scan this competitor's readiness.</div>
                       ) : (
                         <>
-                          {/* Dimensions grid */}
                           <div>
                             <h4 style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G }}>Readiness breakdown</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                              {Object.entries(latestAuditDetails?.report?.dimensions || {}).map(([dim, val]: any) => (
+                              {Object.entries(auditReportObj?.dimensions || {}).map(([dim, val]: any) => (
                                 <div key={dim} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 6, padding: '10px 14px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4 }}>
                                     <span style={{ fontWeight: 600 }}>{dim}</span>
@@ -297,19 +328,22 @@ export default function HuntPage() {
                             </div>
                           </div>
 
-                          {/* Key competitor finding alerts */}
                           <div>
                             <h4 style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G }}>Key Findings & Gaps</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                              {(latestAuditDetails?.report?.findings || []).slice(0, 3).map((f: any, idx: number) => (
-                                <div key={idx} style={{ display: 'flex', gap: 10, background: '#fff', border: `1px solid ${B}`, borderRadius: 6, padding: 12, fontSize: '0.78rem' }}>
-                                  <Shield size={14} style={{ color: '#EF4444', flexShrink: 0, marginTop: 2 }} />
-                                  <div>
-                                    <div style={{ fontWeight: 700, marginBottom: 2 }}>{f.title || f}</div>
-                                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{f.impact || f.recommendation}</div>
+                              {(auditReportObj?.findings || []).slice(0, 3).map((f: any, idx: number) => {
+                                const title = typeof f === 'string' ? f : (f.title || 'Finding');
+                                const detail = typeof f === 'string' ? '' : (f.impact || f.recommendation || '');
+                                return (
+                                  <div key={idx} style={{ display: 'flex', gap: 10, background: '#fff', border: `1px solid ${B}`, borderRadius: 6, padding: 12, fontSize: '0.78rem' }}>
+                                    <Shield size={14} style={{ color: '#EF4444', flexShrink: 0, marginTop: 2 }} />
+                                    <div>
+                                      <div style={{ fontWeight: 700, marginBottom: 2 }}>{title}</div>
+                                      {detail && <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{detail}</div>}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         </>

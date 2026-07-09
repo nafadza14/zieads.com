@@ -65,7 +65,7 @@ export default function InboxPage() {
       const headers = await getAuthHeaders();
       const [connRes, countRes] = await Promise.all([
         fetch('/api/v3/connections', { headers }),
-        fetch('/api/v3/inbox/comments?isArchived=false', { headers })
+        fetch('/api/v3/inbox/comments?status=unread,read,replied', { headers })
       ]);
       const connJ = await connRes.json();
       if (connJ.success) setConnections(connJ.data.filter((c: any) => c.platform !== 'meta_ads' && c.platform !== 'google_ads' && c.platform !== 'tiktok_ads'));
@@ -98,7 +98,8 @@ export default function InboxPage() {
 
     try {
       const headers = await getAuthHeaders();
-      let url = `/api/v3/inbox/comments?isArchived=${archivedFilter}`;
+      const statusVal = archivedFilter ? 'archived' : 'unread,read,replied';
+      let url = `/api/v3/inbox/comments?status=${statusVal}`;
       if (sentimentFilter) {
         url += `&sentiment=${sentimentFilter}`;
       }
@@ -142,14 +143,13 @@ export default function InboxPage() {
     try {
       if (demo.isActive) {
         setReplyText('');
-        // Update local comment state to show user has replied
         const updated = comments.map(c => 
           c.id === selectedComment.id 
-            ? { ...c, user_has_replied: true, user_replied_at: new Date().toISOString() } 
+            ? { ...c, status: 'replied', replied_at: new Date().toISOString(), reply_text: replyText.trim() } 
             : c
         );
         setComments(updated);
-        setSelectedComment({ ...selectedComment, user_has_replied: true, user_replied_at: new Date().toISOString() });
+        setSelectedComment({ ...selectedComment, status: 'replied', replied_at: new Date().toISOString(), reply_text: replyText.trim() });
         setSubmittingReply(false);
         return;
       }
@@ -162,12 +162,12 @@ export default function InboxPage() {
       });
       const j = await res.json();
       if (j.success) {
-        const sentText = j.data?.reply_text || replyText.trim();
+        const sentText = replyText.trim();
         setReplyText('');
         setComments(prev => 
-          prev.map(c => c.id === selectedComment.id ? { ...c, user_has_replied: true, user_replied_at: new Date().toISOString(), comment_replies: [{ reply_text: sentText }] } : c)
+          prev.map(c => c.id === selectedComment.id ? { ...c, status: 'replied', replied_at: new Date().toISOString(), reply_text: sentText } : c)
         );
-        setSelectedComment(prev => ({ ...prev, user_has_replied: true, user_replied_at: new Date().toISOString(), comment_replies: [{ reply_text: sentText }] }));
+        setSelectedComment(prev => ({ ...prev, status: 'replied', replied_at: new Date().toISOString(), reply_text: sentText }));
       }
     } catch (err) {
       alert("Failed to submit comment reply.");
@@ -179,7 +179,7 @@ export default function InboxPage() {
   const handleArchive = async (id: string) => {
     try {
       if (demo.isActive) {
-        const updatedComments = comments.map(c => c.id === id ? { ...c, is_archived: true } : c).filter(c => !c.is_archived);
+        const updatedComments = comments.filter(c => c.id !== id);
         setComments(updatedComments);
         setSelectedComment(null);
         if (isMobile) setMobileView('list');
@@ -367,6 +367,10 @@ export default function InboxPage() {
               comments.map(c => {
                 const isSelected = selectedComment?.id === c.id;
                 const sentStyle = getSentimentStyle(c.sentiment);
+                const userHasReplied = c.status === 'replied';
+                const textVal = c.text || c.comment_text;
+                const commenter = c.author_username || c.commenter_handle;
+                const postedDate = c.posted_at || c.commented_at;
                 return (
                   <div 
                     key={c.id} 
@@ -388,7 +392,7 @@ export default function InboxPage() {
                     <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {getPlatformIcon(c.platform)}
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{c.commenter_handle}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{commenter}</span>
                       </div>
                       <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, ...sentStyle }}>
                         {c.sentiment || 'neutral'}
@@ -396,12 +400,12 @@ export default function InboxPage() {
                     </div>
 
                     <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>
-                      {c.comment_text}
+                      {textVal}
                     </p>
 
                     <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: G }}>
-                      <span>{new Date(c.commented_at).toLocaleDateString()}</span>
-                      {c.user_has_replied && <span style={{ color: '#10B981', fontWeight: 600 }}>Replied</span>}
+                      <span>{new Date(postedDate).toLocaleDateString()}</span>
+                      {userHasReplied && <span style={{ color: '#10B981', fontWeight: 600 }}>Replied</span>}
                     </div>
                   </div>
                 );
@@ -430,7 +434,7 @@ export default function InboxPage() {
                 <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20 }}>
                   <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 800 }}>{selectedComment.commenter_handle}</span>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 800 }}>{selectedComment.author_username || selectedComment.commenter_handle}</span>
                       {getPlatformIcon(selectedComment.platform)}
                     </div>
                     <button 
@@ -442,7 +446,7 @@ export default function InboxPage() {
                   </div>
 
                   <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    "{selectedComment.comment_text}"
+                    "{selectedComment.text || selectedComment.comment_text}"
                   </p>
 
                   {selectedComment.social_posts?.content_text && (
@@ -453,14 +457,14 @@ export default function InboxPage() {
                 </div>
 
                 {/* Thread replies */}
-                {selectedComment.user_has_replied ? (
+                {selectedComment.status === 'replied' ? (
                   <div style={{ background: '#E1F5FE', border: '1px solid #B3E5FC', borderRadius: 8, padding: 20, alignSelf: 'flex-end', width: '90%' }}>
                     <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#01579B' }}>You (via ZieAds)</span>
-                      <span style={{ fontSize: '0.65rem', color: G }}>{selectedComment.user_replied_at ? new Date(selectedComment.user_replied_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      <span style={{ fontSize: '0.65rem', color: G }}>{selectedComment.replied_at ? new Date(selectedComment.replied_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: '#0288D1' }}>
-                      {selectedComment.comment_replies?.[0]?.reply_text || "Reply sent successfully."}
+                      {selectedComment.reply_text || selectedComment.comment_replies?.[0]?.reply_text || "Reply sent successfully."}
                     </p>
                   </div>
                 ) : (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
@@ -11,16 +12,20 @@ import {
   MessageSquare,
   Calendar as CalendarIcon, 
   Eye, 
-  Trash2 
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 
 const B = 'var(--border)';
 const P = 'var(--primary)';
 const G = 'var(--text-muted)';
+const D = 'var(--text)';
 
 export default function CalendarPage() {
+  const navigate = useNavigate();
   const demo = useDemoMode();
   const [events, setEvents] = useState<any[]>([]);
+  const [visualFeed, setVisualFeed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -37,80 +42,6 @@ export default function CalendarPage() {
       : { 'Content-Type': 'application/json' };
   };
 
-  const fetchEvents = async () => {
-    if (demo.isActive) {
-      const eventsList = [
-        ...sampleScheduledPosts.map(p => ({
-          id: p.id,
-          title: p.title,
-          start: p.start,
-          type: "scheduled",
-          status: p.status,
-          platforms: p.platforms,
-          media: p.media
-        })),
-        ...sampleOrganicPosts.map(p => ({
-          id: p.id,
-          title: p.title,
-          start: p.start,
-          type: "published",
-          status: "published",
-          platforms: p.platforms,
-          media: p.media
-        }))
-      ];
-      setEvents(eventsList);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/calendar/events', { headers });
-      const j = await res.json();
-      if (j.success) setEvents(j.data);
-    } catch (err) {
-      console.error("Failed to fetch calendar events:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [demo.isActive]);
-
-  const handleDeletePost = async (id: string) => {
-    if (demo.isActive) {
-      alert("Cannot delete items in Demo Mode.");
-      return;
-    }
-    if (!confirm("Are you sure you want to cancel and delete this scheduled post?")) return;
-    setDeletingId(id);
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/v3/scheduler/posts/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-      const j = await res.json();
-      if (j.success) {
-        setEvents(prev => prev.filter(e => e.id !== id));
-        setSelectedEvent(null);
-      }
-    } catch (err) {
-      alert("Failed to delete post.");
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   // Calendar calculation helpers
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -122,9 +53,7 @@ export default function CalendarPage() {
 
   const firstDayIndex = new Date(year, month, 1).getDay();
   const totalDays = new Date(year, month + 1, 0).getDate();
-
   const prevMonthTotalDays = new Date(year, month, 0).getDate();
-
   const nextMonthDates = 42 - (firstDayIndex + totalDays);
 
   const daysGrid: { dayNum: number; dateKey: string; isCurrentMonth: boolean }[] = [];
@@ -161,6 +90,111 @@ export default function CalendarPage() {
     });
   }
 
+  const fetchEvents = async () => {
+    if (demo.isActive) {
+      const eventsList = [
+        ...sampleScheduledPosts.map(p => ({
+          id: p.id,
+          title: p.title,
+          start: p.start,
+          type: "scheduled",
+          status: p.status,
+          platforms: p.platforms,
+          media: p.media
+        })),
+        ...sampleOrganicPosts.map(p => ({
+          id: p.id,
+          title: p.title,
+          start: p.start,
+          type: "published",
+          status: "published",
+          platforms: p.platforms,
+          media: p.media
+        }))
+      ];
+      setEvents(eventsList);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const fromStr = daysGrid[0] ? `${daysGrid[0].dateKey}T00:00:00Z` : new Date(year, month - 1, 20).toISOString();
+      const toStr = daysGrid[daysGrid.length - 1] ? `${daysGrid[daysGrid.length - 1].dateKey}T23:59:59Z` : new Date(year, month + 1, 10).toISOString();
+
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/v3/posts/scheduled?from=${fromStr}&to=${toStr}`, { headers });
+      const j = await res.json();
+      if (j.success) {
+        const mappedEvents = j.data.map((p: any) => ({
+          id: p.id,
+          title: p.caption || 'No caption',
+          start: p.status === 'published' ? p.published_at : p.scheduled_for,
+          type: p.status === 'published' ? 'published' : 'scheduled',
+          status: p.status,
+          platforms: [{ platform: p.platform, account_handle: p.platform_account_id }],
+          media: p.media_urls || [],
+          permalink: p.platform_permalink,
+          error_message: p.error_message
+        }));
+        setEvents(mappedEvents);
+      }
+    } catch (err) {
+      console.error("Failed to fetch calendar events:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchVisualFeed = async () => {
+    if (demo.isActive) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/v3/analytics/instagram-media?limit=6', { headers });
+      const j = await res.json();
+      if (j.success && j.connected) {
+        setVisualFeed(j.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch visual feed:", err);
+    }
+  };
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+    fetchVisualFeed();
+  }, [demo.isActive, currentDate]);
+
+  const handleDeletePost = async (id: string) => {
+    if (demo.isActive) {
+      alert("Cannot delete items in Demo Mode.");
+      return;
+    }
+    if (!confirm("Are you sure you want to cancel and delete this scheduled post?")) return;
+    setDeletingId(id);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/v3/posts/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      const j = await res.json();
+      if (j.success) {
+        setEvents(prev => prev.filter(e => e.id !== id));
+        setSelectedEvent(null);
+      }
+    } catch (err) {
+      alert("Failed to delete post.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handlePrevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
   };
@@ -188,13 +222,29 @@ export default function CalendarPage() {
     return <MessageSquare size={10} style={{ color: '#fff' }} />;
   };
 
-  // Instagram Feed preview list
-  const instagramFeedEvents = events
-    .filter(e => {
-      const isIg = e.platforms?.some((p: any) => p.platform?.toLowerCase().includes('instagram'));
-      return isIg && e.media && e.media.length > 0;
-    })
-    .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
+  // Merge scheduled & published for Instagram Preview
+  const igScheduled = events.filter(e => 
+    e.type === 'scheduled' && 
+    e.platforms?.some((p: any) => p.platform?.toLowerCase() === 'instagram')
+  );
+  const igScheduledSorted = [...igScheduled].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+  const mergedFeedItems = [
+    ...igScheduledSorted.slice(0, 3).map(e => ({
+      id: e.id,
+      url: e.media?.[0] || '',
+      isScheduled: true,
+      event: e,
+      permalink: null
+    })),
+    ...visualFeed.slice(0, 6).map((item, idx) => ({
+      id: `pub_${idx}`,
+      url: item.media_url,
+      isScheduled: false,
+      event: null,
+      permalink: item.permalink
+    }))
+  ];
 
   return (
     <V3Layout>
@@ -250,6 +300,11 @@ export default function CalendarPage() {
                 return (
                   <div 
                     key={idx} 
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) {
+                        navigate(`/composer?schedule=${cell.dateKey}T12:00`);
+                      }
+                    }}
                     style={{ 
                       background: cell.isCurrentMonth ? '#fff' : 'var(--bg-soft)', 
                       border: `1px solid ${B}`, 
@@ -259,7 +314,8 @@ export default function CalendarPage() {
                       flexDirection: 'column',
                       gap: 6,
                       boxShadow: 'var(--shadow-sm)',
-                      minHeight: 90
+                      minHeight: 90,
+                      cursor: 'pointer'
                     }}
                   >
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: cell.isCurrentMonth ? 'var(--text)' : G }}>
@@ -271,13 +327,16 @@ export default function CalendarPage() {
                       {dayEvents.map(e => (
                         <div 
                           key={e.id}
-                          onClick={() => setSelectedEvent(e)}
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            setSelectedEvent(e);
+                          }}
                           style={{ 
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 4,
-                            background: getPlatformColor(e.platforms?.[0]?.platform || 'instagram'),
+                            background: e.status === 'failed' ? '#EF4444' : getPlatformColor(e.platforms?.[0]?.platform || 'instagram'),
                             color: '#fff',
                             fontSize: '0.68rem',
                             fontWeight: 600,
@@ -287,8 +346,10 @@ export default function CalendarPage() {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis'
                           }}
+                          title={e.error_message ? `Publish Failed: ${e.error_message}` : e.title}
                         >
                           {getPlatformIcon(e.platforms?.[0]?.platform || 'instagram')}
+                          {e.status === 'failed' && <span style={{ marginRight: 2 }}>⚠️</span>}
                           {e.title}
                         </div>
                       ))}
@@ -309,25 +370,44 @@ export default function CalendarPage() {
             <p style={{ margin: 0, fontSize: '0.73rem', color: G }}>Visualize how scheduled images and reels arrange on Instagram.</p>
           </div>
 
-          {instagramFeedEvents.length === 0 ? (
+          {mergedFeedItems.length === 0 ? (
             <div style={{ border: `2px dashed ${B}`, padding: 40, borderRadius: 8, textAlign: 'center', color: G, fontSize: '0.78rem' }}>
-              No visual Instagram posts scheduled yet.
+              Your Instagram feed will preview here once you schedule or publish a post.
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
-              {instagramFeedEvents.map(e => {
-                const mediaItem = e.media?.[0];
-                const url = typeof mediaItem === 'string' ? mediaItem : (mediaItem?.file_url || '');
-                return (
-                  <div key={e.id} style={{ width: '100%', aspectRatio: '1/1', background: 'var(--bg-soft)', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setSelectedEvent(e)}>
-                    {url ? (
-                      <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: G, fontSize: '0.6rem' }}>Text</div>
-                    )}
-                  </div>
-                );
-              })}
+              {mergedFeedItems.map((item, idx) => (
+                <div 
+                  key={idx} 
+                  style={{ 
+                    width: '100%', 
+                    aspectRatio: '1/1', 
+                    background: 'var(--bg-soft)', 
+                    overflow: 'hidden', 
+                    cursor: 'pointer',
+                    position: 'relative',
+                    border: item.isScheduled ? '2px solid #E1306C' : 'none'
+                  }} 
+                  onClick={() => {
+                    if (item.isScheduled) {
+                      setSelectedEvent(item.event);
+                    } else if (item.permalink) {
+                      window.open(item.permalink, '_blank');
+                    }
+                  }}
+                >
+                  {item.url ? (
+                    <img src={item.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: G, fontSize: '0.6rem' }}>Text</div>
+                  )}
+                  {item.isScheduled && (
+                    <span style={{ position: 'absolute', bottom: 2, right: 2, background: '#E1306C', color: '#fff', fontSize: '0.55rem', padding: '1px 3px', borderRadius: 2, fontWeight: 700 }}>
+                      PLAN
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -340,7 +420,7 @@ export default function CalendarPage() {
           <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, width: 440, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                {selectedEvent.type === 'scheduled' ? 'Scheduled Post Details' : 'Published Post History'}
+                {selectedEvent.status === 'failed' ? 'Failed Publish Details' : selectedEvent.type === 'scheduled' ? 'Scheduled Post Details' : 'Published Post History'}
               </h3>
               <span onClick={() => setSelectedEvent(null)} style={{ cursor: 'pointer', color: G, fontSize: '0.9rem' }}>✕</span>
             </div>
@@ -349,10 +429,17 @@ export default function CalendarPage() {
               
               {/* Timing Metadata */}
               <div style={{ display: 'flex', gap: 8, fontSize: '0.75rem', color: G }}>
-                <span>Type: <strong style={{ color: P }}>{selectedEvent.type.toUpperCase()}</strong></span>
+                <span>Status: <strong style={{ color: selectedEvent.status === 'failed' ? '#EF4444' : P }}>{selectedEvent.status.toUpperCase()}</strong></span>
                 <span>•</span>
                 <span>Time: {new Date(selectedEvent.start).toLocaleString()}</span>
               </div>
+
+              {selectedEvent.error_message && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: 12, borderRadius: 6, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                  <div><strong>Error:</strong> {selectedEvent.error_message}</div>
+                </div>
+              )}
 
               {/* Platforms */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -382,7 +469,14 @@ export default function CalendarPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifySelf: 'stretch', justifyContent: 'space-between', borderTop: `1px solid ${B}`, paddingTop: 16, marginTop: 8 }}>
-              {selectedEvent.type === 'scheduled' ? (
+              {selectedEvent.status === 'published' && selectedEvent.permalink ? (
+                <button 
+                  onClick={() => window.open(selectedEvent.permalink, '_blank')}
+                  style={{ border: `1px solid ${B}`, background: '#fff', color: D, padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <Eye size={12} /> View on Instagram
+                </button>
+              ) : selectedEvent.status !== 'publishing' ? (
                 <button 
                   onClick={() => handleDeletePost(selectedEvent.id)}
                   disabled={deletingId === selectedEvent.id}

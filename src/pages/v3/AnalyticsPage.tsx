@@ -77,9 +77,9 @@ export default function AnalyticsPage() {
 
       const calendarJ = await calendarRes.json();
       if (calendarJ.success) {
-        // Filter out only published posts and sort them by engagement for top performing posts list
         const publishedPosts = calendarJ.data
           .filter((e: any) => e.type === 'published')
+          .sort((a: any, b: any) => ((b.likes || 0) + (b.comments || 0)) - ((a.likes || 0) + (a.comments || 0)))
           .slice(0, 10);
         setPosts(publishedPosts);
       }
