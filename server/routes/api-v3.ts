@@ -2679,7 +2679,7 @@ async function compileBriefingHandler(req: any, res: any) {
 
     // 3. Load last 7 days of account insights
     const sevenDaysAgoDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    const { data: accountInsights, error: accErr } = await supabaseAdmin
+    let { data: accountInsights, error: accErr } = await supabaseAdmin
       .from("account_insights_daily")
       .select("*")
       .eq("user_id", userId)
@@ -2690,7 +2690,7 @@ async function compileBriefingHandler(req: any, res: any) {
 
     // 4. Load last 7 days of post insights
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
-    const { data: postInsights, error: postErr } = await supabaseAdmin
+    let { data: postInsights, error: postErr } = await supabaseAdmin
       .from("post_insights_cache")
       .select("*")
       .eq("user_id", userId)
@@ -2700,12 +2700,44 @@ async function compileBriefingHandler(req: any, res: any) {
 
     if (postErr) throw postErr;
 
-    // 5. Insufficient Data check
+    // 5. Insufficient Data check (Auto sync on demand if empty)
     if ((!accountInsights || accountInsights.length === 0) && (!postInsights || postInsights.length === 0)) {
-      return res.json({
-        status: "insufficient_data",
-        message: "The agent is still learning your patterns. Your briefing will be sharper in a few days."
-      });
+      console.log(`[V3 Briefing] Insufficient briefing data. Attempting on-demand insights sync for user ${userId}...`);
+      try {
+        await syncInstagramInsightsForUser(userId);
+        
+        // Reload the insights
+        const { data: newAccountInsights } = await supabaseAdmin
+          .from("account_insights_daily")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("snapshot_date", sevenDaysAgoDate)
+          .order("snapshot_date", { ascending: false });
+
+        const { data: newPostInsights } = await supabaseAdmin
+          .from("post_insights_cache")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("post_published_at", sevenDaysAgo)
+          .order("post_published_at", { ascending: false })
+          .limit(20);
+
+        if ((newAccountInsights && newAccountInsights.length > 0) || (newPostInsights && newPostInsights.length > 0)) {
+          accountInsights = newAccountInsights;
+          postInsights = newPostInsights;
+        } else {
+          return res.json({
+            success: false,
+            error: "The agent is still learning your patterns. Your briefing will be sharper in a few days."
+          });
+        }
+      } catch (syncErr: any) {
+        console.error("[V3 Briefing] On-demand insights sync failed:", syncErr.message);
+        return res.json({
+          success: false,
+          error: "The agent is still learning your patterns. Your briefing will be sharper in a few days."
+        });
+      }
     }
 
     // 6. Build Claude prompt
