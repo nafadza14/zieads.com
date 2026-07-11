@@ -1,5 +1,6 @@
 import express from "express";
 import Anthropic from "@anthropic-ai/sdk";
+import { MockAnthropic } from "../utils/sumopodClient.js";
 import {
   getUserIdFromRequest,
   createConversation,
@@ -28,6 +29,9 @@ function getRateLimit(plan: string | null | undefined): number {
 }
 
 function getAnthropicClient() {
+  if (process.env.SUMOPOD_API_KEY) {
+    return new MockAnthropic() as any;
+  }
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY not set");
   return new Anthropic({ apiKey: key });

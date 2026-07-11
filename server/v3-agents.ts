@@ -1,9 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin } from "./supabaseServer.js";
+import { callSumopodAI } from "./utils/sumopodClient.js";
 
 // Helper to resolve the correct AI API
 async function callAI(systemPrompt: string, userPrompt: string, usePro = false): Promise<string> {
+  const sumopodApiKey = process.env.SUMOPOD_API_KEY;
+  if (sumopodApiKey) {
+    try {
+      return await callSumopodAI(systemPrompt, userPrompt);
+    } catch (e: any) {
+      console.warn("[V3 AI] Sumopod call failed, falling back:", e.message);
+    }
+  }
+
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 

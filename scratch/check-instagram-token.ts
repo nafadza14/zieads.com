@@ -1,10 +1,8 @@
+import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
 import { getDecryptedToken } from "../server/utils/tokenHelper.js";
 import { getProfile } from "../server/utils/instagramApi.js";
 import { syncAll } from "../server/utils/sync-instagram.js";
-
-dotenv.config();
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";

@@ -1,5 +1,6 @@
 import { getDecryptedToken } from './tokenHelper.js';
 import Anthropic from '@anthropic-ai/sdk';
+import { MockAnthropic } from './sumopodClient.js';
 
 export interface ConnectedInstagram {
   accessToken: string;
@@ -56,6 +57,9 @@ export async function callInstagramAPI<T = any>(
  * Returns an initialized Anthropic SDK client.
  */
 export function getClaudeClient(): Anthropic {
+  if (process.env.SUMOPOD_API_KEY) {
+    return new MockAnthropic() as any;
+  }
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY environment variable is not configured.");
