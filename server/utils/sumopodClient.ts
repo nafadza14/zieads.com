@@ -3,7 +3,7 @@ export class MockAnthropic {
     create: async (params: {
       model: string;
       max_tokens?: number;
-      system?: string;
+      system?: string | Array<any>;
       messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     }) => {
       const sumopodApiKey = process.env.SUMOPOD_API_KEY;
@@ -15,7 +15,25 @@ export class MockAnthropic {
       
       const openAiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
       if (params.system) {
-        openAiMessages.push({ role: "system", content: params.system });
+        let systemPrompt = "";
+        if (typeof params.system === "string") {
+          systemPrompt = params.system;
+        } else if (Array.isArray(params.system)) {
+          for (const item of params.system) {
+            if (item && typeof item === "object") {
+              if (item.text && typeof item.text === "string") {
+                systemPrompt += (systemPrompt ? "\n" : "") + item.text;
+              } else if (item.content && typeof item.content === "string") {
+                systemPrompt += (systemPrompt ? "\n" : "") + item.content;
+              }
+            } else if (typeof item === "string") {
+              systemPrompt += (systemPrompt ? "\n" : "") + item;
+            }
+          }
+        }
+        if (systemPrompt) {
+          openAiMessages.push({ role: "system", content: systemPrompt });
+        }
       }
       for (const msg of params.messages) {
         openAiMessages.push({
