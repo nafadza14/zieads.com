@@ -90,40 +90,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/api/temp-credits-grant", async (req, res) => {
-  try {
-    const userId = "808ef24d-d09d-4960-b4bb-42cd38afd1f4";
-    const serviceRoleKeyStatus = process.env.SUPABASE_SERVICE_ROLE_KEY ? `present (starts with ${process.env.SUPABASE_SERVICE_ROLE_KEY.slice(0, 10)})` : "missing";
-    
-    console.log(`[Temp Credit Grant] Service key status: ${serviceRoleKeyStatus}`);
-    
-    const { data, error } = await supabaseAdmin
-      .from("user_credits")
-      .upsert({
-        user_id: userId,
-        ai_chat_daily_remaining: 100,
-        skill_run_monthly_remaining: 100,
-        lifetime_skill_runs: 0,
-        lifetime_ai_messages_sent: 0
-      });
-      
-    if (error) {
-      return res.status(500).json({
-        success: false,
-        error: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-        serviceKeyStatus: serviceRoleKeyStatus
-      });
-    }
-    
-    res.json({ success: true, message: "Granted 100 credits successfully!", data, serviceKeyStatus: serviceRoleKeyStatus });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message, stack: err.stack });
-  }
-});
-
 // ─── Benchmarks ────────────────────────────────────────
 app.get("/api/benchmarks", async (req, res) => {
   try {
@@ -236,13 +202,17 @@ app.post("/api/audit", async (req, res) => {
 
   // Credit pre-flight check
   if (userId) {
-    const [planRes, creditsRes] = await Promise.all([
-      supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).single(),
-      supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).single(),
-    ]);
-    const remaining = creditsRes.data?.skill_run_monthly_remaining ?? 0;
-    if (remaining !== -1 && remaining < 3) {
-      return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: 'Not enough skill credits. Full audit costs 3 credits.', upgrade_url: '/pricing' });
+    try {
+      const [planRes, creditsRes] = await Promise.all([
+        supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
+        supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
+      ]);
+      const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
+      if (remaining !== -1 && remaining < 3) {
+        return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: 'Not enough skill credits. Full audit costs 3 credits.', upgrade_url: '/pricing' });
+      }
+    } catch (e: any) {
+      console.warn("[V0.2 Credit Check] Bypassing credit check due to table error:", e.message);
     }
   }
 
@@ -294,13 +264,17 @@ app.post("/api/skill/:name", async (req, res) => {
     const operationId = SKILL_ROUTE_TO_OPERATION[name] || `skill_ads_${name}`;
     const op = OPERATION_COSTS[operationId];
     const cost = op?.cost ?? 2;
-    const [planRes, creditsRes] = await Promise.all([
-      supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).single(),
-      supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).single(),
-    ]);
-    const remaining = creditsRes.data?.skill_run_monthly_remaining ?? 0;
-    if (remaining !== -1 && remaining < cost) {
-      return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: `Not enough skill credits. This skill costs ${cost} credits.`, upgrade_url: '/pricing' });
+    try {
+      const [planRes, creditsRes] = await Promise.all([
+        supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
+        supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
+      ]);
+      const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
+      if (remaining !== -1 && remaining < cost) {
+        return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: `Not enough skill credits. This skill costs ${cost} credits.`, upgrade_url: '/pricing' });
+      }
+    } catch (e: any) {
+      console.warn("[V0.2 Credit Check] Bypassing skill credit check due to table error:", e.message);
     }
   }
 
