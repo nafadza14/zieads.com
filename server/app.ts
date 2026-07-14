@@ -93,6 +93,10 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/temp-credits-grant", async (req, res) => {
   try {
     const userId = "808ef24d-d09d-4960-b4bb-42cd38afd1f4";
+    const serviceRoleKeyStatus = process.env.SUPABASE_SERVICE_ROLE_KEY ? `present (starts with ${process.env.SUPABASE_SERVICE_ROLE_KEY.slice(0, 10)})` : "missing";
+    
+    console.log(`[Temp Credit Grant] Service key status: ${serviceRoleKeyStatus}`);
+    
     const { data, error } = await supabaseAdmin
       .from("user_credits")
       .upsert({
@@ -102,10 +106,21 @@ app.get("/api/temp-credits-grant", async (req, res) => {
         lifetime_skill_runs: 0,
         lifetime_ai_messages_sent: 0
       });
-    if (error) throw error;
-    res.json({ success: true, message: "Granted 100 credits successfully!", data });
+      
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        serviceKeyStatus: serviceRoleKeyStatus
+      });
+    }
+    
+    res.json({ success: true, message: "Granted 100 credits successfully!", data, serviceKeyStatus: serviceRoleKeyStatus });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message, stack: err.stack });
   }
 });
 
