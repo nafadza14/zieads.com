@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { callSumopodAI } from "./utils/sumopodClient.js";
 import type { ScrapedData } from "./scraper.js";
 
 export interface BusinessContext {
@@ -1470,22 +1471,39 @@ export async function runAgent(
 
   const ai = getAI();
   const prompt = promptFn(context);
+  let parsed: any;
+
+  const sumopodApiKey = process.env.SUMOPOD_API_KEY;
+  if (sumopodApiKey) {
+    try {
+      console.log(`[V0.2 Agent] Routing agent ${agentName} run to Sumopod (model: MiniMax-M2.7-highspeed)...`);
+      const responseText = await callSumopodAI(
+        "You are ZieAds marketing audit assistant. You must respond in valid JSON format matching the schema requested by the user.",
+        prompt
+      );
+      parsed = JSON.parse(responseText);
+    } catch (e: any) {
+      console.warn(`[V0.2 Agent] Sumopod run failed for agent ${agentName}, falling back to Gemini:`, e.message);
+    }
+  }
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.3,
-        maxOutputTokens: 8192,
-      },
-    });
+    if (!parsed) {
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          temperature: 0.3,
+          maxOutputTokens: 8192,
+        },
+      });
 
-    const text = response.text;
-    if (!text) throw new Error(`No response from agent ${agentName}`);
-
-    const parsed = JSON.parse(text);
+      const text = response.text;
+      if (!text) throw new Error(`No response from agent ${agentName}`);
+      parsed = JSON.parse(text);
+    }
 
     // Normalize any agent that uses the funnel-conversion prompt (two scores)
     const FUNNEL_AGENTS = new Set(["funnel-conversion", "ads-funnel", "funnel"]);

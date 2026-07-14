@@ -90,6 +90,25 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.get("/api/temp-credits-grant", async (req, res) => {
+  try {
+    const userId = "808ef24d-d09d-4960-b4bb-42cd38afd1f4";
+    const { data, error } = await supabaseAdmin
+      .from("user_credits")
+      .upsert({
+        user_id: userId,
+        ai_chat_daily_remaining: 100,
+        skill_run_monthly_remaining: 100,
+        lifetime_skill_runs: 0,
+        lifetime_ai_messages_sent: 0
+      });
+    if (error) throw error;
+    res.json({ success: true, message: "Granted 100 credits successfully!", data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Benchmarks ────────────────────────────────────────
 app.get("/api/benchmarks", async (req, res) => {
   try {
