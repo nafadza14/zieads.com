@@ -12,6 +12,7 @@ import {
   incrementAgentUsage,
   getRecentAuditContext,
   getProfile,
+  supabaseAdmin,
 } from "../supabaseServer.js";
 
 export const agentRouter = express.Router();
@@ -156,6 +157,93 @@ ${data || "No additional data provided — use audit context above."}
 Produce the full structured output for this mode. Include all tables, scores, financial impact figures, and prioritized recommendations.`;
 }
 
+async function getV3DataContext(userId: string): Promise<string> {
+  let context = "";
+
+  // 1. Connected Channels
+  try {
+    const { data } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform, platform_username, is_active")
+      .eq("user_id", userId)
+      .eq("is_active", true);
+    if (data && data.length > 0) {
+      context += `### Connected Accounts:\n`;
+      data.forEach(c => {
+        context += `- Platform: ${c.platform.toUpperCase()}, Username: @${c.platform_username}\n`;
+      });
+    } else {
+      context += `### Connected Accounts: None connected yet.\n`;
+    }
+  } catch (e: any) {
+    context += `### Connected Accounts: Error loading connections.\n`;
+  }
+
+  // 2. Channel Performance Metrics
+  try {
+    const { data } = await supabaseAdmin
+      .from("account_insights_daily")
+      .select("platform, snapshot_date, followers_count, media_count")
+      .eq("user_id", userId)
+      .order("snapshot_date", { ascending: false })
+      .limit(3);
+    if (data && data.length > 0) {
+      context += `\n### Recent Channel Insights:\n`;
+      data.forEach(d => {
+        context += `- [${d.platform.toUpperCase()} - ${d.snapshot_date}]: Followers: ${d.followers_count}, Total Posts: ${d.media_count}\n`;
+      });
+    }
+  } catch (e: any) {}
+
+  // 3. Top Posts
+  try {
+    const { data } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("platform, platform_media_id, impressions, reach, likes, comments_count")
+      .eq("user_id", userId)
+      .order("post_published_at", { ascending: false })
+      .limit(5);
+    if (data && data.length > 0) {
+      context += `\n### Recent Post Performance:\n`;
+      data.forEach(p => {
+        context += `- [${p.platform.toUpperCase()} Post ID: ${p.platform_media_id}]: Impressions: ${p.impressions}, Reach: ${p.reach}, Likes: ${p.likes}, Comments: ${p.comments_count}\n`;
+      });
+    }
+  } catch (e: any) {}
+
+  // 4. Scheduled Posts
+  try {
+    const { data } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("platform, caption, media_type, scheduled_for, status")
+      .eq("user_id", userId)
+      .order("scheduled_for", { ascending: true })
+      .limit(5);
+    if (data && data.length > 0) {
+      context += `\n### Scheduled Drafts/Posts:\n`;
+      data.forEach(s => {
+        context += `- [${s.platform.toUpperCase()} (${s.status})]: "${s.caption?.slice(0, 60) || ""}" - Scheduled for: ${s.scheduled_for ? new Date(s.scheduled_for).toDateString() : 'Draft'}\n`;
+      });
+    }
+  } catch (e: any) {}
+
+  // 5. Daily Briefing
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data } = await supabaseAdmin
+      .from("ai_briefings")
+      .select("summary")
+      .eq("user_id", userId)
+      .eq("briefing_date", today)
+      .maybeSingle();
+    if (data && data.summary) {
+      context += `\n### Today's AI Analyst Briefing:\nSummary: ${data.summary}\n`;
+    }
+  } catch (e: any) {}
+
+  return context || "No active channel data available yet.";
+}
+
 // ─── POST /api/agent/message ─────────────────────────────────────────────
 agentRouter.post("/message", async (req, res) => {
   const userId = await getUserIdFromRequest(req);
@@ -195,6 +283,7 @@ agentRouter.post("/message", async (req, res) => {
   const history = await getConversationMessages(convId, userId);
   const recentHistory = history.slice(-20);
   const auditContext = await getRecentAuditContext(userId);
+  const v3Context = await getV3DataContext(userId);
 
   const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
 
@@ -215,7 +304,13 @@ agentRouter.post("/message", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-6",
       max_tokens: 2048,
-      system: buildSystemPrompt(profile),
+      system: `${buildSystemPrompt(profile)}
+
+## User's Connected Social Media Channels & v0.3 Context:
+${v3Context}
+
+## User's Audit Context:
+${auditContext}`,
       messages,
     });
 
@@ -269,6 +364,7 @@ agentRouter.post("/analyze", async (req, res) => {
   }
 
   const auditContext = await getRecentAuditContext(userId);
+  const v3Context = await getV3DataContext(userId);
   const prompt = buildAnalysisPrompt(mode, data || "", auditContext);
 
   // Resolve or create a conversation for this analysis
@@ -298,7 +394,10 @@ agentRouter.post("/analyze", async (req, res) => {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-6",
       max_tokens: 4096,
-      system: buildSystemPrompt(profile),
+      system: `${buildSystemPrompt(profile)}
+
+## User's Connected Social Media Channels & v0.3 Context:
+${v3Context}`,
       messages: [{ role: "user", content: prompt }],
     });
 
