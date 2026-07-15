@@ -304,3 +304,33 @@ export async function isTestUser(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function deductCredits(
+  userId: string,
+  pool: "ai_chat_daily" | "skill_run_monthly",
+  amount: number,
+  operationId: string
+) {
+  try {
+    const { data: planRes } = await supabaseAdmin
+      .from("user_plan")
+      .select("plan_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const planId = planRes?.plan_id || "free";
+
+    const { data, error } = await supabaseAdmin.rpc("atomic_deduct_credits", {
+      p_user_id: userId,
+      p_pool: pool,
+      p_amount: amount,
+      p_operation_id: operationId,
+      p_plan_id: planId,
+    });
+    if (error) throw error;
+    return data;
+  } catch (e: any) {
+    console.error(`[Credits] Failed to deduct ${amount} credits from pool ${pool}:`, e.message);
+    return null;
+  }
+}
+

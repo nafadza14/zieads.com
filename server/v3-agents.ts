@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
-import { supabaseAdmin } from "./supabaseServer.js";
+import { supabaseAdmin, deductCredits } from "./supabaseServer.js";
 import { callSumopodAI } from "./utils/sumopodClient.js";
 
 // Helper to resolve the correct AI API
@@ -73,6 +73,8 @@ async function logCreditUsage(params: {
   if (error) {
     console.error("[V3 DB] Failed to log credit usage:", error.message);
   }
+  // Deduct actual monthly skill credits to align v0.2 and v0.3 credit states
+  await deductCredits(params.userId, 'skill_run_monthly', params.credits, params.eventType);
 }
 
 // ─── 1. Brand Voice Profiler ──────────────────────────────────────────────────

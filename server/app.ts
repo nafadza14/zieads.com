@@ -19,6 +19,7 @@ import {
   getUserSkillResults,
   getBenchmarkAverages,
   isTestUser,
+  deductCredits,
 } from "./supabaseServer.js";
 import { publicApiRouter } from "./routes/api-public.js";
 import { adsLibraryRouter } from "./routes/api-ads-library.js";
@@ -247,6 +248,7 @@ app.post("/api/audit", async (req, res) => {
         agentResults,
         report,
       });
+      await deductCredits(userId, 'skill_run_monthly', 3, 'full_audit');
     }
 
     res.json({ success: true, data: { url, businessName: context.businessName, businessType: context.businessType, report, agentResults, generatedAt: new Date().toISOString() } });
@@ -315,6 +317,7 @@ app.post("/api/skill/:name", async (req, res) => {
         agentResults: [result],
         report: { ...result, overall: score, grade },
       });
+      await deductCredits(userId, 'skill_run_monthly', cost, `skill_${name}`);
     }
 
     res.json({ success: true, data: result });

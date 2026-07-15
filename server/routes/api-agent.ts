@@ -13,6 +13,7 @@ import {
   getRecentAuditContext,
   getProfile,
   supabaseAdmin,
+  deductCredits,
 } from "../supabaseServer.js";
 
 export const agentRouter = express.Router();
@@ -318,6 +319,7 @@ ${auditContext}`,
 
     await saveMessage({ conversationId: convId, userId, role: "assistant", content: assistantContent });
     await incrementAgentUsage(userId);
+    await deductCredits(userId, 'ai_chat_daily', 1, 'agent_message');
 
     res.json({
       success: true,
@@ -405,6 +407,7 @@ ${v3Context}`,
 
     await saveMessage({ conversationId: convId, userId, role: "assistant", content: result });
     await incrementAgentUsage(userId);
+    await deductCredits(userId, 'ai_chat_daily', 1, `agent_analyze_${mode}`);
 
     res.json({
       success: true,
