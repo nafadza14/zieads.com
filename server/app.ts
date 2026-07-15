@@ -99,7 +99,7 @@ app.get("/api/temp-create-test-user", async (req, res) => {
     const { data: usersList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     if (listError) throw listError;
 
-    const existingUser = usersList.users.find(u => u.email === email);
+    const existingUser = (usersList.users as any[]).find(u => u.email === email);
     if (existingUser) {
       console.log(`[Temp Test User] Deleting existing user: ${existingUser.id}`);
       await supabaseAdmin.auth.admin.deleteUser(existingUser.id);
