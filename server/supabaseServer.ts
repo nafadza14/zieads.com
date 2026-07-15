@@ -298,7 +298,7 @@ export async function getRecentAuditContext(userId: string): Promise<string> {
 
 export async function isTestUser(userId: string): Promise<boolean> {
   try {
-    const { data } = await supabaseAdmin.auth.admin.getUser(userId);
+    const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
     return data?.user?.email === "ceo@zieads.com";
   } catch {
     return false;
