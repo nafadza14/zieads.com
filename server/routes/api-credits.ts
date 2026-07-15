@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import { supabaseAdmin, getUserIdFromRequest } from '../supabaseServer.js';
+import { supabaseAdmin, getUserIdFromRequest, isTestUser } from '../supabaseServer.js';
 import {
   PLANS,
   OPERATION_COSTS,
@@ -103,6 +103,31 @@ creditsRouter.get('/balance', async (req, res) => {
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
+    const isTest = await isTestUser(userId);
+    if (isTest) {
+      return res.json({
+        ai_chat: {
+          remaining: 999999,
+          daily_limit: 999999,
+          reset_at: new Date(Date.now() + 86400 * 1000).toISOString(),
+          seconds_until_reset: 86400,
+          state: "normal",
+        },
+        skill_run: {
+          remaining: 999999,
+          monthly_limit: 999999,
+          state: "normal",
+        },
+        plan: {
+          id: "agency",
+          name: "Agency (Testing)",
+          is_lifetime: true,
+          badge: "UNLIMITED",
+        },
+        has_active_subscription: true,
+        trial: null,
+      });
+    }
     const { planData, creditsData } = await getUserPlanAndCredits(userId);
     const planId = (planData.plan_id || 'free') as PlanId;
     const plan = PLANS[planId];

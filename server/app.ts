@@ -18,6 +18,7 @@ import {
   getLatestAudit,
   getUserSkillResults,
   getBenchmarkAverages,
+  isTestUser,
 } from "./supabaseServer.js";
 import { publicApiRouter } from "./routes/api-public.js";
 import { adsLibraryRouter } from "./routes/api-ads-library.js";
@@ -274,16 +275,19 @@ app.post("/api/audit", async (req, res) => {
   // Credit pre-flight check
   if (userId) {
     try {
-      const [planRes, creditsRes] = await Promise.all([
-        supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
-        supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
-      ]);
-      const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
-      if (remaining !== -1 && remaining < 3) {
-        return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: 'Not enough skill credits. Full audit costs 3 credits.', upgrade_url: '/pricing' });
+      const isTest = await isTestUser(userId);
+      if (!isTest) {
+        const [planRes, creditsRes] = await Promise.all([
+          supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
+          supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
+        ]);
+        const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
+        if (remaining !== -1 && remaining < 3) {
+          return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: 'Not enough skill credits. Full audit costs 3 credits.', upgrade_url: '/pricing' });
+        }
       }
     } catch (e: any) {
-      console.warn("[V0.2 Credit Check] Bypassing credit check due to table error:", e.message);
+      console.warn("[V0.2 Credit Check] Bypassing credit check due to error:", e.message);
     }
   }
 
@@ -336,16 +340,19 @@ app.post("/api/skill/:name", async (req, res) => {
     const op = OPERATION_COSTS[operationId];
     const cost = op?.cost ?? 2;
     try {
-      const [planRes, creditsRes] = await Promise.all([
-        supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
-        supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
-      ]);
-      const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
-      if (remaining !== -1 && remaining < cost) {
-        return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: `Not enough skill credits. This skill costs ${cost} credits.`, upgrade_url: '/pricing' });
+      const isTest = await isTestUser(userId);
+      if (!isTest) {
+        const [planRes, creditsRes] = await Promise.all([
+          supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
+          supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
+        ]);
+        const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
+        if (remaining !== -1 && remaining < cost) {
+          return res.status(402).json({ error: 'INSUFFICIENT_CREDITS', message: `Not enough skill credits. This skill costs ${cost} credits.`, upgrade_url: '/pricing' });
+        }
       }
     } catch (e: any) {
-      console.warn("[V0.2 Credit Check] Bypassing skill credit check due to table error:", e.message);
+      console.warn("[V0.2 Credit Check] Bypassing skill credit check due to error:", e.message);
     }
   }
 

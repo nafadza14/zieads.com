@@ -295,3 +295,12 @@ export async function getRecentAuditContext(userId: string): Promise<string> {
   Top findings:\n${findings || "  None"}`;
   }).join("\n\n");
 }
+
+export async function isTestUser(userId: string): Promise<boolean> {
+  try {
+    const { data } = await supabaseAdmin.auth.admin.getUser(userId);
+    return data?.user?.email === "ceo@zieads.com";
+  } catch {
+    return false;
+  }
+}
