@@ -264,12 +264,13 @@ app.post("/api/skill/:name", async (req, res) => {
   if (!url) return res.status(400).json({ error: "URL is required" });
 
   const userId = await getUserIdFromRequest(req);
+  let cost = 2;
 
   // Credit pre-flight check
   if (userId) {
     const operationId = SKILL_ROUTE_TO_OPERATION[name] || `skill_ads_${name}`;
     const op = OPERATION_COSTS[operationId];
-    const cost = op?.cost ?? 2;
+    cost = op?.cost ?? 2;
     try {
       const isTest = await isTestUser(userId);
       if (!isTest) {
