@@ -125,7 +125,7 @@ export default function ComposerPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch('/api/v3/media/upload', {
+      const res = await fetch('/api/v3/media/upload?skipLibrary=true', {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData
@@ -143,7 +143,6 @@ export default function ComposerPage() {
           file_name: j.data.file_name,
           mime_type: j.data.mime_type
         };
-        setMediaLibrary(prev => [newMedia, ...prev]);
         setMediaAttachments(prev => [...prev, newMedia]);
       }
     } catch (err: any) {

@@ -4,6 +4,7 @@ import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import { encrypt } from "../utils/crypto.js";
 import { refreshExpiringTokens } from "../utils/tokenRefresh.js";
 import { syncAll } from "../utils/sync-instagram.js";
+import { syncTikTokInsightsForUser } from "../utils/sync-tiktok.js";
 
 /**
  * Seeds initial demo analytics, post library, and inbox comment data 
@@ -248,7 +249,7 @@ authRouter.get("/:platform/connect", async (req, res) => {
         `${redirectBase}/api/auth/instagram/callback`
       )}&scope=instagram_business_basic,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
     } else if (platform === "tiktok") {
-      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic";
+      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic,user.info.profile,user.info.stats,video.list";
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
         process.env.TIKTOK_CLIENT_KEY
       }&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(
@@ -343,7 +344,7 @@ authRouter.post("/:platform/connect", requireAuth, async (req: any, res) => {
         `${redirectBase}/api/auth/instagram/callback`
       )}&scope=instagram_business_basic,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
     } else if (platform === "tiktok") {
-      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic";
+      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic,user.info.profile,user.info.stats,video.list";
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
         process.env.TIKTOK_CLIENT_KEY
       }&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(
@@ -673,7 +674,17 @@ authRouter.get("/tiktok/callback", async (req, res) => {
         .eq("account_id", connData[0].id);
 
       if (!count || count === 0) {
-        await initializeSocialMediaMockData(stateData.user_id, "tiktok", connData[0].id, `@${platformUsername}`);
+        await syncTikTokInsightsForUser(stateData.user_id);
+        
+        const { count: countAfter } = await supabaseAdmin
+          .from("social_posts")
+          .select("*", { count: "exact", head: true })
+          .eq("account_id", connData[0].id);
+          
+        if (!countAfter || countAfter === 0) {
+          console.log(`[OAuth] Seeding mock TikTok posts as real sync returned empty.`);
+          await initializeSocialMediaMockData(stateData.user_id, "tiktok", connData[0].id, `@${platformUsername}`);
+        }
       }
     }
 

@@ -12,6 +12,7 @@ import { scrapeUrl } from "../scraper.js";
 import { getDecryptedToken } from "../utils/tokenHelper.js";
 import { publishPost, replyToComment } from "../utils/instagramApi.js";
 import { syncAll, syncComments, syncRecentPosts } from "../utils/sync-instagram.js";
+import { syncTikTokInsightsForUser } from "../utils/sync-tiktok.js";
 // @ts-ignore
 import { put, del } from "@vercel/blob";
 // @ts-ignore
@@ -283,13 +284,63 @@ apiV3Router.post("/media/upload", requireAuth, upload.single("file"), async (req
     const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
     const blobPathname = `user-media/${req.userId}/${Date.now()}-${sanitizedName}`;
 
-    // Upload to Vercel Blob
-    console.log(`[V3 Upload] Uploading ${file.originalname} to Vercel Blob...`);
-    const blob = await put(blobPathname, file.buffer, {
-      access: "public",
-      token: process.env.BLOB_READ_WRITE_TOKEN
-    });
-    console.log(`[V3 Upload] Uploaded successfully: ${blob.url}`);
+    let fileUrl = "";
+    let finalPathname = "";
+
+    const skipLibrary = req.query.skipLibrary === "true";
+
+    // 1. Try Vercel Blob first if token is present
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        console.log(`[V3 Upload] Uploading ${file.originalname} to Vercel Blob...`);
+        const blob = await put(blobPathname, file.buffer, {
+          access: "public",
+          token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+        fileUrl = blob.url;
+        finalPathname = blob.pathname;
+        console.log(`[V3 Upload] Vercel Blob success: ${fileUrl}`);
+      } catch (blobErr: any) {
+        console.warn(`[V3 Upload] Vercel Blob failed, falling back to Supabase Storage:`, blobErr.message);
+      }
+    }
+
+    // 2. If Vercel Blob failed or token was not present, upload to Supabase Storage
+    if (!fileUrl) {
+      console.log(`[V3 Upload] Uploading ${file.originalname} to Supabase Storage...`);
+      const bucketName = "post-attachments";
+      const filePath = `user-media/${req.userId}/${Date.now()}-${sanitizedName}`;
+
+      // Ensure bucket exists
+      try {
+        const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+        const hasBucket = buckets?.some(b => b.name === bucketName);
+        if (!hasBucket) {
+          await supabaseAdmin.storage.createBucket(bucketName, { public: true });
+        }
+      } catch (bucketErr: any) {
+        console.warn("[V3 Upload] Supabase Storage bucket init warning:", bucketErr.message);
+      }
+
+      const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+        .from(bucketName)
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true
+        });
+
+      if (uploadErr) {
+        throw new Error(`Upload failed: ${uploadErr.message}`);
+      }
+
+      const { data: { publicUrl } } = supabaseAdmin.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+
+      fileUrl = publicUrl;
+      finalPathname = filePath;
+      console.log(`[V3 Upload] Supabase Storage success: ${fileUrl}`);
+    }
 
     // Extract width/height for images using sharp
     let width: number | null = null;
@@ -304,13 +355,29 @@ apiV3Router.post("/media/upload", requireAuth, upload.single("file"), async (req
       }
     }
 
+    if (skipLibrary) {
+      console.log(`[V3 Upload] skipLibrary=true. Skipping media_library table insertion.`);
+      return res.json({
+        success: true,
+        data: {
+          id: `temp_${Date.now()}`,
+          url: fileUrl,
+          file_name: file.originalname,
+          mime_type: file.mimetype,
+          width,
+          height,
+          duration_seconds: null
+        }
+      });
+    }
+
     // Insert into media_library
     const { data: media, error } = await supabaseAdmin
       .from("media_library")
       .insert({
         user_id: req.userId,
-        blob_url: blob.url,
-        blob_pathname: blobPathname,
+        blob_url: fileUrl,
+        blob_pathname: finalPathname,
         file_name: file.originalname,
         file_size_bytes: file.size,
         mime_type: file.mimetype,
@@ -1213,6 +1280,8 @@ async function syncInstagramInsightsForUser(userId: string) {
   console.log(`[V3 Insights Sync] Synced ${syncedCount} posts for user ${userId}`);
 }
 
+
+
 apiV3Router.get("/analytics/overview", requireAuth, async (req: any, res) => {
   try {
     const { data: connections } = await supabaseAdmin
@@ -1427,7 +1496,25 @@ apiV3Router.get("/analytics/best-posting-windows", requireAuth, async (req: any,
 apiV3Router.post("/analytics/sync", requireAuth, async (req: any, res) => {
   try {
     console.log(`[V3 Analytics Sync] Manual sync requested by user ${req.userId}`);
-    await syncInstagramInsightsForUser(req.userId);
+    const syncPromises: Promise<any>[] = [];
+
+    const { data: conns } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform")
+      .eq("user_id", req.userId)
+      .eq("is_active", true);
+
+    if (conns) {
+      for (const conn of conns) {
+        if (conn.platform === "instagram") {
+          syncPromises.push(syncInstagramInsightsForUser(req.userId).catch(e => console.error("[Sync IG] failed:", e.message)));
+        } else if (conn.platform === "tiktok") {
+          syncPromises.push(syncTikTokInsightsForUser(req.userId).catch(e => console.error("[Sync TikTok] failed:", e.message)));
+        }
+      }
+    }
+
+    await Promise.all(syncPromises);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1547,8 +1634,23 @@ async function checkAndCleanupMockData(userId: string) {
           .eq("platform", conn.platform);
 
         if (!count || count === 0) {
-          console.log(`[V3 Self-Healing] Automatically seeding mock data for active account ${conn.platform} (${conn.account_handle})...`);
-          await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
+          if (conn.platform === "tiktok") {
+            await syncTikTokInsightsForUser(userId);
+            
+            const { count: countAfter } = await supabaseAdmin
+              .from("social_posts")
+              .select("*", { count: "exact", head: true })
+              .eq("user_id", userId)
+              .eq("platform", conn.platform);
+              
+            if (!countAfter || countAfter === 0) {
+              console.log(`[V3 Self-Healing] Real TikTok sync returned empty, seeding mock data...`);
+              await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
+            }
+          } else {
+            console.log(`[V3 Self-Healing] Automatically seeding mock data for active account ${conn.platform} (${conn.account_handle})...`);
+            await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
+          }
         }
       }
     }
@@ -1955,18 +2057,21 @@ apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
     const platformsConnected = connections.map(c => c.platform);
 
     // 2. Trigger on-demand sync if never synced or synced > 1 hour ago
-    const instaConn = connections.find(c => c.platform === "instagram");
-    if (instaConn) {
-      const lastSynced = instaConn.last_synced_at ? new Date(instaConn.last_synced_at).getTime() : 0;
+    for (const conn of connections) {
+      const lastSynced = conn.last_synced_at ? new Date(conn.last_synced_at).getTime() : 0;
       const { count: postCount } = await supabaseAdmin
         .from("social_posts")
         .select("*", { count: "exact", head: true })
         .eq("user_id", req.userId)
-        .eq("platform", "instagram");
+        .eq("platform", conn.platform);
 
       if (Date.now() - lastSynced > 3600 * 1000 || !postCount || postCount === 0) {
-        console.log(`[V3 API] Triggering on-demand sync for user ${req.userId}...`);
-        await syncAll(req.userId);
+        console.log(`[V3 API] Triggering on-demand sync for platform ${conn.platform} for user ${req.userId}...`);
+        if (conn.platform === "instagram") {
+          syncInstagramInsightsForUser(req.userId).catch(err => console.error("[On-demand Sync Error]", err));
+        } else if (conn.platform === "tiktok") {
+          syncTikTokInsightsForUser(req.userId).catch(err => console.error("[On-demand Sync Error]", err));
+        }
       }
     }
 
