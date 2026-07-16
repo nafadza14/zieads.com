@@ -3,6 +3,7 @@ import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections } from '../../data/sample-data';
+import SocialIcon from '../../components/v3/SocialIcon';
 import { 
   Instagram, 
   Link2, 
@@ -374,9 +375,9 @@ export default function ConnectionsPage() {
             <div>
               <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16 }}>Organic Social Media</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-                {renderPlatformCard('instagram', 'Instagram', 'organic', <Instagram size={20} style={{ color: '#E1306C' }} />)}
-                {renderPlatformCard('tiktok', 'TikTok', 'organic', <CheckCircle size={20} style={{ color: '#000000' }} />)}
-                {renderPlatformCard('linkedin', 'LinkedIn', 'organic', <Linkedin size={20} style={{ color: '#0077B5' }} />)}
+                {renderPlatformCard('instagram', 'Instagram', 'organic', <SocialIcon platform="instagram" size={24} />)}
+                {renderPlatformCard('tiktok', 'TikTok', 'organic', <SocialIcon platform="tiktok" size={24} />)}
+                {renderPlatformCard('linkedin', 'LinkedIn', 'organic', <SocialIcon platform="linkedin" size={24} />)}
               </div>
             </div>
 
@@ -384,9 +385,9 @@ export default function ConnectionsPage() {
             <div>
               <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16 }}>Paid Advertising Platforms</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-                {renderPlatformCard('meta_ads', 'Meta Ads', 'ads', <Facebook size={20} style={{ color: '#1877F2' }} />)}
-                {renderPlatformCard('google_ads', 'Google Ads', 'ads', <TrendingUp size={20} style={{ color: '#4285F4' }} />)}
-                {renderPlatformCard('tiktok_ads', 'TikTok Ads', 'ads', <CheckCircle size={20} style={{ color: '#EE1D52' }} />)}
+                {renderPlatformCard('meta_ads', 'Meta Ads', 'ads', <SocialIcon platform="facebook" size={24} />)}
+                {renderPlatformCard('google_ads', 'Google Ads', 'ads', <SocialIcon platform="google" size={24} />)}
+                {renderPlatformCard('tiktok_ads', 'TikTok Ads', 'ads', <SocialIcon platform="tiktok" size={24} />)}
               </div>
             </div>
 

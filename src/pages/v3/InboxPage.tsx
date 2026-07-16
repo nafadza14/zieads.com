@@ -4,6 +4,7 @@ import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleCommentsInbox, sampleConnections } from '../../data/sample-data';
+import SocialIcon from '../../components/v3/SocialIcon';
 import { 
   Inbox, 
   MessageSquare, 
@@ -210,10 +211,7 @@ export default function InboxPage() {
   };
 
   const getPlatformIcon = (platform: string) => {
-    const p = platform.toLowerCase();
-    if (p.includes('instagram')) return <Instagram size={14} style={{ color: '#E1306C' }} />;
-    if (p.includes('linkedin')) return <Linkedin size={14} style={{ color: '#0077B5' }} />;
-    return <MessageSquare size={14} style={{ color: P }} />;
+    return <SocialIcon platform={platform} size={14} />;
   };
 
   const renderEmptyState = () => {

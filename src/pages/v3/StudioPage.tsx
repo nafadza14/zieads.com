@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
+import SocialIcon from '../../components/v3/SocialIcon';
 import { 
   Calendar, 
   Sparkles, 
@@ -81,10 +82,7 @@ export default function StudioPage() {
   };
 
   const getPlatformIcon = (platform: string) => {
-    const p = platform.toLowerCase();
-    if (p.includes('instagram')) return <Instagram size={14} style={{ color: '#E1306C' }} />;
-    if (p.includes('linkedin')) return <Linkedin size={14} style={{ color: '#0077B5' }} />;
-    return <MessageSquare size={14} style={{ color: P }} />;
+    return <SocialIcon platform={platform} size={14} />;
   };
 
   const hasConnections = connections.length > 0;

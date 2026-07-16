@@ -4,6 +4,7 @@ import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleOrganicPosts, sampleScheduledPosts } from '../../data/sample-data';
+import SocialIcon from '../../components/v3/SocialIcon';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -216,10 +217,7 @@ export default function CalendarPage() {
   };
 
   const getPlatformIcon = (platform: string) => {
-    const p = platform.toLowerCase();
-    if (p.includes('instagram')) return <Instagram size={10} style={{ color: '#fff' }} />;
-    if (p.includes('linkedin')) return <Linkedin size={10} style={{ color: '#fff' }} />;
-    return <MessageSquare size={10} style={{ color: '#fff' }} />;
+    return <SocialIcon platform={platform} size={12} />;
   };
 
   // Merge scheduled & published for Instagram Preview
@@ -364,9 +362,9 @@ export default function CalendarPage() {
         {/* Right Preview Side Panel: Instagram Feed Mockup */}
         <div style={{ width: isMobile ? '100%' : '340px', background: '#fff', borderLeft: isMobile ? 'none' : `1px solid ${B}`, borderTop: isMobile ? `1px solid ${B}` : 'none', padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div>
-            <h3 style={{ margin: '0 0 4px', fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Instagram size={16} style={{ color: '#E1306C' }} /> Visual Feed Preview
-            </h3>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${B}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', fontWeight: 700 }}>
+              <SocialIcon platform="instagram" size={16} /> Visual Feed Preview
+            </div>
             <p style={{ margin: 0, fontSize: '0.73rem', color: G }}>Visualize how scheduled images and reels arrange on Instagram.</p>
           </div>
 
