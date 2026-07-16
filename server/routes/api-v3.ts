@@ -1628,6 +1628,22 @@ async function checkAndCleanupMockData(userId: string) {
 
       if (activeConns) {
         for (const conn of activeConns) {
+          // Clean up any previously seeded mock posts for this platform
+          await supabaseAdmin
+            .from("social_posts")
+            .delete()
+            .eq("user_id", userId)
+            .eq("platform", conn.platform)
+            .like("platform_post_id", `post_${conn.platform}_%`);
+
+          // Clean up any previously seeded mock comments for this platform
+          await supabaseAdmin
+            .from("comments_inbox")
+            .delete()
+            .eq("user_id", userId)
+            .eq("platform", conn.platform)
+            .like("platform_comment_id", `comment_${conn.platform}_%`);
+
           const { count } = await supabaseAdmin
             .from("social_posts")
             .select("*", { count: "exact", head: true })
@@ -1636,56 +1652,11 @@ async function checkAndCleanupMockData(userId: string) {
 
           if (!count || count === 0) {
             if (conn.platform === "tiktok") {
+              console.log(`[V3 Self-Healing] Active TikTok connection found but 0 posts. Running real TikTok sync...`);
               await syncTikTokInsightsForUser(userId);
-              
-              const { count: countAfter } = await supabaseAdmin
-                .from("social_posts")
-                .select("*", { count: "exact", head: true })
-                .eq("user_id", userId)
-                .eq("platform", conn.platform);
-                
-              if (!countAfter || countAfter === 0) {
-                console.log(`[V3 Self-Healing] Real TikTok sync returned empty, seeding mock data...`);
-                await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
-              }
-            } else {
-              console.log(`[V3 Self-Healing] Automatically seeding mock data for active account ${conn.platform} (${conn.account_handle})...`);
-              await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
-            }
-          }
-        }
-      }
-
-      // Self-healing: Check if comments_inbox is empty for this user and seed mock comments
-      const { count: commentCount } = await supabaseAdmin
-        .from("comments_inbox")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId);
-
-      if (!commentCount || commentCount === 0) {
-        if (activeConns && activeConns.length > 0) {
-          console.log(`[V3 Self-Healing] Comments inbox is empty. Seeding mock comments...`);
-          for (const conn of activeConns) {
-            const mockComments = [
-              { handle: "@alex_digital", text: "This tool looks amazing! Is there X integration?", sentiment: "positive" },
-              { handle: "@sarah_k", text: "I have some issues trying to sync my Facebook account. Can you help?", sentiment: "negative" },
-              { handle: "@mike_ads", text: "Thanks for the tips, really useful thread.", sentiment: "neutral" }
-            ];
-
-            for (const c of mockComments) {
-              await supabaseAdmin.from("comments_inbox").insert({
-                user_id: userId,
-                platform: conn.platform,
-                platform_comment_id: `comment_${conn.platform}_${Math.random().toString(36).substring(2,9)}`,
-                platform_media_id: `mock_media_${conn.platform}`,
-                author_username: c.handle,
-                text: c.text,
-                sentiment: c.sentiment,
-                sentiment_confidence: 0.95,
-                status: "unread",
-                posted_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
-                created_at: new Date().toISOString()
-              });
+            } else if (conn.platform === "instagram") {
+              console.log(`[V3 Self-Healing] Active Instagram connection found but 0 posts. Running real Instagram sync...`);
+              await syncInstagramInsightsForUser(userId);
             }
           }
         }

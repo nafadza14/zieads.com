@@ -499,24 +499,7 @@ authRouter.get("/instagram/callback", async (req, res) => {
     }, { onConflict: "user_id,platform,platform_account_id" }).select();
 
     if (!connErr && connData && connData.length > 0) {
-      const { count } = await supabaseAdmin
-        .from("social_posts")
-        .select("*", { count: "exact", head: true })
-        .eq("account_id", connData[0].id);
-
-      if (!count || count === 0) {
-        await syncAll(stateData.user_id);
-        
-        const { count: countAfter } = await supabaseAdmin
-          .from("social_posts")
-          .select("*", { count: "exact", head: true })
-          .eq("account_id", connData[0].id);
-          
-        if (!countAfter || countAfter === 0) {
-          console.log(`[OAuth] Seeding mock Instagram posts as real sync returned empty.`);
-          await initializeSocialMediaMockData(stateData.user_id, "instagram", connData[0].id, `@${platformUsername}`);
-        }
-      }
+      await syncAll(stateData.user_id);
     }
 
     return res.redirect(`${redirectBase}/connections?connected=instagram`);
@@ -668,24 +651,7 @@ authRouter.get("/tiktok/callback", async (req, res) => {
     }, { onConflict: "user_id,platform,platform_account_id" }).select();
 
     if (!connErr && connData && connData.length > 0) {
-      const { count } = await supabaseAdmin
-        .from("social_posts")
-        .select("*", { count: "exact", head: true })
-        .eq("account_id", connData[0].id);
-
-      if (!count || count === 0) {
-        await syncTikTokInsightsForUser(stateData.user_id);
-        
-        const { count: countAfter } = await supabaseAdmin
-          .from("social_posts")
-          .select("*", { count: "exact", head: true })
-          .eq("account_id", connData[0].id);
-          
-        if (!countAfter || countAfter === 0) {
-          console.log(`[OAuth] Seeding mock TikTok posts as real sync returned empty.`);
-          await initializeSocialMediaMockData(stateData.user_id, "tiktok", connData[0].id, `@${platformUsername}`);
-        }
-      }
+      await syncTikTokInsightsForUser(stateData.user_id);
     }
 
     return res.redirect(`${redirectBase}/connections?connected=tiktok`);
