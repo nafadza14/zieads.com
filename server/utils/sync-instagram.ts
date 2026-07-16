@@ -117,7 +117,11 @@ export async function syncRecentPosts(userId: string): Promise<void> {
           media_urls: post.media_url ? [post.media_url] : [],
           posted_at: post.timestamp,
           post_url: post.permalink || null,
-          raw_metrics: { permalink: post.permalink || '' },
+          raw_metrics: { 
+            permalink: post.permalink || '',
+            likes: Number(post.like_count || 0),
+            comments: Number(post.comments_count || 0)
+          },
           fetched_at: new Date().toISOString(),
         }, { onConflict: 'account_id,platform_post_id' });
 

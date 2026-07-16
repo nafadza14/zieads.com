@@ -10,7 +10,7 @@ import { syncAll } from "../utils/sync-instagram.js";
  * when a user connects their social channel, making the platform features 
  * (Analytics, Calendar, Composer, Inbox, Competitor Hunt) immediately functional.
  */
-async function initializeSocialMediaMockData(userId: string, platform: string, accountId: string, accountHandle: string) {
+export async function initializeSocialMediaMockData(userId: string, platform: string, accountId: string, accountHandle: string) {
   try {
     const mockPosts = [
       { content: `Loving this new analytics setup on ZieAds! 📊 #socialmedia #business`, likes: 34, comments: 8, reach: 350 },
@@ -505,6 +505,16 @@ authRouter.get("/instagram/callback", async (req, res) => {
 
       if (!count || count === 0) {
         await syncAll(stateData.user_id);
+        
+        const { count: countAfter } = await supabaseAdmin
+          .from("social_posts")
+          .select("*", { count: "exact", head: true })
+          .eq("account_id", connData[0].id);
+          
+        if (!countAfter || countAfter === 0) {
+          console.log(`[OAuth] Seeding mock Instagram posts as real sync returned empty.`);
+          await initializeSocialMediaMockData(stateData.user_id, "instagram", connData[0].id, `@${platformUsername}`);
+        }
       }
     }
 

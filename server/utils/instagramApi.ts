@@ -84,7 +84,7 @@ export async function getRecentMedia(
   limit: number = 25,
   after?: string
 ): Promise<{ data: IGMedia[]; paging?: { cursors: { after: string }; next?: string } }> {
-  const fields = 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username,is_shared_to_feed';
+  const fields = 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username,is_shared_to_feed,like_count,comments_count';
   let url = `${IG_API_BASE}/me/media?fields=${fields}&limit=${limit}`;
   if (after) url += `&after=${after}`;
   return igFetch(url, token);
