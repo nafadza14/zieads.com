@@ -474,7 +474,7 @@ apiV3Router.delete("/media/:id", requireAuth, async (req: any, res) => {
 
 // ─── Post Scheduling & Direct Publishing ─────────────────────────────────────
 apiV3Router.post("/posts/schedule", requireAuth, async (req: any, res) => {
-  const { platform, caption, media_ids, hashtags, scheduled_for } = req.body;
+  const { platform, caption, media_ids, hashtags, scheduled_for, media_attachments } = req.body;
 
   try {
     if (!platform || !scheduled_for) {
@@ -489,16 +489,38 @@ apiV3Router.post("/posts/schedule", requireAuth, async (req: any, res) => {
     // Fetch media library rows to get public urls
     let mediaUrls: string[] = [];
     let mediaType = "text_only";
-    if (media_ids && media_ids.length > 0) {
+    let firstMime = "";
+
+    const realMediaIds = (media_ids || []).filter((id: string) => !id.startsWith("temp_"));
+    const tempMediaIds = (media_ids || []).filter((id: string) => id.startsWith("temp_"));
+
+    if (realMediaIds.length > 0) {
       const { data: mediaRows, error: mediaError } = await supabaseAdmin
         .from("media_library")
         .select("*")
         .eq("user_id", req.userId)
-        .in("id", media_ids);
+        .in("id", realMediaIds);
 
       if (mediaError) throw mediaError;
-      mediaUrls = mediaRows?.map(m => m.blob_url) || [];
-      const firstMime = mediaRows?.[0]?.mime_type || "";
+      if (mediaRows) {
+        mediaRows.forEach(r => {
+          mediaUrls.push(r.blob_url);
+          if (!firstMime) firstMime = r.mime_type || "";
+        });
+      }
+    }
+
+    if (tempMediaIds.length > 0 && media_attachments) {
+      tempMediaIds.forEach((id: string) => {
+        const match = media_attachments.find((m: any) => m.id === id);
+        if (match) {
+          mediaUrls.push(match.file_url || match.url);
+          if (!firstMime) firstMime = match.mime_type || "";
+        }
+      });
+    }
+
+    if (mediaUrls.length > 0) {
       mediaType = firstMime.startsWith("video/") ? "video" : "image";
     }
 
@@ -534,7 +556,7 @@ apiV3Router.post("/posts/schedule", requireAuth, async (req: any, res) => {
 });
 
 apiV3Router.post("/posts/publish-now", requireAuth, async (req: any, res) => {
-  const { platform, caption, media_ids, hashtags } = req.body;
+  const { platform, caption, media_ids, hashtags, media_attachments } = req.body;
 
   try {
     if (platform !== "instagram") {
@@ -549,14 +571,40 @@ apiV3Router.post("/posts/publish-now", requireAuth, async (req: any, res) => {
       return res.status(400).json({ error: "Caption exceeds Instagram's 2200 character limit." });
     }
 
-    // 1. Fetch media library rows
-    const { data: mediaRows, error: mediaError } = await supabaseAdmin
-      .from("media_library")
-      .select("*")
-      .eq("user_id", req.userId)
-      .in("id", media_ids);
+    // 1. Fetch media library rows and combine with temporary attachments
+    const realMediaIds = (media_ids || []).filter((id: string) => !id.startsWith("temp_"));
+    const tempMediaIds = (media_ids || []).filter((id: string) => id.startsWith("temp_"));
 
-    if (mediaError || !mediaRows || mediaRows.length === 0) {
+    const mediaRows: Array<{ blob_url: string; mime_type: string }> = [];
+
+    if (realMediaIds.length > 0) {
+      const { data: dbRows, error: mediaError } = await supabaseAdmin
+        .from("media_library")
+        .select("*")
+        .eq("user_id", req.userId)
+        .in("id", realMediaIds);
+
+      if (mediaError) throw mediaError;
+      if (dbRows) {
+        dbRows.forEach(r => {
+          mediaRows.push({ blob_url: r.blob_url, mime_type: r.mime_type || "" });
+        });
+      }
+    }
+
+    if (tempMediaIds.length > 0 && media_attachments) {
+      tempMediaIds.forEach((id: string) => {
+        const match = media_attachments.find((m: any) => m.id === id);
+        if (match) {
+          mediaRows.push({
+            blob_url: match.file_url || match.url,
+            mime_type: match.mime_type
+          });
+        }
+      });
+    }
+
+    if (mediaRows.length === 0) {
       return res.status(400).json({ error: "Specified media items not found in media library." });
     }
 

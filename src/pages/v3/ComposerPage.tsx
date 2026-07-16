@@ -238,7 +238,8 @@ export default function ComposerPage() {
             platform: 'instagram',
             caption: contentText,
             media_ids,
-            hashtags
+            hashtags,
+            media_attachments: mediaAttachments
           })
         });
       } else {
@@ -255,7 +256,8 @@ export default function ComposerPage() {
             caption: contentText,
             media_ids,
             hashtags,
-            scheduled_for
+            scheduled_for,
+            media_attachments: mediaAttachments
           })
         });
       }
