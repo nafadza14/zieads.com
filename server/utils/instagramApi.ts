@@ -22,6 +22,8 @@ export interface IGMedia {
   thumbnail_url: string;
   timestamp: string;
   username: string;
+  like_count?: number;
+  comments_count?: number;
 }
 
 export interface IGMediaInsight {
