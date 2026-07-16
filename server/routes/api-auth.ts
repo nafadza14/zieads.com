@@ -525,8 +525,21 @@ authRouter.get("/tiktok/callback", async (req, res) => {
     const expiresIn = tokenData.expires_in || 86400; // default 24h expiration
     const openId = tokenData.open_id || "";
 
-    // Fetch user profile from TikTok APIs
-    const profileUrl = "https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,avatar_url,display_name,bio_description,follower_count";
+    // Fetch user profile from TikTok APIs dynamically based on granted scopes to prevent 403 error on restricted fields
+    const grantedScopes = (tokenData.scope || "user.info.basic").split(",");
+    const fieldsList = ["open_id", "union_id", "display_name", "avatar_url"];
+    
+    if (grantedScopes.includes("user.info.profile")) {
+      fieldsList.push("bio_description");
+    }
+    if (grantedScopes.includes("user.info.stats")) {
+      fieldsList.push("follower_count");
+    }
+
+    const fields = fieldsList.join(",");
+    const profileUrl = `https://open.tiktokapis.com/v2/user/info/?fields=${fields}`;
+    
+    console.log(`[OAuth] Fetching TikTok profile with scopes: ${tokenData.scope} and fields: ${fields}`);
     const profileRes = await fetch(profileUrl, {
       method: "GET",
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -538,13 +551,26 @@ authRouter.get("/tiktok/callback", async (req, res) => {
 
     if (profileRes.ok) {
       const profileData = await profileRes.json();
+      console.log("[OAuth] TikTok profile fetch success:", JSON.stringify(profileData));
       const user = profileData.data?.user;
       if (user) {
-        platformUsername = user.display_name || "";
+        platformUsername = user.display_name || user.username || "";
         platformDisplayName = user.display_name || "";
         platformAvatarUrl = user.avatar_url || "";
       }
+    } else {
+      const errText = await profileRes.text();
+      console.error("[OAuth] TikTok profile fetch failed status:", profileRes.status, "body:", errText);
     }
+
+    // Fallback if profile name could not be fetched
+    if (!platformUsername) {
+      platformUsername = `user_${openId.slice(-6)}`;
+    }
+    if (!platformDisplayName) {
+      platformDisplayName = `TikTok User (${openId.slice(-6)})`;
+    }
+
 
     const encryptedAccess = encrypt(accessToken);
     const encryptedRefresh = refreshToken ? encrypt(refreshToken) : null;
