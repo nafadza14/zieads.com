@@ -1064,23 +1064,35 @@ apiV3Router.get("/analytics/instagram-media", requireAuth, async (req: any, res)
   }
 
   try {
-    const conn = await getConnectedInstagram(req.userId);
-    if (!conn) {
+    const { data: connections, error: connErr } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform")
+      .eq("user_id", req.userId)
+      .eq("is_active", true);
+
+    if (connErr) throw connErr;
+
+    if (!connections || connections.length === 0) {
       return res.json({ success: true, connected: false, data: [] });
     }
 
-    console.log(`[V3 Feed API] Fetching published media from Instagram for user ${req.userId}...`);
-    const fields = 'id,media_type,media_url,thumbnail_url,permalink,timestamp';
-    const response = await callInstagramAPI(
-      conn.accessToken,
-      `${conn.platformUserId}/media?fields=${fields}&limit=${limit}`,
-      { method: "GET" }
-    );
+    const platforms = connections.map(c => c.platform);
 
-    const mediaList = (response.data || []).map((item: any) => ({
-      media_url: item.media_url || item.thumbnail_url,
-      permalink: item.permalink,
-      timestamp: item.timestamp,
+    // Fetch recent posts from social_posts across connected platforms
+    const { data: posts, error: postErr } = await supabaseAdmin
+      .from("social_posts")
+      .select("media_urls, platform_post_id, posted_at, media_type, post_url")
+      .eq("user_id", req.userId)
+      .in("platform", platforms)
+      .order("posted_at", { ascending: false })
+      .limit(limit);
+
+    if (postErr) throw postErr;
+
+    const mediaList = (posts || []).map((item: any) => ({
+      media_url: item.media_urls?.[0] || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=150&h=150&q=80',
+      permalink: item.post_url || `https://www.tiktok.com/`,
+      timestamp: item.posted_at,
       media_type: item.media_type
     }));
 

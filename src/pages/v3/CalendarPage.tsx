@@ -220,10 +220,9 @@ export default function CalendarPage() {
     return <SocialIcon platform={platform} size={12} />;
   };
 
-  // Merge scheduled & published for Instagram Preview
+  // Filter scheduled posts for visual preview
   const igScheduled = events.filter(e => 
-    e.type === 'scheduled' && 
-    e.platforms?.some((p: any) => p.platform?.toLowerCase() === 'instagram')
+    e.type === 'scheduled'
   );
   const igScheduledSorted = [...igScheduled].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
@@ -359,18 +358,18 @@ export default function CalendarPage() {
           )}
         </div>
 
-        {/* Right Preview Side Panel: Instagram Feed Mockup */}
+        {/* Right Preview Side Panel: Visual Feed Mockup */}
         <div style={{ width: isMobile ? '100%' : '340px', background: '#fff', borderLeft: isMobile ? 'none' : `1px solid ${B}`, borderTop: isMobile ? `1px solid ${B}` : 'none', padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div>
             <div style={{ padding: '16px 20px', borderBottom: `1px solid ${B}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', fontWeight: 700 }}>
-              <SocialIcon platform="instagram" size={16} /> Visual Feed Preview
+              Visual Feed Preview
             </div>
-            <p style={{ margin: 0, fontSize: '0.73rem', color: G }}>Visualize how scheduled images and reels arrange on Instagram.</p>
+            <p style={{ margin: 0, fontSize: '0.73rem', color: G }}>Visualize how scheduled images and posts arrange on your active channels.</p>
           </div>
 
           {mergedFeedItems.length === 0 ? (
             <div style={{ border: `2px dashed ${B}`, padding: 40, borderRadius: 8, textAlign: 'center', color: G, fontSize: '0.78rem' }}>
-              Your Instagram feed will preview here once you schedule or publish a post.
+              Your feed will preview here once you schedule or publish a post.
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>

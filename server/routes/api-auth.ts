@@ -88,12 +88,60 @@ async function initializeSocialMediaMockData(userId: string, platform: string, a
       engagement_rate: 0.051,
       captured_at: new Date().toISOString()
     });
+
+    // Populate account_insights_daily for v0.3 briefings & analytics
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const followers = 1350 + i * 15;
+      await supabaseAdmin.from("account_insights_daily").upsert({
+        user_id: userId,
+        platform,
+        platform_account_id: accountId,
+        snapshot_date: date,
+        followers_count: followers,
+        following_count: 180,
+        media_count: 3 + (7 - i),
+        impressions_daily: 450 + Math.floor(Math.random() * 200),
+        reach_daily: 350 + Math.floor(Math.random() * 150),
+        profile_views_daily: 45 + Math.floor(Math.random() * 20),
+        website_clicks_daily: 5 + Math.floor(Math.random() * 5),
+      }, { onConflict: "user_id,platform,snapshot_date" });
+    }
+
+    // Populate post_insights_cache with corresponding metrics
+    const { data: postsList } = await supabaseAdmin
+      .from("social_posts")
+      .select("*")
+      .eq("account_id", accountId)
+      .eq("user_id", userId);
+
+    if (postsList) {
+      for (const p of postsList) {
+        const metrics = p.raw_metrics || {};
+        const likesVal = Number(metrics.likes || 20);
+        const commentsVal = Number(metrics.comments || 5);
+        const reachVal = likesVal * 10;
+        
+        await supabaseAdmin.from("post_insights_cache").upsert({
+          user_id: userId,
+          platform,
+          platform_media_id: p.platform_post_id,
+          impressions: reachVal + 100,
+          reach: reachVal,
+          engagement: likesVal + commentsVal,
+          likes: likesVal,
+          comments_count: commentsVal,
+          post_published_at: p.posted_at
+        }, { onConflict: "user_id,platform,platform_media_id" });
+      }
+    }
     
     console.log(`[OAuth] Seeded initial dashboard data metrics for user ${userId} / account ${accountId}`);
   } catch (err) {
     console.error("[OAuth] Failed to populate initial dashboard metrics:", err);
   }
 }
+
 
 export const authRouter = Router();
 
