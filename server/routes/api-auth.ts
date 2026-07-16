@@ -52,18 +52,18 @@ export async function initializeSocialMediaMockData(userId: string, platform: st
     ];
 
     for (const c of mockComments) {
-      await supabaseAdmin.from("comment_inbox").insert({
+      await supabaseAdmin.from("comments_inbox").insert({
         user_id: userId,
-        account_id: accountId,
         platform,
         platform_comment_id: `comment_${platform}_${Math.random().toString(36).substring(2,9)}`,
-        commenter_handle: c.handle,
-        commenter_display_name: c.handle.substring(1),
-        comment_text: c.text,
-        commented_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
+        platform_media_id: `mock_media_${platform}`,
+        author_username: c.handle,
+        text: c.text,
         sentiment: c.sentiment,
-        is_archived: false,
-        user_has_replied: false
+        sentiment_confidence: 0.95,
+        status: "unread",
+        posted_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
+        created_at: new Date().toISOString()
       });
     }
 

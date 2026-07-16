@@ -1574,89 +1574,126 @@ apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
 });
 
 async function checkAndCleanupMockData(userId: string) {
-  try {
-    // Check for old mock-seeded social posts (IDs like 'post_instagram_1')
-    const { data: mockPosts } = await supabaseAdmin
-      .from("social_posts")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("platform", "instagram")
-      .like("platform_post_id", "post_instagram_%")
-      .limit(1);
-
-    // Check for old mock-seeded media library items (Unsplash URLs)
-    const { data: mockMedia } = await supabaseAdmin
-      .from("media_library")
-      .select("id")
-      .eq("user_id", userId)
-      .like("blob_url", "%unsplash%")
-      .limit(1);
-
-    if (mockPosts && mockPosts.length > 0) {
-      console.log(`[V3 API] Mock Instagram posts detected for user ${userId}. Cleaning up mock social data...`);
-      await supabaseAdmin
+  (async () => {
+    try {
+      // Check for old mock-seeded social posts (IDs like 'post_instagram_1')
+      const { data: mockPosts } = await supabaseAdmin
         .from("social_posts")
-        .delete()
+        .select("id")
         .eq("user_id", userId)
         .eq("platform", "instagram")
-        .like("platform_post_id", "post_instagram_%");
-      
-      // Reset last_synced_at to force real sync
-      await supabaseAdmin
-        .from("social_connections")
-        .update({ last_synced_at: null })
-        .eq("user_id", userId)
-        .eq("platform", "instagram");
-    }
+        .like("platform_post_id", "post_instagram_%")
+        .limit(1);
 
-    if (mockMedia && mockMedia.length > 0) {
-      console.log(`[V3 API] Unsplash mock media detected for user ${userId}. Cleaning up media library...`);
-      await supabaseAdmin
+      // Check for old mock-seeded media library items (Unsplash URLs)
+      const { data: mockMedia } = await supabaseAdmin
         .from("media_library")
-        .delete()
+        .select("id")
         .eq("user_id", userId)
-        .like("blob_url", "%unsplash%");
-    }
+        .like("blob_url", "%unsplash%")
+        .limit(1);
 
-    // Self-healing: Check for connected accounts that don't have posts in social_posts
-    const { data: activeConns } = await supabaseAdmin
-      .from("connected_accounts")
-      .select("id, platform, account_handle")
-      .eq("user_id", userId)
-      .eq("is_active", true);
-
-    if (activeConns) {
-      for (const conn of activeConns) {
-        const { count } = await supabaseAdmin
+      if (mockPosts && mockPosts.length > 0) {
+        console.log(`[V3 API] Mock Instagram posts detected for user ${userId}. Cleaning up mock social data...`);
+        await supabaseAdmin
           .from("social_posts")
-          .select("*", { count: "exact", head: true })
+          .delete()
           .eq("user_id", userId)
-          .eq("platform", conn.platform);
+          .eq("platform", "instagram")
+          .like("platform_post_id", "post_instagram_%");
+        
+        // Reset last_synced_at to force real sync
+        await supabaseAdmin
+          .from("social_connections")
+          .update({ last_synced_at: null })
+          .eq("user_id", userId)
+          .eq("platform", "instagram");
+      }
 
-        if (!count || count === 0) {
-          if (conn.platform === "tiktok") {
-            await syncTikTokInsightsForUser(userId);
-            
-            const { count: countAfter } = await supabaseAdmin
-              .from("social_posts")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", userId)
-              .eq("platform", conn.platform);
+      if (mockMedia && mockMedia.length > 0) {
+        console.log(`[V3 API] Unsplash mock media detected for user ${userId}. Cleaning up media library...`);
+        await supabaseAdmin
+          .from("media_library")
+          .delete()
+          .eq("user_id", userId)
+          .like("blob_url", "%unsplash%");
+      }
+
+      // Self-healing: Check for connected accounts that don't have posts in social_posts
+      const { data: activeConns } = await supabaseAdmin
+        .from("connected_accounts")
+        .select("id, platform, account_handle")
+        .eq("user_id", userId)
+        .eq("is_active", true);
+
+      if (activeConns) {
+        for (const conn of activeConns) {
+          const { count } = await supabaseAdmin
+            .from("social_posts")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .eq("platform", conn.platform);
+
+          if (!count || count === 0) {
+            if (conn.platform === "tiktok") {
+              await syncTikTokInsightsForUser(userId);
               
-            if (!countAfter || countAfter === 0) {
-              console.log(`[V3 Self-Healing] Real TikTok sync returned empty, seeding mock data...`);
+              const { count: countAfter } = await supabaseAdmin
+                .from("social_posts")
+                .select("*", { count: "exact", head: true })
+                .eq("user_id", userId)
+                .eq("platform", conn.platform);
+                
+              if (!countAfter || countAfter === 0) {
+                console.log(`[V3 Self-Healing] Real TikTok sync returned empty, seeding mock data...`);
+                await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
+              }
+            } else {
+              console.log(`[V3 Self-Healing] Automatically seeding mock data for active account ${conn.platform} (${conn.account_handle})...`);
               await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
             }
-          } else {
-            console.log(`[V3 Self-Healing] Automatically seeding mock data for active account ${conn.platform} (${conn.account_handle})...`);
-            await initializeSocialMediaMockData(userId, conn.platform, conn.id, conn.account_handle);
           }
         }
       }
+
+      // Self-healing: Check if comments_inbox is empty for this user and seed mock comments
+      const { count: commentCount } = await supabaseAdmin
+        .from("comments_inbox")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (!commentCount || commentCount === 0) {
+        if (activeConns && activeConns.length > 0) {
+          console.log(`[V3 Self-Healing] Comments inbox is empty. Seeding mock comments...`);
+          for (const conn of activeConns) {
+            const mockComments = [
+              { handle: "@alex_digital", text: "This tool looks amazing! Is there X integration?", sentiment: "positive" },
+              { handle: "@sarah_k", text: "I have some issues trying to sync my Facebook account. Can you help?", sentiment: "negative" },
+              { handle: "@mike_ads", text: "Thanks for the tips, really useful thread.", sentiment: "neutral" }
+            ];
+
+            for (const c of mockComments) {
+              await supabaseAdmin.from("comments_inbox").insert({
+                user_id: userId,
+                platform: conn.platform,
+                platform_comment_id: `comment_${conn.platform}_${Math.random().toString(36).substring(2,9)}`,
+                platform_media_id: `mock_media_${conn.platform}`,
+                author_username: c.handle,
+                text: c.text,
+                sentiment: c.sentiment,
+                sentiment_confidence: 0.95,
+                status: "unread",
+                posted_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
+                created_at: new Date().toISOString()
+              });
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("[Cleanup Mock Check Failed]", err.message);
     }
-  } catch (err: any) {
-    console.error("[Cleanup Mock Check Failed]", err.message);
-  }
+  })().catch(e => console.error("[V3 Background Cleanup Error]", e.message));
 }
 
 // Helpers for Instagram API direct publishing
@@ -2090,6 +2127,16 @@ apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
       .eq("user_id", req.userId)
       .in("post_id", postIds);
 
+    const { data: cacheInsights } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("impressions, reach, likes, comments_count")
+      .eq("user_id", req.userId);
+
+    const cacheLikes = cacheInsights?.reduce((sum, i) => sum + Number(i.likes || 0), 0) || 0;
+    const cacheComments = cacheInsights?.reduce((sum, i) => sum + Number(i.comments_count || 0), 0) || 0;
+    const cacheImpressions = cacheInsights?.reduce((sum, i) => sum + Number(i.impressions || 0), 0) || 0;
+    const cacheReach = cacheInsights?.reduce((sum, i) => sum + Number(i.reach || 0), 0) || 0;
+
     const { data: followerSnapshots } = await supabaseAdmin
       .from("metric_snapshots")
       .select("platform, follower_count_at_capture")
@@ -2102,10 +2149,10 @@ apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
     const totalLikesFromPosts = posts?.reduce((sum, p) => sum + (Number(p.raw_metrics?.likes) || Number(p.raw_metrics?.like_count) || 0), 0) || 0;
     const totalCommentsFromPosts = posts?.reduce((sum, p) => sum + (Number(p.raw_metrics?.comments) || Number(p.raw_metrics?.comments_count) || 0), 0) || 0;
     
-    const totalLikes = totalLikesFromPosts || snapshots?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0;
-    const totalComments = totalCommentsFromPosts || snapshots?.reduce((sum, s) => sum + (s.comments || 0), 0) || 0;
-    const totalImpressions = snapshots?.reduce((sum, s) => sum + (s.impressions || 0), 0) || 0;
-    const totalReach = snapshots?.reduce((sum, s) => sum + (s.reach || 0), 0) || 0;
+    const totalLikes = cacheLikes || totalLikesFromPosts || snapshots?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0;
+    const totalComments = cacheComments || totalCommentsFromPosts || snapshots?.reduce((sum, s) => sum + (s.comments || 0), 0) || 0;
+    const totalImpressions = cacheImpressions || snapshots?.reduce((sum, s) => sum + (s.impressions || 0), 0) || 0;
+    const totalReach = cacheReach || snapshots?.reduce((sum, s) => sum + (s.reach || 0), 0) || 0;
 
     // Follower counts (group by platform)
     const latestFollowersByPlatform = new Map<string, number>();
