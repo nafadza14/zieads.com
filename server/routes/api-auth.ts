@@ -200,9 +200,10 @@ authRouter.get("/:platform/connect", async (req, res) => {
         `${redirectBase}/api/auth/instagram/callback`
       )}&scope=instagram_business_basic,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
     } else if (platform === "tiktok") {
+      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic";
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
         process.env.TIKTOK_CLIENT_KEY
-      }&scope=user.info.basic,user.info.profile,user.info.stats,video.list,video.publish&response_type=code&redirect_uri=${encodeURIComponent(
+      }&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(
         `${redirectBase}/api/auth/tiktok/callback`
       )}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     } else if (platform === "linkedin") {
@@ -294,9 +295,10 @@ authRouter.post("/:platform/connect", requireAuth, async (req: any, res) => {
         `${redirectBase}/api/auth/instagram/callback`
       )}&scope=instagram_business_basic,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
     } else if (platform === "tiktok") {
+      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic";
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
         process.env.TIKTOK_CLIENT_KEY
-      }&scope=user.info.basic,user.info.profile,user.info.stats,video.list,video.publish&response_type=code&redirect_uri=${encodeURIComponent(
+      }&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(
         `${redirectBase}/api/auth/tiktok/callback`
       )}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     } else if (platform === "linkedin") {
