@@ -107,7 +107,7 @@ export async function superadminAuthMiddleware(
         .from('superadmin_users')
         .update({ last_activity_at: now.toISOString() })
         .eq('id', cachedSession.admin.id)
-        .catch(() => {});
+        .then(() => {});
     }
 
     return next();
@@ -132,8 +132,7 @@ export async function superadminAuthMiddleware(
       await supabaseAdmin
         .from('superadmin_users')
         .update({ current_session_token: null, session_expires_at: null, last_activity_at: null })
-        .eq('id', admin.id)
-        .catch(() => {});
+        .eq('id', admin.id);
       return res.status(401).json({ error: 'SESSION_EXPIRED' });
     }
 
@@ -147,8 +146,7 @@ export async function superadminAuthMiddleware(
         await supabaseAdmin
           .from('superadmin_users')
           .update({ current_session_token: null, session_expires_at: null, last_activity_at: null })
-          .eq('id', admin.id)
-          .catch(() => {});
+          .eq('id', admin.id);
         return res.status(401).json({ error: 'SESSION_IDLE_TIMEOUT' });
       }
     }
@@ -164,8 +162,7 @@ export async function superadminAuthMiddleware(
     await supabaseAdmin
       .from('superadmin_users')
       .update({ last_activity_at: now.toISOString() })
-      .eq('id', admin.id)
-      .catch(() => {});
+      .eq('id', admin.id);
 
     // Attach admin details to request
     (req as any).superadmin = admin;
@@ -241,8 +238,7 @@ superadminRouter.post('/auth/login', async (req, res) => {
         await supabaseAdmin
           .from('superadmin_users')
           .update({ totp_secret: tempSecret })
-          .eq('id', admin.id)
-          .catch(() => {});
+          .eq('id', admin.id);
       }
       return res.json({
         totp_enabled: false,
@@ -283,8 +279,7 @@ superadminRouter.post('/auth/login', async (req, res) => {
           last_login_at: now.toISOString(),
           last_login_ip: getClientIp(req),
         })
-        .eq('id', admin.id)
-        .catch(() => {});
+        .eq('id', admin.id);
 
       await logAudit({
         req,
@@ -391,8 +386,7 @@ superadminRouter.post('/auth/setup-totp', async (req, res) => {
           last_login_at: now.toISOString(),
           last_login_ip: getClientIp(req),
         })
-        .eq('id', admin.id)
-        .catch(() => {});
+        .eq('id', admin.id);
 
       await logAudit({
         req,
@@ -432,8 +426,7 @@ superadminRouter.post('/auth/logout', superadminAuthMiddleware, async (req, res)
       await supabaseAdmin
         .from('superadmin_users')
         .update({ current_session_token: null, session_expires_at: null, last_activity_at: null })
-        .eq('id', admin.id)
-        .catch(() => {});
+        .eq('id', admin.id);
 
       await logAudit({
         req,
