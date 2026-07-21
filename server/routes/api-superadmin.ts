@@ -102,7 +102,7 @@ export async function superadminAuthMiddleware(
     (req as any).superadmin = cachedSession.admin;
 
     // Update DB last activity in background
-    if (cachedSession.admin.id !== '00000000-0000-0000-0000-000000000000') {
+    if (!cachedSession.admin.id.startsWith('00000000-0000-')) {
       supabaseAdmin
         .from('superadmin_users')
         .update({ last_activity_at: now.toISOString() })
@@ -198,15 +198,15 @@ superadminRouter.post('/auth/login', async (req, res) => {
       dbError = e;
     }
 
-    // Fallback: If DB query fails or user not found, support fallback login for admin@zieads.com
-    if ((dbError || !admin) && email === 'admin@zieads.com') {
+    // Fallback: If DB query fails or user not found, support fallback login for admin@zieads.com and ceo@zieads.com
+    if ((dbError || !admin) && (email === 'admin@zieads.com' || email === 'ceo@zieads.com')) {
       const fallbackHash = 'a2281ded64db00fd816e1ce9b0942db1:654984746e51aa7500ac0524f5fa1ef62d8562ca1de33c4b921100e2c6e267ec0d2a66c5d6587e2256f43324cd00125f12c60703e09aca0ba5dae960736de15d';
       const passwordMatch = verifyPassword(password, fallbackHash);
       if (passwordMatch) {
         admin = {
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'admin@zieads.com',
-          name: 'ZieAds Superadmin (Local)',
+          id: email === 'ceo@zieads.com' ? '00000000-0000-0000-0000-000000000001' : '00000000-0000-0000-0000-000000000000',
+          email: email,
+          name: email === 'ceo@zieads.com' ? 'ZieAds CEO' : 'ZieAds Superadmin (Local)',
           role: 'superadmin',
           password_hash: fallbackHash,
           totp_secret: 'ZIEADSFALLBACKSECRET12345',
@@ -234,7 +234,7 @@ superadminRouter.post('/auth/login', async (req, res) => {
     if (!admin.totp_enabled) {
       // TOTP not set up yet. Generate a temporary secret and return setup details
       const tempSecret = admin.totp_secret || generateTOTPSecret();
-      if (!admin.totp_secret && admin.id !== '00000000-0000-0000-0000-000000000000') {
+      if (!admin.totp_secret && !admin.id.startsWith('00000000-0000-')) {
         await supabaseAdmin
           .from('superadmin_users')
           .update({ totp_secret: tempSecret })
@@ -269,7 +269,7 @@ superadminRouter.post('/auth/login', async (req, res) => {
       lastActivityAt: now
     });
 
-    if (admin.id !== '00000000-0000-0000-0000-000000000000') {
+    if (!admin.id.startsWith('00000000-0000-')) {
       await supabaseAdmin
         .from('superadmin_users')
         .update({
@@ -330,14 +330,14 @@ superadminRouter.post('/auth/setup-totp', async (req, res) => {
       dbError = e;
     }
 
-    if ((dbError || !admin) && email === 'admin@zieads.com') {
+    if ((dbError || !admin) && (email === 'admin@zieads.com' || email === 'ceo@zieads.com')) {
       const fallbackHash = 'a2281ded64db00fd816e1ce9b0942db1:654984746e51aa7500ac0524f5fa1ef62d8562ca1de33c4b921100e2c6e267ec0d2a66c5d6587e2256f43324cd00125f12c60703e09aca0ba5dae960736de15d';
       const passwordMatch = verifyPassword(password, fallbackHash);
       if (passwordMatch) {
         admin = {
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'admin@zieads.com',
-          name: 'ZieAds Superadmin (Local)',
+          id: email === 'ceo@zieads.com' ? '00000000-0000-0000-0000-000000000001' : '00000000-0000-0000-0000-000000000000',
+          email: email,
+          name: email === 'ceo@zieads.com' ? 'ZieAds CEO' : 'ZieAds Superadmin (Local)',
           role: 'superadmin',
           password_hash: fallbackHash,
           totp_secret: 'ZIEADSFALLBACKSECRET12345',
@@ -375,7 +375,7 @@ superadminRouter.post('/auth/setup-totp', async (req, res) => {
       lastActivityAt: now
     });
 
-    if (admin.id !== '00000000-0000-0000-0000-000000000000') {
+    if (!admin.id.startsWith('00000000-0000-')) {
       await supabaseAdmin
         .from('superadmin_users')
         .update({
@@ -422,7 +422,7 @@ superadminRouter.post('/auth/logout', superadminAuthMiddleware, async (req, res)
       superadminSessions.delete(token);
     }
 
-    if (admin.id !== '00000000-0000-0000-0000-000000000000') {
+    if (!admin.id.startsWith('00000000-0000-')) {
       await supabaseAdmin
         .from('superadmin_users')
         .update({ current_session_token: null, session_expires_at: null, last_activity_at: null })
