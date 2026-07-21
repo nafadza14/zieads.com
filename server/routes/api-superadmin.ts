@@ -209,7 +209,7 @@ superadminRouter.post('/auth/login', async (req, res) => {
           name: email === 'ceo@zieads.com' ? 'ZieAds CEO' : 'ZieAds Superadmin (Local)',
           role: 'superadmin',
           password_hash: fallbackHash,
-          totp_secret: 'ZIEADSFALLBACKSECRET12345',
+          totp_secret: 'ZIEADSFALLBACKSECRET234567',
           totp_enabled: false,
           is_active: true
         };
@@ -340,7 +340,7 @@ superadminRouter.post('/auth/setup-totp', async (req, res) => {
           name: email === 'ceo@zieads.com' ? 'ZieAds CEO' : 'ZieAds Superadmin (Local)',
           role: 'superadmin',
           password_hash: fallbackHash,
-          totp_secret: 'ZIEADSFALLBACKSECRET12345',
+          totp_secret: 'ZIEADSFALLBACKSECRET234567',
           totp_enabled: false,
           is_active: true
         };
@@ -358,7 +358,7 @@ superadminRouter.post('/auth/setup-totp', async (req, res) => {
       }
     }
 
-    const totpMatch = verifyTOTP(totpCode, admin.totp_secret || 'ZIEADSFALLBACKSECRET12345');
+    const totpMatch = verifyTOTP(totpCode, admin.totp_secret || 'ZIEADSFALLBACKSECRET234567');
     if (!totpMatch) {
       return res.status(400).json({ error: 'Invalid 2FA code. Please scan the QR code and try again.' });
     }
