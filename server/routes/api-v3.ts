@@ -1622,97 +1622,52 @@ apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
 });
 
 async function checkAndCleanupMockData(userId: string) {
-  (async () => {
-    try {
-      // Check for old mock-seeded social posts (IDs like 'post_instagram_1')
-      const { data: mockPosts } = await supabaseAdmin
+  try {
+    // Check for old mock-seeded social posts (IDs like 'post_instagram_1')
+    const { data: mockPosts } = await supabaseAdmin
+      .from("social_posts")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("platform", "instagram")
+      .like("platform_post_id", "post_instagram_%")
+      .limit(1);
+
+    // Check for old mock-seeded media library items (Unsplash URLs)
+    const { data: mockMedia } = await supabaseAdmin
+      .from("media_library")
+      .select("id")
+      .eq("user_id", userId)
+      .like("blob_url", "%unsplash%")
+      .limit(1);
+
+    if (mockPosts && mockPosts.length > 0) {
+      console.log(`[V3 API] Mock Instagram posts detected for user ${userId}. Cleaning up mock social data...`);
+      await supabaseAdmin
         .from("social_posts")
-        .select("id")
+        .delete()
         .eq("user_id", userId)
         .eq("platform", "instagram")
-        .like("platform_post_id", "post_instagram_%")
-        .limit(1);
-
-      // Check for old mock-seeded media library items (Unsplash URLs)
-      const { data: mockMedia } = await supabaseAdmin
-        .from("media_library")
-        .select("id")
+        .like("platform_post_id", "post_instagram_%");
+      
+      // Reset last_synced_at to force real sync
+      await supabaseAdmin
+        .from("social_connections")
+        .update({ last_synced_at: null })
         .eq("user_id", userId)
-        .like("blob_url", "%unsplash%")
-        .limit(1);
-
-      if (mockPosts && mockPosts.length > 0) {
-        console.log(`[V3 API] Mock Instagram posts detected for user ${userId}. Cleaning up mock social data...`);
-        await supabaseAdmin
-          .from("social_posts")
-          .delete()
-          .eq("user_id", userId)
-          .eq("platform", "instagram")
-          .like("platform_post_id", "post_instagram_%");
-        
-        // Reset last_synced_at to force real sync
-        await supabaseAdmin
-          .from("social_connections")
-          .update({ last_synced_at: null })
-          .eq("user_id", userId)
-          .eq("platform", "instagram");
-      }
-
-      if (mockMedia && mockMedia.length > 0) {
-        console.log(`[V3 API] Unsplash mock media detected for user ${userId}. Cleaning up media library...`);
-        await supabaseAdmin
-          .from("media_library")
-          .delete()
-          .eq("user_id", userId)
-          .like("blob_url", "%unsplash%");
-      }
-
-      // Self-healing: Check for connected accounts that don't have posts in social_posts
-      const { data: activeConns } = await supabaseAdmin
-        .from("connected_accounts")
-        .select("id, platform, account_handle")
-        .eq("user_id", userId)
-        .eq("is_active", true);
-
-      if (activeConns) {
-        for (const conn of activeConns) {
-          // Clean up any previously seeded mock posts for this platform
-          await supabaseAdmin
-            .from("social_posts")
-            .delete()
-            .eq("user_id", userId)
-            .eq("platform", conn.platform)
-            .like("platform_post_id", `post_${conn.platform}_%`);
-
-          // Clean up any previously seeded mock comments for this platform
-          await supabaseAdmin
-            .from("comments_inbox")
-            .delete()
-            .eq("user_id", userId)
-            .eq("platform", conn.platform)
-            .like("platform_comment_id", `comment_${conn.platform}_%`);
-
-          const { count } = await supabaseAdmin
-            .from("social_posts")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .eq("platform", conn.platform);
-
-          if (!count || count === 0) {
-            if (conn.platform === "tiktok") {
-              console.log(`[V3 Self-Healing] Active TikTok connection found but 0 posts. Running real TikTok sync...`);
-              await syncTikTokInsightsForUser(userId);
-            } else if (conn.platform === "instagram") {
-              console.log(`[V3 Self-Healing] Active Instagram connection found but 0 posts. Running real Instagram sync...`);
-              await syncInstagramInsightsForUser(userId);
-            }
-          }
-        }
-      }
-    } catch (err: any) {
-      console.error("[Cleanup Mock Check Failed]", err.message);
+        .eq("platform", "instagram");
     }
-  })().catch(e => console.error("[V3 Background Cleanup Error]", e.message));
+
+    if (mockMedia && mockMedia.length > 0) {
+      console.log(`[V3 API] Unsplash mock media detected for user ${userId}. Cleaning up media library...`);
+      await supabaseAdmin
+        .from("media_library")
+        .delete()
+        .eq("user_id", userId)
+        .like("blob_url", "%unsplash%");
+    }
+  } catch (err: any) {
+    console.error("[Cleanup Mock Check Failed]", err.message);
+  }
 }
 
 // Helpers for Instagram API direct publishing
@@ -2391,7 +2346,11 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
       const lastSynced = conn?.last_synced_at ? new Date(conn.last_synced_at).getTime() : 0;
       if (Date.now() - lastSynced > 15 * 60 * 1000) {
         console.log(`[V3 Inbox] Triggering on-demand comments sync for user ${req.userId}...`);
-        syncInstagramCommentsForUser(req.userId).catch(err => console.error("[V3 Inbox Sync Error]", err));
+        try {
+          await syncInstagramCommentsForUser(req.userId);
+        } catch (err) {
+          console.error("[V3 Inbox Sync Error]", err);
+        }
       }
     }
 
