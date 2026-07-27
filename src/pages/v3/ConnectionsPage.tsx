@@ -327,12 +327,21 @@ export default function ConnectionsPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button 
-                onClick={() => {
+                onClick={async () => {
                   if (demo.isActive) {
                     alert("Please exit Demo Mode to connect real accounts.");
                     return;
                   }
-                  setPlatformToConnect(id);
+                  if (id === 'instagram' || id === 'tiktok' || id === 'linkedin') {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) {
+                      alert("Please sign in first.");
+                      return;
+                    }
+                    window.location.href = `/api/auth/${id}/connect?token=${session.access_token}`;
+                  } else {
+                    setPlatformToConnect(id);
+                  }
                 }}
                 style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '10px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
               >
@@ -389,44 +398,15 @@ export default function ConnectionsPage() {
       {/* Modal - Connect Account */}
       {platformToConnect && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 28, width: 440, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 28, width: 400, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Connect {platformToConnect.toUpperCase()}</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: G }}>
-                {['instagram', 'tiktok', 'linkedin'].includes(platformToConnect) 
-                  ? "Choose whether to connect your official account using OAuth or connect manually."
-                  : "Enter your profile handle to connect this channel."}
-              </p>
+              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: G }}>Enter your profile handle to instantly mock-connect this channel.</p>
             </div>
-
-            {['instagram', 'tiktok', 'linkedin'].includes(platformToConnect) && (
-              <div style={{ paddingBottom: 16, borderBottom: `1px solid ${B}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Option A: Official Connection</div>
-                <button
-                  onClick={async () => {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (!session) {
-                      alert("Please sign in first.");
-                      return;
-                    }
-                    window.location.href = `/api/auth/${platformToConnect}/connect?token=${session.access_token}`;
-                  }}
-                  style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '12px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                >
-                  Connect via Official OAuth
-                </button>
-                <p style={{ margin: 0, fontSize: '0.72rem', color: '#EF4444', lineHeight: 1.35 }}>
-                  ⚠️ <strong>Info:</strong> Jika Chrome menampilkan peringatan <em>"Dangerous site"</em>, ini karena Meta App untuk domain ini sedang proses verifikasi. Anda bisa melewatinya dengan mengklik <strong>"Details"</strong> &rarr; <strong>"visit this unsafe site"</strong> pada Chrome, atau gunakan <strong>Manual Connection</strong> di bawah.
-                </p>
-              </div>
-            )}
             
             <form onSubmit={handleConnect} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 8 }}>
-                  {['instagram', 'tiktok', 'linkedin'].includes(platformToConnect) ? "Option B: Manual Connection (Instant)" : "Account Details"}
-                </div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: G, marginBottom: 6 }}>Account Handle</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>Account Handle</label>
                 <input 
                   value={accountHandle}
                   onChange={e => setAccountHandle(e.target.value)}
@@ -447,9 +427,9 @@ export default function ConnectionsPage() {
                 <button 
                   type="submit" 
                   disabled={connecting}
-                  style={{ background: '#111827', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ background: P, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                 >
-                  {connecting ? 'Connecting...' : 'Connect Manually'}
+                  {connecting ? 'Connecting...' : 'Connect'}
                 </button>
               </div>
             </form>
