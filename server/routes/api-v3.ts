@@ -2275,77 +2275,101 @@ async function classifyCommentSentiment(text: string): Promise<{ sentiment: 'pos
   }
 }
 
+const activeInboxSyncs = new Set<string>();
+
 async function syncInstagramCommentsForUser(userId: string): Promise<number> {
-  const conn = await getConnectedInstagram(userId);
-  if (!conn) return 0;
-
-  console.log(`[V3 Inbox Sync] Polling comments for ${conn.platformUsername}...`);
-  const postsResponse = await callInstagramAPI<{ data: any[] }>(
-    conn.accessToken,
-    `${conn.platformUserId}/media?fields=id,timestamp,caption&limit=20`
-  );
-
-  const postsList = postsResponse.data || [];
-  let newCommentsCount = 0;
-
-  for (const post of postsList) {
-    try {
-      const commentsResponse = await callInstagramAPI<{ data: any[] }>(
-        conn.accessToken,
-        `${post.id}/comments?fields=id,text,username,timestamp,like_count,replies{id,text,username,timestamp}`
-      );
-
-      const commentsList = commentsResponse.data || [];
-      for (const comment of commentsList) {
-        const { data: existing } = await supabaseAdmin
-          .from("comments_inbox")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("platform", "instagram")
-          .eq("platform_comment_id", comment.id)
-          .maybeSingle();
-
-        if (!existing) {
-          console.log(`[V3 Inbox Sync] New comment detected: "${comment.text?.slice(0, 30)}..." from ${comment.username}`);
-          const sentimentResult = await classifyCommentSentiment(comment.text || "");
-
-          const { error: insertErr } = await supabaseAdmin
-            .from("comments_inbox")
-            .insert({
-              user_id: userId,
-              platform: "instagram",
-              platform_comment_id: comment.id,
-              platform_media_id: post.id,
-              parent_comment_id: null,
-              author_username: comment.username,
-              author_platform_id: "",
-              text: comment.text,
-              sentiment: sentimentResult.sentiment,
-              sentiment_confidence: sentimentResult.confidence,
-              status: "unread",
-              posted_at: comment.timestamp,
-              created_at: new Date().toISOString()
-            });
-
-          if (!insertErr) {
-            newCommentsCount++;
-          } else {
-            console.error(`[V3 Inbox Sync] Insert failed for comment ${comment.id}:`, insertErr.message);
-          }
-        }
-      }
-    } catch (postErr: any) {
-      console.error(`[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`, postErr.message);
-    }
+  if (activeInboxSyncs.has(userId)) {
+    console.log(`[V3 Inbox Sync] Sync already in progress for user ${userId}. Skipping duplicate trigger.`);
+    return 0;
   }
 
-  await supabaseAdmin
-    .from("social_connections")
-    .update({ last_synced_at: new Date().toISOString() })
-    .eq("user_id", userId)
-    .eq("platform", "instagram");
+  activeInboxSyncs.add(userId);
 
-  return newCommentsCount;
+  try {
+    const conn = await getConnectedInstagram(userId);
+    if (!conn) return 0;
+
+    // Update last_synced_at immediately to lock duplicate triggers
+    await supabaseAdmin
+      .from("social_connections")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("platform", "instagram");
+
+    console.log(`[V3 Inbox Sync] Polling comments for ${conn.platformUsername}...`);
+
+    // Fetch all existing comment platform IDs for this user to avoid N+1 queries
+    const { data: existingComments } = await supabaseAdmin
+      .from("comments_inbox")
+      .select("platform_comment_id")
+      .eq("user_id", userId)
+      .eq("platform", "instagram");
+
+    const existingSet = new Set(existingComments?.map(c => c.platform_comment_id).filter(Boolean) || []);
+
+    const postsResponse = await callInstagramAPI<{ data: any[] }>(
+      conn.accessToken,
+      `${conn.platformUserId}/media?fields=id,timestamp,caption&limit=20`
+    );
+
+    const postsList = postsResponse.data || [];
+    let newCommentsCount = 0;
+
+    for (const post of postsList) {
+      try {
+        const commentsResponse = await callInstagramAPI<{ data: any[] }>(
+          conn.accessToken,
+          `${post.id}/comments?fields=id,text,username,timestamp,like_count,replies{id,text,username,timestamp}`
+        );
+
+        const commentsList = commentsResponse.data || [];
+        const newComments = commentsList.filter(c => c.id && !existingSet.has(c.id));
+
+        if (newComments.length > 0) {
+          // Classify and insert new comments in parallel to speed up Gemini processing
+          await Promise.all(newComments.map(async (comment) => {
+            try {
+              console.log(`[V3 Inbox Sync] New comment detected: "${comment.text?.slice(0, 30)}..." from ${comment.username}`);
+              const sentimentResult = await classifyCommentSentiment(comment.text || "");
+
+              const { error: insertErr } = await supabaseAdmin
+                .from("comments_inbox")
+                .insert({
+                  user_id: userId,
+                  platform: "instagram",
+                  platform_comment_id: comment.id,
+                  platform_media_id: post.id,
+                  parent_comment_id: null,
+                  author_username: comment.username,
+                  author_platform_id: "",
+                  text: comment.text,
+                  sentiment: sentimentResult.sentiment,
+                  sentiment_confidence: sentimentResult.confidence,
+                  status: "unread",
+                  posted_at: comment.timestamp,
+                  created_at: new Date().toISOString()
+                });
+
+              if (!insertErr) {
+                newCommentsCount++;
+                existingSet.add(comment.id); // prevent duplicate insertions
+              } else {
+                console.error(`[V3 Inbox Sync] Insert failed for comment ${comment.id}:`, insertErr.message);
+              }
+            } catch (err: any) {
+              console.error(`[V3 Inbox Sync] Failed to process single comment ${comment.id}:`, err.message);
+            }
+          }));
+        }
+      } catch (postErr: any) {
+        console.error(`[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`, postErr.message);
+      }
+    }
+
+    return newCommentsCount;
+  } finally {
+    activeInboxSyncs.delete(userId);
+  }
 }
 
 apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
