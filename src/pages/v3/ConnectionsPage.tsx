@@ -80,7 +80,8 @@ export default function ConnectionsPage() {
               platform: c.platform,
               account_handle: c.username || c.display_name || `@${c.platform}`,
               connected_at: c.connected_at,
-              is_oauth: true
+              is_oauth: true,
+              avatar_url: c.avatar_url
             });
           }
         });
@@ -302,7 +303,19 @@ export default function ConnectionsPage() {
               {activeConns.map(conn => (
                 <div key={conn.id} style={{ display: 'flex', alignItems: 'center', justifySelf: 'stretch', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-soft)', borderRadius: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    <CheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
+                    {conn.avatar_url ? (
+                      <img 
+                        src={conn.avatar_url} 
+                        alt={conn.account_handle} 
+                        style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                        onError={(e) => {
+                          // Fallback to check icon on load error
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <CheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
+                    )}
                     <span style={{ fontSize: '0.8rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {conn.account_handle}
                     </span>
