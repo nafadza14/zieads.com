@@ -400,7 +400,7 @@ export default function ComposerPage() {
                 </div>
               )}
               <textarea 
-                value={isInheriting ? contentText : (customOverrides[activeTab] || '')}
+                value={getActiveText()}
                 onChange={e => handleTextChange(e.target.value)}
                 placeholder="What would you like to share today?"
                 style={{ minHeight: 180, border: 'none', outline: 'none', padding: 20, fontSize: '0.9rem', lineHeight: 1.5, resize: 'vertical', borderRadius: '8px 8px 0 0' }}
