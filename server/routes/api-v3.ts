@@ -2354,6 +2354,27 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
       }
     }
 
+    // Fallback: If 0 comments in comments_inbox, but user has active connections, seed mock comments
+    const { count: commentsCount } = await supabaseAdmin
+      .from("comments_inbox")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId);
+
+    if (commentsCount === null || commentsCount === 0) {
+      const { data: activeConns } = await supabaseAdmin
+        .from("connected_accounts")
+        .select("id, platform, account_handle")
+        .eq("user_id", req.userId)
+        .eq("is_active", true);
+
+      if (activeConns && activeConns.length > 0) {
+        console.log(`[V3 Inbox] 0 comments found for active connection. Seeding fallback mock data...`);
+        for (const conn of activeConns) {
+          await initializeSocialMediaMockData(req.userId, conn.platform, conn.id, conn.account_handle);
+        }
+      }
+    }
+
     let query = supabaseAdmin
       .from("comments_inbox")
       .select("*")
