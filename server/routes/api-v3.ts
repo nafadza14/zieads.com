@@ -3263,15 +3263,24 @@ async function commentReplyHandler(req: any, res: any) {
       return res.status(401).json({ error: "reconnect_needed", message: "Instagram session not found or expired. Please reconnect." });
     }
 
-    console.log(`[V3 Inbox Reply] Posting reply to comment ${comment.platform_comment_id}...`);
-    const replyResult = await callInstagramAPI<{ id: string }>(
-      conn.accessToken,
-      `${comment.platform_comment_id}/replies`,
-      {
-        method: "POST",
-        body: JSON.stringify({ message: replyText })
-      }
-    );
+    let replyResult: { id: string };
+
+    if (comment.platform_comment_id.startsWith('dummy_')) {
+      console.log(`[V3 Inbox Reply] Simulating reply for dummy comment ${comment.platform_comment_id}...`);
+      // Simulate network delay for realism in the video
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      replyResult = { id: `dummy_reply_${Date.now()}` };
+    } else {
+      console.log(`[V3 Inbox Reply] Posting reply to comment ${comment.platform_comment_id}...`);
+      replyResult = await callInstagramAPI<{ id: string }>(
+        conn.accessToken,
+        `${comment.platform_comment_id}/replies`,
+        {
+          method: "POST",
+          body: JSON.stringify({ message: replyText })
+        }
+      );
+    }
 
     const { data: updatedComment, error: updateErr } = await supabaseAdmin
       .from("comments_inbox")
