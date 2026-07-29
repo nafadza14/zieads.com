@@ -222,13 +222,17 @@ export default function InboxPage() {
               `Note: this inbox syncs post comments only — new likes or direct messages won't appear here.`,
           });
         } else if (commentsSeen === 0 && (totalOnIg ?? 0) > 0) {
-          // Instagram says there ARE comments, but the comments edge returned none — a
-          // permissions/visibility issue (e.g. missing instagram_business_manage_comments,
-          // or comments on posts beyond our scan cap). Tell the user to reconnect.
+          // Instagram says there ARE comments, but the comments edge returned none.
+          // This is almost always a Meta app access-level gate on
+          // `instagram_business_manage_comments` (Standard vs Advanced Access), NOT a
+          // reconnect problem. Surface the real backend diagnostic so the fix is clear.
+          const detail = j.sample_error ? ` Details: ${j.sample_error}` : '';
           setRefreshBanner({
-            tone: 'warn',
-            text: `Instagram reports ${totalOnIg} comment${totalOnIg === 1 ? '' : 's'} but they couldn't be read. ` +
-              `Try reconnecting your Instagram account with comment permissions enabled.`,
+            tone: 'error',
+            text: `Instagram reports ${totalOnIg} comment${totalOnIg === 1 ? '' : 's'} but they can't be read. ` +
+              `This is a Meta app permission gate — the app needs Advanced Access for ` +
+              `"instagram_business_manage_comments", or this Instagram account must be added as a ` +
+              `tester/role in the Meta App Dashboard.${detail}`,
           });
         } else {
           // Comments were seen but all already in the inbox — up to date.

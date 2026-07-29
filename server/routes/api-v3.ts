@@ -2263,6 +2263,67 @@ interface InboxSyncResult {
   connection_ok: boolean;
   account_type: string | null;
   errors: string[];
+  sample_error: string | null;    // first raw Instagram error from a comments-edge call (for diagnosis)
+  comments_edge_blocked: boolean; // true when IG reports comments exist but the edge returns none
+}
+
+/**
+ * Fetch comments for a single Instagram media, resilient to field-permission errors.
+ *
+ * Instagram's Graph API rejects the WHOLE request with a 400 if any requested field is
+ * not permitted for the token's access level (e.g. `like_count` / `username` sometimes
+ * require Advanced Access on `instagram_business_manage_comments`). We therefore try a
+ * rich field set first, then progressively fall back to the minimal fields that are
+ * always available. Replies are flattened into the returned list so nested replies are
+ * also ingested. Returns the comments plus the raw error text if every attempt failed.
+ */
+async function fetchCommentsForPost(
+  accessToken: string,
+  postId: string
+): Promise<{ comments: any[]; error: string | null }> {
+  const fieldVariants = [
+    'id,text,username,timestamp,like_count,replies{id,text,username,timestamp,like_count}',
+    'id,text,username,timestamp,replies{id,text,username,timestamp}',
+    'id,text,username,timestamp',
+    'id,text,timestamp',
+  ];
+
+  let lastError: string | null = null;
+
+  for (const fields of fieldVariants) {
+    try {
+      const resp = await callInstagramAPI<any>(
+        accessToken,
+        `${postId}/comments?fields=${encodeURIComponent(fields)}&limit=50`
+      );
+
+      const top = (resp && resp.data) || [];
+      // Flatten one level of replies so nested replies land in the inbox too.
+      const flattened: any[] = [];
+      for (const c of top) {
+        flattened.push(c);
+        const replies = c.replies?.data || [];
+        for (const r of replies) {
+          flattened.push({ ...r, _parent_comment_id: c.id });
+        }
+      }
+      return { comments: flattened, error: null };
+    } catch (err: any) {
+      lastError = err?.message || String(err);
+      // Only fall back to a simpler field set when the error is about an invalid/unavailable
+      // FIELD. For permission (#10 / #200), rate-limit, or network errors, retrying with fewer
+      // fields won't help — stop and surface the real error immediately.
+      const isFieldError = /nonexisting field|Tried accessing|Invalid parameter|does not support the field/i.test(lastError);
+      if (!isFieldError) {
+        break;
+      }
+      console.warn(
+        `[V3 Inbox Sync] Comments fetch for post ${postId} failed with fields "${fields}". Trying simpler set. Error: ${lastError}`
+      );
+    }
+  }
+
+  return { comments: [], error: lastError };
 }
 
 async function syncUserInbox(
@@ -2298,6 +2359,8 @@ async function syncUserInbox(
     connection_ok: false,
     account_type: null,
     errors: [],
+    sample_error: null,
+    comments_edge_blocked: false,
   };
   let errorMessage: string | null = null;
 
@@ -2436,39 +2499,60 @@ async function syncUserInbox(
     const newCommentsToClassify: Array<{ id: string; text: string }> = [];
 
     for (const post of postsToFetch) {
-      try {
-        const commentsResponse = await callInstagramAPI<any>(
-          conn.accessToken,
-          `${post.id}/comments?fields=id,text,username,timestamp,like_count&limit=50`
-        );
+      const { comments: commentsList, error: fetchError } = await fetchCommentsForPost(
+        conn.accessToken,
+        post.id
+      );
 
-        const commentsList = (commentsResponse && commentsResponse.data) || [];
-        result.comments_seen += commentsList.length;
-        console.log(`[V3 Inbox Sync] Post ${post.id}: found ${commentsList.length} comments from API`);
-
-        const newComments = commentsList.filter((c: any) => c.id && !existingSet.has(c.id));
-        console.log(`[V3 Inbox Sync] Post ${post.id}: ${newComments.length} new comments to insert`);
-
-        for (const comment of newComments) {
-          const inserted = await insertCommentDefensive(userId, post.id, comment, source);
-          if (inserted && inserted.id) {
-            newCommentsToClassify.push({ id: inserted.id, text: comment.text });
-            result.new_comments_count++;
-            existingSet.add(comment.id); // prevent duplicate insertions in same run
-          }
-        }
-
-        // Small delay between posts to be nice to Instagram API
-        await new Promise(resolve => setTimeout(resolve, 80));
-      } catch (postError: any) {
-        const errStr = `Post ${post.id}: ${postError.message}`;
+      if (fetchError) {
+        const errStr = `Post ${post.id}: ${fetchError}`;
         result.errors.push(errStr);
-        console.error(
-          `[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`,
-          postError.message,
-          postError.stack?.split('\n')[1] || ''
-        );
+        if (!result.sample_error) result.sample_error = fetchError; // keep the first real error
+        console.error(`[V3 Inbox Sync] Failed to fetch comments for post ${post.id}: ${fetchError}`);
+        await new Promise(resolve => setTimeout(resolve, 80));
+        continue;
       }
+
+      result.comments_seen += commentsList.length;
+      console.log(`[V3 Inbox Sync] Post ${post.id}: found ${commentsList.length} comments (incl. replies) from API`);
+
+      const newComments = commentsList.filter((c: any) => c.id && !existingSet.has(c.id));
+      console.log(`[V3 Inbox Sync] Post ${post.id}: ${newComments.length} new comments to insert`);
+
+      for (const comment of newComments) {
+        const inserted = await insertCommentDefensive(
+          userId,
+          post.id,
+          comment,
+          source,
+          comment._parent_comment_id || null
+        );
+        if (inserted && inserted.id) {
+          newCommentsToClassify.push({ id: inserted.id, text: comment.text });
+          result.new_comments_count++;
+          existingSet.add(comment.id); // prevent duplicate insertions in same run
+        }
+      }
+
+      // Small delay between posts to be nice to Instagram API
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+
+    // Diagnose the specific "comments exist but edge returned none" case that the user hit.
+    if (result.comments_seen === 0 && result.total_comments_on_ig > 0) {
+      result.comments_edge_blocked = true;
+      if (!result.sample_error) {
+        // The comments edge returned an empty array with NO error thrown — this is the
+        // signature of an access-level gate: `instagram_business_manage_comments` only has
+        // Standard Access, so Instagram silently returns no comment data for accounts that
+        // are not testers/admins of the Meta app (even though comments_count is visible via
+        // the basic permission). Advanced Access via App Review — or adding this IG account
+        // as a tester in the Meta App Dashboard — is required.
+        result.sample_error =
+          `Instagram returned ${result.total_comments_on_ig} comment(s) in post metadata but the comments edge returned none and raised no error. ` +
+          `This indicates the Meta app lacks Advanced Access for "instagram_business_manage_comments" (or the connected account is not a tester on the app).`;
+      }
+      console.warn(`[V3 Inbox Sync] comments_edge_blocked for user ${userId}: ${result.sample_error}`);
     }
 
     // FIX: Await sentiment classification with a hard timeout so it actually runs on Vercel.
@@ -2539,7 +2623,8 @@ async function insertCommentDefensive(
   userId: string,
   platformMediaId: string,
   comment: { id: string; username?: string; text?: string; timestamp?: string },
-  source: 'cron_polling' | 'manual_refresh'
+  source: 'cron_polling' | 'manual_refresh',
+  parentCommentId: string | null = null
 ): Promise<{ id: string } | null> {
   const basePayload: any = {
     user_id: userId,
@@ -2551,6 +2636,7 @@ async function insertCommentDefensive(
     posted_at: comment.timestamp || new Date().toISOString(),
     status: 'unread',
   };
+  if (parentCommentId) basePayload.parent_comment_id = parentCommentId;
 
   // First attempt: with ingestion_source
   const withSource = { ...basePayload, ingestion_source: source };
@@ -2565,15 +2651,26 @@ async function insertCommentDefensive(
 
   if (!attempt1.error && attempt1.data) return attempt1.data;
 
-  // Second attempt: without ingestion_source (schema might be older)
+  // Second attempt: strip optional columns that may not exist in older schemas
+  // (ingestion_source and/or parent_comment_id). Retry with only the core columns.
   const errMsg = attempt1.error?.message || '';
-  if (/ingestion_source|column.*does not exist/i.test(errMsg)) {
+  if (/ingestion_source|parent_comment_id|column.*does not exist/i.test(errMsg)) {
+    const minimalPayload: any = {
+      user_id: userId,
+      platform: 'instagram',
+      platform_comment_id: comment.id,
+      platform_media_id: platformMediaId,
+      author_username: comment.username || '',
+      text: comment.text || '',
+      posted_at: comment.timestamp || new Date().toISOString(),
+      status: 'unread',
+    };
     console.warn(
-      `[V3 Inbox Sync] ingestion_source column missing, retrying without it for comment ${comment.id}`
+      `[V3 Inbox Sync] Optional column missing (${errMsg}), retrying with core columns for comment ${comment.id}`
     );
     const attempt2 = await supabaseAdmin
       .from('comments_inbox')
-      .upsert(basePayload, {
+      .upsert(minimalPayload, {
         onConflict: 'user_id,platform,platform_comment_id',
         ignoreDuplicates: false,
       })
@@ -2825,6 +2922,8 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
       total_comments_on_ig: syncResult.total_comments_on_ig,
       comments_seen: syncResult.comments_seen,
       account_type: syncResult.account_type,
+      comments_edge_blocked: syncResult.comments_edge_blocked,
+      sample_error: syncResult.sample_error,
       errors: syncResult.errors,
     });
   } catch (err: any) {
