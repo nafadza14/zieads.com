@@ -2255,8 +2255,11 @@ async function classifyCommentSentiment(text: string): Promise<{ sentiment: 'pos
 
 interface InboxSyncResult {
   new_comments_count: number;
-  posts_fetched: number;
-  comments_seen: number;
+  posts_fetched: number;          // number of posts whose comments edge we actually fetched
+  posts_scanned: number;          // total posts scanned via me/media (metadata only)
+  posts_with_comments: number;    // posts reporting comments_count > 0
+  total_comments_on_ig: number;   // sum of comments_count across ALL scanned posts
+  comments_seen: number;          // total comments returned by the comments edge
   connection_ok: boolean;
   account_type: string | null;
   errors: string[];
@@ -2288,6 +2291,9 @@ async function syncUserInbox(
   const result: InboxSyncResult = {
     new_comments_count: 0,
     posts_fetched: 0,
+    posts_scanned: 0,
+    posts_with_comments: 0,
+    total_comments_on_ig: 0,
     comments_seen: 0,
     connection_ok: false,
     account_type: null,
@@ -2337,19 +2343,43 @@ async function syncUserInbox(
     );
     console.log(`[V3 Inbox Sync] Found ${existingSet.size} existing comments in DB for user ${userId}`);
 
-    // FIX: Use `me/media` instead of `${platformUserId}/media`.
-    // On Instagram Login for Business API v21.0, `me` always resolves to the token owner
-    // and works consistently across Business/Creator accounts, whereas raw numeric IDs
-    // sometimes fail with "Object does not exist" errors on newly-migrated test accounts.
-    // Fetch 10 posts (up from 5) to give test accounts with older content a chance.
-    let postsList: any[] = [];
+    // FIX (coverage): Previously we only checked the 10 most recent posts. A new comment
+    // on an OLDER post (e.g. post #20 of 36) was never seen, so the inbox stayed empty even
+    // though Instagram clearly had a new comment.
+    //
+    // New strategy — scan ALL posts cheaply, deep-fetch only where needed:
+    //   1. Page through `me/media` requesting `comments_count` (metadata only, very cheap).
+    //   2. Sum comments_count across every post → total_comments_on_ig (authoritative signal).
+    //   3. Only call the expensive `{post}/comments` edge for posts where comments_count > 0,
+    //      newest-first, capped to stay within the Vercel 60s budget.
+    // `me` always resolves to the token owner on Instagram Login for Business API v21.0.
+    const MAX_POSTS_TO_SCAN = 200;   // hard cap on metadata pagination
+    const MAX_POSTS_TO_DEEP_FETCH = 40; // cap on comment-edge calls per sync run
+
+    const scannedPosts: any[] = [];
     try {
-      const postsResponse = await callInstagramAPI<{ data: any[] }>(
-        conn.accessToken,
-        `me/media?fields=id,timestamp,caption,media_type&limit=10`
-      );
-      postsList = postsResponse.data || [];
-      result.posts_fetched = postsList.length;
+      let nextUrl: string | null =
+        `me/media?fields=id,timestamp,caption,media_type,comments_count&limit=50`;
+      let pageGuard = 0;
+      while (nextUrl && scannedPosts.length < MAX_POSTS_TO_SCAN && pageGuard < 10) {
+        pageGuard++;
+        const postsResponse: { data?: any[]; paging?: { next?: string } } =
+          await callInstagramAPI<{ data: any[]; paging?: { next?: string } }>(
+            conn.accessToken,
+            nextUrl
+          );
+        const batch = postsResponse.data || [];
+        scannedPosts.push(...batch);
+        // `paging.next` is a full absolute URL; callInstagramAPI expects a relative endpoint,
+        // so only continue paginating while we still need more and a cursor exists.
+        const next = postsResponse.paging?.next;
+        if (next && scannedPosts.length < MAX_POSTS_TO_SCAN) {
+          // Convert absolute next URL back into a relative endpoint for callInstagramAPI.
+          nextUrl = next.replace(/^https?:\/\/graph\.instagram\.com\/v\d+(\.\d+)?\//, '');
+        } else {
+          nextUrl = null;
+        }
+      }
     } catch (mediaErr: any) {
       const msg = mediaErr.message || String(mediaErr);
       // Provide actionable diagnostics for common Instagram permission failures
@@ -2361,18 +2391,51 @@ async function syncUserInbox(
       throw new Error(`Failed to fetch Instagram posts: ${msg}`);
     }
 
-    console.log(`[V3 Inbox Sync] Fetched ${postsList.length} posts from Instagram for user ${userId}`);
+    result.posts_scanned = scannedPosts.length;
+    result.total_comments_on_ig = scannedPosts.reduce(
+      (sum, p) => sum + (Number(p.comments_count) || 0),
+      0
+    );
 
-    if (postsList.length === 0) {
-      // Not an error — test accounts often have no posts. Log and return gracefully.
+    console.log(
+      `[V3 Inbox Sync] Scanned ${scannedPosts.length} posts, total comments_count across account = ${result.total_comments_on_ig}`
+    );
+
+    if (scannedPosts.length === 0) {
       console.log(
         `[V3 Inbox Sync] User ${userId} has 0 posts on Instagram. Nothing to fetch comments for.`
       );
     }
 
+    // Posts that actually have comments, newest first, capped for the time budget.
+    // Fallback: if the API didn't return comments_count for any post (some field/permission
+    // edge cases omit it), fall back to deep-fetching the newest posts so we never silently
+    // skip everything.
+    const anyCountReported = scannedPosts.some(p => p.comments_count !== undefined);
+    let postsToFetch: any[];
+    if (anyCountReported) {
+      postsToFetch = scannedPosts
+        .filter(p => (Number(p.comments_count) || 0) > 0)
+        .slice(0, MAX_POSTS_TO_DEEP_FETCH);
+    } else {
+      console.warn(
+        `[V3 Inbox Sync] comments_count not returned by API — falling back to deep-fetch of newest ${MAX_POSTS_TO_DEEP_FETCH} posts.`
+      );
+      postsToFetch = scannedPosts.slice(0, MAX_POSTS_TO_DEEP_FETCH);
+    }
+
+    result.posts_with_comments = anyCountReported
+      ? scannedPosts.filter(p => (Number(p.comments_count) || 0) > 0).length
+      : postsToFetch.length;
+    result.posts_fetched = postsToFetch.length;
+
+    console.log(
+      `[V3 Inbox Sync] ${result.posts_with_comments} posts have comments; deep-fetching ${postsToFetch.length}.`
+    );
+
     const newCommentsToClassify: Array<{ id: string; text: string }> = [];
 
-    for (const post of postsList) {
+    for (const post of postsToFetch) {
       try {
         const commentsResponse = await callInstagramAPI<any>(
           conn.accessToken,
@@ -2396,7 +2459,7 @@ async function syncUserInbox(
         }
 
         // Small delay between posts to be nice to Instagram API
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 80));
       } catch (postError: any) {
         const errStr = `Post ${post.id}: ${postError.message}`;
         result.errors.push(errStr);
@@ -2749,13 +2812,17 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
     const syncResult = await syncUserInbox(userId, 'manual_refresh');
     console.log(
       `[V3 Inbox Manual Refresh] Sync completed for user ${userId}: ` +
-      `posts=${syncResult.posts_fetched}, comments_seen=${syncResult.comments_seen}, new=${syncResult.new_comments_count}, errors=${syncResult.errors.length}`
+      `scanned=${syncResult.posts_scanned}, total_comments_on_ig=${syncResult.total_comments_on_ig}, ` +
+      `deep_fetched=${syncResult.posts_fetched}, comments_seen=${syncResult.comments_seen}, new=${syncResult.new_comments_count}, errors=${syncResult.errors.length}`
     );
 
     res.json({
       success: true,
       new_comments_count: syncResult.new_comments_count,
       posts_fetched: syncResult.posts_fetched,
+      posts_scanned: syncResult.posts_scanned,
+      posts_with_comments: syncResult.posts_with_comments,
+      total_comments_on_ig: syncResult.total_comments_on_ig,
       comments_seen: syncResult.comments_seen,
       account_type: syncResult.account_type,
       errors: syncResult.errors,

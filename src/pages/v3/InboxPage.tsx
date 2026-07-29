@@ -195,30 +195,46 @@ export default function InboxPage() {
 
       if (j.success) {
         const newCount = j.new_comments_count || 0;
-        const postsFetched = j.posts_fetched ?? null;
+        const postsScanned = j.posts_scanned ?? j.posts_fetched ?? null;
         const commentsSeen = j.comments_seen ?? null;
+        const totalOnIg = j.total_comments_on_ig ?? null;
 
         console.log(
-          `[Inbox] Sync completed. new=${newCount}, posts=${postsFetched}, comments_seen=${commentsSeen}, errors=${(j.errors || []).length}`
+          `[Inbox] Sync completed. new=${newCount}, scanned=${postsScanned}, ` +
+          `total_comments_on_ig=${totalOnIg}, comments_seen=${commentsSeen}, errors=${(j.errors || []).length}`
         );
 
-        // Give the user useful feedback distinguishing the three "zero-new" reasons
+        // Distinguish the possible outcomes so the user knows exactly what happened.
         if (newCount > 0) {
           setRefreshBanner({ tone: 'success', text: `Synced ${newCount} new comment${newCount === 1 ? '' : 's'}.` });
-        } else if (postsFetched === 0) {
+        } else if (postsScanned === 0) {
           setRefreshBanner({
             tone: 'info',
             text: 'Instagram returned 0 posts for your account. Publish a post first, then try again.',
           });
-        } else if (commentsSeen === 0) {
+        } else if (totalOnIg === 0) {
+          // Authoritative: Instagram itself reports zero comments across every post.
+          // This usually means the new activity is a DM or a like, not a post comment
+          // (the Unified Inbox syncs post comments only).
           setRefreshBanner({
             tone: 'info',
-            text: `Checked ${postsFetched ?? 'your'} recent post${postsFetched === 1 ? '' : 's'} — no comments on Instagram yet.`,
+            text: `Instagram reports 0 comments across all ${postsScanned} of your posts. ` +
+              `Note: this inbox syncs post comments only — new likes or direct messages won't appear here.`,
+          });
+        } else if (commentsSeen === 0 && (totalOnIg ?? 0) > 0) {
+          // Instagram says there ARE comments, but the comments edge returned none — a
+          // permissions/visibility issue (e.g. missing instagram_business_manage_comments,
+          // or comments on posts beyond our scan cap). Tell the user to reconnect.
+          setRefreshBanner({
+            tone: 'warn',
+            text: `Instagram reports ${totalOnIg} comment${totalOnIg === 1 ? '' : 's'} but they couldn't be read. ` +
+              `Try reconnecting your Instagram account with comment permissions enabled.`,
           });
         } else {
+          // Comments were seen but all already in the inbox — up to date.
           setRefreshBanner({
             tone: 'info',
-            text: `Already up to date. Checked ${postsFetched ?? '?'} posts, ${commentsSeen ?? '?'} total comments.`,
+            text: `Already up to date. Scanned ${postsScanned} posts, ${commentsSeen} comment${commentsSeen === 1 ? '' : 's'} on Instagram.`,
           });
         }
 
