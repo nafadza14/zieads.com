@@ -18,8 +18,9 @@ import { put, del } from "@vercel/blob";
 // @ts-ignore
 import sharp from "sharp";
 import multer from "multer";
-import { getConnectedInstagram, callInstagramAPI, getClaudeClient } from "../utils/instagramHelpers.js";
+import { getConnectedInstagram, callInstagramAPI, getClaudeClient, verifyCronSecret } from "../utils/instagramHelpers.js";
 import { initializeSocialMediaMockData } from "./api-auth.js";
+import { classifyCommentsAsync } from "../utils/sentiment-classifier.js";
 
 export const apiV3Router = Router();
 
@@ -1640,6 +1641,14 @@ async function checkAndCleanupMockData(userId: string) {
       .like("blob_url", "%unsplash%")
       .limit(1);
 
+    // Check for old mock-seeded comments (IDs like 'comment_instagram_abc' or 'comment_linkedin_xyz')
+    const { data: mockComments } = await supabaseAdmin
+      .from("comments_inbox")
+      .select("id")
+      .eq("user_id", userId)
+      .like("platform_comment_id", "comment_%")
+      .limit(1);
+
     if (mockPosts && mockPosts.length > 0) {
       console.log(`[V3 API] Mock Instagram posts detected for user ${userId}. Cleaning up mock social data...`);
       await supabaseAdmin
@@ -1664,6 +1673,15 @@ async function checkAndCleanupMockData(userId: string) {
         .delete()
         .eq("user_id", userId)
         .like("blob_url", "%unsplash%");
+    }
+
+    if (mockComments && mockComments.length > 0) {
+      console.log(`[V3 API] Mock comments detected for user ${userId}. Cleaning up mock comments...`);
+      await supabaseAdmin
+        .from("comments_inbox")
+        .delete()
+        .eq("user_id", userId)
+        .like("platform_comment_id", "comment_%");
     }
   } catch (err: any) {
     console.error("[Cleanup Mock Check Failed]", err.message);
@@ -2232,17 +2250,35 @@ async function classifyCommentSentiment(text: string): Promise<{ sentiment: 'pos
 
 const activeInboxSyncs = new Set<string>();
 
-async function syncInstagramCommentsForUser(userId: string): Promise<number> {
+async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_refresh'): Promise<number> {
   if (activeInboxSyncs.has(userId)) {
     console.log(`[V3 Inbox Sync] Sync already in progress for user ${userId}. Skipping duplicate trigger.`);
     return 0;
   }
 
   activeInboxSyncs.add(userId);
+  const userStartTime = Date.now();
+  
+  // Create sync log row
+  const { data: logData } = await supabaseAdmin
+    .from('inbox_sync_log')
+    .insert({
+      user_id: userId,
+      platform: 'instagram',
+      sync_started_at: new Date().toISOString(),
+    })
+    .select('id')
+    .maybeSingle();
+
+  const logId = logData?.id;
+  let newCommentsCount = 0;
+  let errorMessage: string | null = null;
 
   try {
     const conn = await getConnectedInstagram(userId);
-    if (!conn) return 0;
+    if (!conn) {
+      throw new Error(`No active Instagram connection found for user ${userId}`);
+    }
 
     // Update last_synced_at immediately to lock duplicate triggers
     await supabaseAdmin
@@ -2251,7 +2287,7 @@ async function syncInstagramCommentsForUser(userId: string): Promise<number> {
       .eq("user_id", userId)
       .eq("platform", "instagram");
 
-    console.log(`[V3 Inbox Sync] Polling comments for ${conn.platformUsername}...`);
+    console.log(`[V3 Inbox Sync] Polling comments for ${conn.platformUsername} (${userId})...`);
 
     // Fetch all existing comment platform IDs for this user to avoid N+1 queries
     const { data: existingComments } = await supabaseAdmin
@@ -2268,117 +2304,148 @@ async function syncInstagramCommentsForUser(userId: string): Promise<number> {
     );
 
     const postsList = postsResponse.data || [];
-    let newCommentsCount = 0;
+    const newCommentsToClassify: Array<{ id: string, text: string }> = [];
 
     for (const post of postsList) {
       try {
-        const commentsResponse = await callInstagramAPI<{ data: any[] }>(
+        const commentsResponse = await callInstagramAPI<any>(
           conn.accessToken,
-          `${post.id}/comments?fields=id,text,username,timestamp,like_count,replies{id,text,username,timestamp}`
+          `${post.id}/comments?fields=id,text,username,timestamp,like_count&limit=50`
         );
 
-        const commentsList = commentsResponse.data || [];
+        const commentsList = (commentsResponse && commentsResponse.data) || [];
         const newComments = commentsList.filter(c => c.id && !existingSet.has(c.id));
 
-        if (newComments.length > 0) {
-          // Classify and insert new comments in parallel to speed up Gemini processing
-          await Promise.all(newComments.map(async (comment) => {
-            try {
-              console.log(`[V3 Inbox Sync] New comment detected: "${comment.text?.slice(0, 30)}..." from ${comment.username}`);
-              const sentimentResult = await classifyCommentSentiment(comment.text || "");
+        for (const comment of newComments) {
+          const { data: inserted } = await supabaseAdmin
+            .from('comments_inbox')
+            .upsert({
+              user_id: userId,
+              platform: 'instagram',
+              platform_comment_id: comment.id,
+              platform_media_id: post.id,
+              author_username: comment.username,
+              text: comment.text,
+              posted_at: comment.timestamp,
+              status: 'unread',
+              ingestion_source: source
+            }, { onConflict: 'user_id,platform,platform_comment_id', ignoreDuplicates: true })
+            .select('id, sentiment')
+            .maybeSingle();
 
-              const { error: insertErr } = await supabaseAdmin
-                .from("comments_inbox")
-                .insert({
-                  user_id: userId,
-                  platform: "instagram",
-                  platform_comment_id: comment.id,
-                  platform_media_id: post.id,
-                  parent_comment_id: null,
-                  author_username: comment.username,
-                  author_platform_id: "",
-                  text: comment.text,
-                  sentiment: sentimentResult.sentiment,
-                  sentiment_confidence: sentimentResult.confidence,
-                  status: "unread",
-                  posted_at: comment.timestamp,
-                  created_at: new Date().toISOString()
-                });
-
-              if (!insertErr) {
-                newCommentsCount++;
-                existingSet.add(comment.id); // prevent duplicate insertions
-              } else {
-                console.error(`[V3 Inbox Sync] Insert failed for comment ${comment.id}:`, insertErr.message);
-              }
-            } catch (err: any) {
-              console.error(`[V3 Inbox Sync] Failed to process single comment ${comment.id}:`, err.message);
-            }
-          }));
+          if (inserted && !inserted.sentiment) {
+            newCommentsToClassify.push({ id: inserted.id, text: comment.text });
+            newCommentsCount++;
+            existingSet.add(comment.id); // prevent duplicate insertions in same run
+          }
         }
-      } catch (postErr: any) {
-        console.error(`[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`, postErr.message);
+
+        // Small delay between posts to be nice to Instagram API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (postError: any) {
+        console.error(`[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`, postError.message);
       }
     }
 
-    return newCommentsCount;
+    // Classify sentiment for new comments ASYNC (don't block cron completion)
+    if (newCommentsToClassify.length > 0) {
+      console.log(`[V3 Inbox Sync] Triggering sentiment classification for ${newCommentsToClassify.length} comments...`);
+      classifyCommentsAsync(newCommentsToClassify).catch(err => 
+        console.error('[V3 Inbox Sync Sentiment Error]', err.message)
+      );
+    }
+
+  } catch (err: any) {
+    console.error(`[V3 Inbox Sync Error] Sync failed for user ${userId}:`, err.message);
+    errorMessage = err.message;
   } finally {
+    // Update sync log
+    if (logId) {
+      await supabaseAdmin
+        .from('inbox_sync_log')
+        .update({
+          sync_completed_at: new Date().toISOString(),
+          new_comments_count: newCommentsCount,
+          error_message: errorMessage,
+          duration_ms: Date.now() - userStartTime
+        })
+        .eq('id', logId);
+    }
     activeInboxSyncs.delete(userId);
   }
+
+  if (errorMessage) {
+    throw new Error(errorMessage);
+  }
+
+  return newCommentsCount;
 }
 
-apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
-  const { sentiment, status, limit } = req.query;
-  const maxLimit = limit ? Math.min(parseInt(limit as string), 100) : 50;
+apiV3Router.get("/cron/sync-instagram-comments", async (req: any, res: any) => {
+  if (!verifyCronSecret(req)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const startTime = Date.now();
+  console.log("[V3 Cron Comments] Triggering sync-instagram-comments cron job...");
 
   try {
-    await checkAndCleanupMockData(req.userId);
-    
-    const { data: connections } = await supabaseAdmin
+    const { data: connections, error } = await supabaseAdmin
       .from("social_connections")
-      .select("platform, last_synced_at")
-      .eq("user_id", req.userId)
+      .select("user_id")
+      .eq("platform", "instagram")
       .eq("is_active", true);
 
-    const hasInsta = connections?.some(c => c.platform === "instagram");
-    if (hasInsta) {
-      const conn = connections.find(c => c.platform === "instagram");
-      const lastSynced = conn?.last_synced_at ? new Date(conn.last_synced_at).getTime() : 0;
-      if (Date.now() - lastSynced > 15 * 60 * 1000) {
-        console.log(`[V3 Inbox] Triggering on-demand comments sync for user ${req.userId}...`);
-        try {
-          await syncInstagramCommentsForUser(req.userId);
-        } catch (err) {
-          console.error("[V3 Inbox Sync Error]", err);
-        }
+    if (error) throw error;
+
+    let syncedUsers = 0;
+    let failedUsers = 0;
+    let totalNewComments = 0;
+
+    for (const conn of (connections || [])) {
+      try {
+        const count = await syncUserInbox(conn.user_id, 'cron_polling');
+        totalNewComments += count;
+        syncedUsers++;
+      } catch (err: any) {
+        console.error(`[V3 Cron Comments] Failed for user ${conn.user_id}:`, err.message);
+        failedUsers++;
       }
+      // Spread load between users
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    // Fallback: If 0 comments in comments_inbox, but user has active connections, seed mock comments
-    const { count: commentsCount } = await supabaseAdmin
-      .from("comments_inbox")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", req.userId);
+    const duration = Date.now() - startTime;
+    console.log(`[V3 Cron Comments] Sync completed in ${duration}ms: synced_users=${syncedUsers} failed_users=${failedUsers} total_new_comments=${totalNewComments}`);
 
-    if (commentsCount === null || commentsCount === 0) {
-      const { data: activeConns } = await supabaseAdmin
-        .from("connected_accounts")
-        .select("id, platform, account_handle")
-        .eq("user_id", req.userId)
-        .eq("is_active", true);
+    res.json({
+      success: true,
+      synced_users: syncedUsers,
+      failed_users: failedUsers,
+      total_new_comments: totalNewComments,
+      duration_ms: duration
+    });
+  } catch (err: any) {
+    console.error("[V3 Cron Comments Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-      if (activeConns && activeConns.length > 0) {
-        console.log(`[V3 Inbox] 0 comments found for active connection. Seeding fallback mock data...`);
-        for (const conn of activeConns) {
-          await initializeSocialMediaMockData(req.userId, conn.platform, conn.id, conn.account_handle);
-        }
-      }
-    }
+apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
+  const { sentiment, status, limit, before } = req.query;
+  const maxLimit = limit ? Math.min(parseInt(limit as string), 100) : 50;
+  const userId = req.userId;
 
+  const startTime = Date.now();
+
+  try {
+    await checkAndCleanupMockData(userId);
+
+    // Build comment query
     let query = supabaseAdmin
       .from("comments_inbox")
       .select("*")
-      .eq("user_id", req.userId);
+      .eq("user_id", userId);
 
     if (sentiment && sentiment !== "all") {
       query = query.eq("sentiment", sentiment);
@@ -2388,7 +2455,12 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
       const statusList = (status as string).split(",");
       query = query.in("status", statusList);
     } else if (!status) {
+      // Default: exclude archived
       query = query.neq("status", "archived");
+    }
+
+    if (before) {
+      query = query.lt("posted_at", before);
     }
 
     const { data: comments, error } = await query
@@ -2397,10 +2469,12 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
 
     if (error) throw error;
 
-    const { data: allComments, error: summaryErr } = await supabaseAdmin
+    // Get summary counts (uses same indexed query, fast)
+    const { data: summaryData, error: summaryErr } = await supabaseAdmin
       .from("comments_inbox")
       .select("status, sentiment")
-      .eq("user_id", req.userId);
+      .eq("user_id", userId)
+      .neq("status", "archived");
 
     if (summaryErr) throw summaryErr;
 
@@ -2409,12 +2483,24 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
     let totalNegative = 0;
     let totalNeutral = 0;
 
-    for (const c of (allComments || [])) {
+    for (const c of (summaryData || [])) {
       if (c.status === "unread") totalUnread++;
       if (c.sentiment === "positive") totalPositive++;
       if (c.sentiment === "negative") totalNegative++;
       if (c.sentiment === "neutral") totalNeutral++;
     }
+
+    // Get last sync time from inbox_sync_log
+    const { data: lastSync } = await supabaseAdmin
+      .from("inbox_sync_log")
+      .select("sync_completed_at")
+      .eq("user_id", userId)
+      .order("sync_started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const duration = Date.now() - startTime;
+    console.log(`[INBOX] user=${userId} duration=${duration}ms comments=${comments?.length || 0}`);
 
     res.json({
       success: true,
@@ -2424,10 +2510,51 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
         total_positive: totalPositive,
         total_negative: totalNegative,
         total_neutral: totalNeutral
-      }
+      },
+      last_synced_at: lastSync?.sync_completed_at || null,
+      has_more: (comments || []).length === maxLimit
     });
 
   } catch (err: any) {
+    console.error("[V3 Inbox Get Comments Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
+  const userId = req.userId;
+
+  try {
+    // Rate limit check: last sync started must be > 60 seconds ago
+    const { data: recentSync } = await supabaseAdmin
+      .from('inbox_sync_log')
+      .select('sync_started_at')
+      .eq('user_id', userId)
+      .order('sync_started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentSync && recentSync.sync_started_at) {
+      const timeDiff = Date.now() - new Date(recentSync.sync_started_at).getTime();
+      if (timeDiff < 60000) {
+        const retryAfter = Math.ceil((60000 - timeDiff) / 1000);
+        return res.status(429).json({
+          error: `Please wait ${retryAfter} seconds before refreshing again.`,
+          retry_after_seconds: retryAfter
+        });
+      }
+    }
+
+    // Trigger sync immediately and await it
+    console.log(`[V3 Inbox Manual Refresh] Triggering manual sync for user ${userId}...`);
+    const newComments = await syncUserInbox(userId, 'manual_refresh');
+
+    res.json({
+      success: true,
+      new_comments_count: newComments
+    });
+  } catch (err: any) {
+    console.error("[V3 Inbox Manual Refresh Error]", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -2527,42 +2654,7 @@ async function commentArchiveHandler(req: any, res: any) {
 apiV3Router.post("/inbox/archive", requireAuth, commentArchiveHandler);
 apiV3Router.post("/inbox/comments/:id/archive", requireAuth, commentArchiveHandler);
 
-apiV3Router.get("/cron/sync-instagram-comments", async (req: any, res) => {
-  const cronSecret = process.env.CRON_SECRET || "local_secret";
-  const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: "Unauthorized cron execution." });
-  }
 
-  console.log("[V3 Cron Comments] Starting background comments sync...");
-  try {
-    const { data: conns, error } = await supabaseAdmin
-      .from("social_connections")
-      .select("user_id")
-      .eq("platform", "instagram")
-      .eq("is_active", true);
-
-    if (error) throw error;
-
-    let syncedUsers = 0;
-    let totalNewComments = 0;
-
-    for (const conn of (conns || [])) {
-      try {
-        const count = await syncInstagramCommentsForUser(conn.user_id);
-        totalNewComments += count;
-        syncedUsers++;
-        await new Promise(r => setTimeout(r, 200));
-      } catch (err: any) {
-        console.error(`[V3 Cron Comments] Failed for user ${conn.user_id}:`, err.message);
-      }
-    }
-
-    res.json({ success: true, synced_users: syncedUsers, new_comments: totalNewComments });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 apiV3Router.get("/webhooks/instagram/comments", (req: any, res) => {
   const mode = req.query["hub.mode"];

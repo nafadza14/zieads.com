@@ -43,6 +43,17 @@ export default function InboxPage() {
   const [connections, setConnections] = useState<any[]>([]);
   const [totalCommentsCount, setTotalCommentsCount] = useState<number>(0);
 
+  // Sync / Refresh States
+  const [summary, setSummary] = useState<any>({
+    total_unread: 0,
+    total_positive: 0,
+    total_negative: 0,
+    total_neutral: 0
+  });
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
   // Responsive state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
@@ -64,14 +75,9 @@ export default function InboxPage() {
 
     try {
       const headers = await getAuthHeaders();
-      const [connRes, countRes] = await Promise.all([
-        fetch('/api/v3/connections', { headers }),
-        fetch('/api/v3/inbox/comments?status=unread,read,replied', { headers })
-      ]);
+      const connRes = await fetch('/api/v3/connections', { headers });
       const connJ = await connRes.json();
       if (connJ.success) setConnections(connJ.data.filter((c: any) => c.platform !== 'meta_ads' && c.platform !== 'google_ads' && c.platform !== 'tiktok_ads'));
-      const countJ = await countRes.json();
-      if (countJ.success) setTotalCommentsCount(countJ.data.length);
     } catch (e) {
       console.error(e);
     }
@@ -108,6 +114,15 @@ export default function InboxPage() {
       const j = await res.json();
       if (j.success) {
         setComments(j.data);
+        setSummary(j.summary || {
+          total_unread: 0,
+          total_positive: 0,
+          total_negative: 0,
+          total_neutral: 0
+        });
+        setLastSyncedAt(j.last_synced_at);
+        setTotalCommentsCount(j.data.length);
+
         if (j.data.length > 0) {
           const stillMatches = j.data.find((c: any) => c.id === selectedComment?.id);
           setSelectedComment(stillMatches || j.data[0]);
@@ -119,6 +134,28 @@ export default function InboxPage() {
       console.error("Failed to fetch comments:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (refreshing || cooldownSeconds > 0) return;
+    setRefreshing(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/v3/inbox/refresh', { method: 'POST', headers });
+      const j = await res.json();
+      if (res.status === 429) {
+        setCooldownSeconds(j.retry_after_seconds || 60);
+      } else if (j.success) {
+        await fetchComments();
+        setCooldownSeconds(60);
+      } else {
+        alert(j.error || "Failed to refresh inbox.");
+      }
+    } catch (err: any) {
+      console.error("Failed to refresh:", err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -136,42 +173,79 @@ export default function InboxPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setCooldownSeconds(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownSeconds]);
+
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !selectedComment) return;
 
-    setSubmittingReply(true);
-    try {
-      if (demo.isActive) {
-        setReplyText('');
-        const updated = comments.map(c => 
-          c.id === selectedComment.id 
-            ? { ...c, status: 'replied', replied_at: new Date().toISOString(), reply_text: replyText.trim() } 
-            : c
-        );
-        setComments(updated);
-        setSelectedComment({ ...selectedComment, status: 'replied', replied_at: new Date().toISOString(), reply_text: replyText.trim() });
-        setSubmittingReply(false);
-        return;
-      }
+    const originalComment = { ...selectedComment };
+    const originalCommentsList = [...comments];
+    const textToSend = replyText.trim();
 
+    setReplyText('');
+    setSubmittingReply(true);
+
+    if (demo.isActive) {
+      const updated = comments.map(c => 
+        c.id === selectedComment.id 
+          ? { ...c, status: 'replied', replied_at: new Date().toISOString(), reply_text: textToSend } 
+          : c
+      );
+      setComments(updated);
+      setSelectedComment({ ...selectedComment, status: 'replied', replied_at: new Date().toISOString(), reply_text: textToSend });
+      setSubmittingReply(false);
+      return;
+    }
+
+    // Optimistic UI Update: immediately show reply as sending
+    const optimisticComment = {
+      ...selectedComment,
+      status: 'replied',
+      replied_at: new Date().toISOString(),
+      reply_text: textToSend,
+      isOptimistic: true
+    };
+
+    setComments(prev =>
+      prev.map(c => c.id === selectedComment.id ? optimisticComment : c)
+    );
+    setSelectedComment(optimisticComment);
+
+    try {
       const headers = await getAuthHeaders();
       const res = await fetch(`/api/v3/inbox/comments/${selectedComment.id}/reply`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ replyText: replyText.trim() })
+        body: JSON.stringify({ replyText: textToSend })
       });
       const j = await res.json();
       if (j.success) {
-        const sentText = replyText.trim();
-        setReplyText('');
-        setComments(prev => 
-          prev.map(c => c.id === selectedComment.id ? { ...c, status: 'replied', replied_at: new Date().toISOString(), reply_text: sentText } : c)
+        const realComment = {
+          ...selectedComment,
+          status: 'replied',
+          replied_at: j.replied_at || new Date().toISOString(),
+          reply_text: textToSend,
+          reply_platform_id: j.reply_id
+        };
+        setComments(prev =>
+          prev.map(c => c.id === selectedComment.id ? realComment : c)
         );
-        setSelectedComment(prev => ({ ...prev, status: 'replied', replied_at: new Date().toISOString(), reply_text: sentText }));
+        setSelectedComment(realComment);
+      } else {
+        throw new Error(j.error || "Failed to reply");
       }
-    } catch (err) {
-      alert("Failed to submit comment reply.");
+    } catch (err: any) {
+      alert(err.message || "Failed to submit comment reply.");
+      // Rollback on failure
+      setComments(originalCommentsList);
+      setSelectedComment(originalComment);
     } finally {
       setSubmittingReply(false);
     }
@@ -214,9 +288,24 @@ export default function InboxPage() {
     return <SocialIcon platform={platform} size={14} />;
   };
 
+  const formatLastSynced = (timestamp: string | null) => {
+    if (!timestamp) return "Never synced";
+    const date = new Date(timestamp);
+    const diffMs = Date.now() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return "Synced just now";
+    if (diffMins === 1) return "Synced 1 minute ago";
+    if (diffMins < 60) return `Synced ${diffMins} minutes ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours === 1) return "Synced 1 hour ago";
+    return `Synced ${diffHours} hours ago`;
+  };
+
   const renderEmptyState = () => {
     const isNoConnections = connections.length === 0;
-    const isNoCommentsYet = connections.length > 0 && totalCommentsCount === 0;
+    const isNoCommentsYet = connections.length > 0 && comments.length === 0;
 
     if (isNoConnections) {
       return (
@@ -224,7 +313,7 @@ export default function InboxPage() {
           <AlertCircle size={32} style={{ color: P }} />
           <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>No accounts connected yet</h3>
           <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-            Connect your social accounts to manage comments and DMs from one place.
+            Connect an Instagram account to start receiving comments.
           </p>
           <button 
             onClick={() => navigate('/connections')}
@@ -237,15 +326,27 @@ export default function InboxPage() {
     }
 
     if (isNoCommentsYet) {
-      return (
-        <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
-          <Clock size={32} style={{ color: P }} />
-          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>Waiting for activity</h3>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-            Comments and engagement on your posts will appear here once your followers interact. We sync every 30 minutes.
-          </p>
-        </div>
-      );
+      if (!lastSyncedAt) {
+        return (
+          <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
+            <Clock size={32} style={{ color: P, animation: 'pulse 1.5s infinite' }} />
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>Syncing your comments...</h3>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
+              We are fetching your Instagram activity. Check back in a few minutes or click the refresh button.
+            </p>
+          </div>
+        );
+      } else {
+        return (
+          <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
+            <MessageSquare size={32} style={{ color: G }} />
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>No comments yet</h3>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
+              When people comment on your posts, they will appear here within 15 minutes.
+            </p>
+          </div>
+        );
+      }
     }
 
     return (
@@ -268,6 +369,24 @@ export default function InboxPage() {
     );
   };
 
+  const SkeletonLoader = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 20, width: '100%', boxSizing: 'border-box' }}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16, border: `1px solid ${B}`, borderRadius: 8, background: '#fff', opacity: 0.6 }}>
+          <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--bg-soft)' }} />
+              <div style={{ width: 80, height: 12, borderRadius: 4, background: 'var(--bg-soft)' }} />
+            </div>
+            <div style={{ width: 50, height: 12, borderRadius: 4, background: 'var(--bg-soft)' }} />
+          </div>
+          <div style={{ width: '100%', height: 14, borderRadius: 4, background: 'var(--bg-soft)' }} />
+          <div style={{ width: '70%', height: 14, borderRadius: 4, background: 'var(--bg-soft)' }} />
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <V3Layout>
       {/* Header */}
@@ -276,6 +395,36 @@ export default function InboxPage() {
           <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Unified Inbox</h1>
           <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Manage and reply to all social comments in one dashboard.</p>
         </div>
+        {connections.length > 0 && !demo.isActive && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {lastSyncedAt && (
+              <span style={{ fontSize: '0.75rem', color: G }}>
+                {formatLastSynced(lastSyncedAt)}
+              </span>
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || cooldownSeconds > 0}
+              style={{
+                background: P,
+                color: '#fff',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 6,
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: (refreshing || cooldownSeconds > 0) ? 'not-allowed' : 'pointer',
+                opacity: (refreshing || cooldownSeconds > 0) ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Clock size={12} />
+              {refreshing ? 'Refreshing...' : cooldownSeconds > 0 ? `Refresh (${cooldownSeconds}s)` : 'Refresh Now'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Grid Split Panel (Responsive) */}
@@ -288,15 +437,18 @@ export default function InboxPage() {
               <h3 style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 10 }}>Filter Sentiment</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
-                  { k: '', l: 'All Sentiments' },
-                  { k: 'positive', l: 'Positive' },
-                  { k: 'neutral', l: 'Neutral' },
-                  { k: 'negative', l: 'Negative' }
+                  { k: '', l: 'All Sentiments', count: null },
+                  { k: 'positive', l: 'Positive', count: summary.total_positive },
+                  { k: 'neutral', l: 'Neutral', count: summary.total_neutral },
+                  { k: 'negative', l: 'Negative', count: summary.total_negative }
                 ].map(opt => (
                   <button
                     key={opt.k}
                     onClick={() => setSentimentFilter(opt.k)}
                     style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
                       textAlign: 'left',
                       background: sentimentFilter === opt.k ? 'var(--primary-bg)' : 'transparent',
                       border: 'none',
@@ -308,7 +460,12 @@ export default function InboxPage() {
                       cursor: 'pointer'
                     }}
                   >
-                    {opt.l}
+                    <span>{opt.l}</span>
+                    {opt.count !== null && opt.count > 0 && (
+                      <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 10, background: opt.k === 'positive' ? '#D1FAE5' : opt.k === 'negative' ? '#FEE2E2' : 'var(--bg-soft)', color: opt.k === 'positive' ? '#065F46' : opt.k === 'negative' ? '#991B1B' : 'var(--text-secondary)' }}>
+                        {opt.count}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -358,7 +515,7 @@ export default function InboxPage() {
             )}
 
             {loading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: G, fontSize: '0.85rem' }}>Loading comment inbox...</div>
+              <SkeletonLoader />
             ) : comments.length === 0 ? (
               renderEmptyState()
             ) : (
@@ -456,9 +613,11 @@ export default function InboxPage() {
 
                 {/* Thread replies */}
                 {selectedComment.status === 'replied' ? (
-                  <div style={{ background: '#E1F5FE', border: '1px solid #B3E5FC', borderRadius: 8, padding: 20, alignSelf: 'flex-end', width: '90%' }}>
+                  <div style={{ background: '#E1F5FE', border: '1px solid #B3E5FC', borderRadius: 8, padding: 20, alignSelf: 'flex-end', width: '90%', opacity: selectedComment.isOptimistic ? 0.7 : 1 }}>
                     <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#01579B' }}>You (via ZieAds)</span>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#01579B' }}>
+                        You (via ZieAds) {selectedComment.isOptimistic && <span style={{ fontWeight: 400, fontStyle: 'italic', color: G }}> (Sending...)</span>}
+                      </span>
                       <span style={{ fontSize: '0.65rem', color: G }}>{selectedComment.replied_at ? new Date(selectedComment.replied_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: '#0288D1' }}>

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-gradient'; // Wait, let's use react-router-dom
-import { useNavigate as useNav } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ZieAdsLogo from '../../components/ZieAdsLogo';
 
 export default function SuperadminLogin() {
-  const navigate = useNav();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
