@@ -230,9 +230,8 @@ export default function InboxPage() {
           setRefreshBanner({
             tone: 'error',
             text: `Instagram reports ${totalOnIg} comment${totalOnIg === 1 ? '' : 's'} but they can't be read. ` +
-              `This is a Meta app permission gate — the app needs Advanced Access for ` +
-              `"instagram_business_manage_comments", or this Instagram account must be added as a ` +
-              `tester/role in the Meta App Dashboard.${detail}`,
+              `Because your Meta App is in Development Mode, Instagram hides all comments made by regular users. ` +
+              `To test this, please post a comment using your own tester account.${detail}`,
           });
         } else {
           // Comments were seen but all already in the inbox — up to date.

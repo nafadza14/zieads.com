@@ -2549,8 +2549,8 @@ async function syncUserInbox(
         // the basic permission). Advanced Access via App Review — or adding this IG account
         // as a tester in the Meta App Dashboard — is required.
         result.sample_error =
-          `Instagram returned ${result.total_comments_on_ig} comment(s) in post metadata but the comments edge returned none and raised no error. ` +
-          `This indicates the Meta app lacks Advanced Access for "instagram_business_manage_comments" (or the connected account is not a tester on the app).`;
+          `Instagram returned ${result.total_comments_on_ig} comment(s) in post metadata but the comments edge returned none. ` +
+          `Because your Meta App is in Development Mode (or lacks Advanced Access), the Instagram API strictly hides all comments made by regular users. It will only return comments made by other App Testers.`;
       }
       console.warn(`[V3 Inbox Sync] comments_edge_blocked for user ${userId}: ${result.sample_error}`);
     }
