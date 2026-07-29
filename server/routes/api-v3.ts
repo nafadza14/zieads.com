@@ -2414,6 +2414,28 @@ async function syncUserInbox(
       `[V3 Inbox Sync] Polling comments for ${conn.platformUsername} (${userId}), platformUserId=${conn.platformUserId}, accountType=${result.account_type || 'unknown'}`
     );
 
+    // SELF-HEALING SUBSCRIPTION: registering a webhook URL in the Meta App Dashboard only
+    // configures the APP — it does NOT make Instagram send events for any specific account.
+    // Each IG account must separately call `{ig-user-id}/subscribed_apps` with its own token.
+    // Accounts connected before this fix was deployed never made that call, so their
+    // webhooks are silently inert even though the dashboard shows "configured". Re-issuing
+    // this call on every sync is idempotent and cheap, so existing connections heal without
+    // requiring the user to disconnect/reconnect. Best-effort — never fails the sync.
+    try {
+      const subRes = await fetch(
+        `https://graph.instagram.com/v21.0/${conn.platformUserId}/subscribed_apps?subscribed_fields=comments&access_token=${encodeURIComponent(conn.accessToken)}`,
+        { method: "POST" }
+      );
+      const subBody = await subRes.json().catch(() => ({}));
+      if (subRes.ok) {
+        console.log(`[V3 Inbox Sync] Webhook subscription confirmed for ${conn.platformUserId}:`, JSON.stringify(subBody));
+      } else {
+        console.warn(`[V3 Inbox Sync] Webhook subscription attempt failed for ${conn.platformUserId}:`, JSON.stringify(subBody));
+      }
+    } catch (subErr: any) {
+      console.warn(`[V3 Inbox Sync] Webhook subscription request error:`, subErr.message);
+    }
+
     // Fetch all existing comment platform IDs for this user to avoid N+1 queries
     const { data: existingComments } = await supabaseAdmin
       .from("comments_inbox")
@@ -2972,6 +2994,60 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
  * Usage (must be authenticated as the connected user):
  *   GET /api/v3/inbox/diagnose
  */
+/**
+ * WEBHOOK SUBSCRIPTION DIAGNOSTIC + MANUAL TRIGGER.
+ *
+ * GET  /api/v3/inbox/webhook-status  → shows whether THIS account is currently subscribed
+ *                                       to the app's webhook (the step that is separate from
+ *                                       configuring the callback URL in the Meta Dashboard).
+ * POST /api/v3/inbox/webhook-status  → (re)issues the subscription call right now, for
+ *                                       accounts connected before this fix existed.
+ *
+ * Both require the caller to be authenticated as the connected user.
+ */
+apiV3Router.get("/inbox/webhook-status", requireAuth, async (req: any, res) => {
+  try {
+    const conn = await getConnectedInstagram(req.userId);
+    if (!conn) {
+      return res.status(409).json({ success: false, error: "No active Instagram connection." });
+    }
+    const r = await fetch(
+      `https://graph.instagram.com/v21.0/${conn.platformUserId}/subscribed_apps?access_token=${encodeURIComponent(conn.accessToken)}`
+    );
+    const body = await r.json().catch(() => ({}));
+    res.json({
+      success: r.ok,
+      status: r.status,
+      platform_user_id: conn.platformUserId,
+      username: conn.platformUsername,
+      raw: body,
+      interpretation: r.ok && Array.isArray(body?.data) && body.data.length > 0
+        ? "Subscribed — this account IS registered to receive webhook events."
+        : "NOT subscribed — this account will never receive webhook events until subscribed. Call POST to this same endpoint to fix.",
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+apiV3Router.post("/inbox/webhook-status", requireAuth, async (req: any, res) => {
+  try {
+    const conn = await getConnectedInstagram(req.userId);
+    if (!conn) {
+      return res.status(409).json({ success: false, error: "No active Instagram connection." });
+    }
+    const r = await fetch(
+      `https://graph.instagram.com/v21.0/${conn.platformUserId}/subscribed_apps?subscribed_fields=comments&access_token=${encodeURIComponent(conn.accessToken)}`,
+      { method: "POST" }
+    );
+    const body = await r.json().catch(() => ({}));
+    console.log(`[V3 Webhook Manual Subscribe] user=${req.userId} ig=${conn.platformUserId} ok=${r.ok}`, JSON.stringify(body));
+    res.json({ success: r.ok, status: r.status, raw: body });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 apiV3Router.get("/inbox/diagnose", requireAuth, async (req: any, res) => {
   const userId = req.userId;
   const IG_API_BASE = 'https://graph.instagram.com/v21.0';

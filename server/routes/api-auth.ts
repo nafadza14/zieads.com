@@ -513,6 +513,28 @@ authRouter.get("/instagram/callback", async (req, res) => {
       await syncAll(stateData.user_id);
     }
 
+    // CRITICAL STEP that is easy to miss: registering a webhook callback URL in the Meta App
+    // Dashboard only configures the APP. Instagram will not actually send events for a
+    // specific IG account until that account is explicitly subscribed via the
+    // `{ig-user-id}/subscribed_apps` edge, using THAT account's own access token. Without
+    // this call, the dashboard webhook config looks "done" but zero events ever arrive —
+    // which is exactly the symptom reported (comments never reach the inbox). Best-effort:
+    // never block the OAuth redirect on this.
+    try {
+      const subRes = await fetch(
+        `https://graph.instagram.com/v21.0/${platformUserId}/subscribed_apps?subscribed_fields=comments&access_token=${encodeURIComponent(longLivedToken)}`,
+        { method: "POST" }
+      );
+      const subBody = await subRes.json().catch(() => ({}));
+      if (subRes.ok) {
+        console.log(`[OAuth] Instagram webhook subscription registered for account ${platformUserId}:`, JSON.stringify(subBody));
+      } else {
+        console.error(`[OAuth] Instagram webhook subscription FAILED for account ${platformUserId}:`, JSON.stringify(subBody));
+      }
+    } catch (subErr: any) {
+      console.error(`[OAuth] Instagram webhook subscription request failed:`, subErr.message);
+    }
+
     return res.redirect(`${redirectBase}/connections?connected=instagram`);
   } catch (err: any) {
     console.error("[OAuth] Unexpected Instagram callback error:", err);
