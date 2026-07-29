@@ -2493,14 +2493,23 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
     // Get last sync time from inbox_sync_log
     const { data: lastSync } = await supabaseAdmin
       .from("inbox_sync_log")
-      .select("sync_completed_at")
+      .select("sync_completed_at, sync_started_at")
       .eq("user_id", userId)
       .order("sync_started_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
+    // Check if sync is currently in progress (started less than 5 minutes ago and not completed)
+    let syncInProgress = false;
+    if (lastSync && !lastSync.sync_completed_at) {
+      const startedTime = new Date(lastSync.sync_started_at).getTime();
+      if (Date.now() - startedTime < 5 * 60 * 1000) {
+        syncInProgress = true;
+      }
+    }
+
     const duration = Date.now() - startTime;
-    console.log(`[INBOX] user=${userId} duration=${duration}ms comments=${comments?.length || 0}`);
+    console.log(`[INBOX] user=${userId} duration=${duration}ms comments=${comments?.length || 0} sync_in_progress=${syncInProgress}`);
 
     res.json({
       success: true,
@@ -2512,6 +2521,7 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
         total_neutral: totalNeutral
       },
       last_synced_at: lastSync?.sync_completed_at || null,
+      sync_in_progress: syncInProgress,
       has_more: (comments || []).length === maxLimit
     });
 
@@ -2545,13 +2555,15 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
       }
     }
 
-    // Trigger sync immediately and await it
-    console.log(`[V3 Inbox Manual Refresh] Triggering manual sync for user ${userId}...`);
-    const newComments = await syncUserInbox(userId, 'manual_refresh');
+    // Trigger sync in the background
+    console.log(`[V3 Inbox Manual Refresh] Triggering async manual sync for user ${userId}...`);
+    syncUserInbox(userId, 'manual_refresh').catch(err => {
+      console.error(`[V3 Inbox Async Sync Error] Background sync failed for user ${userId}:`, err.message);
+    });
 
     res.json({
       success: true,
-      new_comments_count: newComments
+      message: "Sync started in background"
     });
   } catch (err: any) {
     console.error("[V3 Inbox Manual Refresh Error]", err.message);

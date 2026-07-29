@@ -109,7 +109,7 @@ export async function getMediaInsights(
     metrics = 'impressions,reach,replies,taps_forward,taps_back,exits';
   } else {
     // IMAGE, CAROUSEL_ALBUM
-    metrics = 'impressions,reach,engagement,saved,likes,comments,shares';
+    metrics = 'impressions,reach,saved,likes,comments,shares';
   }
 
   try {

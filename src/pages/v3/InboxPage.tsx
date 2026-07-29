@@ -53,6 +53,7 @@ export default function InboxPage() {
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [syncInProgress, setSyncInProgress] = useState(false);
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -124,6 +125,7 @@ export default function InboxPage() {
           total_neutral: 0
         });
         setLastSyncedAt(j.last_synced_at);
+        setSyncInProgress(!!j.sync_in_progress);
         setTotalCommentsCount(j.data.length);
 
         if (j.data.length > 0) {
@@ -150,6 +152,7 @@ export default function InboxPage() {
       if (res.status === 429) {
         setCooldownSeconds(j.retry_after_seconds || 60);
       } else if (j.success) {
+        setSyncInProgress(true);
         await fetchComments();
         setCooldownSeconds(60);
       } else {
@@ -161,6 +164,46 @@ export default function InboxPage() {
       setRefreshing(false);
     }
   };
+
+  // Background polling while sync is running
+  useEffect(() => {
+    if (!syncInProgress || demo.isActive) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const statusVal = archivedFilter ? 'archived' : 'unread,read,replied';
+        let url = `/api/v3/inbox/comments?status=${statusVal}`;
+        if (sentimentFilter) {
+          url += `&sentiment=${sentimentFilter}`;
+        }
+        const res = await fetch(url, { headers });
+        const j = await res.json();
+        if (j.success) {
+          setComments(j.data);
+          setSummary(j.summary);
+          setLastSyncedAt(j.last_synced_at);
+          setSyncInProgress(!!j.sync_in_progress);
+          
+          if (j.data.length > 0 && !selectedComment) {
+            setSelectedComment(j.data[0]);
+          }
+        }
+      } catch (e) {
+        console.error("Polling error:", e);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [syncInProgress, sentimentFilter, archivedFilter, demo.isActive]);
+
+  // Auto-start sync if connected but never synced
+  useEffect(() => {
+    if (!demo.isActive && connections.length > 0 && lastSyncedAt === null && !syncInProgress && !refreshing) {
+      console.log("[Inbox] Auto-triggering first comment sync...");
+      handleRefresh();
+    }
+  }, [connections, lastSyncedAt, demo.isActive]);
 
   useEffect(() => {
     loadMetadata();
@@ -329,7 +372,7 @@ export default function InboxPage() {
     }
 
     if (isNoCommentsYet) {
-      if (!lastSyncedAt) {
+      if (!lastSyncedAt || syncInProgress) {
         return (
           <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
             <Clock size={32} style={{ color: P, animation: 'pulse 1.5s infinite' }} />
@@ -409,7 +452,7 @@ export default function InboxPage() {
             )}
             <button
               onClick={handleRefresh}
-              disabled={refreshing || cooldownSeconds > 0}
+              disabled={refreshing || syncInProgress || cooldownSeconds > 0}
               style={{
                 background: P,
                 color: '#fff',
@@ -418,15 +461,15 @@ export default function InboxPage() {
                 borderRadius: 6,
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                cursor: (refreshing || cooldownSeconds > 0) ? 'not-allowed' : 'pointer',
-                opacity: (refreshing || cooldownSeconds > 0) ? 0.7 : 1,
+                cursor: (refreshing || syncInProgress || cooldownSeconds > 0) ? 'not-allowed' : 'pointer',
+                opacity: (refreshing || syncInProgress || cooldownSeconds > 0) ? 0.7 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6
               }}
             >
               <Clock size={12} />
-              {refreshing ? 'Refreshing...' : cooldownSeconds > 0 ? `Refresh (${cooldownSeconds}s)` : 'Refresh Now'}
+              {syncInProgress ? 'Syncing comments...' : refreshing ? 'Refreshing...' : cooldownSeconds > 0 ? `Refresh (${cooldownSeconds}s)` : 'Refresh Now'}
             </button>
           </div>
         )}
