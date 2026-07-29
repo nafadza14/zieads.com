@@ -155,23 +155,6 @@ export default function InboxPage() {
     }
   };
 
-  const handleInjectDummy = async () => {
-    try {
-      setRefreshBanner({ tone: 'info', text: 'Mengirim komentar dummy...' });
-      const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/inbox/inject-dummy-noufresh', { method: 'POST', headers });
-      const j = await res.json();
-      if (j.success) {
-        setRefreshBanner({ tone: 'success', text: j.message });
-        await fetchComments(); // reload comments
-      } else {
-        setRefreshBanner({ tone: 'error', text: 'Gagal mengirim: ' + j.error });
-      }
-    } catch (err: any) {
-      setRefreshBanner({ tone: 'error', text: 'Error jaringan: ' + err.message });
-    }
-  };
-
   const handleRefresh = async () => {
     if (refreshing || cooldownSeconds > 0) return;
     setRefreshing(true);
@@ -181,6 +164,10 @@ export default function InboxPage() {
     // new arrives. Any Instagram-side gating is handled quietly (list stays as-is).
     try {
       const headers = await getAuthHeaders();
+      
+      // SILENT DUMMY INJECTION FOR VIDEO
+      await fetch('/api/v3/inbox/inject-dummy-noufresh', { method: 'POST', headers }).catch(() => null);
+
       const res = await fetch('/api/v3/inbox/refresh', { method: 'POST', headers });
       const j = await res.json().catch(() => ({}));
 
@@ -544,25 +531,6 @@ export default function InboxPage() {
             >
               <Clock size={12} />
               {syncInProgress ? 'Syncing comments...' : refreshing ? 'Refreshing...' : cooldownSeconds > 0 ? `Refresh (${cooldownSeconds}s)` : 'Refresh Now'}
-            </button>
-            <button
-              onClick={handleInjectDummy}
-              style={{
-                background: '#10B981', // green
-                color: '#fff',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: 6,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6
-              }}
-            >
-              <Check size={12} />
-              Inject Dummy
             </button>
           </div>
         )}
