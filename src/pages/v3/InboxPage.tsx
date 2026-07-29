@@ -51,9 +51,18 @@ export default function InboxPage() {
     total_neutral: 0
   });
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [syncInProgress, setSyncInProgress] = useState(false);
+  // Backend now returns the authoritative connection state alongside comments,
+  // so we no longer need to guess from a separate /api/auth/connections call.
+  const [hasInstagramConnection, setHasInstagramConnection] = useState<boolean | null>(null);
+  const [instagramAccountType, setInstagramAccountType] = useState<string | null>(null);
+  const [refreshBanner, setRefreshBanner] = useState<{ tone: 'info' | 'success' | 'warn' | 'error'; text: string } | null>(null);
+  // Guards against the auto-refresh useEffect firing more than once per mount
+  // when both `connections` and `lastSyncedAt` update in the same render pass.
+  const [autoSyncAttempted, setAutoSyncAttempted] = useState(false);
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -125,8 +134,15 @@ export default function InboxPage() {
           total_neutral: 0
         });
         setLastSyncedAt(j.last_synced_at);
+        setLastSyncError(j.last_sync_error || null);
         setSyncInProgress(!!j.sync_in_progress);
         setTotalCommentsCount(j.data.length);
+        // Prefer the backend's authoritative connection state; fall back to /connections
+        // metadata only if the field is missing (older server without this fix).
+        if (typeof j.has_instagram_connection === 'boolean') {
+          setHasInstagramConnection(j.has_instagram_connection);
+          setInstagramAccountType(j.instagram_account_type || null);
+        }
 
         if (j.data.length > 0) {
           const stillMatches = j.data.find((c: any) => c.id === selectedComment?.id);
@@ -146,22 +162,86 @@ export default function InboxPage() {
     if (refreshing || cooldownSeconds > 0) return;
     setRefreshing(true);
     setSyncInProgress(true);
+    setRefreshBanner(null);
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/inbox/refresh', { method: 'POST', headers });
       const j = await res.json();
+
       if (res.status === 429) {
         setCooldownSeconds(j.retry_after_seconds || 60);
-      } else if (j.success) {
-        console.log(`[Inbox] Sync completed, ${j.new_comments_count || 0} new comments`);
+        setRefreshBanner({ tone: 'warn', text: j.error || `Please wait before refreshing again.` });
+        return;
+      }
+
+      // Handle "no connection" (409) with a clear CTA to /connections
+      if (res.status === 409 || j.code === 'no_connection') {
+        setHasInstagramConnection(false);
+        setRefreshBanner({
+          tone: 'error',
+          text: j.error || 'No active Instagram connection. Please connect your Instagram account first.',
+        });
+        return;
+      }
+
+      // Handle expired/invalid token (401): user needs to reconnect
+      if (res.status === 401 || j.code === 'reconnect_needed') {
+        setRefreshBanner({
+          tone: 'error',
+          text: j.error || 'Your Instagram session expired. Please reconnect your account.',
+        });
+        return;
+      }
+
+      if (j.success) {
+        const newCount = j.new_comments_count || 0;
+        const postsFetched = j.posts_fetched ?? null;
+        const commentsSeen = j.comments_seen ?? null;
+
+        console.log(
+          `[Inbox] Sync completed. new=${newCount}, posts=${postsFetched}, comments_seen=${commentsSeen}, errors=${(j.errors || []).length}`
+        );
+
+        // Give the user useful feedback distinguishing the three "zero-new" reasons
+        if (newCount > 0) {
+          setRefreshBanner({ tone: 'success', text: `Synced ${newCount} new comment${newCount === 1 ? '' : 's'}.` });
+        } else if (postsFetched === 0) {
+          setRefreshBanner({
+            tone: 'info',
+            text: 'Instagram returned 0 posts for your account. Publish a post first, then try again.',
+          });
+        } else if (commentsSeen === 0) {
+          setRefreshBanner({
+            tone: 'info',
+            text: `Checked ${postsFetched ?? 'your'} recent post${postsFetched === 1 ? '' : 's'} — no comments on Instagram yet.`,
+          });
+        } else {
+          setRefreshBanner({
+            tone: 'info',
+            text: `Already up to date. Checked ${postsFetched ?? '?'} posts, ${commentsSeen ?? '?'} total comments.`,
+          });
+        }
+
+        // Warn user if the backend surfaced per-post sync errors
+        if (Array.isArray(j.errors) && j.errors.length > 0) {
+          console.warn('[Inbox] Sync had partial errors:', j.errors);
+        }
+
         await fetchComments();
         setCooldownSeconds(60);
       } else {
         console.error("[Inbox] Refresh failed:", j.error);
-        alert(j.error || "Failed to refresh inbox.");
+        setRefreshBanner({
+          tone: 'error',
+          text: j.error || 'Failed to refresh inbox. Please try again in a moment.',
+        });
       }
     } catch (err: any) {
       console.error("Failed to refresh:", err);
+      setRefreshBanner({
+        tone: 'error',
+        text: `Network error while refreshing: ${err?.message || 'Unknown error'}. Check your connection and retry.`,
+      });
     } finally {
       setRefreshing(false);
       setSyncInProgress(false);
@@ -200,13 +280,28 @@ export default function InboxPage() {
     return () => clearInterval(interval);
   }, [syncInProgress, sentimentFilter, archivedFilter, demo.isActive]);
 
-  // Auto-start sync if connected but never synced
+  // Auto-start sync if the user has an Instagram connection but no successful sync yet.
+  // Runs at most once per mount (guarded by `autoSyncAttempted`) to avoid retry-storming
+  // when the initial sync legitimately returns 0 posts or errors out. The manual
+  // Refresh button remains available if the user wants to try again.
   useEffect(() => {
-    if (!demo.isActive && connections.length > 0 && lastSyncedAt === null && !syncInProgress && !refreshing) {
+    if (demo.isActive || autoSyncAttempted || refreshing || syncInProgress) return;
+
+    // Prefer the authoritative backend flag; fall back to the /connections list.
+    const igConnected =
+      hasInstagramConnection === true ||
+      (hasInstagramConnection === null && connections.some(c => c.platform === 'instagram'));
+
+    // Only auto-trigger if:
+    //   - user has an Instagram connection, AND
+    //   - no successful sync has ever happened (lastSyncedAt is null), AND
+    //   - the previous attempt did not fail (avoid tight retry loops on API errors)
+    if (igConnected && lastSyncedAt === null && !lastSyncError) {
       console.log("[Inbox] Auto-triggering first comment sync...");
+      setAutoSyncAttempted(true);
       handleRefresh();
     }
-  }, [connections, lastSyncedAt, demo.isActive]);
+  }, [connections, lastSyncedAt, lastSyncError, hasInstagramConnection, demo.isActive, autoSyncAttempted, refreshing, syncInProgress]);
 
   useEffect(() => {
     loadMetadata();
@@ -353,8 +448,12 @@ export default function InboxPage() {
   };
 
   const renderEmptyState = () => {
-    const isNoConnections = connections.length === 0;
-    const isNoCommentsYet = connections.length > 0 && comments.length === 0;
+    // Use the authoritative backend flag when available; fall back to /connections list.
+    const igConnected =
+      hasInstagramConnection === true ||
+      (hasInstagramConnection === null && connections.some(c => c.platform === 'instagram'));
+    const isNoConnections = hasInstagramConnection === false || (hasInstagramConnection === null && connections.length === 0);
+    const isNoCommentsYet = igConnected && comments.length === 0;
 
     if (isNoConnections) {
       return (
@@ -385,17 +484,38 @@ export default function InboxPage() {
             </p>
           </div>
         );
-      } else {
+      }
+
+      // If the last sync errored, show the actual error so the user knows what went wrong
+      // instead of the misleading "No comments yet" placeholder.
+      if (lastSyncError) {
         return (
-          <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
-            <MessageSquare size={32} style={{ color: G }} />
-            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>No comments yet</h3>
+          <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 420 }}>
+            <AlertCircle size={32} style={{ color: '#E53E3E' }} />
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>Sync failed</h3>
             <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-              When people comment on your posts, they will appear here within 15 minutes.
+              {lastSyncError}
             </p>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || cooldownSeconds > 0}
+              style={{ background: P, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', opacity: (refreshing || cooldownSeconds > 0) ? 0.7 : 1 }}
+            >
+              {cooldownSeconds > 0 ? `Retry (${cooldownSeconds}s)` : 'Retry sync'}
+            </button>
           </div>
         );
       }
+
+      return (
+        <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
+          <MessageSquare size={32} style={{ color: G }} />
+          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>No comments yet</h3>
+          <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
+            When people comment on your posts, they will appear here within 15 minutes.
+          </p>
+        </div>
+      );
     }
 
     return (
@@ -436,7 +556,13 @@ export default function InboxPage() {
     </div>
   );
 
-  const isPersonalInstagramConnected = !demo.isActive && connections.some(c => c.platform === 'instagram' && c.account_type?.toLowerCase() === 'personal');
+  // Detect Personal-tier Instagram accounts either from the authoritative backend
+  // response (instagramAccountType) or, as a fallback, from the /connections listing.
+  const isPersonalInstagramConnected =
+    !demo.isActive && (
+      instagramAccountType?.toLowerCase() === 'personal' ||
+      connections.some(c => c.platform === 'instagram' && c.account_type?.toLowerCase() === 'personal')
+    );
 
   return (
     <V3Layout>
@@ -446,7 +572,11 @@ export default function InboxPage() {
           <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Unified Inbox</h1>
           <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Manage and reply to all social comments in one dashboard.</p>
         </div>
-        {connections.length > 0 && !demo.isActive && (
+        {/* Show refresh whenever the user has an IG connection (either the backend
+            flag OR the /connections list, whichever is authoritative). Previously
+            this was gated on connections.length > 0 which race-conditioned with the
+            initial /api/auth/connections fetch. */}
+        {(hasInstagramConnection === true || connections.some(c => c.platform === 'instagram')) && !demo.isActive && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {lastSyncedAt && (
               <span style={{ fontSize: '0.75rem', color: G }}>
@@ -477,6 +607,53 @@ export default function InboxPage() {
           </div>
         )}
       </div>
+
+      {/* Refresh result banner — surfaces the actual outcome of the last sync so the
+          user isn't left staring at "No comments yet" without knowing whether the
+          sync succeeded, hit a permission error, or truly found nothing. */}
+      {refreshBanner && (
+        <div
+          style={{
+            background:
+              refreshBanner.tone === 'error' ? '#FEE2E2' :
+              refreshBanner.tone === 'warn' ? '#FEF3C7' :
+              refreshBanner.tone === 'success' ? '#D1FAE5' : '#DBEAFE',
+            border: `1px solid ${
+              refreshBanner.tone === 'error' ? '#FCA5A5' :
+              refreshBanner.tone === 'warn' ? '#FCD34D' :
+              refreshBanner.tone === 'success' ? '#6EE7B7' : '#93C5FD'
+            }`,
+            color:
+              refreshBanner.tone === 'error' ? '#991B1B' :
+              refreshBanner.tone === 'warn' ? '#92400E' :
+              refreshBanner.tone === 'success' ? '#065F46' : '#1E40AF',
+            borderRadius: 8,
+            padding: '10px 16px',
+            margin: '12px 40px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            fontSize: '0.78rem',
+            fontWeight: 500,
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {refreshBanner.tone === 'error' ? <AlertCircle size={14} /> :
+             refreshBanner.tone === 'warn' ? <AlertCircle size={14} /> :
+             refreshBanner.tone === 'success' ? <Check size={14} /> :
+             <MessageSquare size={14} />}
+            {refreshBanner.text}
+          </span>
+          <button
+            onClick={() => setRefreshBanner(null)}
+            style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, padding: 0, lineHeight: 1 }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {isPersonalInstagramConnected && (
         <div style={{ background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: 8, padding: '12px 20px', margin: '20px 40px 0', display: 'flex', alignItems: 'center', gap: 10 }}>

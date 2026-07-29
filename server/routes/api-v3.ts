@@ -2248,46 +2248,82 @@ async function classifyCommentSentiment(text: string): Promise<{ sentiment: 'pos
   }
 }
 
-const activeInboxSyncs = new Set<string>();
+// NOTE: In-memory locking (activeInboxSyncs) was removed because Vercel serverless
+// spawns a fresh instance per invocation, making an in-memory Set useless.
+// Duplicate prevention is now handled at the /inbox/refresh endpoint via inbox_sync_log
+// (60-second rate limit) and at the DB level via ON CONFLICT (user_id,platform,platform_comment_id).
 
-async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_refresh'): Promise<number> {
-  if (activeInboxSyncs.has(userId)) {
-    console.log(`[V3 Inbox Sync] Sync already in progress for user ${userId}. Skipping duplicate trigger.`);
-    return 0;
+interface InboxSyncResult {
+  new_comments_count: number;
+  posts_fetched: number;
+  comments_seen: number;
+  connection_ok: boolean;
+  account_type: string | null;
+  errors: string[];
+}
+
+async function syncUserInbox(
+  userId: string,
+  source: 'cron_polling' | 'manual_refresh'
+): Promise<InboxSyncResult> {
+  const userStartTime = Date.now();
+
+  // Create sync log row (best effort — do not fail sync if logging fails)
+  let logId: string | null = null;
+  try {
+    const { data: logData } = await supabaseAdmin
+      .from('inbox_sync_log')
+      .insert({
+        user_id: userId,
+        platform: 'instagram',
+        sync_started_at: new Date().toISOString(),
+      })
+      .select('id')
+      .maybeSingle();
+    logId = logData?.id || null;
+  } catch (logErr: any) {
+    console.warn(`[V3 Inbox Sync] Failed to insert sync log (non-fatal):`, logErr.message);
   }
 
-  activeInboxSyncs.add(userId);
-  const userStartTime = Date.now();
-  
-  // Create sync log row
-  const { data: logData } = await supabaseAdmin
-    .from('inbox_sync_log')
-    .insert({
-      user_id: userId,
-      platform: 'instagram',
-      sync_started_at: new Date().toISOString(),
-    })
-    .select('id')
-    .maybeSingle();
-
-  const logId = logData?.id;
-  let newCommentsCount = 0;
+  const result: InboxSyncResult = {
+    new_comments_count: 0,
+    posts_fetched: 0,
+    comments_seen: 0,
+    connection_ok: false,
+    account_type: null,
+    errors: [],
+  };
   let errorMessage: string | null = null;
 
   try {
     const conn = await getConnectedInstagram(userId);
     if (!conn) {
-      throw new Error(`No active Instagram connection found for user ${userId}`);
+      throw new Error(
+        `No active Instagram connection found. Please connect your Instagram Business or Creator account.`
+      );
     }
+    result.connection_ok = true;
 
-    // Update last_synced_at immediately to lock duplicate triggers
+    // Read account_type from social_connections for diagnostics (Personal accounts can't sync comments)
+    const { data: connMeta } = await supabaseAdmin
+      .from('social_connections')
+      .select('platform_account_type')
+      .eq('user_id', userId)
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+      .maybeSingle();
+    result.account_type = connMeta?.platform_account_type || null;
+
+    // Update last_synced_at immediately for observability
     await supabaseAdmin
       .from("social_connections")
       .update({ last_synced_at: new Date().toISOString() })
       .eq("user_id", userId)
       .eq("platform", "instagram");
 
-    console.log(`[V3 Inbox Sync] Polling comments for ${conn.platformUsername} (${userId}), platformUserId=${conn.platformUserId}`);
+    console.log(
+      `[V3 Inbox Sync] Polling comments for ${conn.platformUsername} (${userId}), platformUserId=${conn.platformUserId}, accountType=${result.account_type || 'unknown'}`
+    );
 
     // Fetch all existing comment platform IDs for this user to avoid N+1 queries
     const { data: existingComments } = await supabaseAdmin
@@ -2296,18 +2332,45 @@ async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_re
       .eq("user_id", userId)
       .eq("platform", "instagram");
 
-    const existingSet = new Set(existingComments?.map(c => c.platform_comment_id).filter(Boolean) || []);
+    const existingSet = new Set(
+      existingComments?.map(c => c.platform_comment_id).filter(Boolean) || []
+    );
     console.log(`[V3 Inbox Sync] Found ${existingSet.size} existing comments in DB for user ${userId}`);
 
-    // Only fetch 5 most recent posts to stay within Vercel serverless timeout
-    const postsResponse = await callInstagramAPI<{ data: any[] }>(
-      conn.accessToken,
-      `${conn.platformUserId}/media?fields=id,timestamp,caption&limit=5`
-    );
+    // FIX: Use `me/media` instead of `${platformUserId}/media`.
+    // On Instagram Login for Business API v21.0, `me` always resolves to the token owner
+    // and works consistently across Business/Creator accounts, whereas raw numeric IDs
+    // sometimes fail with "Object does not exist" errors on newly-migrated test accounts.
+    // Fetch 10 posts (up from 5) to give test accounts with older content a chance.
+    let postsList: any[] = [];
+    try {
+      const postsResponse = await callInstagramAPI<{ data: any[] }>(
+        conn.accessToken,
+        `me/media?fields=id,timestamp,caption,media_type&limit=10`
+      );
+      postsList = postsResponse.data || [];
+      result.posts_fetched = postsList.length;
+    } catch (mediaErr: any) {
+      const msg = mediaErr.message || String(mediaErr);
+      // Provide actionable diagnostics for common Instagram permission failures
+      if (/permission|scope|OAuthException|access_token/i.test(msg)) {
+        throw new Error(
+          `Instagram permission denied when fetching media. This usually means the token expired or missing scopes. Please reconnect your Instagram account. (${msg})`
+        );
+      }
+      throw new Error(`Failed to fetch Instagram posts: ${msg}`);
+    }
 
-    const postsList = postsResponse.data || [];
     console.log(`[V3 Inbox Sync] Fetched ${postsList.length} posts from Instagram for user ${userId}`);
-    const newCommentsToClassify: Array<{ id: string, text: string }> = [];
+
+    if (postsList.length === 0) {
+      // Not an error — test accounts often have no posts. Log and return gracefully.
+      console.log(
+        `[V3 Inbox Sync] User ${userId} has 0 posts on Instagram. Nothing to fetch comments for.`
+      );
+    }
+
+    const newCommentsToClassify: Array<{ id: string; text: string }> = [];
 
     for (const post of postsList) {
       try {
@@ -2317,30 +2380,17 @@ async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_re
         );
 
         const commentsList = (commentsResponse && commentsResponse.data) || [];
+        result.comments_seen += commentsList.length;
         console.log(`[V3 Inbox Sync] Post ${post.id}: found ${commentsList.length} comments from API`);
-        const newComments = commentsList.filter(c => c.id && !existingSet.has(c.id));
+
+        const newComments = commentsList.filter((c: any) => c.id && !existingSet.has(c.id));
         console.log(`[V3 Inbox Sync] Post ${post.id}: ${newComments.length} new comments to insert`);
 
         for (const comment of newComments) {
-          const { data: inserted } = await supabaseAdmin
-            .from('comments_inbox')
-            .upsert({
-              user_id: userId,
-              platform: 'instagram',
-              platform_comment_id: comment.id,
-              platform_media_id: post.id,
-              author_username: comment.username,
-              text: comment.text,
-              posted_at: comment.timestamp,
-              status: 'unread',
-              ingestion_source: source
-            }, { onConflict: 'user_id,platform,platform_comment_id', ignoreDuplicates: true })
-            .select('id, sentiment')
-            .maybeSingle();
-
-          if (inserted && !inserted.sentiment) {
+          const inserted = await insertCommentDefensive(userId, post.id, comment, source);
+          if (inserted && inserted.id) {
             newCommentsToClassify.push({ id: inserted.id, text: comment.text });
-            newCommentsCount++;
+            result.new_comments_count++;
             existingSet.add(comment.id); // prevent duplicate insertions in same run
           }
         }
@@ -2348,42 +2398,139 @@ async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_re
         // Small delay between posts to be nice to Instagram API
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (postError: any) {
-        console.error(`[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`, postError.message, postError.stack?.split('\n')[1] || '');
+        const errStr = `Post ${post.id}: ${postError.message}`;
+        result.errors.push(errStr);
+        console.error(
+          `[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`,
+          postError.message,
+          postError.stack?.split('\n')[1] || ''
+        );
       }
     }
 
-    // Classify sentiment for new comments ASYNC (don't block cron completion)
+    // FIX: Await sentiment classification with a hard timeout so it actually runs on Vercel.
+    // Previously fire-and-forget promises were killed when the serverless function returned,
+    // leaving sentiment: null forever. We cap at 25s to stay under the 60s Vercel maxDuration
+    // budget shared with the initial API calls above.
     if (newCommentsToClassify.length > 0) {
-      console.log(`[V3 Inbox Sync] Triggering sentiment classification for ${newCommentsToClassify.length} comments...`);
-      classifyCommentsAsync(newCommentsToClassify).catch(err => 
-        console.error('[V3 Inbox Sync Sentiment Error]', err.message)
+      console.log(
+        `[V3 Inbox Sync] Awaiting sentiment classification for ${newCommentsToClassify.length} comments (25s timeout)...`
       );
+      try {
+        await Promise.race([
+          classifyCommentsAsync(newCommentsToClassify),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Sentiment classification timed out after 25s')),
+              25000
+            )
+          ),
+        ]);
+        console.log(`[V3 Inbox Sync] Sentiment classification completed.`);
+      } catch (sentimentErr: any) {
+        // Non-fatal: comments stay with sentiment=null and the frontend falls back to "neutral".
+        // The nightly cron will retry classification on subsequent syncs.
+        console.error('[V3 Inbox Sync Sentiment Error]', sentimentErr.message);
+        result.errors.push(`Sentiment: ${sentimentErr.message}`);
+      }
     }
-
   } catch (err: any) {
     console.error(`[V3 Inbox Sync Error] Sync failed for user ${userId}:`, err.message);
     errorMessage = err.message;
+    result.errors.push(err.message);
   } finally {
     // Update sync log
     if (logId) {
-      await supabaseAdmin
-        .from('inbox_sync_log')
-        .update({
-          sync_completed_at: new Date().toISOString(),
-          new_comments_count: newCommentsCount,
-          error_message: errorMessage,
-          duration_ms: Date.now() - userStartTime
-        })
-        .eq('id', logId);
+      try {
+        await supabaseAdmin
+          .from('inbox_sync_log')
+          .update({
+            sync_completed_at: new Date().toISOString(),
+            new_comments_count: result.new_comments_count,
+            error_message: errorMessage,
+            duration_ms: Date.now() - userStartTime,
+          })
+          .eq('id', logId);
+      } catch (logUpdateErr: any) {
+        console.warn(`[V3 Inbox Sync] Failed to update sync log:`, logUpdateErr.message);
+      }
     }
-    activeInboxSyncs.delete(userId);
   }
 
   if (errorMessage) {
-    throw new Error(errorMessage);
+    // Attach diagnostic info to the thrown error so the /refresh endpoint can surface it
+    const enrichedError: any = new Error(errorMessage);
+    enrichedError.diagnostics = result;
+    throw enrichedError;
   }
 
-  return newCommentsCount;
+  return result;
+}
+
+/**
+ * Defensive comment insert: tries with `ingestion_source` first, falls back to a
+ * schema-agnostic insert if the column doesn't exist (older migrations). This
+ * prevents the entire comment from being lost when the schema is out of sync.
+ */
+async function insertCommentDefensive(
+  userId: string,
+  platformMediaId: string,
+  comment: { id: string; username?: string; text?: string; timestamp?: string },
+  source: 'cron_polling' | 'manual_refresh'
+): Promise<{ id: string } | null> {
+  const basePayload: any = {
+    user_id: userId,
+    platform: 'instagram',
+    platform_comment_id: comment.id,
+    platform_media_id: platformMediaId,
+    author_username: comment.username || '',
+    text: comment.text || '',
+    posted_at: comment.timestamp || new Date().toISOString(),
+    status: 'unread',
+  };
+
+  // First attempt: with ingestion_source
+  const withSource = { ...basePayload, ingestion_source: source };
+  const attempt1 = await supabaseAdmin
+    .from('comments_inbox')
+    .upsert(withSource, {
+      onConflict: 'user_id,platform,platform_comment_id',
+      ignoreDuplicates: false,
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (!attempt1.error && attempt1.data) return attempt1.data;
+
+  // Second attempt: without ingestion_source (schema might be older)
+  const errMsg = attempt1.error?.message || '';
+  if (/ingestion_source|column.*does not exist/i.test(errMsg)) {
+    console.warn(
+      `[V3 Inbox Sync] ingestion_source column missing, retrying without it for comment ${comment.id}`
+    );
+    const attempt2 = await supabaseAdmin
+      .from('comments_inbox')
+      .upsert(basePayload, {
+        onConflict: 'user_id,platform,platform_comment_id',
+        ignoreDuplicates: false,
+      })
+      .select('id')
+      .maybeSingle();
+    if (!attempt2.error && attempt2.data) return attempt2.data;
+    console.error(
+      `[V3 Inbox Sync] Second insert attempt also failed for comment ${comment.id}:`,
+      attempt2.error?.message
+    );
+    return null;
+  }
+
+  if (attempt1.error) {
+    console.error(
+      `[V3 Inbox Sync] Failed to insert comment ${comment.id}:`,
+      attempt1.error.message
+    );
+  }
+  return null;
 }
 
 apiV3Router.get("/cron/sync-instagram-comments", async (req: any, res: any) => {
@@ -2409,8 +2556,8 @@ apiV3Router.get("/cron/sync-instagram-comments", async (req: any, res: any) => {
 
     for (const conn of (connections || [])) {
       try {
-        const count = await syncUserInbox(conn.user_id, 'cron_polling');
-        totalNewComments += count;
+        const syncResult = await syncUserInbox(conn.user_id, 'cron_polling');
+        totalNewComments += syncResult.new_comments_count;
         syncedUsers++;
       } catch (err: any) {
         console.error(`[V3 Cron Comments] Failed for user ${conn.user_id}:`, err.message);
@@ -2495,10 +2642,10 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
       if (c.sentiment === "neutral") totalNeutral++;
     }
 
-    // Get last sync time from inbox_sync_log
+    // Get last sync log entry (completed OR failed) for status/diagnostics
     const { data: lastSync } = await supabaseAdmin
       .from("inbox_sync_log")
-      .select("sync_completed_at, sync_started_at")
+      .select("sync_completed_at, sync_started_at, error_message, new_comments_count")
       .eq("user_id", userId)
       .order("sync_started_at", { ascending: false })
       .limit(1)
@@ -2513,8 +2660,26 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
       }
     }
 
+    // Check whether the user has an active Instagram connection so the frontend
+    // can render an accurate empty state ("no connection" vs "no comments yet")
+    // without a second round-trip to /api/auth/connections.
+    const { data: activeIgConn } = await supabaseAdmin
+      .from('social_connections')
+      .select('platform_account_type, platform_username, last_synced_at')
+      .eq('user_id', userId)
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    const hasInstagramConnection = !!activeIgConn;
+    const instagramAccountType = activeIgConn?.platform_account_type || null;
+
     const duration = Date.now() - startTime;
-    console.log(`[INBOX] user=${userId} duration=${duration}ms comments=${comments?.length || 0} sync_in_progress=${syncInProgress}`);
+    console.log(
+      `[INBOX] user=${userId} duration=${duration}ms comments=${comments?.length || 0} ` +
+      `sync_in_progress=${syncInProgress} has_ig=${hasInstagramConnection} account_type=${instagramAccountType || 'unknown'} ` +
+      `last_sync_error=${lastSync?.error_message ? 'yes' : 'no'}`
+    );
 
     res.json({
       success: true,
@@ -2526,7 +2691,12 @@ apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
         total_neutral: totalNeutral
       },
       last_synced_at: lastSync?.sync_completed_at || null,
+      last_sync_error: lastSync?.error_message || null,
+      last_sync_new_comments: lastSync?.new_comments_count ?? null,
       sync_in_progress: syncInProgress,
+      has_instagram_connection: hasInstagramConnection,
+      instagram_account_type: instagramAccountType,
+      instagram_username: activeIgConn?.platform_username || null,
       has_more: (comments || []).length === maxLimit
     });
 
@@ -2540,6 +2710,18 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
   const userId = req.userId;
 
   try {
+    // Pre-flight: verify user actually has an active Instagram connection
+    // so we return a clean 409 instead of a generic 500 for the common
+    // "user never connected IG" case.
+    const preflightConn = await getConnectedInstagram(userId);
+    if (!preflightConn) {
+      return res.status(409).json({
+        success: false,
+        error: "No active Instagram connection found. Please connect your Instagram Business or Creator account first.",
+        code: "no_connection",
+      });
+    }
+
     // Rate limit check: last sync started must be > 60 seconds ago
     const { data: recentSync } = await supabaseAdmin
       .from('inbox_sync_log')
@@ -2554,24 +2736,42 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
       if (timeDiff < 60000) {
         const retryAfter = Math.ceil((60000 - timeDiff) / 1000);
         return res.status(429).json({
+          success: false,
           error: `Please wait ${retryAfter} seconds before refreshing again.`,
-          retry_after_seconds: retryAfter
+          retry_after_seconds: retryAfter,
+          code: "rate_limited",
         });
       }
     }
 
     // Sync must be awaited — Vercel kills fire-and-forget async calls after response
     console.log(`[V3 Inbox Manual Refresh] Starting sync for user ${userId}...`);
-    const newComments = await syncUserInbox(userId, 'manual_refresh');
-    console.log(`[V3 Inbox Manual Refresh] Sync completed for user ${userId}, ${newComments} new comments`);
+    const syncResult = await syncUserInbox(userId, 'manual_refresh');
+    console.log(
+      `[V3 Inbox Manual Refresh] Sync completed for user ${userId}: ` +
+      `posts=${syncResult.posts_fetched}, comments_seen=${syncResult.comments_seen}, new=${syncResult.new_comments_count}, errors=${syncResult.errors.length}`
+    );
 
     res.json({
       success: true,
-      new_comments_count: newComments
+      new_comments_count: syncResult.new_comments_count,
+      posts_fetched: syncResult.posts_fetched,
+      comments_seen: syncResult.comments_seen,
+      account_type: syncResult.account_type,
+      errors: syncResult.errors,
     });
   } catch (err: any) {
     console.error("[V3 Inbox Manual Refresh Error]", err.message);
-    res.status(500).json({ error: err.message });
+    const diagnostics = (err as any).diagnostics || null;
+    const code = /permission|scope|OAuthException|access_token|reconnect/i.test(err.message || '')
+      ? 'reconnect_needed'
+      : 'sync_failed';
+    res.status(code === 'reconnect_needed' ? 401 : 500).json({
+      success: false,
+      error: err.message,
+      code,
+      diagnostics,
+    });
   }
 });
 
