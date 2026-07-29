@@ -3048,6 +3048,70 @@ apiV3Router.post("/inbox/webhook-status", requireAuth, async (req: any, res) => 
   }
 });
 
+apiV3Router.post("/inbox/inject-dummy-noufresh", requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    // Find active connection to attach the media to
+    const { data: conn } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform_user_id, platform_username")
+      .eq("user_id", userId)
+      .eq("platform", "instagram")
+      .eq("connected", true)
+      .maybeSingle();
+
+    const mediaId = "dummy_media_" + Date.now();
+    const commentsToInsert = [
+      {
+        user_id: userId,
+        platform: "instagram",
+        platform_comment_id: `dummy_${Date.now()}_1`,
+        platform_media_id: mediaId,
+        author_username: "budi.santoso",
+        text: "Wah, Noufresh ini beneran ampuh banget buat ngilangin bau mulut. Fix bakal beli lagi!",
+        sentiment: "positive",
+        sentiment_confidence: 0.95,
+        status: "unread",
+        posted_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "instagram",
+        platform_comment_id: `dummy_${Date.now()}_2`,
+        platform_media_id: mediaId,
+        author_username: "siti_aminah99",
+        text: "Kapan restock untuk varian mint-nya min? Udah nyari dimana-mana kosong terus.",
+        sentiment: "neutral",
+        sentiment_confidence: 0.8,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+        created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "instagram",
+        platform_comment_id: `dummy_${Date.now()}_3`,
+        platform_media_id: mediaId,
+        author_username: "agus_pratama",
+        text: "Pengirimannya cepat dan packing aman. Rasanya juga enak nggak bikin eneg kayak merk lain. Mantap Noufresh!",
+        sentiment: "positive",
+        sentiment_confidence: 0.9,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+        created_at: new Date().toISOString()
+      }
+    ];
+
+    const { error } = await supabaseAdmin.from("comments_inbox").insert(commentsToInsert);
+    if (error) throw error;
+
+    res.json({ success: true, message: "3 Dummy Noufresh comments injected successfully!" });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 apiV3Router.get("/inbox/diagnose", requireAuth, async (req: any, res) => {
   const userId = req.userId;
   const IG_API_BASE = 'https://graph.instagram.com/v21.0';
