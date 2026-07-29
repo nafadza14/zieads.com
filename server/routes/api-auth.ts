@@ -426,6 +426,17 @@ authRouter.get("/instagram/callback", async (req, res) => {
     const shortLivedData = await tokenRes.json();
     const shortLivedToken = shortLivedData.access_token;
 
+    // Capture the permissions Instagram ACTUALLY granted (returned as an array or a
+    // comma-separated string on the Business Login token response). Storing the real
+    // grant — instead of a hard-coded string — makes silently-missing scopes (e.g. a
+    // user unchecking "manage comments" on the consent screen) visible in the DB.
+    const grantedPermissions: string = Array.isArray(shortLivedData.permissions)
+      ? shortLivedData.permissions.join(",")
+      : (typeof shortLivedData.permissions === "string" && shortLivedData.permissions.length > 0
+          ? shortLivedData.permissions
+          : "");
+    console.log(`[OAuth] Instagram granted permissions: ${grantedPermissions || "<not reported>"}`);
+
     // Exchange short-lived token for long-lived (60 days) token
     const longLivedUrl = `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${
       process.env.INSTAGRAM_APP_SECRET
@@ -476,7 +487,7 @@ authRouter.get("/instagram/callback", async (req, res) => {
       platform_account_type: platformAccountType,
       access_token: encryptedAccess,
       token_expires_at: expiresAt,
-      scopes_granted: "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish",
+      scopes_granted: grantedPermissions || "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish",
       is_active: true,
       last_refreshed_at: new Date().toISOString(),
     }, { onConflict: "user_id,platform" });

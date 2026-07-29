@@ -3225,51 +3225,79 @@ apiV3Router.post("/webhooks/instagram/comments", async (req: any, res) => {
     for (const entry of entries) {
       const changes = entry.changes || [];
       for (const change of changes) {
-        if (change.value && change.value.item === "comment") {
-          const igAccountId = entry.id;
-          const commentVal = change.value;
-          const commentId = commentVal.id;
-          const mediaId = commentVal.media?.id;
-          const text = commentVal.text;
-          const username = commentVal.from?.username;
+        // FIX: Real Instagram comment webhooks (Instagram Login flavor) arrive as
+        //   { field: "comments", value: { id, text, from: {id, username}, media: {id}, parent_id? } }
+        // — there is NO `value.item` property. The old check (`value.item === "comment"`) only
+        // matched Facebook Page `feed` payloads, so genuine Instagram webhooks were silently
+        // dropped. Accept BOTH shapes.
+        const isIgCommentsField = change.field === "comments" && change.value && change.value.id;
+        const isLegacyFeedComment = change.value && change.value.item === "comment";
+        if (!isIgCommentsField && !isLegacyFeedComment) continue;
 
-          const { data: conn } = await supabaseAdmin
-            .from("social_connections")
-            .select("user_id")
-            .eq("platform_user_id", igAccountId)
-            .eq("platform", "instagram")
-            .maybeSingle();
+        const igAccountId = String(entry.id || "");
+        const commentVal = change.value;
+        const commentId = commentVal.id || commentVal.comment_id;
+        const mediaId = commentVal.media?.id || commentVal.post_id || null;
+        const text = commentVal.text || commentVal.message || "";
+        const username = commentVal.from?.username || commentVal.from?.name || "";
 
-          if (conn) {
-            const { data: existing } = await supabaseAdmin
-              .from("comments_inbox")
-              .select("id")
-              .eq("user_id", conn.user_id)
-              .eq("platform", "instagram")
-              .eq("platform_comment_id", commentId)
-              .maybeSingle();
+        if (!commentId) continue;
 
-            if (!existing) {
-              classifyCommentSentiment(text).then(async (sentimentResult) => {
-                await supabaseAdmin
-                  .from("comments_inbox")
-                  .insert({
-                    user_id: conn.user_id,
-                    platform: "instagram",
-                    platform_comment_id: commentId,
-                    platform_media_id: mediaId,
-                    parent_comment_id: commentVal.parent_id || null,
-                    author_username: username || "anonymous",
-                    author_platform_id: commentVal.from?.id || "",
-                    text: text,
-                    sentiment: sentimentResult.sentiment,
-                    sentiment_confidence: sentimentResult.confidence,
-                    status: "unread",
-                    posted_at: new Date(commentVal.created_time * 1000).toISOString(),
-                    created_at: new Date().toISOString()
-                  });
-              }).catch(err => console.error("[V3 Webhook Sentiment Error]", err));
+        // Route to the owning user via the IG account id in entry.id
+        const { data: conn } = await supabaseAdmin
+          .from("social_connections")
+          .select("user_id")
+          .eq("platform_user_id", igAccountId)
+          .eq("platform", "instagram")
+          .maybeSingle();
+
+        if (!conn) {
+          console.warn(`[V3 Webhook] No connection matches IG account ${igAccountId}; skipping comment ${commentId}`);
+          continue;
+        }
+
+        // Skip comments authored by the connected account itself (e.g. our own replies
+        // posted via the API) so they don't appear as inbound inbox items.
+        if (commentVal.from?.id && String(commentVal.from.id) === igAccountId) {
+          console.log(`[V3 Webhook] Ignoring own comment ${commentId} (author == account owner)`);
+          continue;
+        }
+
+        // FIX: insert must be AWAITED before responding — on Vercel serverless,
+        // fire-and-forget promises are killed as soon as the response is sent.
+        // `created_time` is unix seconds when present; absent in some payloads.
+        const postedAt = commentVal.created_time
+          ? new Date(Number(commentVal.created_time) * 1000).toISOString()
+          : new Date().toISOString();
+
+        const inserted = await insertCommentDefensive(
+          conn.user_id,
+          mediaId || `webhook_${igAccountId}`,
+          { id: commentId, username, text, timestamp: postedAt },
+          'cron_polling',
+          commentVal.parent_id || null
+        );
+
+        if (inserted && inserted.id) {
+          console.log(`[V3 Webhook] Ingested comment ${commentId} for user ${conn.user_id}`);
+          // Sentiment: await with a short timeout so it completes before the function exits;
+          // on timeout/failure the comment simply stays neutral — never blocks ingestion.
+          try {
+            const sentimentResult: any = await Promise.race([
+              classifyCommentSentiment(text),
+              new Promise(resolve => setTimeout(() => resolve(null), 8000)),
+            ]);
+            if (sentimentResult && sentimentResult.sentiment) {
+              await supabaseAdmin
+                .from("comments_inbox")
+                .update({
+                  sentiment: sentimentResult.sentiment,
+                  sentiment_confidence: sentimentResult.confidence ?? 0,
+                })
+                .eq("id", inserted.id);
             }
+          } catch (sentimentErr: any) {
+            console.error("[V3 Webhook Sentiment Error]", sentimentErr.message);
           }
         }
       }
