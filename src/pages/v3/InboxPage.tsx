@@ -51,7 +51,6 @@ export default function InboxPage() {
     total_neutral: 0
   });
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
-  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [syncInProgress, setSyncInProgress] = useState(false);
@@ -59,10 +58,6 @@ export default function InboxPage() {
   // so we no longer need to guess from a separate /api/auth/connections call.
   const [hasInstagramConnection, setHasInstagramConnection] = useState<boolean | null>(null);
   const [instagramAccountType, setInstagramAccountType] = useState<string | null>(null);
-  const [refreshBanner, setRefreshBanner] = useState<{ tone: 'info' | 'success' | 'warn' | 'error'; text: string } | null>(null);
-  // Shows the "Run diagnostics" action in the banner when the comments edge is blocked.
-  const [showDiagnoseAction, setShowDiagnoseAction] = useState(false);
-  const [diagnosing, setDiagnosing] = useState(false);
   // Guards against the auto-refresh useEffect firing more than once per mount
   // when both `connections` and `lastSyncedAt` update in the same render pass.
   const [autoSyncAttempted, setAutoSyncAttempted] = useState(false);
@@ -137,7 +132,6 @@ export default function InboxPage() {
           total_neutral: 0
         });
         setLastSyncedAt(j.last_synced_at);
-        setLastSyncError(j.last_sync_error || null);
         setSyncInProgress(!!j.sync_in_progress);
         setTotalCommentsCount(j.data.length);
         // Prefer the backend's authoritative connection state; fall back to /connections
@@ -161,138 +155,40 @@ export default function InboxPage() {
     }
   };
 
-  const runDiagnostics = async () => {
-    if (diagnosing) return;
-    setDiagnosing(true);
-    setRefreshBanner({ tone: 'info', text: 'Running Instagram diagnostics — inspecting raw API responses...' });
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/inbox/diagnose', { headers });
-      const j = await res.json();
-      // Full raw payload to the console for deep inspection / screenshotting.
-      console.log('[Inbox Diagnostics] Full report:', j);
-      if (j.success) {
-        setRefreshBanner({
-          tone: j.interpretation?.includes('access-level gate') ? 'error' : 'info',
-          text: `Diagnostics: ${j.interpretation || 'See browser console for the full report.'} ` +
-            `(media returned ${j.media?.total_posts_returned ?? '?'} posts, ` +
-            `${j.media?.posts_with_comments ?? '?'} with comments. Full JSON in the browser console.)`,
-        });
-      } else {
-        setRefreshBanner({ tone: 'error', text: `Diagnostics failed: ${j.error || 'unknown error'}` });
-      }
-    } catch (err: any) {
-      setRefreshBanner({ tone: 'error', text: `Diagnostics request failed: ${err?.message || 'network error'}` });
-    } finally {
-      setDiagnosing(false);
-    }
-  };
-
   const handleRefresh = async () => {
     if (refreshing || cooldownSeconds > 0) return;
     setRefreshing(true);
     setSyncInProgress(true);
-    setRefreshBanner(null);
-    setShowDiagnoseAction(false);
+    // Silent refresh — no banners or notifications shown in the inbox per product decision.
+    // Outcomes are logged to the console only; the comment list simply updates if anything
+    // new arrives. Any Instagram-side gating is handled quietly (list stays as-is).
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/inbox/refresh', { method: 'POST', headers });
-      const j = await res.json();
+      const j = await res.json().catch(() => ({}));
 
       if (res.status === 429) {
         setCooldownSeconds(j.retry_after_seconds || 60);
-        setRefreshBanner({ tone: 'warn', text: j.error || `Please wait before refreshing again.` });
         return;
       }
 
-      // Handle "no connection" (409) with a clear CTA to /connections
       if (res.status === 409 || j.code === 'no_connection') {
         setHasInstagramConnection(false);
-        setRefreshBanner({
-          tone: 'error',
-          text: j.error || 'No active Instagram connection. Please connect your Instagram account first.',
-        });
         return;
       }
 
-      // Handle expired/invalid token (401): user needs to reconnect
-      if (res.status === 401 || j.code === 'reconnect_needed') {
-        setRefreshBanner({
-          tone: 'error',
-          text: j.error || 'Your Instagram session expired. Please reconnect your account.',
-        });
-        return;
-      }
-
-      if (j.success) {
-        const newCount = j.new_comments_count || 0;
-        const postsScanned = j.posts_scanned ?? j.posts_fetched ?? null;
-        const commentsSeen = j.comments_seen ?? null;
-        const totalOnIg = j.total_comments_on_ig ?? null;
-
+      if (j && j.success) {
         console.log(
-          `[Inbox] Sync completed. new=${newCount}, scanned=${postsScanned}, ` +
-          `total_comments_on_ig=${totalOnIg}, comments_seen=${commentsSeen}, errors=${(j.errors || []).length}`
+          `[Inbox] Sync completed. new=${j.new_comments_count ?? 0}, scanned=${j.posts_scanned ?? '?'}, ` +
+          `total_comments_on_ig=${j.total_comments_on_ig ?? '?'}, comments_seen=${j.comments_seen ?? '?'}`
         );
-
-        // Distinguish the possible outcomes so the user knows exactly what happened.
-        if (newCount > 0) {
-          setRefreshBanner({ tone: 'success', text: `Synced ${newCount} new comment${newCount === 1 ? '' : 's'}.` });
-        } else if (postsScanned === 0) {
-          setRefreshBanner({
-            tone: 'info',
-            text: 'Instagram returned 0 posts for your account. Publish a post first, then try again.',
-          });
-        } else if (totalOnIg === 0) {
-          // Authoritative: Instagram itself reports zero comments across every post.
-          // This usually means the new activity is a DM or a like, not a post comment
-          // (the Unified Inbox syncs post comments only).
-          setRefreshBanner({
-            tone: 'info',
-            text: `Instagram reports 0 comments across all ${postsScanned} of your posts. ` +
-              `Note: this inbox syncs post comments only — new likes or direct messages won't appear here.`,
-          });
-        } else if (commentsSeen === 0 && (totalOnIg ?? 0) > 0) {
-          // Instagram says there ARE comments, but the comments edge returned none.
-          // This is almost always a Meta app access-level gate on
-          // `instagram_business_manage_comments` (Standard vs Advanced Access), NOT a
-          // reconnect problem. Surface the real backend diagnostic + offer a deep probe.
-          const detail = j.sample_error ? ` Details: ${j.sample_error}` : '';
-          setShowDiagnoseAction(true);
-          setRefreshBanner({
-            tone: 'error',
-            text: `Instagram reports ${totalOnIg} comment${totalOnIg === 1 ? '' : 's'} but they can't be read. ` +
-              `Likely a Meta app permission gate on "instagram_business_manage_comments" ` +
-              `(Standard vs Advanced Access). Click "Run diagnostics" to see Instagram's raw response.${detail}`,
-          });
-        } else {
-          // Comments were seen but all already in the inbox — up to date.
-          setRefreshBanner({
-            tone: 'info',
-            text: `Already up to date. Scanned ${postsScanned} posts, ${commentsSeen} comment${commentsSeen === 1 ? '' : 's'} on Instagram.`,
-          });
-        }
-
-        // Warn user if the backend surfaced per-post sync errors
-        if (Array.isArray(j.errors) && j.errors.length > 0) {
-          console.warn('[Inbox] Sync had partial errors:', j.errors);
-        }
-
         await fetchComments();
         setCooldownSeconds(60);
       } else {
-        console.error("[Inbox] Refresh failed:", j.error);
-        setRefreshBanner({
-          tone: 'error',
-          text: j.error || 'Failed to refresh inbox. Please try again in a moment.',
-        });
+        console.error("[Inbox] Refresh failed:", j?.error);
       }
     } catch (err: any) {
       console.error("Failed to refresh:", err);
-      setRefreshBanner({
-        tone: 'error',
-        text: `Network error while refreshing: ${err?.message || 'Unknown error'}. Check your connection and retry.`,
-      });
     } finally {
       setRefreshing(false);
       setSyncInProgress(false);
@@ -343,16 +239,14 @@ export default function InboxPage() {
       hasInstagramConnection === true ||
       (hasInstagramConnection === null && connections.some(c => c.platform === 'instagram'));
 
-    // Only auto-trigger if:
-    //   - user has an Instagram connection, AND
-    //   - no successful sync has ever happened (lastSyncedAt is null), AND
-    //   - the previous attempt did not fail (avoid tight retry loops on API errors)
-    if (igConnected && lastSyncedAt === null && !lastSyncError) {
+    // Only auto-trigger if the user has an Instagram connection and no successful sync
+    // has happened yet. Runs at most once per mount (autoSyncAttempted guard).
+    if (igConnected && lastSyncedAt === null) {
       console.log("[Inbox] Auto-triggering first comment sync...");
       setAutoSyncAttempted(true);
       handleRefresh();
     }
-  }, [connections, lastSyncedAt, lastSyncError, hasInstagramConnection, demo.isActive, autoSyncAttempted, refreshing, syncInProgress]);
+  }, [connections, lastSyncedAt, hasInstagramConnection, demo.isActive, autoSyncAttempted, refreshing, syncInProgress]);
 
   useEffect(() => {
     loadMetadata();
@@ -537,27 +431,6 @@ export default function InboxPage() {
         );
       }
 
-      // If the last sync errored, show the actual error so the user knows what went wrong
-      // instead of the misleading "No comments yet" placeholder.
-      if (lastSyncError) {
-        return (
-          <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 420 }}>
-            <AlertCircle size={32} style={{ color: '#E53E3E' }} />
-            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>Sync failed</h3>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-              {lastSyncError}
-            </p>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing || cooldownSeconds > 0}
-              style={{ background: P, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', opacity: (refreshing || cooldownSeconds > 0) ? 0.7 : 1 }}
-            >
-              {cooldownSeconds > 0 ? `Retry (${cooldownSeconds}s)` : 'Retry sync'}
-            </button>
-          </div>
-        );
-      }
-
       return (
         <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
           <MessageSquare size={32} style={{ color: G }} />
@@ -658,77 +531,6 @@ export default function InboxPage() {
           </div>
         )}
       </div>
-
-      {/* Refresh result banner — surfaces the actual outcome of the last sync so the
-          user isn't left staring at "No comments yet" without knowing whether the
-          sync succeeded, hit a permission error, or truly found nothing. */}
-      {refreshBanner && (
-        <div
-          style={{
-            background:
-              refreshBanner.tone === 'error' ? '#FEE2E2' :
-              refreshBanner.tone === 'warn' ? '#FEF3C7' :
-              refreshBanner.tone === 'success' ? '#D1FAE5' : '#DBEAFE',
-            border: `1px solid ${
-              refreshBanner.tone === 'error' ? '#FCA5A5' :
-              refreshBanner.tone === 'warn' ? '#FCD34D' :
-              refreshBanner.tone === 'success' ? '#6EE7B7' : '#93C5FD'
-            }`,
-            color:
-              refreshBanner.tone === 'error' ? '#991B1B' :
-              refreshBanner.tone === 'warn' ? '#92400E' :
-              refreshBanner.tone === 'success' ? '#065F46' : '#1E40AF',
-            borderRadius: 8,
-            padding: '10px 16px',
-            margin: '12px 40px 0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-            fontSize: '0.78rem',
-            fontWeight: 500,
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {refreshBanner.tone === 'error' ? <AlertCircle size={14} /> :
-             refreshBanner.tone === 'warn' ? <AlertCircle size={14} /> :
-             refreshBanner.tone === 'success' ? <Check size={14} /> :
-             <MessageSquare size={14} />}
-            {refreshBanner.text}
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            {showDiagnoseAction && (
-              <button
-                onClick={runDiagnostics}
-                disabled={diagnosing}
-                style={{
-                  background: 'rgba(0,0,0,0.06)', border: '1px solid currentColor', color: 'inherit',
-                  cursor: diagnosing ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: 700,
-                  padding: '4px 10px', borderRadius: 6, whiteSpace: 'nowrap', opacity: diagnosing ? 0.6 : 1,
-                }}
-              >
-                {diagnosing ? 'Running…' : 'Run diagnostics'}
-              </button>
-            )}
-            <button
-              onClick={() => setRefreshBanner(null)}
-              style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, padding: 0, lineHeight: 1 }}
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </span>
-        </div>
-      )}
-
-      {isPersonalInstagramConnected && (
-        <div style={{ background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: 8, padding: '12px 20px', margin: '20px 40px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <AlertCircle size={16} style={{ color: '#E53E3E', flexShrink: 0 }} />
-          <span style={{ fontSize: '0.78rem', color: '#C53030', fontWeight: 500 }}>
-            Instagram Personal account connected. Comments syncing and replies are only supported for <strong>Instagram Business or Creator</strong> accounts. Please switch your account type in the Instagram app and reconnect.
-          </span>
-        </div>
-      )}
 
       {/* Grid Split Panel (Responsive) */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
