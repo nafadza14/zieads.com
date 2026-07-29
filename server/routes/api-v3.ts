@@ -2267,30 +2267,40 @@ interface InboxSyncResult {
   comments_edge_blocked: boolean; // true when IG reports comments exist but the edge returns none
 }
 
+// Field variants tried when reading a media's comments, richest → simplest.
+// CRITICAL: `like_count` on a comment is permission-gated on the Instagram API with
+// Instagram Login and, when not granted, Graph API frequently returns HTTP 200 with an
+// EMPTY `data: []` array instead of an explicit error. That silent-empty is exactly the
+// symptom we hit ("comments_count=5 but edge returned none, no error"). So we omit
+// `like_count` from the primary variants and, crucially, keep trying simpler field sets
+// whenever a variant comes back empty — not only when it throws.
+const IG_COMMENT_FIELD_VARIANTS = [
+  'id,text,username,timestamp,replies{id,text,username,timestamp}',
+  'id,text,username,timestamp',
+  'id,text,timestamp',
+  'id,text',
+];
+
 /**
- * Fetch comments for a single Instagram media, resilient to field-permission errors.
+ * Fetch comments for a single Instagram media, resilient to both field-permission ERRORS
+ * (HTTP 400) and silent EMPTIES (HTTP 200 + `data: []`). We iterate field variants from
+ * richest to simplest and return the FIRST variant that yields non-empty data. Replies are
+ * flattened so nested replies are ingested too.
  *
- * Instagram's Graph API rejects the WHOLE request with a 400 if any requested field is
- * not permitted for the token's access level (e.g. `like_count` / `username` sometimes
- * require Advanced Access on `instagram_business_manage_comments`). We therefore try a
- * rich field set first, then progressively fall back to the minimal fields that are
- * always available. Replies are flattened into the returned list so nested replies are
- * also ingested. Returns the comments plus the raw error text if every attempt failed.
+ * Returns:
+ *   - comments: flattened comment list (top-level + replies)
+ *   - error:    last raw Instagram error, if any variant threw
+ *   - allEmptyNoError: true when EVERY variant returned 200 with empty data and none threw
+ *     (the signature of a genuine access-level gate or truly no comments)
  */
 async function fetchCommentsForPost(
   accessToken: string,
   postId: string
-): Promise<{ comments: any[]; error: string | null }> {
-  const fieldVariants = [
-    'id,text,username,timestamp,like_count,replies{id,text,username,timestamp,like_count}',
-    'id,text,username,timestamp,replies{id,text,username,timestamp}',
-    'id,text,username,timestamp',
-    'id,text,timestamp',
-  ];
-
+): Promise<{ comments: any[]; error: string | null; allEmptyNoError: boolean }> {
   let lastError: string | null = null;
+  let sawSuccessfulEmpty = false;
 
-  for (const fields of fieldVariants) {
+  for (const fields of IG_COMMENT_FIELD_VARIANTS) {
     try {
       const resp = await callInstagramAPI<any>(
         accessToken,
@@ -2298,7 +2308,18 @@ async function fetchCommentsForPost(
       );
 
       const top = (resp && resp.data) || [];
-      // Flatten one level of replies so nested replies land in the inbox too.
+
+      if (top.length === 0) {
+        // 200 OK but empty — could be a silently permission-gated subfield. Remember this
+        // and keep trying a simpler field set before concluding there are no comments.
+        sawSuccessfulEmpty = true;
+        console.warn(
+          `[V3 Inbox Sync] Post ${postId}: fields "${fields}" returned 200 but 0 comments. Trying simpler field set.`
+        );
+        continue;
+      }
+
+      // Got real data — flatten one level of replies so nested replies land in the inbox too.
       const flattened: any[] = [];
       for (const c of top) {
         flattened.push(c);
@@ -2307,23 +2328,22 @@ async function fetchCommentsForPost(
           flattened.push({ ...r, _parent_comment_id: c.id });
         }
       }
-      return { comments: flattened, error: null };
+      return { comments: flattened, error: null, allEmptyNoError: false };
     } catch (err: any) {
       lastError = err?.message || String(err);
-      // Only fall back to a simpler field set when the error is about an invalid/unavailable
-      // FIELD. For permission (#10 / #200), rate-limit, or network errors, retrying with fewer
-      // fields won't help — stop and surface the real error immediately.
-      const isFieldError = /nonexisting field|Tried accessing|Invalid parameter|does not support the field/i.test(lastError);
-      if (!isFieldError) {
-        break;
-      }
       console.warn(
-        `[V3 Inbox Sync] Comments fetch for post ${postId} failed with fields "${fields}". Trying simpler set. Error: ${lastError}`
+        `[V3 Inbox Sync] Comments fetch for post ${postId} failed with fields "${fields}": ${lastError}. Trying simpler set.`
       );
+      // Always fall through to a simpler field set — even permission-style errors sometimes
+      // clear once the gated subfield (like_count / replies) is dropped.
     }
   }
 
-  return { comments: [], error: lastError };
+  return {
+    comments: [],
+    error: lastError,
+    allEmptyNoError: sawSuccessfulEmpty && !lastError,
+  };
 }
 
 async function syncUserInbox(
@@ -2497,12 +2517,11 @@ async function syncUserInbox(
     );
 
     const newCommentsToClassify: Array<{ id: string; text: string }> = [];
+    let postsSilentEmpty = 0; // posts where the edge returned 200 + [] across all variants
 
     for (const post of postsToFetch) {
-      const { comments: commentsList, error: fetchError } = await fetchCommentsForPost(
-        conn.accessToken,
-        post.id
-      );
+      const { comments: commentsList, error: fetchError, allEmptyNoError } =
+        await fetchCommentsForPost(conn.accessToken, post.id);
 
       if (fetchError) {
         const errStr = `Post ${post.id}: ${fetchError}`;
@@ -2512,6 +2531,8 @@ async function syncUserInbox(
         await new Promise(resolve => setTimeout(resolve, 80));
         continue;
       }
+
+      if (allEmptyNoError) postsSilentEmpty++;
 
       result.comments_seen += commentsList.length;
       console.log(`[V3 Inbox Sync] Post ${post.id}: found ${commentsList.length} comments (incl. replies) from API`);
@@ -2538,19 +2559,19 @@ async function syncUserInbox(
       await new Promise(resolve => setTimeout(resolve, 80));
     }
 
-    // Diagnose the specific "comments exist but edge returned none" case that the user hit.
+    // Diagnose the specific "comments exist but edge returned none" case.
     if (result.comments_seen === 0 && result.total_comments_on_ig > 0) {
       result.comments_edge_blocked = true;
       if (!result.sample_error) {
-        // The comments edge returned an empty array with NO error thrown — this is the
-        // signature of an access-level gate: `instagram_business_manage_comments` only has
-        // Standard Access, so Instagram silently returns no comment data for accounts that
-        // are not testers/admins of the Meta app (even though comments_count is visible via
-        // the basic permission). Advanced Access via App Review — or adding this IG account
-        // as a tester in the Meta App Dashboard — is required.
+        // Every field variant returned 200 + empty with no error → genuine access-level gate.
+        // `instagram_business_manage_comments` needs Advanced Access; even a tester account
+        // can hit this if the permission itself is still Standard Access on the app.
         result.sample_error =
-          `Instagram returned ${result.total_comments_on_ig} comment(s) in post metadata but the comments edge returned none. ` +
-          `Because your Meta App is in Development Mode (or lacks Advanced Access), the Instagram API strictly hides all comments made by regular users. It will only return comments made by other App Testers.`;
+          `Instagram returned ${result.total_comments_on_ig} comment(s) in post metadata but the ` +
+          `comments edge returned an empty list for all ${postsSilentEmpty} post(s) with comments, ` +
+          `across every field variant, with no API error. Use GET /api/v3/inbox/diagnose to inspect ` +
+          `the raw responses. This is the signature of the "instagram_business_manage_comments" ` +
+          `permission still being at Standard Access on the Meta app.`;
       }
       console.warn(`[V3 Inbox Sync] comments_edge_blocked for user ${userId}: ${result.sample_error}`);
     }
@@ -2938,6 +2959,134 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
       code,
       diagnostics,
     });
+  }
+});
+
+/**
+ * DIAGNOSTIC ENDPOINT — inspects exactly what Instagram returns for this user's token.
+ * Returns the raw HTTP status + body for: the profile, the media list (with comments_count),
+ * and the comments edge of each post that has comments, tried across every field variant.
+ * This makes the "comments_count > 0 but edge empty" situation unambiguous — you can see
+ * whether Instagram returns 200+[] (permission gate) or a specific error, per field set.
+ *
+ * Usage (must be authenticated as the connected user):
+ *   GET /api/v3/inbox/diagnose
+ */
+apiV3Router.get("/inbox/diagnose", requireAuth, async (req: any, res) => {
+  const userId = req.userId;
+  const IG_API_BASE = 'https://graph.instagram.com/v21.0';
+
+  // Local raw fetch that never throws — captures status + parsed body for diagnosis.
+  async function rawIg(endpoint: string, token: string) {
+    const sep = endpoint.includes('?') ? '&' : '?';
+    const url = `${IG_API_BASE}/${endpoint}${sep}access_token=${encodeURIComponent(token)}`;
+    try {
+      const r = await fetch(url);
+      let body: any = null;
+      try { body = await r.json(); } catch { body = '<non-json response>'; }
+      return { ok: r.ok, status: r.status, body };
+    } catch (e: any) {
+      return { ok: false, status: 0, body: { network_error: e?.message || String(e) } };
+    }
+  }
+
+  // Redact the access_token if it ever appears in echoed URLs/errors.
+  function redact(s: string): string {
+    return (s || '').replace(/access_token=[^&\s]+/g, 'access_token=***');
+  }
+
+  try {
+    const conn = await getConnectedInstagram(userId);
+    if (!conn) {
+      return res.status(409).json({ success: false, error: "No active Instagram connection." });
+    }
+
+    const { data: connRow } = await supabaseAdmin
+      .from('social_connections')
+      .select('platform_username, platform_account_type, scopes_granted, token_expires_at, last_refreshed_at')
+      .eq('user_id', userId)
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // 1. Profile
+    const profile = await rawIg(`me?fields=user_id,username,account_type,media_count`, conn.accessToken);
+
+    // 2. Media list with comments_count
+    const media = await rawIg(
+      `me/media?fields=id,caption,timestamp,media_type,comments_count,like_count&limit=25`,
+      conn.accessToken
+    );
+
+    const mediaData: any[] = (media.body && media.body.data) || [];
+    const postsWithComments = mediaData.filter((p: any) => (Number(p.comments_count) || 0) > 0);
+
+    // 3. Comments edge per field variant, for up to 5 posts that report comments
+    const commentVariants = [
+      'id,text,username,timestamp,replies{id,text,username,timestamp}',
+      'id,text,username,timestamp',
+      'id,text,timestamp',
+      'id,text',
+      'id,text,username,timestamp,like_count', // include the suspected gated field explicitly
+    ];
+
+    const commentProbes: any[] = [];
+    for (const post of postsWithComments.slice(0, 5)) {
+      const attempts: any[] = [];
+      for (const fields of commentVariants) {
+        const probe = await rawIg(
+          `${post.id}/comments?fields=${encodeURIComponent(fields)}&limit=50`,
+          conn.accessToken
+        );
+        attempts.push({
+          fields,
+          status: probe.status,
+          ok: probe.ok,
+          returned_count: (probe.body && Array.isArray(probe.body.data)) ? probe.body.data.length : null,
+          error: probe.body?.error ? redact(JSON.stringify(probe.body.error)) : null,
+        });
+        await new Promise(r => setTimeout(r, 60));
+      }
+      commentProbes.push({
+        post_id: post.id,
+        reported_comments_count: post.comments_count,
+        media_type: post.media_type,
+        attempts,
+      });
+    }
+
+    res.json({
+      success: true,
+      connection: {
+        username: connRow?.platform_username || conn.platformUsername,
+        account_type: connRow?.platform_account_type || null,
+        scopes_granted: connRow?.scopes_granted || null,
+        token_expires_at: connRow?.token_expires_at || null,
+        last_refreshed_at: connRow?.last_refreshed_at || null,
+        platform_user_id: conn.platformUserId,
+      },
+      profile: { status: profile.status, ok: profile.ok, body: profile.body?.error ? redact(JSON.stringify(profile.body.error)) : profile.body },
+      media: {
+        status: media.status,
+        ok: media.ok,
+        total_posts_returned: mediaData.length,
+        posts_with_comments: postsWithComments.length,
+        total_comments_count: mediaData.reduce((s: number, p: any) => s + (Number(p.comments_count) || 0), 0),
+        error: media.body?.error ? redact(JSON.stringify(media.body.error)) : null,
+      },
+      comment_probes: commentProbes,
+      interpretation:
+        commentProbes.length === 0
+          ? "No posts report comments_count > 0, so there is nothing to read."
+          : commentProbes.every(p => p.attempts.every((a: any) => a.returned_count === 0 && !a.error))
+          ? "Every comment request returned HTTP 200 with 0 comments and NO error across all field variants. This is a Meta app access-level gate: 'instagram_business_manage_comments' is still Standard Access. Request Advanced Access (App Review) or, for testing, ensure the app is in Development mode AND this exact IG account holds an app role, then reconnect."
+          : commentProbes.some(p => p.attempts.some((a: any) => a.returned_count && a.returned_count > 0))
+          ? "At least one field variant returned comments — the sync will now ingest them. If a specific variant errored while a simpler one worked, the gated field (likely like_count) was the culprit; the sync already avoids it."
+          : "Comment requests returned errors — see the 'error' field in each attempt for the exact Instagram message.",
+    });
+  } catch (err: any) {
+    console.error("[V3 Inbox Diagnose Error]", err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

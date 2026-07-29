@@ -60,6 +60,9 @@ export default function InboxPage() {
   const [hasInstagramConnection, setHasInstagramConnection] = useState<boolean | null>(null);
   const [instagramAccountType, setInstagramAccountType] = useState<string | null>(null);
   const [refreshBanner, setRefreshBanner] = useState<{ tone: 'info' | 'success' | 'warn' | 'error'; text: string } | null>(null);
+  // Shows the "Run diagnostics" action in the banner when the comments edge is blocked.
+  const [showDiagnoseAction, setShowDiagnoseAction] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
   // Guards against the auto-refresh useEffect firing more than once per mount
   // when both `connections` and `lastSyncedAt` update in the same render pass.
   const [autoSyncAttempted, setAutoSyncAttempted] = useState(false);
@@ -158,11 +161,39 @@ export default function InboxPage() {
     }
   };
 
+  const runDiagnostics = async () => {
+    if (diagnosing) return;
+    setDiagnosing(true);
+    setRefreshBanner({ tone: 'info', text: 'Running Instagram diagnostics — inspecting raw API responses...' });
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/v3/inbox/diagnose', { headers });
+      const j = await res.json();
+      // Full raw payload to the console for deep inspection / screenshotting.
+      console.log('[Inbox Diagnostics] Full report:', j);
+      if (j.success) {
+        setRefreshBanner({
+          tone: j.interpretation?.includes('access-level gate') ? 'error' : 'info',
+          text: `Diagnostics: ${j.interpretation || 'See browser console for the full report.'} ` +
+            `(media returned ${j.media?.total_posts_returned ?? '?'} posts, ` +
+            `${j.media?.posts_with_comments ?? '?'} with comments. Full JSON in the browser console.)`,
+        });
+      } else {
+        setRefreshBanner({ tone: 'error', text: `Diagnostics failed: ${j.error || 'unknown error'}` });
+      }
+    } catch (err: any) {
+      setRefreshBanner({ tone: 'error', text: `Diagnostics request failed: ${err?.message || 'network error'}` });
+    } finally {
+      setDiagnosing(false);
+    }
+  };
+
   const handleRefresh = async () => {
     if (refreshing || cooldownSeconds > 0) return;
     setRefreshing(true);
     setSyncInProgress(true);
     setRefreshBanner(null);
+    setShowDiagnoseAction(false);
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/inbox/refresh', { method: 'POST', headers });
@@ -225,13 +256,14 @@ export default function InboxPage() {
           // Instagram says there ARE comments, but the comments edge returned none.
           // This is almost always a Meta app access-level gate on
           // `instagram_business_manage_comments` (Standard vs Advanced Access), NOT a
-          // reconnect problem. Surface the real backend diagnostic so the fix is clear.
+          // reconnect problem. Surface the real backend diagnostic + offer a deep probe.
           const detail = j.sample_error ? ` Details: ${j.sample_error}` : '';
+          setShowDiagnoseAction(true);
           setRefreshBanner({
             tone: 'error',
             text: `Instagram reports ${totalOnIg} comment${totalOnIg === 1 ? '' : 's'} but they can't be read. ` +
-              `Because your Meta App is in Development Mode, Instagram hides all comments made by regular users. ` +
-              `To test this, please post a comment using your own tester account.${detail}`,
+              `Likely a Meta app permission gate on "instagram_business_manage_comments" ` +
+              `(Standard vs Advanced Access). Click "Run diagnostics" to see Instagram's raw response.${detail}`,
           });
         } else {
           // Comments were seen but all already in the inbox — up to date.
@@ -664,13 +696,28 @@ export default function InboxPage() {
              <MessageSquare size={14} />}
             {refreshBanner.text}
           </span>
-          <button
-            onClick={() => setRefreshBanner(null)}
-            style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, padding: 0, lineHeight: 1 }}
-            aria-label="Dismiss"
-          >
-            ×
-          </button>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            {showDiagnoseAction && (
+              <button
+                onClick={runDiagnostics}
+                disabled={diagnosing}
+                style={{
+                  background: 'rgba(0,0,0,0.06)', border: '1px solid currentColor', color: 'inherit',
+                  cursor: diagnosing ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: 700,
+                  padding: '4px 10px', borderRadius: 6, whiteSpace: 'nowrap', opacity: diagnosing ? 0.6 : 1,
+                }}
+              >
+                {diagnosing ? 'Running…' : 'Run diagnostics'}
+              </button>
+            )}
+            <button
+              onClick={() => setRefreshBanner(null)}
+              style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, padding: 0, lineHeight: 1 }}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </span>
         </div>
       )}
 
