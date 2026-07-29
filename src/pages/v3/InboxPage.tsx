@@ -75,9 +75,12 @@ export default function InboxPage() {
 
     try {
       const headers = await getAuthHeaders();
-      const connRes = await fetch('/api/v3/connections', { headers });
+      const connRes = await fetch('/api/auth/connections', { headers });
       const connJ = await connRes.json();
-      if (connJ.success) setConnections(connJ.data.filter((c: any) => c.platform !== 'meta_ads' && c.platform !== 'google_ads' && c.platform !== 'tiktok_ads'));
+      if (Array.isArray(connJ)) {
+        const active = connJ.filter((c: any) => c.connected);
+        setConnections(active);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -387,6 +390,8 @@ export default function InboxPage() {
     </div>
   );
 
+  const isPersonalInstagramConnected = !demo.isActive && connections.some(c => c.platform === 'instagram' && c.account_type?.toLowerCase() === 'personal');
+
   return (
     <V3Layout>
       {/* Header */}
@@ -426,6 +431,15 @@ export default function InboxPage() {
           </div>
         )}
       </div>
+
+      {isPersonalInstagramConnected && (
+        <div style={{ background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: 8, padding: '12px 20px', margin: '20px 40px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AlertCircle size={16} style={{ color: '#E53E3E', flexShrink: 0 }} />
+          <span style={{ fontSize: '0.78rem', color: '#C53030', fontWeight: 500 }}>
+            Instagram Personal account connected. Comments syncing and replies are only supported for <strong>Instagram Business or Creator</strong> accounts. Please switch your account type in the Instagram app and reconnect.
+          </span>
+        </div>
+      )}
 
       {/* Grid Split Panel (Responsive) */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>

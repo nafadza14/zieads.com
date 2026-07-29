@@ -81,7 +81,8 @@ export default function ConnectionsPage() {
               account_handle: c.username || c.display_name || `@${c.platform}`,
               connected_at: c.connected_at,
               is_oauth: true,
-              avatar_url: c.avatar_url
+              avatar_url: c.avatar_url,
+              account_type: c.account_type
             });
           }
         });
@@ -301,31 +302,46 @@ export default function ConnectionsPage() {
           {isConnected ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {activeConns.map(conn => (
-                <div key={conn.id} style={{ display: 'flex', alignItems: 'center', justifySelf: 'stretch', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-soft)', borderRadius: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    {conn.avatar_url ? (
-                      <img 
-                        src={conn.avatar_url} 
-                        alt={conn.account_handle} 
-                        style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                        onError={(e) => {
-                          // Fallback to check icon on load error
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <CheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
-                    )}
-                    <span style={{ fontSize: '0.8rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {conn.account_handle}
-                    </span>
+                <div key={conn.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifySelf: 'stretch', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-soft)', borderRadius: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      {conn.avatar_url ? (
+                        <img 
+                          src={conn.avatar_url} 
+                          alt={conn.account_handle} 
+                          style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                          onError={(e) => {
+                            // Fallback to check icon on load error
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <CheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
+                      )}
+                      <span style={{ fontSize: '0.8rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {conn.account_handle}
+                      </span>
+                      {conn.account_type && (
+                        <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: 4, background: conn.account_type.toLowerCase() === 'personal' ? '#FEE2E2' : '#D1FAE5', color: conn.account_type.toLowerCase() === 'personal' ? '#EF4444' : '#10B981', marginLeft: 6, textTransform: 'uppercase', fontWeight: 700, flexShrink: 0 }}>
+                          {conn.account_type}
+                        </span>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => handleDelete(conn)}
+                      style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => handleDelete(conn)}
-                    style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {conn.platform === 'instagram' && conn.account_type?.toLowerCase() === 'personal' && (
+                    <div style={{ display: 'flex', alignItems: 'start', gap: 6, padding: '6px 10px', borderRadius: 6, background: '#FFF5F5', border: '1px solid #FEB2B2' }}>
+                      <AlertTriangle size={12} style={{ color: '#E53E3E', marginTop: 2, flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.68rem', color: '#C53030', lineHeight: 1.3 }}>
+                        Personal accounts do not support comment syncing. Please convert to a Business/Creator account in Instagram settings and reconnect.
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
               {type === 'ads' && (
