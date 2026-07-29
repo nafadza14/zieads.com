@@ -3100,6 +3100,32 @@ apiV3Router.post("/inbox/inject-dummy-noufresh", requireAuth, async (req: any, r
         status: "unread",
         posted_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
         created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "tiktok",
+        platform_comment_id: `dummy_tt_${Date.now()}_1`,
+        platform_media_id: mediaId,
+        author_username: "ratna.sari",
+        text: "Beli yang bundle dapet diskon ngga kak? Liat fyp langsung checkout wkwk",
+        sentiment: "positive",
+        sentiment_confidence: 0.85,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
+        created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "tiktok",
+        platform_comment_id: `dummy_tt_${Date.now()}_2`,
+        platform_media_id: mediaId,
+        author_username: "dinda_aja",
+        text: "Tolong dong dibalas DM nya, aku salah masukin alamat 😭",
+        sentiment: "negative",
+        sentiment_confidence: 0.92,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+        created_at: new Date().toISOString()
       }
     ];
 
@@ -3258,11 +3284,6 @@ async function commentReplyHandler(req: any, res: any) {
       return res.status(400).json({ error: "Already replied to this comment." });
     }
 
-    const conn = await getConnectedInstagram(req.userId);
-    if (!conn) {
-      return res.status(401).json({ error: "reconnect_needed", message: "Instagram session not found or expired. Please reconnect." });
-    }
-
     let replyResult: { id: string };
 
     if (comment.platform_comment_id.startsWith('dummy_')) {
@@ -3271,6 +3292,11 @@ async function commentReplyHandler(req: any, res: any) {
       await new Promise(resolve => setTimeout(resolve, 1500));
       replyResult = { id: `dummy_reply_${Date.now()}` };
     } else {
+      const conn = await getConnectedInstagram(req.userId);
+      if (!conn) {
+        return res.status(401).json({ error: "reconnect_needed", message: "Instagram session not found or expired. Please reconnect." });
+      }
+
       console.log(`[V3 Inbox Reply] Posting reply to comment ${comment.platform_comment_id}...`);
       replyResult = await callInstagramAPI<{ id: string }>(
         conn.accessToken,
