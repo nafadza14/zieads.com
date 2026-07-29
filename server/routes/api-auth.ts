@@ -247,7 +247,7 @@ authRouter.get("/:platform/connect", async (req, res) => {
         process.env.INSTAGRAM_APP_ID
       }&redirect_uri=${encodeURIComponent(
         `${redirectBase}/api/auth/instagram/callback`
-      )}&scope=instagram_business_basic,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
+      )}&scope=instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
     } else if (platform === "tiktok") {
       const scopes = process.env.TIKTOK_SCOPES || "user.info.basic,user.info.profile,user.info.stats,video.list";
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
@@ -342,7 +342,7 @@ authRouter.post("/:platform/connect", requireAuth, async (req: any, res) => {
         process.env.INSTAGRAM_APP_ID
       }&redirect_uri=${encodeURIComponent(
         `${redirectBase}/api/auth/instagram/callback`
-      )}&scope=instagram_business_basic,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
+      )}&scope=instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
     } else if (platform === "tiktok") {
       const scopes = process.env.TIKTOK_SCOPES || "user.info.basic,user.info.profile,user.info.stats,video.list";
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
@@ -476,7 +476,7 @@ authRouter.get("/instagram/callback", async (req, res) => {
       platform_account_type: platformAccountType,
       access_token: encryptedAccess,
       token_expires_at: expiresAt,
-      scopes_granted: "instagram_business_basic,instagram_business_manage_insights,instagram_business_content_publish",
+      scopes_granted: "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish",
       is_active: true,
       last_refreshed_at: new Date().toISOString(),
     }, { onConflict: "user_id,platform" });
