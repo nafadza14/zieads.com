@@ -145,6 +145,7 @@ export default function InboxPage() {
   const handleRefresh = async () => {
     if (refreshing || cooldownSeconds > 0) return;
     setRefreshing(true);
+    setSyncInProgress(true);
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/v3/inbox/refresh', { method: 'POST', headers });
@@ -152,16 +153,18 @@ export default function InboxPage() {
       if (res.status === 429) {
         setCooldownSeconds(j.retry_after_seconds || 60);
       } else if (j.success) {
-        setSyncInProgress(true);
+        console.log(`[Inbox] Sync completed, ${j.new_comments_count || 0} new comments`);
         await fetchComments();
         setCooldownSeconds(60);
       } else {
+        console.error("[Inbox] Refresh failed:", j.error);
         alert(j.error || "Failed to refresh inbox.");
       }
     } catch (err: any) {
       console.error("Failed to refresh:", err);
     } finally {
       setRefreshing(false);
+      setSyncInProgress(false);
     }
   };
 

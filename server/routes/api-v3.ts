@@ -2287,7 +2287,7 @@ async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_re
       .eq("user_id", userId)
       .eq("platform", "instagram");
 
-    console.log(`[V3 Inbox Sync] Polling comments for ${conn.platformUsername} (${userId})...`);
+    console.log(`[V3 Inbox Sync] Polling comments for ${conn.platformUsername} (${userId}), platformUserId=${conn.platformUserId}`);
 
     // Fetch all existing comment platform IDs for this user to avoid N+1 queries
     const { data: existingComments } = await supabaseAdmin
@@ -2297,13 +2297,16 @@ async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_re
       .eq("platform", "instagram");
 
     const existingSet = new Set(existingComments?.map(c => c.platform_comment_id).filter(Boolean) || []);
+    console.log(`[V3 Inbox Sync] Found ${existingSet.size} existing comments in DB for user ${userId}`);
 
+    // Only fetch 5 most recent posts to stay within Vercel serverless timeout
     const postsResponse = await callInstagramAPI<{ data: any[] }>(
       conn.accessToken,
-      `${conn.platformUserId}/media?fields=id,timestamp,caption&limit=20`
+      `${conn.platformUserId}/media?fields=id,timestamp,caption&limit=5`
     );
 
     const postsList = postsResponse.data || [];
+    console.log(`[V3 Inbox Sync] Fetched ${postsList.length} posts from Instagram for user ${userId}`);
     const newCommentsToClassify: Array<{ id: string, text: string }> = [];
 
     for (const post of postsList) {
@@ -2314,7 +2317,9 @@ async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_re
         );
 
         const commentsList = (commentsResponse && commentsResponse.data) || [];
+        console.log(`[V3 Inbox Sync] Post ${post.id}: found ${commentsList.length} comments from API`);
         const newComments = commentsList.filter(c => c.id && !existingSet.has(c.id));
+        console.log(`[V3 Inbox Sync] Post ${post.id}: ${newComments.length} new comments to insert`);
 
         for (const comment of newComments) {
           const { data: inserted } = await supabaseAdmin
@@ -2343,7 +2348,7 @@ async function syncUserInbox(userId: string, source: 'cron_polling' | 'manual_re
         // Small delay between posts to be nice to Instagram API
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (postError: any) {
-        console.error(`[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`, postError.message);
+        console.error(`[V3 Inbox Sync] Failed to sync comments for post ${post.id}:`, postError.message, postError.stack?.split('\n')[1] || '');
       }
     }
 
@@ -2555,15 +2560,14 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
       }
     }
 
-    // Trigger sync in the background
-    console.log(`[V3 Inbox Manual Refresh] Triggering async manual sync for user ${userId}...`);
-    syncUserInbox(userId, 'manual_refresh').catch(err => {
-      console.error(`[V3 Inbox Async Sync Error] Background sync failed for user ${userId}:`, err.message);
-    });
+    // Sync must be awaited — Vercel kills fire-and-forget async calls after response
+    console.log(`[V3 Inbox Manual Refresh] Starting sync for user ${userId}...`);
+    const newComments = await syncUserInbox(userId, 'manual_refresh');
+    console.log(`[V3 Inbox Manual Refresh] Sync completed for user ${userId}, ${newComments} new comments`);
 
     res.json({
       success: true,
-      message: "Sync started in background"
+      new_comments_count: newComments
     });
   } catch (err: any) {
     console.error("[V3 Inbox Manual Refresh Error]", err.message);
