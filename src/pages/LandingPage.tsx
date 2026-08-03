@@ -687,7 +687,7 @@ export default function LandingPage({ onScanComplete }: Props) {
 
         {/* v0.3 Active Feature Suite Grid */}
         <div style={{ maxWidth: '960px', margin: '0 auto 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', textAlign: 'left' }}>
-          {[
+          {( [
             { title: "AI Analyst", desc: "Automated social performance diagnosis and key growth drivers.", Icon: Sparkles },
             { title: "AI Agent", desc: "Deep strategic reasoning & prioritized daily action plans.", Icon: Bot },
             { title: "Composer", desc: "Multi-channel post creator with AI captions tailored per platform.", Icon: PenTool },
@@ -697,7 +697,7 @@ export default function LandingPage({ onScanComplete }: Props) {
             { title: "Competitor Hunt", desc: "Real-time competitor content monitoring and market gap analysis.", Icon: Target },
             { title: "Connections", desc: "One-click OAuth integration for Instagram, TikTok, and ad data.", Icon: Link2 },
             { title: "Settings", desc: "Custom brand voice, team seats, and workspace preferences.", Icon: SettingsIcon }
-          ].map((f, i) => {
+          ] as Array<{title: string, desc: string, Icon: any}> ).map((f, i) => {
             const IconComp = f.Icon;
             return (
               <div 
