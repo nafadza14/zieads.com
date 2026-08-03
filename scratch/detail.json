@@ -1,0 +1,40 @@
+Found item: {
+  png_64: 'https://cdn.iconscout.com/icon/premium/png-64-thumb/robot-icon-svg-download-png-415007.png',
+  png_128: 'https://cdn.iconscout.com/icon/premium/png-128-thumb/robot-icon-svg-download-png-415007.png',
+  png_256: 'https://cdn.iconscout.com/icon/premium/png-256-thumb/robot-icon-svg-download-png-415007.png'
+}
+No SVG URL in search results, checking item details endpoint...
+{
+  "status": "success",
+  "response": {
+    "item": {
+      "id": 65,
+      "uuid": "51d17d6c-9d1b-11e8-aa5b-16f546a19484",
+      "asset": "icon",
+      "name": "Promotion",
+      "slug": "promotion-announcement-marketing-branding-reaching-audience-2",
+      "price": 2,
+      "urls": {
+        "png_64": "https://cdn.iconscout.com/icon/premium/png-64-thumb/promotion-icon-svg-download-png-65.png",
+        "png_128": "https://cdn.iconscout.com/icon/premium/png-128-thumb/promotion-icon-svg-download-png-65.png",
+        "png_256": "https://cdn.iconscout.com/icon/premium/png-256-thumb/promotion-icon-svg-download-png-65.png"
+      },
+      "color_codes": [
+        {
+          "decimal_color": 2835029,
+          "color_id": 233
+        }
+      ]
+    }
+  },
+  "message": null,
+  "meta": {
+    "total_time": 29.63,
+    "db_query_time": 0,
+    "db_query_count": 0,
+    "db_query_logs": [],
+    "search_query_time": 0,
+    "search_query_logs": []
+  },
+  "elements": null
+}
