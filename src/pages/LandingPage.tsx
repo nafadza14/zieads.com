@@ -26,7 +26,11 @@ import {
   EyeOff,
   Sliders,
   Radar,
-  Rocket
+  Rocket,
+  Send,
+  Sparkles,
+  MessageSquare,
+  ArrowRight
 } from 'lucide-react';
 
 interface Props {
@@ -42,6 +46,25 @@ export default function LandingPage({ onScanComplete }: Props) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
  
+  const [heroChatInput, setHeroChatInput] = useState('');
+
+  const agentPromptHints = [
+    "💡 Buatkan 5 hook video TikTok viral untuk produk Skincare",
+    "📊 Kenapa ROAS Meta Ads saya turun minggu ini?",
+    "🚀 Buatkan kalender konten Instagram 7 hari untuk launching",
+    "🎯 Strategi rekomendasi audiens & budget Meta vs TikTok"
+  ];
+
+  const handleHeroChatSend = (promptText?: string) => {
+    const textToSend = promptText || heroChatInput;
+    if (!textToSend.trim()) {
+      navigate('/sign-up');
+      return;
+    }
+    // Directly redirect user to auth / signup page upon clicking send
+    navigate('/sign-up', { state: { initialPrompt: textToSend } });
+  };
+
   /* ── Hero Rotating Headline Animation State ── */
   const rotatingPhrases = [
     "runs your social media.",
@@ -474,30 +497,81 @@ export default function LandingPage({ onScanComplete }: Props) {
         </h1>
         
         <p className="hero-subtitle">
-          ZieAds connects to your social accounts and ad data, then works like a marketing analyst who never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. You approve. It takes it from there.
+          ZieAds connects to your social accounts and ad data, powered by an AI Marketing Agent that never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. Try asking your AI Agent:
         </p>
 
-        <div className="hero-input-wrapper">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              className="btn-lp-primary-gradient"
-              onClick={() => { const el = document.getElementById('free-audit-try'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }}
-              style={{ cursor: 'pointer', padding: '14px 28px', fontSize: '15px', fontWeight: 600, border: 'none', borderRadius: '12px', color: 'white', transition: 'all 0.2s' }}
-            >
-              Start Free
-            </button>
-            <button
-              className="btn-lp-secondary"
-              onClick={() => { const el = document.getElementById('dashboard-preview'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }}
-              style={{ cursor: 'pointer', padding: '14px 28px', fontSize: '15px', fontWeight: 600, border: '1px solid var(--lp-border-strong)', borderRadius: '12px', background: 'transparent', transition: 'all 0.2s' }}
-            >
-              Watch a 90-second tour
-            </button>
+        {/* ── Interactive Hero AI Agent Chat Box ── */}
+        <div className="hero-chat-wrapper w-full max-w-2xl mx-auto mt-6 text-left px-2 sm:px-0">
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.96)',
+            border: '1px solid rgba(139, 92, 246, 0.22)',
+            borderRadius: '24px',
+            padding: '20px sm:24px',
+            boxShadow: '0 20px 40px -15px rgba(124, 58, 237, 0.12), 0 0 0 1px rgba(139, 92, 246, 0.08)',
+            backdropFilter: 'blur(16px)'
+          }}>
+            {/* AI Agent Chat Box Header */}
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-sm">
+                  <Bot size={18} />
+                </div>
+                <div>
+                  <div className="text-[14px] font-bold text-zinc-900 flex items-center gap-1.5">
+                    ZieAds AI Agent <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  </div>
+                  <div className="text-[11px] text-zinc-500">Tanyakan strategi marketing, iklan Meta/TikTok, atauide konten</div>
+                </div>
+              </div>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-violet-50 text-violet-700 border border-violet-100">
+                v0.3 Engine
+              </span>
+            </div>
+
+            {/* Input Field & Send Button */}
+            <div className="flex flex-col sm:flex-row gap-2 relative">
+              <input
+                type="text"
+                placeholder="Tulis pertanyaan untuk AI Agent (contoh: 'Analisis strategi Meta Ads...')"
+                value={heroChatInput}
+                onChange={(e) => setHeroChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleHeroChatSend()}
+                className="flex-1 px-4 py-3.5 rounded-xl border border-zinc-200 text-[14px] bg-zinc-50/70 text-zinc-900 focus:bg-white focus:border-violet-500 focus:outline-none transition-all placeholder:text-zinc-400"
+              />
+              <button
+                onClick={() => handleHeroChatSend()}
+                className="btn-lp-primary-gradient px-6 py-3.5 rounded-xl text-white font-semibold text-[14px] flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98] transition-all shadow-md hover:shadow-violet-200"
+              >
+                <span>Tanya AI Agent</span>
+                <Send size={15} />
+              </button>
+            </div>
+
+            {/* Hint Prompts list */}
+            <div className="mt-4 pt-3.5 border-t border-zinc-100">
+              <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Sparkles size={12} className="text-violet-500" />
+                Coba Prompt Populer AI Agent:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {agentPromptHints.map((hint, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleHeroChatSend(hint)}
+                    className="text-[12px] px-3 py-1.5 rounded-full bg-zinc-100/80 hover:bg-violet-100/70 hover:text-violet-800 border border-zinc-200/80 hover:border-violet-300 text-zinc-700 transition-all text-left cursor-pointer active:scale-95 flex items-center gap-1"
+                  >
+                    <span>{hint}</span>
+                    <ArrowRight size={11} className="opacity-50 inline" />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="final-cta-trust-strip mt-6 justify-center flex gap-6 text-[13px] text-zinc-500">
-            <span><Shield size={14} className="inline mr-1" /> Free plan, no card</span>
-            <span><Check size={14} className="inline mr-1" /> Connects in 2 minutes</span>
-            <span><Clock size={14} className="inline mr-1" /> First briefing tomorrow morning</span>
+
+          <div className="final-cta-trust-strip mt-6 justify-center flex flex-wrap gap-4 sm:gap-6 text-[13px] text-zinc-500">
+            <span><Shield size={14} className="inline mr-1 text-violet-600" /> Free plan, no card needed</span>
+            <span><Check size={14} className="inline mr-1 text-emerald-600" /> Instant AI Response & Signup</span>
+            <span><Clock size={14} className="inline mr-1 text-indigo-600" /> First briefing tomorrow morning</span>
           </div>
         </div>
       </section>

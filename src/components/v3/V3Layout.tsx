@@ -120,7 +120,7 @@ export default function V3Layout({ children }: Props) {
 
   const v3Items = [
     { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#71717A' }} /> },
-    { k: '/agent', l: 'Deep Analysis', icon: <Bot size={15} style={{ color: '#71717A' }} /> },
+    { k: '/agent', l: 'AI Agent', icon: <Bot size={15} style={{ color: '#71717A' }} /> },
     { k: '/composer', l: 'Composer', icon: <PenTool size={15} style={{ color: '#71717A' }} /> },
     { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} style={{ color: '#71717A' }} /> },
     { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} style={{ color: '#71717A' }} /> },

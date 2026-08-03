@@ -298,7 +298,7 @@ export default function ClientDashboard({ reportData }: Props) {
               <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>{section === 'home' ? 'TOOLS & REPORTS' : 'SKILLS'}</div>
               {section === 'home' ? (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {[{k:'home',l:'Audit'},{k:'reports',l:'Reports'},{k:'agent',l:'Deep Analysis'},{k:'profile-page',l:'Business Profile'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
+                  {[{k:'home',l:'Audit'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'profile-page',l:'Business Profile'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
                     <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } if (n.k === 'profile-page') { navigate('/profile'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? 'var(--primary-bg)' : 'transparent', color: sidebarNav === n.k ? 'var(--text)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
                       {n.k === 'home' && <Search size={15} style={{ color: '#71717A' }} />}
                       {n.k === 'reports' && <FileText size={15} style={{ color: '#71717A' }} />}
