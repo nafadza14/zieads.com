@@ -597,7 +597,7 @@ export default function LandingPage({ onScanComplete }: Props) {
                     fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'center',
+                    justifyContent: 'center',
                     gap: '8px',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
