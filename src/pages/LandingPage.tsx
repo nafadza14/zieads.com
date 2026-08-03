@@ -500,78 +500,210 @@ export default function LandingPage({ onScanComplete }: Props) {
           ZieAds connects to your social accounts and ad data, powered by an AI Marketing Agent that never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. Try asking your AI Agent:
         </p>
 
-        {/* ── Interactive Hero AI Agent Chat Box ── */}
-        <div className="hero-chat-wrapper w-full max-w-2xl mx-auto mt-6 text-left px-2 sm:px-0">
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.96)',
-            border: '1px solid rgba(139, 92, 246, 0.22)',
-            borderRadius: '24px',
-            padding: '20px sm:24px',
-            boxShadow: '0 20px 40px -15px rgba(124, 58, 237, 0.12), 0 0 0 1px rgba(139, 92, 246, 0.08)',
-            backdropFilter: 'blur(16px)'
-          }}>
-            {/* AI Agent Chat Box Header */}
-            <div className="flex items-center justify-between mb-3.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-sm">
-                  <Bot size={18} />
+        {/* ── Interactive Hero AI Agent Chat Box (Redesigned UI/UX) ── */}
+        <div className="hero-chat-wrapper w-full max-w-3xl mx-auto mt-8 text-left relative px-2 sm:px-0">
+          {/* Subtle Ambient Rainbow/Blue Glow behind card */}
+          <div 
+            style={{
+              position: 'absolute',
+              inset: '-8px',
+              borderRadius: '28px',
+              background: 'linear-gradient(135deg, rgba(30, 123, 255, 0.15) 0%, rgba(14, 165, 239, 0.1) 50%, rgba(139, 92, 246, 0.12) 100%)',
+              filter: 'blur(16px)',
+              zIndex: 0,
+              pointerEvents: 'none'
+            }}
+          />
+
+          <div 
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              background: 'var(--lp-bg-card)',
+              border: '1px solid var(--lp-border-default)',
+              borderRadius: 'var(--lp-radius-card-lg)',
+              boxShadow: 'var(--lp-shadow-showcase)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Chrome Header Bar */}
+            <div 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                padding: '12px 18px',
+                background: 'var(--lp-bg-inset)',
+                borderBottom: '1px solid var(--lp-border-subtle)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="lp-chrome-dots" style={{ display: 'flex', gap: '6px' }}>
+                  <span className="lp-dot-red" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FF5F56', display: 'inline-block' }}></span>
+                  <span className="lp-dot-yellow" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFBD2E', display: 'inline-block' }}></span>
+                  <span className="lp-dot-green" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#27C93F', display: 'inline-block' }}></span>
                 </div>
-                <div>
-                  <div className="text-[14px] font-bold text-zinc-900 flex items-center gap-1.5">
-                    ZieAds AI Agent <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  </div>
-                  <div className="text-[11px] text-zinc-500">Tanyakan strategi marketing, iklan Meta/TikTok, atauide konten</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
+                  <ZieAdsLogo size={16} />
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--lp-text-primary)' }}>ZieAds AI Agent</span>
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#DCE9FF', color: '#1E7BFF', fontWeight: 600 }}>v0.3 Engine</span>
                 </div>
               </div>
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-violet-50 text-violet-700 border border-violet-100">
-                v0.3 Engine
-              </span>
-            </div>
-
-            {/* Input Field & Send Button */}
-            <div className="flex flex-col sm:flex-row gap-2 relative">
-              <input
-                type="text"
-                placeholder="Tulis pertanyaan untuk AI Agent (contoh: 'Analisis strategi Meta Ads...')"
-                value={heroChatInput}
-                onChange={(e) => setHeroChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleHeroChatSend()}
-                className="flex-1 px-4 py-3.5 rounded-xl border border-zinc-200 text-[14px] bg-zinc-50/70 text-zinc-900 focus:bg-white focus:border-violet-500 focus:outline-none transition-all placeholder:text-zinc-400"
-              />
-              <button
-                onClick={() => handleHeroChatSend()}
-                className="btn-lp-primary-gradient px-6 py-3.5 rounded-xl text-white font-semibold text-[14px] flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98] transition-all shadow-md hover:shadow-violet-200"
-              >
-                <span>Tanya AI Agent</span>
-                <Send size={15} />
-              </button>
-            </div>
-
-            {/* Hint Prompts list */}
-            <div className="mt-4 pt-3.5 border-t border-zinc-100">
-              <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                <Sparkles size={12} className="text-violet-500" />
-                Coba Prompt Populer AI Agent:
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600, color: '#10B981' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} className="animate-pulse"></span>
+                <span>Active & Ready</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {agentPromptHints.map((hint, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleHeroChatSend(hint)}
-                    className="text-[12px] px-3 py-1.5 rounded-full bg-zinc-100/80 hover:bg-violet-100/70 hover:text-violet-800 border border-zinc-200/80 hover:border-violet-300 text-zinc-700 transition-all text-left cursor-pointer active:scale-95 flex items-center gap-1"
-                  >
-                    <span>{hint}</span>
-                    <ArrowRight size={11} className="opacity-50 inline" />
-                  </button>
-                ))}
+            </div>
+
+            {/* Chat Body & Interaction Container */}
+            <div style={{ padding: '20px 24px' }}>
+              {/* Agent Greeting Bubble */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '18px', alignItems: 'flex-start' }}>
+                <div 
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: 'var(--lp-accent-gradient)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    color: '#fff',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 12px rgba(30, 123, 255, 0.25)'
+                  }}
+                >
+                  <Bot size={20} />
+                </div>
+                <div 
+                  style={{
+                    background: 'var(--lp-bg-inset)',
+                    border: '1px solid var(--lp-border-subtle)',
+                    borderRadius: '16px',
+                    borderTopLeftRadius: '4px',
+                    padding: '12px 16px',
+                    fontSize: '13.5px',
+                    lineHeight: '1.5',
+                    color: 'var(--lp-text-secondary)',
+                    maxWidth: '90%'
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: 'var(--lp-text-primary)', display: 'block', marginBottom: '2px' }}>ZieAds AI Agent</span>
+                  Halo! Saya AI Marketing Agent ZieAds. Tanyakan apa saja seputar campaign Meta/TikTok Ads, ide konten, atau optimasi strategi brand Anda hari ini:
+                </div>
+              </div>
+
+              {/* Chat Input Field & Send Button */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="sm:flex-row">
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Sparkles size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--lp-accent)' }} />
+                  <input
+                    type="text"
+                    placeholder="Tulis pertanyaan untuk AI Agent (contoh: 'Analisis strategi Meta Ads...')"
+                    value={heroChatInput}
+                    onChange={(e) => setHeroChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleHeroChatSend()}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px 14px 44px',
+                      borderRadius: 'var(--lp-radius-input)',
+                      border: '1px solid var(--lp-border-default)',
+                      fontSize: '14px',
+                      background: 'var(--lp-bg-canvas)',
+                      color: 'var(--lp-text-primary)',
+                      outline: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--lp-accent)';
+                      e.target.style.background = '#FFFFFF';
+                      e.target.style.boxShadow = '0 0 0 3px var(--lp-focus-ring)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--lp-border-default)';
+                      e.target.style.background = 'var(--lp-bg-canvas)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={() => handleHeroChatSend()}
+                  className="btn-lp-primary-gradient"
+                  style={{
+                    padding: '14px 24px',
+                    borderRadius: 'var(--lp-radius-button)',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: 'var(--lp-shadow-cta)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>Tanya AI Agent</span>
+                  <Send size={15} />
+                </button>
+              </div>
+
+              {/* Prompt Hint Chips */}
+              <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--lp-border-subtle)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--lp-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Sparkles size={12} style={{ color: 'var(--lp-accent)' }} />
+                  Coba Prompt Populer AI Agent:
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {agentPromptHints.map((hint, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleHeroChatSend(hint)}
+                      style={{
+                        padding: '7px 14px',
+                        borderRadius: 'var(--lp-radius-pill)',
+                        background: 'var(--lp-bg-inset)',
+                        border: '1px solid var(--lp-border-subtle)',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: 'var(--lp-text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--lp-pill-bg)';
+                        e.currentTarget.style.borderColor = 'var(--lp-accent)';
+                        e.currentTarget.style.color = 'var(--lp-accent-hover)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--lp-bg-inset)';
+                        e.currentTarget.style.borderColor = 'var(--lp-border-subtle)';
+                        e.currentTarget.style.color = 'var(--lp-text-secondary)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <span>{hint}</span>
+                      <ArrowRight size={11} style={{ opacity: 0.6 }} />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="final-cta-trust-strip mt-6 justify-center flex flex-wrap gap-4 sm:gap-6 text-[13px] text-zinc-500">
-            <span><Shield size={14} className="inline mr-1 text-violet-600" /> Free plan, no card needed</span>
-            <span><Check size={14} className="inline mr-1 text-emerald-600" /> Instant AI Response & Signup</span>
-            <span><Clock size={14} className="inline mr-1 text-indigo-600" /> First briefing tomorrow morning</span>
+          {/* Trust Strip below chat box */}
+          <div className="final-cta-trust-strip mt-6 justify-center flex flex-wrap gap-4 sm:gap-6 text-[13px]" style={{ color: 'var(--lp-text-tertiary)' }}>
+            <span><Shield size={14} className="inline mr-1" style={{ color: 'var(--lp-accent)' }} /> Free plan, no card needed</span>
+            <span><Check size={14} className="inline mr-1" style={{ color: '#10B981' }} /> Instant AI Response & Signup</span>
+            <span><Clock size={14} className="inline mr-1" style={{ color: 'var(--lp-accent)' }} /> First briefing tomorrow morning</span>
           </div>
         </div>
       </section>
