@@ -480,17 +480,17 @@ export default function LandingPage({ onScanComplete }: Props) {
         
         <h1 className="hero-title flex flex-col items-center">
           <span>The AI Marketing Agent that</span>
-          <span className="lp-pill-highlight mt-2 rotating-container relative inline-block text-[#1A1A1A] min-h-[50px] sm:min-h-[60px] md:min-h-[70px] align-middle">
+          <span className="lp-pill-highlight mt-2 rotating-container relative inline-block text-[#1A1A1A] text-[0.75em] whitespace-nowrap min-h-[50px] sm:min-h-[60px] md:min-h-[70px] align-middle">
             {prefersReducedMotion ? (
               <span>runs your social media.</span>
             ) : (
               <span 
-                className={`inline-flex flex-wrap justify-center transition-all duration-300 ${
+                className={`inline-flex flex-nowrap justify-center transition-all duration-300 ${
                   animationPhase === 'exit' 
                     ? 'opacity-0 translate-y-[-10px] blur-sm' 
                     : 'opacity-100 translate-y-0 blur-0'
                 }`}
-                style={{ columnGap: '0.28em', rowGap: '0.15em' }}
+                style={{ columnGap: '0.28em' }}
               >
                 {phraseWords.map((word, wIdx) => (
                   <span
