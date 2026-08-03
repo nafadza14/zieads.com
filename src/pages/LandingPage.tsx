@@ -513,98 +513,102 @@ export default function LandingPage({ onScanComplete }: Props) {
           ZieAds connects to your social accounts and ad data, powered by an AI Marketing Agent that never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. Try asking your AI Agent:
         </p>
 
-        {/* ── Minimal English Hero AI Agent Chat Box (Input + Button Only) ── */}
-        <div className="hero-chat-wrapper w-full max-w-2xl mx-auto mt-8 text-left relative px-2 sm:px-0">
+        {/* ── Minimal English Hero AI Agent Chat Box (Full Card, 5x Taller Input, ZieAds Icon) ── */}
+        <div className="hero-chat-wrapper w-full max-w-3xl mx-auto mt-8 text-left relative px-2 sm:px-0">
           <div 
             style={{
               position: 'relative',
               zIndex: 1,
               background: 'var(--lp-bg-card)',
               border: '1px solid var(--lp-border-default)',
-              borderRadius: 'var(--lp-radius-card-lg)',
+              borderRadius: '24px',
               boxShadow: 'var(--lp-shadow-showcase)',
-              padding: '16px 20px',
+              padding: '24px 28px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px'
+              gap: '16px'
             }}
           >
-            {/* Header / Chrome Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div className="lp-chrome-dots" style={{ display: 'flex', gap: '6px' }}>
-                  <span className="lp-dot-red" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FF5F56', display: 'inline-block' }}></span>
-                  <span className="lp-dot-yellow" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFBD2E', display: 'inline-block' }}></span>
-                  <span className="lp-dot-green" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#27C93F', display: 'inline-block' }}></span>
+            {/* 5x Taller Chat Box Container with ZieAds Icon */}
+            <div 
+              style={{ 
+                position: 'relative',
+                width: '100%',
+                background: 'var(--lp-bg-canvas)',
+                border: '1px solid var(--lp-border-default)',
+                borderRadius: '16px',
+                padding: '18px 20px',
+                transition: 'all 0.3s ease-in-out'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--lp-accent)';
+                e.currentTarget.style.background = '#FFFFFF';
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--lp-focus-ring)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--lp-border-default)';
+                e.currentTarget.style.background = 'var(--lp-bg-canvas)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <div style={{ paddingTop: '3px', flexShrink: 0 }}>
+                  <ZieAdsLogo size={22} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '4px' }}>
-                  <ZieAdsLogo size={16} />
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--lp-text-primary)' }}>ZieAds AI Agent</span>
-                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#DCE9FF', color: '#1E7BFF', fontWeight: 600 }}>v0.3</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600, color: '#10B981' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} className="animate-pulse"></span>
-                <span>Active Agent</span>
-              </div>
-            </div>
-
-            {/* Main Chat Input & Button Bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="sm:flex-row">
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Sparkles size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--lp-accent)' }} />
-                <input
-                  type="text"
+                <textarea
+                  rows={4}
                   placeholder={rotatingPlaceholders[placeholderIndex]}
                   value={heroChatInput}
                   onChange={(e) => setHeroChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleHeroChatSend()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleHeroChatSend();
+                    }
+                  }}
                   style={{
                     width: '100%',
-                    padding: '14px 16px 14px 44px',
-                    borderRadius: 'var(--lp-radius-input)',
-                    border: '1px solid var(--lp-border-default)',
-                    fontSize: '14px',
-                    background: 'var(--lp-bg-canvas)',
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: '15px',
+                    lineHeight: '1.6',
                     color: 'var(--lp-text-primary)',
                     outline: 'none',
-                    transition: 'all 0.3s ease-in-out'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--lp-accent)';
-                    e.target.style.background = '#FFFFFF';
-                    e.target.style.boxShadow = '0 0 0 3px var(--lp-focus-ring)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--lp-border-default)';
-                    e.target.style.background = 'var(--lp-bg-canvas)';
-                    e.target.style.boxShadow = 'none';
+                    resize: 'none',
+                    minHeight: '110px'
                   }}
                 />
               </div>
-              <button
-                onClick={() => handleHeroChatSend()}
-                className="btn-lp-primary-gradient"
-                style={{
-                  padding: '14px 24px',
-                  borderRadius: 'var(--lp-radius-button)',
-                  border: 'none',
-                  color: '#FFFFFF',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  boxShadow: 'var(--lp-shadow-cta)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>Ask AI Agent</span>
-                <Send size={15} />
-              </button>
+
+              {/* Action Bar inside Chat Box Card */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--lp-border-subtle)' }}>
+                <span style={{ fontSize: '12px', color: 'var(--lp-text-tertiary)', fontWeight: 500 }}>
+                  Press <kbd style={{ padding: '2px 6px', borderRadius: '4px', background: 'var(--lp-bg-inset)', border: '1px solid var(--lp-border-subtle)', fontSize: '11px' }}>Enter ↵</kbd> to ask AI Agent
+                </span>
+                <button
+                  onClick={() => handleHeroChatSend()}
+                  className="btn-lp-primary-gradient"
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: 'var(--lp-radius-button)',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: 'var(--lp-shadow-cta)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>Ask AI Agent</span>
+                  <Send size={15} />
+                </button>
+              </div>
             </div>
           </div>
 
