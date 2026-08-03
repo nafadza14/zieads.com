@@ -118,23 +118,24 @@ export default function V3Layout({ children }: Props) {
 
   const currentPath = location.pathname;
 
-  const dailyItems = [
+  const v3Items = [
     { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#71717A' }} /> },
+    { k: '/agent', l: 'Deep Analysis', icon: <Bot size={15} style={{ color: '#71717A' }} /> },
     { k: '/composer', l: 'Composer', icon: <PenTool size={15} style={{ color: '#71717A' }} /> },
     { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} style={{ color: '#71717A' }} /> },
     { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} style={{ color: '#71717A' }} /> },
     { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} style={{ color: '#71717A' }} /> },
     { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} style={{ color: '#71717A' }} /> },
     { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#71717A' }} /> },
+    { k: '/clients?tab=settings', l: 'Settings', icon: <SettingsIcon size={15} style={{ color: '#71717A' }} /> },
   ];
 
-  const toolItems = [
+  // V0.2 features hidden for V0.3 release (do not delete)
+  const v2HiddenItems = [
     { k: '/clients?tab=home', l: 'Audit', icon: <Search size={15} style={{ color: '#71717A' }} /> },
     { k: '/clients?tab=reports', l: 'Reports', icon: <FileText size={15} style={{ color: '#71717A' }} /> },
-    { k: '/agent', l: 'Deep Analysis', icon: <Bot size={15} style={{ color: '#71717A' }} /> },
     { k: '/profile', l: 'Business Profile', icon: <User size={15} style={{ color: '#71717A' }} /> },
     { k: '/clients?tab=referrals', l: 'Referrals', icon: <Share2 size={15} style={{ color: '#71717A' }} /> },
-    { k: '/clients?tab=settings', l: 'Settings', icon: <SettingsIcon size={15} style={{ color: '#71717A' }} /> },
     { k: '/clients?tab=skills', l: 'All Skills', icon: <LayoutGrid size={15} style={{ color: '#71717A' }} /> },
   ];
 
@@ -165,11 +166,11 @@ export default function V3Layout({ children }: Props) {
       {/* Sidebar Navigation */}
       <div style={{ padding: '20px 12px', flex: 1, overflowY: 'auto' }}>
         {/* Daily Operations Group */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, paddingLeft: 8, marginBottom: 8 }}>Daily Operations</div>
+        <div style={{ marginBottom: 24, flex: 1, overflowY: 'auto' }}>
+          <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, paddingLeft: 8, marginBottom: 8 }}>Main Menu</div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {dailyItems.map(n => {
-              const isActive = currentPath === n.k;
+            {v3Items.map(n => {
+              const isActive = currentPath === n.k || (currentPath === '/clients' && n.k.includes('tab=') && location.search.includes(n.k.split('=')[1]));
               return (
                 <li 
                   key={n.k} 
@@ -181,33 +182,6 @@ export default function V3Layout({ children }: Props) {
                     fontWeight: isActive ? 600 : 400, 
                     background: isActive ? 'var(--primary-bg)' : 'transparent', 
                     color: isActive ? 'var(--text)' : 'var(--text-secondary)', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 10 
-                  }}
-                >
-                  {n.icon}
-                  {n.l}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        {/* Tools and Reports Group */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, paddingLeft: 8, marginBottom: 8 }}>Tools & Reports</div>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {toolItems.map(n => {
-              return (
-                <li 
-                  key={n.k} 
-                  onClick={() => handleNavClick(n.k)} 
-                  style={{ 
-                    cursor: 'pointer', 
-                    padding: '8px 12px', 
-                    borderRadius: 'var(--radius-sm)', 
-                    color: 'var(--text-secondary)', 
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: 10 
