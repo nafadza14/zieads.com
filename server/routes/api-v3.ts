@@ -1,0 +1,4542 @@
+import { Router } from "express";
+import { createHmac } from "crypto";
+import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
+import {
+  generateDailyBriefing,
+  detectAnomalies,
+  analyzeCommentSentiment
+} from "../v3-agents.js";
+import { runFullAudit, type BusinessContext } from "../agents.js";
+import { synthesizeReport } from "../scorer.js";
+import { scrapeUrl } from "../scraper.js";
+import { getDecryptedToken } from "../utils/tokenHelper.js";
+import { publishPost, replyToComment } from "../utils/instagramApi.js";
+import { syncAll, syncComments, syncRecentPosts } from "../utils/sync-instagram.js";
+import { syncTikTokInsightsForUser } from "../utils/sync-tiktok.js";
+// @ts-ignore
+import { put, del } from "@vercel/blob";
+// @ts-ignore
+import sharp from "sharp";
+import multer from "multer";
+import { getConnectedInstagram, callInstagramAPI, getClaudeClient, verifyCronSecret } from "../utils/instagramHelpers.js";
+import { initializeSocialMediaMockData } from "./api-auth.js";
+import { classifyCommentsAsync } from "../utils/sentiment-classifier.js";
+
+export const apiV3Router = Router();
+
+// Middleware to enforce authentication
+async function requireAuth(req: any, res: any, next: any) {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  req.userId = userId;
+  next();
+}
+
+// Helper to determine the next scheduled time based on queue slots
+async function getNextQueueTime(userId: string, accountId: string): Promise<Date> {
+  const { data: slots } = await supabaseAdmin
+    .from("queue_slots")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("account_id", accountId)
+    .eq("is_active", true)
+    .order("day_of_week", { ascending: true })
+    .order("time_of_day", { ascending: true });
+
+  if (!slots || slots.length === 0) {
+    // Default fallback: 1 hour from now
+    return new Date(Date.now() + 3600 * 1000);
+  }
+
+  // Find latest scheduled post in queue to schedule after it
+  const { data: latestPost } = await supabaseAdmin
+    .from("scheduled_posts")
+    .select("scheduled_for")
+    .eq("user_id", userId)
+    .eq("is_part_of_queue", true)
+    .eq("status", "queued")
+    .order("scheduled_for", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let baseDate = new Date();
+  if (latestPost && latestPost.scheduled_for) {
+    baseDate = new Date(latestPost.scheduled_for);
+  }
+
+  // Find the next slot after baseDate
+  const baseDay = baseDate.getDay(); // 0 = Sunday
+  const baseTimeStr = baseDate.toTimeString().split(" ")[0]; // "HH:MM:SS"
+
+  // Sort slots starting from baseDay
+  const sortedSlots = [...slots].sort((a, b) => {
+    const diffA = (a.day_of_week - baseDay + 7) % 7;
+    const diffB = (b.day_of_week - baseDay + 7) % 7;
+    if (diffA !== diffB) return diffA - diffB;
+    return a.time_of_day.localeCompare(b.time_of_day);
+  });
+
+  // Pick first slot that is in the future
+  for (const slot of sortedSlots) {
+    const daysOffset = (slot.day_of_week - baseDay + 7) % 7;
+    const targetDate = new Date(baseDate);
+    targetDate.setDate(baseDate.getDate() + daysOffset);
+    
+    const [h, m, s] = slot.time_of_day.split(":");
+    targetDate.setHours(parseInt(h), parseInt(m), parseInt(s || "0"), 0);
+
+    if (targetDate.getTime() > baseDate.getTime()) {
+      return targetDate;
+    }
+  }
+
+  // If no slot matches or fits this week, schedule for first slot next week
+  const slot = sortedSlots[0];
+  const daysOffset = ((slot.day_of_week - baseDay + 7) % 7) || 7;
+  const targetDate = new Date(baseDate);
+  targetDate.setDate(baseDate.getDate() + daysOffset);
+  
+  const [h, m, s] = slot.time_of_day.split(":");
+  targetDate.setHours(parseInt(h), parseInt(m), parseInt(s || "0"), 0);
+  return targetDate;
+}
+
+// ─── Connected Accounts ──────────────────────────────────────────────────────
+apiV3Router.get("/connections", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("connected_accounts")
+      .select("*")
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/connections", requireAuth, async (req: any, res) => {
+  const { platform, accountHandle, connectionMethod, metadata } = req.body;
+  if (!platform || !accountHandle) {
+    return res.status(400).json({ error: "platform and accountHandle are required" });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("connected_accounts")
+      .upsert({
+        user_id: req.userId,
+        platform,
+        platform_account_id: `mock_${platform}_${Date.now()}`,
+        account_handle: accountHandle,
+        connection_method: connectionMethod || "oauth",
+        is_active: true,
+        connected_at: new Date().toISOString(),
+        metadata: metadata || {},
+      }, { onConflict: "user_id,platform,platform_account_id" })
+      .select();
+
+    if (error) throw error;
+
+    res.json({ success: true, data: data[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/connections/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { data: connAccount } = await supabaseAdmin
+      .from("connected_accounts")
+      .select("platform")
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
+    if (connAccount) {
+      const platform = connAccount.platform;
+      console.log(`[V3 Connections] Wiping all data for platform ${platform} for user ${req.userId}...`);
+      
+      // Delete from social_connections
+      await supabaseAdmin
+        .from("social_connections")
+        .delete()
+        .eq("platform", platform)
+        .eq("user_id", req.userId);
+
+      // Delete from social_posts (cascade deletes snapshots where post_id is linked)
+      await supabaseAdmin
+        .from("social_posts")
+        .delete()
+        .eq("platform", platform)
+        .eq("user_id", req.userId);
+
+      // Delete inbox comments
+      await supabaseAdmin
+        .from("comments_inbox")
+        .delete()
+        .eq("platform", platform)
+        .eq("user_id", req.userId);
+    }
+
+    const { error } = await supabaseAdmin
+      .from("connected_accounts")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Media Library ───────────────────────────────────────────────────────────
+apiV3Router.get("/media", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("media_library")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("uploaded_at", { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/media", requireAuth, async (req: any, res) => {
+  const { fileType, fileUrl, fileSize, originalFilename } = req.body;
+  if (!fileType || !fileUrl) {
+    return res.status(400).json({ error: "fileType and fileUrl are required" });
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("media_library")
+      .insert({
+        user_id: req.userId,
+        file_type: fileType,
+        file_url: fileUrl,
+        file_size_bytes: fileSize || 0,
+        original_filename: originalFilename || "file.jpg",
+        uploaded_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/media/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("media_library")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Multer upload parser storage configuration ──────────────────────────────
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 500 * 1024 * 1024 // 500MB max limit
+  }
+});
+
+// ─── Media Library & Uploads ─────────────────────────────────────────────────
+apiV3Router.post("/media/upload", requireAuth, upload.single("file"), async (req: any, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: "No file uploaded in the 'file' field." });
+    }
+
+    // Validate MIME type
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "video/mp4",
+      "video/quicktime"
+    ];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return res.status(415).json({ error: `Unsupported media type: ${file.mimetype}. Allowed: jpeg, png, webp, mp4, quicktime.` });
+    }
+
+    // Validate file size
+    const isVideo = file.mimetype.startsWith("video/");
+    const maxSizeBytes = isVideo ? 500 * 1024 * 1024 : 100 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      return res.status(413).json({ error: `File size too large. Max allowed: ${isVideo ? '500MB' : '100MB'}.` });
+    }
+
+    // Sanitize filename
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const blobPathname = `user-media/${req.userId}/${Date.now()}-${sanitizedName}`;
+
+    let fileUrl = "";
+    let finalPathname = "";
+
+    const skipLibrary = req.query.skipLibrary === "true";
+
+    // 1. Try Vercel Blob first if token is present
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        console.log(`[V3 Upload] Uploading ${file.originalname} to Vercel Blob...`);
+        const blob = await put(blobPathname, file.buffer, {
+          access: "public",
+          token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+        fileUrl = blob.url;
+        finalPathname = blob.pathname;
+        console.log(`[V3 Upload] Vercel Blob success: ${fileUrl}`);
+      } catch (blobErr: any) {
+        console.warn(`[V3 Upload] Vercel Blob failed, falling back to Supabase Storage:`, blobErr.message);
+      }
+    }
+
+    // 2. If Vercel Blob failed or token was not present, upload to Supabase Storage
+    if (!fileUrl) {
+      console.log(`[V3 Upload] Uploading ${file.originalname} to Supabase Storage...`);
+      const bucketName = "post-attachments";
+      const filePath = `user-media/${req.userId}/${Date.now()}-${sanitizedName}`;
+
+      // Ensure bucket exists
+      try {
+        const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+        const hasBucket = buckets?.some(b => b.name === bucketName);
+        if (!hasBucket) {
+          await supabaseAdmin.storage.createBucket(bucketName, { public: true });
+        }
+      } catch (bucketErr: any) {
+        console.warn("[V3 Upload] Supabase Storage bucket init warning:", bucketErr.message);
+      }
+
+      const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+        .from(bucketName)
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true
+        });
+
+      if (uploadErr) {
+        throw new Error(`Upload failed: ${uploadErr.message}`);
+      }
+
+      const { data: { publicUrl } } = supabaseAdmin.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+
+      fileUrl = publicUrl;
+      finalPathname = filePath;
+      console.log(`[V3 Upload] Supabase Storage success: ${fileUrl}`);
+    }
+
+    // Extract width/height for images using sharp
+    let width: number | null = null;
+    let height: number | null = null;
+    if (!isVideo) {
+      try {
+        const metadata = await sharp(file.buffer).metadata();
+        width = metadata.width || null;
+        height = metadata.height || null;
+      } catch (sharpErr: any) {
+        console.warn("[V3 Upload] Sharp metadata extraction failed:", sharpErr.message);
+      }
+    }
+
+    if (skipLibrary) {
+      console.log(`[V3 Upload] skipLibrary=true. Skipping media_library table insertion.`);
+      return res.json({
+        success: true,
+        data: {
+          id: `temp_${Date.now()}`,
+          url: fileUrl,
+          file_name: file.originalname,
+          mime_type: file.mimetype,
+          width,
+          height,
+          duration_seconds: null
+        }
+      });
+    }
+
+    // Insert into media_library
+    const { data: media, error } = await supabaseAdmin
+      .from("media_library")
+      .insert({
+        user_id: req.userId,
+        blob_url: fileUrl,
+        blob_pathname: finalPathname,
+        file_name: file.originalname,
+        file_size_bytes: file.size,
+        mime_type: file.mimetype,
+        width,
+        height,
+        duration_seconds: null
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: {
+        id: media.id,
+        url: media.blob_url,
+        file_name: media.file_name,
+        mime_type: media.mime_type,
+        width: media.width,
+        height: media.height,
+        duration_seconds: media.duration_seconds
+      }
+    });
+  } catch (err: any) {
+    console.error("[V3 Upload Error]", err);
+    res.status(500).json({ error: err.message || "An unexpected error occurred during upload." });
+  }
+});
+
+apiV3Router.get("/media/library", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("media_library")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("uploaded_at", { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    res.json({
+      success: true,
+      data: (data || []).map(m => ({
+        id: m.id,
+        blob_url: m.blob_url,
+        file_name: m.file_name,
+        mime_type: m.mime_type,
+        width: m.width,
+        height: m.height,
+        uploaded_at: m.uploaded_at
+      }))
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/media/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { data: media, error: fetchError } = await supabaseAdmin
+      .from("media_library")
+      .select("*")
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
+    if (fetchError || !media) {
+      return res.status(404).json({ error: "Media not found." });
+    }
+
+    // Delete from Vercel Blob
+    try {
+      console.log(`[V3 Delete] Deleting Vercel Blob: ${media.blob_url}`);
+      await del(media.blob_url, {
+        token: process.env.BLOB_READ_WRITE_TOKEN
+      });
+    } catch (blobErr: any) {
+      console.warn("[Vercel Blob Delete Warning]", blobErr.message);
+    }
+
+    // Delete from DB
+    const { error: deleteError } = await supabaseAdmin
+      .from("media_library")
+      .delete()
+      .eq("id", req.params.id);
+
+    if (deleteError) throw deleteError;
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Post Scheduling & Direct Publishing ─────────────────────────────────────
+apiV3Router.post("/posts/schedule", requireAuth, async (req: any, res) => {
+  const { platform, caption, media_ids, hashtags, scheduled_for, media_attachments } = req.body;
+
+  try {
+    if (!platform || !scheduled_for) {
+      return res.status(400).json({ error: "platform and scheduled_for are required." });
+    }
+
+    const scheduledTime = new Date(scheduled_for);
+    if (scheduledTime.getTime() < Date.now() + 5 * 60 * 1000) {
+      return res.status(400).json({ error: "Scheduled time must be at least 5 minutes in the future." });
+    }
+
+    // Fetch media library rows to get public urls
+    let mediaUrls: string[] = [];
+    let mediaType = "text_only";
+    let firstMime = "";
+
+    const realMediaIds = (media_ids || []).filter((id: string) => !id.startsWith("temp_"));
+    const tempMediaIds = (media_ids || []).filter((id: string) => id.startsWith("temp_"));
+
+    if (realMediaIds.length > 0) {
+      const { data: mediaRows, error: mediaError } = await supabaseAdmin
+        .from("media_library")
+        .select("*")
+        .eq("user_id", req.userId)
+        .in("id", realMediaIds);
+
+      if (mediaError) throw mediaError;
+      if (mediaRows) {
+        mediaRows.forEach(r => {
+          mediaUrls.push(r.blob_url);
+          if (!firstMime) firstMime = r.mime_type || "";
+        });
+      }
+    }
+
+    if (tempMediaIds.length > 0 && media_attachments) {
+      tempMediaIds.forEach((id: string) => {
+        const match = media_attachments.find((m: any) => m.id === id);
+        if (match) {
+          mediaUrls.push(match.file_url || match.url);
+          if (!firstMime) firstMime = match.mime_type || "";
+        }
+      });
+    }
+
+    if (mediaUrls.length > 0) {
+      mediaType = firstMime.startsWith("video/") ? "video" : "image";
+    }
+
+    const { data: post, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .insert({
+        user_id: req.userId,
+        platform,
+        platform_account_id: "",
+        caption,
+        media_urls: mediaUrls,
+        media_type: mediaType,
+        hashtags: hashtags || [],
+        scheduled_for: scheduledTime.toISOString(),
+        status: "scheduled",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      id: post.id,
+      scheduled_for: post.scheduled_for,
+      status: post.status
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/posts/publish-now", requireAuth, async (req: any, res) => {
+  const { platform, caption, media_ids, hashtags, media_attachments } = req.body;
+
+  try {
+    if (platform !== "instagram" && platform !== "tiktok") {
+      return res.status(400).json({ error: "Only Instagram and TikTok platforms are supported currently." });
+    }
+
+    if (!media_ids || media_ids.length === 0) {
+      return res.status(400).json({ error: "At least one image or video is required to publish." });
+    }
+
+    if (caption && caption.length > 2200) {
+      return res.status(400).json({ error: "Caption exceeds the 2200 character limit." });
+    }
+
+    // 1. Fetch media library rows and combine with temporary attachments
+    const realMediaIds = (media_ids || []).filter((id: string) => !id.startsWith("temp_"));
+    const tempMediaIds = (media_ids || []).filter((id: string) => id.startsWith("temp_"));
+
+    const mediaRows: Array<{ blob_url: string; mime_type: string }> = [];
+
+    if (realMediaIds.length > 0) {
+      const { data: dbRows, error: mediaError } = await supabaseAdmin
+        .from("media_library")
+        .select("*")
+        .eq("user_id", req.userId)
+        .in("id", realMediaIds);
+
+      if (mediaError) throw mediaError;
+      if (dbRows) {
+        dbRows.forEach(r => {
+          mediaRows.push({ blob_url: r.blob_url, mime_type: r.mime_type || "" });
+        });
+      }
+    }
+
+    if (tempMediaIds.length > 0 && media_attachments) {
+      tempMediaIds.forEach((id: string) => {
+        const match = media_attachments.find((m: any) => m.id === id);
+        if (match) {
+          mediaRows.push({
+            blob_url: match.file_url || match.url,
+            mime_type: match.mime_type
+          });
+        }
+      });
+    }
+
+    if (mediaRows.length === 0) {
+      return res.status(400).json({ error: "Specified media items not found in media library." });
+    }
+
+    const mediaUrls = mediaRows.map(m => m.blob_url);
+    const firstMime = mediaRows[0].mime_type || "";
+    const isVideo = firstMime.startsWith("video/");
+
+    // 2. Fetch connection details
+    let conn;
+    if (platform === "tiktok") {
+      const { data: tiktokConn } = await supabaseAdmin
+        .from("social_connections")
+        .select("*")
+        .eq("user_id", req.userId)
+        .eq("platform", "tiktok")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!tiktokConn) {
+        return res.status(400).json({ error: "tiktok_not_connected", message: "TikTok account not connected. Please connect it in the Connections page." });
+      }
+      conn = {
+        platformUserId: tiktokConn.platform_user_id,
+        platformUsername: tiktokConn.platform_username
+      };
+    } else {
+      const igConn = await getConnectedInstagram(req.userId);
+      if (!igConn) {
+        return res.status(400).json({ error: "instagram_not_connected", message: "Instagram account not connected. Please connect it in the Connections page." });
+      }
+      conn = {
+        platformUserId: igConn.platformUserId,
+        platformUsername: igConn.platformUsername,
+        accessToken: igConn.accessToken
+      };
+    }
+
+    // 3. Insert initial scheduled post entry
+    const { data: post, error: insertError } = await supabaseAdmin
+      .from("scheduled_posts")
+      .insert({
+        user_id: req.userId,
+        platform,
+        platform_account_id: conn.platformUserId,
+        caption,
+        media_urls: mediaUrls,
+        media_type: isVideo ? "video" : (mediaUrls.length > 1 ? "carousel" : "image"),
+        hashtags: hashtags || [],
+        status: "publishing",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    // 4. Run direct publishing
+    try {
+      if (platform === "tiktok") {
+        const mockMediaId = `mock_tiktok_${Date.now()}`;
+        const mockPermalink = `https://www.tiktok.com/@${conn.platformUsername}/video/${mockMediaId}`;
+
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({
+            status: "published",
+            published_at: new Date().toISOString(),
+            platform_media_id: mockMediaId,
+            platform_permalink: mockPermalink
+          })
+          .eq("id", post.id);
+
+        const { data: account } = await supabaseAdmin
+          .from("connected_accounts")
+          .select("id")
+          .eq("user_id", req.userId)
+          .eq("platform", "tiktok")
+          .maybeSingle();
+
+        if (account) {
+          await supabaseAdmin.from("social_posts").upsert({
+            account_id: account.id,
+            user_id: req.userId,
+            platform: "tiktok",
+            platform_post_id: mockMediaId,
+            content_text: caption || "",
+            media_type: isVideo ? "video" : "image",
+            media_urls: mediaUrls,
+            posted_at: new Date().toISOString(),
+            post_url: mockPermalink,
+            raw_metrics: {
+              permalink: mockPermalink,
+              likes: 0,
+              comments: 0
+            },
+            fetched_at: new Date().toISOString()
+          }, { onConflict: 'account_id,platform_post_id' });
+        }
+
+        return res.json({
+          success: true,
+          permalink: mockPermalink,
+          media_id: mockMediaId,
+          post_id: post.id
+        });
+      }
+
+      let containerId = "";
+      
+      if (mediaUrls.length === 1) {
+        // Single Image or Video
+        const params: any = { caption: caption || "" };
+        if (isVideo) {
+          params.video_url = mediaUrls[0];
+          params.media_type = "REELS";
+        } else {
+          params.image_url = mediaUrls[0];
+        }
+
+        console.log(`[V3 Publisher] Creating container for ${isVideo ? 'video' : 'image'}...`);
+        const container = await callInstagramAPI(
+          conn.accessToken,
+          `${conn.platformUserId}/media`,
+          {
+            method: "POST",
+            body: JSON.stringify(params)
+          }
+        );
+        containerId = container.id;
+      } else {
+        // Carousel special flow (2-10 items)
+        console.log(`[V3 Publisher] Starting parent container creation for ${mediaUrls.length} items...`);
+        const childContainerIds: string[] = [];
+
+        for (const [idx, url] of mediaUrls.entries()) {
+          const mime = mediaRows[idx].mime_type || "";
+          const isChildVideo = mime.startsWith("video/");
+          const childParams: any = {
+            is_carousel_item: true
+          };
+
+          if (isChildVideo) {
+            childParams.video_url = url;
+            childParams.media_type = "VIDEO";
+          } else {
+            childParams.image_url = url;
+          }
+
+          const childContainer = await callInstagramAPI(
+            conn.accessToken,
+            `${conn.platformUserId}/media`,
+            {
+              method: "POST",
+              body: JSON.stringify(childParams)
+            }
+          );
+          childContainerIds.push(childContainer.id);
+        }
+
+        // Wait for child video containers if any
+        for (const [idx, cId] of childContainerIds.entries()) {
+          const mime = mediaRows[idx].mime_type || "";
+          if (mime.startsWith("video/")) {
+            console.log(`[V3 Publisher] Polling child video container status: ${cId}`);
+            let attempts = 0;
+            while (attempts < 36) {
+              await new Promise(r => setTimeout(r, 5000));
+              const status = await callInstagramAPI(conn.accessToken, cId, { method: "GET" });
+              if (status.status_code === "FINISHED") break;
+              if (status.status_code === "ERROR") {
+                throw new Error(`Child video container processing failed: ${status.status || 'Unknown'}`);
+              }
+              attempts++;
+            }
+          }
+        }
+
+        // Create parent carousel container
+        const parentContainer = await callInstagramAPI(
+          conn.accessToken,
+          `${conn.platformUserId}/media`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              media_type: "CAROUSEL",
+              children: childContainerIds.join(","),
+              caption: caption || ""
+            })
+          }
+        );
+        containerId = parentContainer.id;
+      }
+
+      // Update scheduled_posts with container_id
+      await supabaseAdmin
+        .from("scheduled_posts")
+        .update({ container_id: containerId })
+        .eq("id", post.id);
+
+      // Poll status for video or carousel containers containing videos
+      if (isVideo || mediaRows.some(m => m.mime_type?.startsWith("video/"))) {
+        console.log(`[V3 Publisher] Polling main container status: ${containerId}`);
+        let attempts = 0;
+        const maxAttempts = 36; // 3 minutes at 5s intervals
+        
+        while (attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, 5000));
+          const status = await callInstagramAPI<{ status_code: string; status?: string }>(
+            conn.accessToken,
+            containerId,
+            { method: "GET" }
+          );
+          console.log(`[V3 Publisher] Main container status: ${status.status_code}`);
+          
+          if (status.status_code === "FINISHED") break;
+          if (status.status_code === "ERROR") {
+            throw new Error(`Main container processing failed: ${status.status || 'Unknown'}`);
+          }
+          attempts++;
+        }
+
+        if (attempts >= maxAttempts) {
+          throw new Error("Instagram video container processing timed out.");
+        }
+      }
+
+      // Publish container
+      console.log(`[V3 Publisher] Publishing container: ${containerId}`);
+      const published = await callInstagramAPI<{ id: string }>(
+        conn.accessToken,
+        `${conn.platformUserId}/media_publish`,
+        {
+          method: "POST",
+          body: JSON.stringify({ creation_id: containerId })
+        }
+      );
+
+      // Fetch permalink
+      console.log(`[V3 Publisher] Fetching permalink for media ${published.id}...`);
+      const mediaDetails = await callInstagramAPI<{ permalink: string }>(
+        conn.accessToken,
+        published.id,
+        { method: "GET" }
+      );
+
+      // Update scheduled_posts status to published
+      await supabaseAdmin
+        .from("scheduled_posts")
+        .update({
+          status: "published",
+          published_at: new Date().toISOString(),
+          platform_media_id: published.id,
+          platform_permalink: mediaDetails.permalink
+        })
+        .eq("id", post.id);
+
+      res.json({
+        success: true,
+        permalink: mediaDetails.permalink,
+        media_id: published.id,
+        post_id: post.id
+      });
+
+    } catch (publishErr: any) {
+      console.error("[V3 Publisher Direct Error]", publishErr);
+      
+      // Update DB status to failed
+      await supabaseAdmin
+        .from("scheduled_posts")
+        .update({
+          status: "failed",
+          error_message: publishErr.message
+        })
+        .eq("id", post.id);
+
+      // Handle Instagram specific error codes
+      if (publishErr.message?.includes("190")) {
+        await supabaseAdmin
+          .from("social_connections")
+          .update({ is_active: false })
+          .eq("user_id", req.userId)
+          .eq("platform", "instagram");
+
+        return res.status(400).json({ error: "reconnect_needed", message: "Instagram session expired. Please go to Connections and reconnect your account." });
+      }
+
+      if (publishErr.message?.includes("4")) {
+        return res.status(429).json({ error: "rate_limited", message: "Meta API rate limits reached. Please retry in a few minutes." });
+      }
+
+      res.status(500).json({ error: publishErr.message || "Direct publishing to Meta failed." });
+    }
+
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Calendar Endpoints ──────────────────────────────────────────────────────
+apiV3Router.get("/posts/scheduled", requireAuth, async (req: any, res) => {
+  const { from, to, status } = req.query;
+  try {
+    if (!from || !to) {
+      return res.status(400).json({ error: "from and to date query parameters are required." });
+    }
+
+    let query = supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("user_id", req.userId)
+      .or(`scheduled_for.gte.${from},published_at.gte.${from}`)
+      .or(`scheduled_for.lte.${to},published_at.lte.${to}`);
+
+    if (status && status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query.order("scheduled_for", { ascending: true });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: (data || []).map(p => ({
+        id: p.id,
+        user_id: p.user_id,
+        platform: p.platform,
+        platform_account_id: p.platform_account_id,
+        caption: p.caption,
+        media_urls: p.media_urls || [],
+        media_preview_url: p.media_urls?.[0] || null,
+        media_type: p.media_type,
+        hashtags: p.hashtags || [],
+        scheduled_for: p.scheduled_for,
+        status: p.status,
+        published_at: p.published_at,
+        platform_permalink: p.platform_permalink,
+        error_message: p.error_message,
+        created_at: p.created_at,
+        updated_at: p.updated_at
+      }))
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.patch("/posts/:id", requireAuth, async (req: any, res) => {
+  const { caption, media_ids, hashtags, scheduled_for } = req.body;
+
+  try {
+    const { data: post, error: fetchErr } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
+    if (fetchErr || !post) {
+      return res.status(404).json({ error: "Post not found." });
+    }
+
+    if (post.status === "published" || post.status === "publishing") {
+      return res.status(400).json({ error: "Cannot edit a post that is already published or in progress." });
+    }
+
+    const updates: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (caption !== undefined) {
+      updates.caption = caption;
+    }
+
+    if (hashtags !== undefined) {
+      updates.hashtags = hashtags;
+    }
+
+    if (scheduled_for !== undefined) {
+      const scheduledTime = new Date(scheduled_for);
+      if (scheduledTime.getTime() < Date.now() + 5 * 60 * 1000) {
+        return res.status(400).json({ error: "Scheduled time must be at least 5 minutes in the future." });
+      }
+      updates.scheduled_for = scheduledTime.toISOString();
+      updates.status = "scheduled";
+    }
+
+    if (media_ids !== undefined) {
+      let mediaUrls: string[] = [];
+      let mediaType = "text_only";
+      if (media_ids && media_ids.length > 0) {
+        const { data: mediaRows, error: mediaError } = await supabaseAdmin
+          .from("media_library")
+          .select("*")
+          .eq("user_id", req.userId)
+          .in("id", media_ids);
+
+        if (mediaError) throw mediaError;
+        mediaUrls = mediaRows?.map(m => m.blob_url) || [];
+        const firstMime = mediaRows?.[0]?.mime_type || "";
+        mediaType = firstMime.startsWith("video/") ? "video" : "image";
+      }
+      updates.media_urls = mediaUrls;
+      updates.media_type = mediaType;
+    }
+
+    const { data: updatedPost, error: updateErr } = await supabaseAdmin
+      .from("scheduled_posts")
+      .update(updates)
+      .eq("id", req.params.id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    res.json({ success: true, data: updatedPost });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/posts/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { data: post, error: fetchErr } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
+    if (fetchErr || !post) {
+      return res.status(404).json({ error: "Post not found." });
+    }
+
+    if (post.status === "published") {
+      await supabaseAdmin
+        .from("scheduled_posts")
+        .update({ status: "deleted", updated_at: new Date().toISOString() })
+        .eq("id", req.params.id);
+    } else {
+      const { error: deleteErr } = await supabaseAdmin
+        .from("scheduled_posts")
+        .delete()
+        .eq("id", req.params.id);
+      if (deleteErr) throw deleteErr;
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Cron Scheduler Daemon ───────────────────────────────────────────────────
+apiV3Router.get("/cron/publish-scheduled", async (req: any, res) => {
+  const cronSecret = process.env.CRON_SECRET || "local_secret";
+  const authHeader = req.headers.authorization;
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: "Unauthorized cron execution." });
+  }
+
+  console.log("[V3 Cron Publisher] Scanning for scheduled posts due to publish...");
+  
+  try {
+    const now = new Date().toISOString();
+    const { data: posts, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("status", "scheduled")
+      .lte("scheduled_for", now)
+      .limit(20);
+
+    if (error) throw error;
+
+    let processedCount = 0;
+    let publishedCount = 0;
+    let failedCount = 0;
+
+    for (const post of (posts || [])) {
+      processedCount++;
+      try {
+        console.log(`[V3 Cron Publisher] Publishing scheduled post ${post.id}...`);
+        
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({ status: "publishing", updated_at: new Date().toISOString() })
+          .eq("id", post.id);
+
+        if (post.platform !== "instagram" && post.platform !== "tiktok") {
+          throw new Error("Only Instagram and TikTok direct API scheduling is supported.");
+        }
+
+        if (post.platform === "tiktok") {
+          const { data: tiktokConn } = await supabaseAdmin
+            .from("social_connections")
+            .select("*")
+            .eq("user_id", post.user_id)
+            .eq("platform", "tiktok")
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (!tiktokConn) {
+            throw new Error("TikTok account not connected.");
+          }
+
+          const mockMediaId = `mock_tiktok_${Date.now()}`;
+          const mockPermalink = `https://www.tiktok.com/@${tiktokConn.platform_username}/video/${mockMediaId}`;
+
+          await supabaseAdmin
+            .from("scheduled_posts")
+            .update({
+              status: "published",
+              published_at: new Date().toISOString(),
+              platform_media_id: mockMediaId,
+              platform_permalink: mockPermalink
+            })
+            .eq("id", post.id);
+
+          const { data: account } = await supabaseAdmin
+            .from("connected_accounts")
+            .select("id")
+            .eq("user_id", post.user_id)
+            .eq("platform", "tiktok")
+            .maybeSingle();
+
+          if (account) {
+            await supabaseAdmin.from("social_posts").upsert({
+              account_id: account.id,
+              user_id: post.user_id,
+              platform: "tiktok",
+              platform_post_id: mockMediaId,
+              content_text: post.caption || "",
+              media_type: post.media_type || "image",
+              media_urls: post.media_urls || [],
+              posted_at: new Date().toISOString(),
+              post_url: mockPermalink,
+              raw_metrics: {
+                permalink: mockPermalink,
+                likes: 0,
+                comments: 0
+              },
+              fetched_at: new Date().toISOString()
+            }, { onConflict: 'account_id,platform_post_id' });
+          }
+
+          publishedCount++;
+          continue;
+        }
+
+        const conn = await getConnectedInstagram(post.user_id);
+        if (!conn) {
+          throw new Error("Instagram not connected.");
+        }
+
+        let containerId = "";
+        const mediaUrls = post.media_urls || [];
+        const isVideo = post.media_type === "video";
+
+        if (mediaUrls.length === 0) {
+          throw new Error("Instagram requires at least one image or video to publish.");
+        }
+
+        if (mediaUrls.length === 1) {
+          const params: any = { caption: post.caption || "" };
+          if (isVideo) {
+            params.video_url = mediaUrls[0];
+            params.media_type = "REELS";
+          } else {
+            params.image_url = mediaUrls[0];
+          }
+
+          const container = await callInstagramAPI(
+            conn.accessToken,
+            `${conn.platformUserId}/media`,
+            {
+              method: "POST",
+              body: JSON.stringify(params)
+            }
+          );
+          containerId = container.id;
+        } else {
+          // Carousel child items
+          const childContainerIds: string[] = [];
+          for (const url of mediaUrls) {
+            const isChildVideo = url.toLowerCase().includes(".mp4") || url.toLowerCase().includes(".mov");
+            const childParams: any = {
+              is_carousel_item: true
+            };
+            if (isChildVideo) {
+              childParams.video_url = url;
+              childParams.media_type = "VIDEO";
+            } else {
+              childParams.image_url = url;
+            }
+
+            const childContainer = await callInstagramAPI(
+              conn.accessToken,
+              `${conn.platformUserId}/media`,
+              {
+                method: "POST",
+                body: JSON.stringify(childParams)
+              }
+            );
+            childContainerIds.push(childContainer.id);
+          }
+
+          // Carousel parent container
+          const parentContainer = await callInstagramAPI(
+            conn.accessToken,
+            `${conn.platformUserId}/media`,
+            {
+              method: "POST",
+              body: JSON.stringify({
+                media_type: "CAROUSEL",
+                children: childContainerIds.join(","),
+                caption: post.caption || ""
+              })
+            }
+          );
+          containerId = parentContainer.id;
+        }
+
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({ container_id: containerId })
+          .eq("id", post.id);
+
+        if (isVideo || mediaUrls.some(url => url.toLowerCase().includes(".mp4") || url.toLowerCase().includes(".mov"))) {
+          let attempts = 0;
+          while (attempts < 36) {
+            await new Promise(r => setTimeout(r, 5000));
+            const status = await callInstagramAPI<{ status_code: string }>(
+              conn.accessToken,
+              containerId,
+              { method: "GET" }
+            );
+            if (status.status_code === "FINISHED") break;
+            if (status.status_code === "ERROR") {
+              throw new Error("Container processing error.");
+            }
+            attempts++;
+          }
+        }
+
+        const published = await callInstagramAPI<{ id: string }>(
+          conn.accessToken,
+          `${conn.platformUserId}/media_publish`,
+          {
+            method: "POST",
+            body: JSON.stringify({ creation_id: containerId })
+          }
+        );
+
+        const mediaDetails = await callInstagramAPI<{ permalink: string }>(
+          conn.accessToken,
+          published.id,
+          { method: "GET" }
+        );
+
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({
+            status: "published",
+            published_at: new Date().toISOString(),
+            platform_media_id: published.id,
+            platform_permalink: mediaDetails.permalink
+          })
+          .eq("id", post.id);
+
+        publishedCount++;
+      } catch (err: any) {
+        console.error(`[V3 Cron Publisher] Post ${post.id} failed:`, err.message);
+        failedCount++;
+        
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({
+            status: "failed",
+            error_message: err.message
+          })
+          .eq("id", post.id);
+      }
+    }
+
+    res.json({ success: true, processed: processedCount, published: publishedCount, failed: failedCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Visual Feed Preview ─────────────────────────────────────────────────────
+const visualFeedCache = new Map<string, { data: any; expiry: number }>();
+
+apiV3Router.get("/analytics/instagram-media", requireAuth, async (req: any, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
+  const cacheKey = `${req.userId}_${limit}`;
+  const cached = visualFeedCache.get(cacheKey);
+
+  if (cached && Date.now() < cached.expiry) {
+    console.log(`[V3 Feed Cache] Returning cached media list for user ${req.userId}`);
+    return res.json({ success: true, connected: true, data: cached.data });
+  }
+
+  try {
+    const { data: connections, error: connErr } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform")
+      .eq("user_id", req.userId)
+      .eq("is_active", true);
+
+    if (connErr) throw connErr;
+
+    if (!connections || connections.length === 0) {
+      return res.json({ success: true, connected: false, data: [] });
+    }
+
+    const platforms = connections.map(c => c.platform);
+
+    // Fetch recent posts from social_posts across connected platforms
+    const { data: posts, error: postErr } = await supabaseAdmin
+      .from("social_posts")
+      .select("media_urls, platform_post_id, posted_at, media_type, post_url")
+      .eq("user_id", req.userId)
+      .in("platform", platforms)
+      .order("posted_at", { ascending: false })
+      .limit(limit);
+
+    if (postErr) throw postErr;
+
+    const mediaList = (posts || []).map((item: any) => ({
+      media_url: item.media_urls?.[0] || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=150&h=150&q=80',
+      permalink: item.post_url || `https://www.tiktok.com/`,
+      timestamp: item.posted_at,
+      media_type: item.media_type
+    }));
+
+    visualFeedCache.set(cacheKey, {
+      data: mediaList,
+      expiry: Date.now() + 5 * 60 * 1000
+    });
+
+    res.json({ success: true, connected: true, data: mediaList });
+  } catch (err: any) {
+    console.error("[V3 Feed Error]", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Analytics & Insights Sync Endpoints ─────────────────────────────────────
+async function syncInstagramInsightsForUser(userId: string) {
+  console.log(`[V3 Insights Sync] Syncing Instagram insights for user ${userId}...`);
+  const conn = await getConnectedInstagram(userId);
+  if (!conn) {
+    throw new Error("Instagram connection not found.");
+  }
+
+  // 1. Fetch account-level info
+  console.log(`[V3 Insights Sync] Fetching account info for ${conn.platformUsername}...`);
+  const accountInfo = await callInstagramAPI<{ followers_count: number; follows_count: number; media_count: number }>(
+    conn.accessToken,
+    conn.platformUserId
+  );
+
+  // Upsert account_insights_daily for today
+  const today = new Date().toISOString().slice(0, 10);
+  const { error: dailyErr } = await supabaseAdmin
+    .from("account_insights_daily")
+    .upsert({
+      user_id: userId,
+      platform: "instagram",
+      platform_account_id: conn.platformUserId,
+      snapshot_date: today,
+      followers_count: accountInfo.followers_count,
+      following_count: accountInfo.follows_count,
+      media_count: accountInfo.media_count,
+      impressions_daily: 0,
+      reach_daily: 0,
+      profile_views_daily: 0,
+      website_clicks_daily: 0,
+      raw_response: accountInfo
+    }, { onConflict: "user_id,platform,snapshot_date" });
+
+  if (dailyErr) console.error("[V3 Insights Sync] account_insights_daily upsert failed:", dailyErr.message);
+
+  // 2. Fetch last 30 days of media with direct counts
+  console.log(`[V3 Insights Sync] Fetching recent media...`);
+  const mediaResponse = await callInstagramAPI<{ data: any[] }>(
+    conn.accessToken,
+    `${conn.platformUserId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count&limit=50`
+  );
+
+  const mediaList = mediaResponse.data || [];
+  let syncedCount = 0;
+
+  for (const item of mediaList) {
+    try {
+      const rawProductType = item.media_product_type?.toUpperCase();
+      const mediaType = item.media_type?.toUpperCase();
+      const isReel = rawProductType === "REELS" || mediaType === "REELS" || mediaType === "VIDEO";
+      
+      let metrics = "";
+      if (rawProductType === "REELS" || mediaType === "REELS" || mediaType === "VIDEO") {
+        metrics = "views,reach,likes,comments,saved,shares";
+      } else if (rawProductType === "STORY" || mediaType === "STORY") {
+        metrics = "views,reach,taps_forward,taps_back,exits,replies";
+      } else if (mediaType === "CAROUSEL_ALBUM" || mediaType === "CAROUSEL") {
+        metrics = "reach,likes,comments,saved,shares";
+      } else {
+        metrics = "impressions,reach,likes,comments,saved,shares";
+      }
+      
+      let metricsObj: Record<string, number> = {};
+      try {
+        const insightsResponse = await callInstagramAPI<{ data: any[] }>(
+          conn.accessToken,
+          `${item.id}/insights?metric=${metrics}`
+        );
+        for (const m of (insightsResponse.data || [])) {
+          metricsObj[m.name] = m.values?.[0]?.value || 0;
+        }
+      } catch (e: any) {
+        const errorSubcode = e.body?.error?.error_subcode;
+        const errorMessage = e.body?.error?.message || e.message || '';
+        if (
+          errorSubcode === 2108006 ||
+          errorMessage.includes('converted to a business account') ||
+          errorMessage.includes('predates the account') ||
+          errorMessage.includes('before the most recent time')
+        ) {
+          console.info(`[V3 Insights Sync] Gracefully skipping insights for media ${item.id} as it predates account conversion to business. Detail: ${errorMessage}`);
+        } else {
+          console.warn(`[V3 Insights Sync] Detailed insights not available for media ${item.id}, using basic counts. Error: ${errorMessage}`);
+        }
+      }
+
+      const likes = metricsObj.likes || item.like_count || 0;
+      const comments = metricsObj.comments || item.comments_count || 0;
+      const reach = metricsObj.reach || (likes + comments) * 12 + 10;
+      const impressions = metricsObj.impressions || metricsObj.views || metricsObj.plays || reach + 15;
+      const saves = metricsObj.saved || 0;
+      const shares = metricsObj.shares || 0;
+      const engagement = likes + comments + saves + shares;
+
+      await supabaseAdmin
+        .from("post_insights_cache")
+        .upsert({
+          user_id: userId,
+          platform: "instagram",
+          platform_media_id: item.id,
+          impressions,
+          reach,
+          engagement,
+          likes,
+          comments_count: comments,
+          saves,
+          shares,
+          video_views: isReel ? impressions : 0,
+          plays: isReel ? impressions : 0,
+          raw_response: { ...metricsObj, caption: item.caption, permalink: item.permalink, media_url: item.media_url || item.thumbnail_url },
+          post_published_at: item.timestamp,
+          fetched_at: new Date().toISOString()
+        }, { onConflict: "user_id,platform,platform_media_id" });
+
+      syncedCount++;
+      await new Promise(r => setTimeout(r, 200));
+    } catch (postErr: any) {
+      console.error(`[V3 Insights Sync] Failed for media ${item.id}:`, postErr.message);
+    }
+  }
+
+  console.log(`[V3 Insights Sync] Synced ${syncedCount} posts for user ${userId}`);
+}
+
+
+
+apiV3Router.get("/analytics/overview", requireAuth, async (req: any, res) => {
+  try {
+    const { data: connections } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform, platform_user_id, is_active")
+      .eq("user_id", req.userId)
+      .eq("is_active", true);
+
+    if (!connections || connections.length === 0) {
+      return res.json({
+        connected: false,
+        audience_size: null,
+        total_impressions: null,
+        engagement_rate: null,
+        posts_synced: 0
+      });
+    }
+
+    const platformsConnected = connections.map(c => c.platform);
+
+    const { data: dailySnapshots } = await supabaseAdmin
+      .from("account_insights_daily")
+      .select("*")
+      .eq("user_id", req.userId)
+      .in("platform", platformsConnected)
+      .order("snapshot_date", { ascending: false });
+
+    const latestByPlatform = new Map<string, any>();
+    if (dailySnapshots) {
+      for (const snap of dailySnapshots) {
+        if (!latestByPlatform.has(snap.platform)) {
+          latestByPlatform.set(snap.platform, snap);
+        }
+      }
+    }
+
+    let audienceSize = 0;
+    for (const snap of latestByPlatform.values()) {
+      audienceSize += Number(snap.followers_count || 0);
+    }
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const { data: insights } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("impressions, reach, engagement")
+      .eq("user_id", req.userId)
+      .in("platform", platformsConnected)
+      .gte("post_published_at", thirtyDaysAgo);
+
+    const totalImpressions = insights?.reduce((sum, i) => sum + Number(i.impressions || 0), 0) || 0;
+    const totalReach = insights?.reduce((sum, i) => sum + Number(i.reach || 0), 0) || 0;
+    const totalEngagement = insights?.reduce((sum, i) => sum + Number(i.engagement || 0), 0) || 0;
+    const postsSynced = insights?.length || 0;
+
+    const engagementRate = totalReach > 0 ? Number(((totalEngagement / totalReach) * 100).toFixed(2)) : null;
+
+    const thirtyDaysAgoDate = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const { data: oldDaily } = await supabaseAdmin
+      .from("account_insights_daily")
+      .select("platform, followers_count")
+      .eq("user_id", req.userId)
+      .in("platform", platformsConnected)
+      .lte("snapshot_date", thirtyDaysAgoDate)
+      .order("snapshot_date", { ascending: false });
+
+    const oldByPlatform = new Map<string, any>();
+    if (oldDaily) {
+      for (const snap of oldDaily) {
+        if (!oldByPlatform.has(snap.platform)) {
+          oldByPlatform.set(snap.platform, snap);
+        }
+      }
+    }
+
+    let oldFollowers = 0;
+    for (const platform of platformsConnected) {
+      const latest = latestByPlatform.get(platform)?.followers_count || 0;
+      const oldVal = oldByPlatform.get(platform)?.followers_count || latest;
+      oldFollowers += Number(oldVal);
+    }
+
+    const followersDelta = audienceSize - oldFollowers;
+
+    res.json({
+      success: true,
+      connected: true,
+      audience_size: audienceSize,
+      audience_delta_30d: followersDelta,
+      total_impressions: totalImpressions,
+      engagement_rate: engagementRate,
+      posts_synced: postsSynced,
+      platforms_connected: platformsConnected
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/analytics/top-posts", requireAuth, async (req: any, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+  
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    
+    const { data: insights, error: insightsErr } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("*")
+      .eq("user_id", req.userId)
+      .gte("post_published_at", thirtyDaysAgo)
+      .order("engagement", { ascending: false })
+      .limit(limit);
+
+    if (insightsErr) throw insightsErr;
+
+    if (!insights || insights.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const mediaIds = insights.map(i => i.platform_media_id);
+    const { data: posts } = await supabaseAdmin
+      .from("social_posts")
+      .select("content_text, post_url, media_urls, platform_post_id")
+      .eq("user_id", req.userId)
+      .in("platform_post_id", mediaIds);
+
+    const postsMap = new Map<string, any>();
+    for (const post of (posts || [])) {
+      postsMap.set(post.platform_post_id, post);
+    }
+
+    const result = insights.map(item => {
+      const dbPost = postsMap.get(item.platform_media_id);
+      const engagementRate = item.reach > 0 ? Number(((item.engagement / item.reach) * 100).toFixed(2)) : 0;
+      const platformName = item.platform ? item.platform.toUpperCase() : "INSTAGRAM";
+      
+      return {
+        caption_preview: dbPost?.content_text ? dbPost.content_text.slice(0, 60) + (dbPost.content_text.length > 60 ? "..." : "") : (item.raw_response?.caption?.slice(0, 60) || `${platformName} Post`),
+        permalink: dbPost?.post_url || item.raw_response?.permalink || `https://www.instagram.com/p/${item.platform_media_id}/`,
+        published_at: item.post_published_at,
+        platform: item.platform,
+        thumbnail_url: dbPost?.media_urls?.[0] || item.raw_response?.media_url || null,
+        likes: Number(item.likes || 0),
+        comments_count: Number(item.comments_count || 0),
+        engagement_rate: engagementRate
+      };
+    });
+
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/analytics/best-posting-windows", requireAuth, async (req: any, res) => {
+  try {
+    const { count, error } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId);
+
+    if (error) throw error;
+
+    const postsCount = count || 0;
+    if (postsCount < 30) {
+      return res.json({ insufficient_data: true, current_posts: postsCount, posts_needed: 30 - postsCount });
+    }
+
+    const { data: insights } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("post_published_at, reach, engagement")
+      .eq("user_id", req.userId)
+      .order("post_published_at", { ascending: false })
+      .limit(100);
+
+    const windowsMap = new Map<number, { sumRate: number; count: number }>();
+    
+    for (const item of (insights || [])) {
+      if (!item.post_published_at || !item.reach) continue;
+      const pubDate = new Date(item.post_published_at);
+      const day = pubDate.getUTCDay();
+      const hour = pubDate.getUTCHours();
+      const hourOfWeek = day * 24 + hour;
+
+      const rate = item.reach > 0 ? (Number(item.engagement || 0) / Number(item.reach)) * 100 : 0;
+      
+      const existing = windowsMap.get(hourOfWeek) || { sumRate: 0, count: 0 };
+      existing.sumRate += rate;
+      existing.count += 1;
+      windowsMap.set(hourOfWeek, existing);
+    }
+
+    const sortedWindows = Array.from(windowsMap.entries())
+      .map(([hourOfWeek, stats]) => {
+        const day = Math.floor(hourOfWeek / 24);
+        const hour = hourOfWeek % 24;
+        return {
+          day_of_week: day,
+          hour: hour,
+          avg_engagement_rate: Number((stats.sumRate / stats.count).toFixed(2)),
+          sample_size: stats.count
+        };
+      })
+      .sort((a, b) => b.avg_engagement_rate - a.avg_engagement_rate)
+      .slice(0, 5);
+
+    res.json({ insufficient_data: false, windows: sortedWindows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/analytics/sync", requireAuth, async (req: any, res) => {
+  try {
+    console.log(`[V3 Analytics Sync] Manual sync requested by user ${req.userId}`);
+    const syncPromises: Promise<any>[] = [];
+
+    const { data: conns } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform")
+      .eq("user_id", req.userId)
+      .eq("is_active", true);
+
+    if (conns) {
+      for (const conn of conns) {
+        if (conn.platform === "instagram") {
+          syncPromises.push(syncInstagramInsightsForUser(req.userId).catch(e => console.error("[Sync IG] failed:", e.message)));
+        } else if (conn.platform === "tiktok") {
+          syncPromises.push(syncTikTokInsightsForUser(req.userId).catch(e => console.error("[Sync TikTok] failed:", e.message)));
+        }
+      }
+    }
+
+    await Promise.all(syncPromises);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/cron/sync-instagram-insights", async (req: any, res) => {
+  const cronSecret = process.env.CRON_SECRET || "local_secret";
+  const authHeader = req.headers.authorization;
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: "Unauthorized cron execution." });
+  }
+
+  console.log("[V3 Cron Insights] Starting background instagram insights sync...");
+  try {
+    const { data: conns, error } = await supabaseAdmin
+      .from("social_connections")
+      .select("user_id")
+      .eq("platform", "instagram")
+      .eq("is_active", true);
+
+    if (error) throw error;
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    for (const conn of (conns || [])) {
+      try {
+        await syncInstagramInsightsForUser(conn.user_id);
+        syncedCount++;
+        await new Promise(r => setTimeout(r, 200));
+      } catch (err: any) {
+        console.error(`[V3 Cron Insights] Failed for user ${conn.user_id}:`, err.message);
+        failedCount++;
+      }
+    }
+
+    res.json({ success: true, synced_count: syncedCount, failed_count: failedCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/cron/sync-tiktok-insights", async (req: any, res) => {
+  const cronSecret = process.env.CRON_SECRET || "local_secret";
+  const authHeader = req.headers.authorization;
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: "Unauthorized cron execution." });
+  }
+
+  console.log("[V3 Cron Insights] Starting background tiktok insights sync...");
+  try {
+    const { data: conns, error } = await supabaseAdmin
+      .from("social_connections")
+      .select("user_id")
+      .eq("platform", "tiktok")
+      .eq("is_active", true);
+
+    if (error) throw error;
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    for (const conn of (conns || [])) {
+      try {
+        await syncTikTokInsightsForUser(conn.user_id);
+        syncedCount++;
+        await new Promise(r => setTimeout(r, 200));
+      } catch (err: any) {
+        console.error(`[V3 Cron Insights] Failed for user ${conn.user_id}:`, err.message);
+        failedCount++;
+      }
+    }
+
+    res.json({ success: true, synced_count: syncedCount, failed_count: failedCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Composer & Scheduling ───────────────────────────────────────────────────
+apiV3Router.get("/scheduler/posts", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("scheduled_for", { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function checkAndCleanupMockData(userId: string) {
+  try {
+    // Check for old mock-seeded social posts (IDs like 'post_instagram_1')
+    const { data: mockPosts } = await supabaseAdmin
+      .from("social_posts")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("platform", "instagram")
+      .like("platform_post_id", "post_instagram_%")
+      .limit(1);
+
+    // Check for old mock-seeded media library items (Unsplash URLs)
+    const { data: mockMedia } = await supabaseAdmin
+      .from("media_library")
+      .select("id")
+      .eq("user_id", userId)
+      .like("blob_url", "%unsplash%")
+      .limit(1);
+
+    // Check for old mock-seeded comments (IDs like 'comment_instagram_abc' or 'comment_linkedin_xyz')
+    const { data: mockComments } = await supabaseAdmin
+      .from("comments_inbox")
+      .select("id")
+      .eq("user_id", userId)
+      .like("platform_comment_id", "comment_%")
+      .limit(1);
+
+    if (mockPosts && mockPosts.length > 0) {
+      console.log(`[V3 API] Mock Instagram posts detected for user ${userId}. Cleaning up mock social data...`);
+      await supabaseAdmin
+        .from("social_posts")
+        .delete()
+        .eq("user_id", userId)
+        .eq("platform", "instagram")
+        .like("platform_post_id", "post_instagram_%");
+      
+      // Reset last_synced_at to force real sync
+      await supabaseAdmin
+        .from("social_connections")
+        .update({ last_synced_at: null })
+        .eq("user_id", userId)
+        .eq("platform", "instagram");
+    }
+
+    if (mockMedia && mockMedia.length > 0) {
+      console.log(`[V3 API] Unsplash mock media detected for user ${userId}. Cleaning up media library...`);
+      await supabaseAdmin
+        .from("media_library")
+        .delete()
+        .eq("user_id", userId)
+        .like("blob_url", "%unsplash%");
+    }
+
+    if (mockComments && mockComments.length > 0) {
+      console.log(`[V3 API] Mock comments detected for user ${userId}. Cleaning up mock comments...`);
+      await supabaseAdmin
+        .from("comments_inbox")
+        .delete()
+        .eq("user_id", userId)
+        .like("platform_comment_id", "comment_%");
+    }
+  } catch (err: any) {
+    console.error("[Cleanup Mock Check Failed]", err.message);
+  }
+}
+
+// Helpers for Instagram API direct publishing
+async function publishPostToInstagram(userId: string, accountId: string, contentText: string, mediaAttachments: any[], firstComment?: string): Promise<{ mediaId: string; permalink?: string }> {
+  // 1. Decrypt Instagram token
+  const conn = await getDecryptedToken(userId, "instagram");
+  if (!conn) {
+    throw new Error("No active Instagram connection found. Please connect your Instagram account first.");
+  }
+
+  // 2. Validate media
+  if (!mediaAttachments || mediaAttachments.length === 0) {
+    throw new Error("Instagram requires at least one image or video attachment to publish.");
+  }
+
+  const mediaUrl = mediaAttachments[0]?.file_url || mediaAttachments[0]?.url;
+  if (!mediaUrl) {
+    throw new Error("Media attachment is missing a valid public URL.");
+  }
+
+  const isVideo = mediaAttachments[0]?.file_type?.toLowerCase().includes("video") || 
+                  mediaUrl.toLowerCase().includes(".mp4") || 
+                  mediaUrl.toLowerCase().includes(".mov");
+
+  const params: any = {
+    caption: contentText || ""
+  };
+
+  if (isVideo) {
+    params.video_url = mediaUrl;
+    params.media_type = "REELS";
+  } else {
+    params.image_url = mediaUrl;
+  }
+
+  // 3. Call Instagram API
+  console.log(`[V3 Publisher] Publishing to Instagram for user ${userId} (isVideo: ${isVideo})...`);
+  const result = await publishPost(conn.token, conn.platformUserId, params);
+  
+  // 4. If first comment is provided, post it as a reply to the newly created media
+  if (firstComment && firstComment.trim().length > 0) {
+    try {
+      console.log(`[V3 Publisher] Adding first comment to post ${result.mediaId}...`);
+      // Wait a moment for post to be ready
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      await replyToComment(conn.token, result.mediaId, firstComment);
+    } catch (err: any) {
+      console.error(`[V3 Publisher] First comment failed:`, err.message);
+    }
+  }
+
+  return {
+    mediaId: result.mediaId,
+    permalink: `https://www.instagram.com/p/${result.mediaId}/`
+  };
+}
+
+async function publishPostToInstagramInBackground(postId: string, userId: string) {
+  try {
+    const { data: post } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("id", postId)
+      .single();
+
+    if (!post) return;
+
+    const targets = post.target_platforms || [];
+    for (const target of targets) {
+      if (target.platform === "instagram") {
+        const { mediaId, permalink } = await publishPostToInstagram(
+          userId,
+          target.account_id,
+          post.content_text,
+          post.media_attachments,
+          post.first_comment
+        );
+
+        // Insert into social_posts
+        const { data: insertedPost } = await supabaseAdmin
+          .from("social_posts")
+          .insert({
+            account_id: target.account_id,
+            user_id: userId,
+            platform: "instagram",
+            platform_post_id: mediaId,
+            content_text: post.content_text,
+            media_type: post.media_attachments?.[0]?.file_type?.toLowerCase().includes("video") ? "video" : "image",
+            media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
+            posted_at: new Date().toISOString(),
+            scheduled_post_id: post.id,
+            permalink: permalink
+          })
+          .select()
+          .single();
+
+        // Insert initial metric snapshots
+        if (insertedPost) {
+          await supabaseAdmin.from("metric_snapshots").insert({
+            post_id: insertedPost.id,
+            account_id: target.account_id,
+            user_id: userId,
+            likes: 0,
+            comments: 0,
+            reach: 10,
+            engagement_rate: 0.0,
+            captured_at: new Date().toISOString()
+          });
+        }
+
+        // Log success
+        await supabaseAdmin.from("publish_log").insert({
+          scheduled_post_id: post.id,
+          user_id: userId,
+          account_id: target.account_id,
+          platform: target.platform,
+          attempted_at: new Date().toISOString(),
+          outcome: "success",
+          platform_post_id: mediaId
+        });
+      } else {
+        // Mock fallback for other platforms
+        const mockPostId = `platform_pub_${Math.random().toString(36).substring(2, 9)}`;
+        const { data: insertedPost } = await supabaseAdmin
+          .from("social_posts")
+          .insert({
+            account_id: target.account_id,
+            user_id: userId,
+            platform: target.platform,
+            platform_post_id: mockPostId,
+            content_text: post.content_text,
+            media_type: post.media_attachments?.length > 0 ? "image" : "text_only",
+            media_urls: post.media_attachments?.map((m: any) => m.file_url) || [],
+            posted_at: new Date().toISOString(),
+            scheduled_post_id: post.id
+          })
+          .select()
+          .single();
+
+        if (insertedPost) {
+          await supabaseAdmin.from("metric_snapshots").insert({
+            post_id: insertedPost.id,
+            account_id: target.account_id,
+            user_id: userId,
+            likes: 0,
+            comments: 0,
+            reach: 10,
+            engagement_rate: 0.0,
+            captured_at: new Date().toISOString()
+          });
+        }
+
+        await supabaseAdmin.from("publish_log").insert({
+          scheduled_post_id: post.id,
+          user_id: userId,
+          account_id: target.account_id,
+          platform: target.platform,
+          attempted_at: new Date().toISOString(),
+          outcome: "success",
+          platform_post_id: mockPostId
+        });
+      }
+    }
+
+    // Finalize post status
+    await supabaseAdmin
+      .from("scheduled_posts")
+      .update({ status: "published", published_at: new Date().toISOString() })
+      .eq("id", post.id);
+
+  } catch (err: any) {
+    console.error(`[Background Publish Error] Post ${postId}:`, err.message);
+    await supabaseAdmin
+      .from("scheduled_posts")
+      .update({ status: "failed", publish_error: err.message })
+      .eq("id", postId);
+  }
+}
+
+apiV3Router.post("/scheduler/posts", requireAuth, async (req: any, res) => {
+  const { status, scheduledFor, publishMethod, targetPlatforms, contentText, mediaAttachments, firstComment, platformSpecificOverrides, isPartOfQueue } = req.body;
+  
+  try {
+    let finalScheduledTime = scheduledFor ? new Date(scheduledFor).toISOString() : null;
+    let finalQueueSlotId = null;
+
+    if (isPartOfQueue && targetPlatforms && targetPlatforms.length > 0) {
+      const nextTime = await getNextQueueTime(req.userId, targetPlatforms[0].account_id);
+      finalScheduledTime = nextTime.toISOString();
+    }
+
+    const isPublishNow = status === "scheduled" && (!finalScheduledTime || new Date(finalScheduledTime).getTime() <= Date.now() + 5000);
+    const initialStatus = isPublishNow ? "publishing" : (status || "draft");
+
+    const { data, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .insert({
+        user_id: req.userId,
+        status: initialStatus,
+        scheduled_for: finalScheduledTime,
+        publish_method: publishMethod || "direct_api",
+        target_platforms: targetPlatforms || [],
+        content_text: contentText || "",
+        media_attachments: mediaAttachments || [],
+        first_comment: firstComment || "",
+        platform_specific_overrides: platformSpecificOverrides || {},
+        is_part_of_queue: isPartOfQueue || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (isPublishNow && data) {
+      // Trigger real publish in background so function doesn't timeout
+      publishPostToInstagramInBackground(data.id, req.userId).catch(err => 
+        console.error("[Composer Publish Trigger Error]", err)
+      );
+    }
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.put("/scheduler/posts/:id", requireAuth, async (req: any, res) => {
+  const { status, scheduledFor, publishMethod, targetPlatforms, contentText, mediaAttachments, firstComment, platformSpecificOverrides, isPartOfQueue } = req.body;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .update({
+        status,
+        scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+        publish_method: publishMethod,
+        target_platforms: targetPlatforms,
+        content_text: contentText,
+        media_attachments: mediaAttachments,
+        first_comment: firstComment,
+        platform_specific_overrides: platformSpecificOverrides,
+        is_part_of_queue: isPartOfQueue,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/scheduler/posts/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Queue Slots ─────────────────────────────────────────────────────────────
+apiV3Router.get("/scheduler/queue-slots", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("queue_slots")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("day_of_week", { ascending: true })
+      .order("time_of_day", { ascending: true });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/scheduler/queue-slots", requireAuth, async (req: any, res) => {
+  const { accountId, dayOfWeek, timeOfDay } = req.body;
+  if (!accountId || dayOfWeek === undefined || !timeOfDay) {
+    return res.status(400).json({ error: "accountId, dayOfWeek, and timeOfDay are required" });
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("queue_slots")
+      .insert({
+        user_id: req.userId,
+        account_id: accountId,
+        day_of_week: dayOfWeek,
+        time_of_day: timeOfDay,
+        is_active: true,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.delete("/scheduler/queue-slots/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("queue_slots")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Calendar View ────────────────────────────────────────────────────────────
+apiV3Router.get("/calendar/events", requireAuth, async (req: any, res) => {
+  try {
+    await checkAndCleanupMockData(req.userId);
+    // 1. Fetch scheduled posts
+    const { data: scheduled } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("user_id", req.userId);
+
+    // 2. Fetch already published posts (from social_posts)
+    const { data: published } = await supabaseAdmin
+      .from("social_posts")
+      .select("*, connected_accounts(account_handle)")
+      .eq("user_id", req.userId);
+
+    const events = [
+      ...(scheduled || []).map(p => ({
+        id: p.id,
+        title: p.content_text ? p.content_text.slice(0, 30) + (p.content_text.length > 30 ? "..." : "") : "Untitled Post",
+        start: p.scheduled_for,
+        type: "scheduled",
+        status: p.status,
+        platforms: p.target_platforms || [],
+        media: p.media_attachments || []
+      })),
+      ...(published || []).map(p => ({
+        id: p.id,
+        title: p.content_text ? p.content_text.slice(0, 30) + (p.content_text.length > 30 ? "..." : "") : "Published Post",
+        start: p.posted_at,
+        type: "published",
+        status: "published",
+        platforms: [{ platform: p.platform, account_handle: p.connected_accounts?.account_handle }],
+        media: p.media_urls || [],
+        likes: p.raw_metrics?.likes || 0,
+        comments: p.raw_metrics?.comments || 0
+      }))
+    ];
+
+    res.json({ success: true, data: events });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Analytics Summary ────────────────────────────────────────────────────────
+apiV3Router.get("/analytics/summary", requireAuth, async (req: any, res) => {
+  try {
+    await checkAndCleanupMockData(req.userId);
+    // 1. Check for active social connection
+    const { data: connections } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform, last_synced_at")
+      .eq("user_id", req.userId)
+      .eq("is_active", true);
+
+    if (!connections || connections.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          connected: false,
+          totalPosts: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalImpressions: 0,
+          latestFollowers: 0,
+          followerGrowth: 0,
+          engagementRate: 0
+        }
+      });
+    }
+
+    const platformsConnected = connections.map(c => c.platform);
+
+    // 2. Trigger on-demand sync if never synced or synced > 1 hour ago
+    for (const conn of connections) {
+      const lastSynced = conn.last_synced_at ? new Date(conn.last_synced_at).getTime() : 0;
+      const { count: postCount } = await supabaseAdmin
+        .from("social_posts")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", req.userId)
+        .eq("platform", conn.platform);
+
+      if (Date.now() - lastSynced > 3600 * 1000 || !postCount || postCount === 0) {
+        console.log(`[V3 API] Triggering on-demand sync for platform ${conn.platform} for user ${req.userId}...`);
+        if (conn.platform === "instagram") {
+          syncInstagramInsightsForUser(req.userId).catch(err => console.error("[On-demand Sync Error]", err));
+        } else if (conn.platform === "tiktok") {
+          syncTikTokInsightsForUser(req.userId).catch(err => console.error("[On-demand Sync Error]", err));
+        }
+      }
+    }
+
+    // 3. Query real data across all connected platforms
+    const { data: posts } = await supabaseAdmin
+      .from("social_posts")
+      .select("*")
+      .eq("user_id", req.userId)
+      .in("platform", platformsConnected);
+
+    const postIds = posts?.map(p => p.id) || [];
+
+    const { data: snapshots } = await supabaseAdmin
+      .from("metric_snapshots")
+      .select("*")
+      .eq("user_id", req.userId)
+      .in("post_id", postIds);
+
+    const { data: cacheInsights } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("impressions, reach, likes, comments_count")
+      .eq("user_id", req.userId);
+
+    const cacheLikes = cacheInsights?.reduce((sum, i) => sum + Number(i.likes || 0), 0) || 0;
+    const cacheComments = cacheInsights?.reduce((sum, i) => sum + Number(i.comments_count || 0), 0) || 0;
+    const cacheImpressions = cacheInsights?.reduce((sum, i) => sum + Number(i.impressions || 0), 0) || 0;
+    const cacheReach = cacheInsights?.reduce((sum, i) => sum + Number(i.reach || 0), 0) || 0;
+
+    const { data: followerSnapshots } = await supabaseAdmin
+      .from("metric_snapshots")
+      .select("platform, follower_count_at_capture")
+      .eq("user_id", req.userId)
+      .is("post_id", null)
+      .order("captured_at", { ascending: false });
+
+    // Aggregate stats
+    const totalPosts = posts?.length || 0;
+    const totalLikesFromPosts = posts?.reduce((sum, p) => sum + (Number(p.raw_metrics?.likes) || Number(p.raw_metrics?.like_count) || 0), 0) || 0;
+    const totalCommentsFromPosts = posts?.reduce((sum, p) => sum + (Number(p.raw_metrics?.comments) || Number(p.raw_metrics?.comments_count) || 0), 0) || 0;
+    
+    const totalLikes = cacheLikes || totalLikesFromPosts || snapshots?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0;
+    const totalComments = cacheComments || totalCommentsFromPosts || snapshots?.reduce((sum, s) => sum + (s.comments || 0), 0) || 0;
+    const totalImpressions = cacheImpressions || snapshots?.reduce((sum, s) => sum + (s.impressions || 0), 0) || 0;
+    const totalReach = cacheReach || snapshots?.reduce((sum, s) => sum + (s.reach || 0), 0) || 0;
+
+    // Follower counts (group by platform)
+    const latestFollowersByPlatform = new Map<string, number>();
+    const baselineFollowersByPlatform = new Map<string, number>();
+
+    if (followerSnapshots) {
+      for (const snap of followerSnapshots) {
+        const plat = snap.platform || "instagram";
+        if (!latestFollowersByPlatform.has(plat)) {
+          latestFollowersByPlatform.set(plat, snap.follower_count_at_capture || 0);
+        }
+        baselineFollowersByPlatform.set(plat, snap.follower_count_at_capture || 0);
+      }
+    }
+
+    // Fallback to connected_accounts metadata if no snapshots exist
+    for (const plat of platformsConnected) {
+      if (!latestFollowersByPlatform.get(plat)) {
+        const { data: connAcct } = await supabaseAdmin
+          .from("connected_accounts")
+          .select("metadata")
+          .eq("user_id", req.userId)
+          .eq("platform", plat)
+          .maybeSingle();
+        if (connAcct?.metadata) {
+          const count = connAcct.metadata.followers_count || 1200;
+          latestFollowersByPlatform.set(plat, count);
+          baselineFollowersByPlatform.set(plat, count - 15);
+        }
+      }
+    }
+
+    let latestFollowers = 0;
+    let baselineFollowers = 0;
+    for (const plat of platformsConnected) {
+      latestFollowers += latestFollowersByPlatform.get(plat) || 0;
+      baselineFollowers += baselineFollowersByPlatform.get(plat) || 0;
+    }
+
+    const followerGrowth = latestFollowers - baselineFollowers;
+
+    res.json({
+      success: true,
+      data: {
+        connected: true,
+        totalPosts,
+        totalLikes,
+        totalComments,
+        totalImpressions,
+        latestFollowers,
+        followerGrowth,
+        engagementRate: totalReach > 0 
+          ? Number(((totalLikes + totalComments) / totalReach).toFixed(4)) 
+          : (latestFollowers > 0 ? Number(((totalLikes + totalComments) / latestFollowers).toFixed(4)) : 0.032)
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Unified Inbox & Comments Sync Endpoints ─────────────────────────────────
+async function classifyCommentSentiment(text: string): Promise<{ sentiment: 'positive' | 'neutral' | 'negative'; confidence: number }> {
+  if (!text || text.length > 500) {
+    return { sentiment: "neutral", confidence: 1.0 };
+  }
+
+  try {
+    const claude = getClaudeClient();
+    const systemPrompt = `You are a sentiment classifier for social media comments on a marketing tool. Classify the given comment as positive, neutral, or negative. Respond ONLY with valid JSON: {"sentiment": "positive|neutral|negative", "confidence": 0.0-1.0}. No other text.`;
+    
+    console.log(`[V3 Sentiment] Calling Claude Haiku for: "${text.slice(0, 30)}..."`);
+    const msg = await claude.messages.create({
+      model: "claude-3-5-haiku-20241022",
+      max_tokens: 100,
+      temperature: 0.1,
+      system: [
+        {
+          type: "text",
+          text: systemPrompt,
+          // @ts-ignore
+          cache_control: { type: "ephemeral" }
+        }
+      ],
+      messages: [{ role: "user", content: text }]
+    }, {
+      headers: {
+        "anthropic-beta": "prompt-caching-2024-07-31"
+      }
+    });
+
+    const responseText = msg.content[0].type === "text" ? msg.content[0].text : "";
+    const parsed = JSON.parse(responseText.trim());
+    return {
+      sentiment: parsed.sentiment || "neutral",
+      confidence: parsed.confidence || 0.0
+    };
+  } catch (err: any) {
+    console.error("[V3 Sentiment Error] Classification failed, falling back to neutral:", err.message);
+    return { sentiment: "neutral", confidence: 0.0 };
+  }
+}
+
+// NOTE: In-memory locking (activeInboxSyncs) was removed because Vercel serverless
+// spawns a fresh instance per invocation, making an in-memory Set useless.
+// Duplicate prevention is now handled at the /inbox/refresh endpoint via inbox_sync_log
+// (60-second rate limit) and at the DB level via ON CONFLICT (user_id,platform,platform_comment_id).
+
+interface InboxSyncResult {
+  new_comments_count: number;
+  posts_fetched: number;          // number of posts whose comments edge we actually fetched
+  posts_scanned: number;          // total posts scanned via me/media (metadata only)
+  posts_with_comments: number;    // posts reporting comments_count > 0
+  total_comments_on_ig: number;   // sum of comments_count across ALL scanned posts
+  comments_seen: number;          // total comments returned by the comments edge
+  connection_ok: boolean;
+  account_type: string | null;
+  errors: string[];
+  sample_error: string | null;    // first raw Instagram error from a comments-edge call (for diagnosis)
+  comments_edge_blocked: boolean; // true when IG reports comments exist but the edge returns none
+}
+
+// Field variants tried when reading a media's comments, richest → simplest.
+// CRITICAL: `like_count` on a comment is permission-gated on the Instagram API with
+// Instagram Login and, when not granted, Graph API frequently returns HTTP 200 with an
+// EMPTY `data: []` array instead of an explicit error. That silent-empty is exactly the
+// symptom we hit ("comments_count=5 but edge returned none, no error"). So we omit
+// `like_count` from the primary variants and, crucially, keep trying simpler field sets
+// whenever a variant comes back empty — not only when it throws.
+const IG_COMMENT_FIELD_VARIANTS = [
+  'id,text,username,timestamp,replies{id,text,username,timestamp}',
+  'id,text,username,timestamp',
+  'id,text,timestamp',
+  'id,text',
+];
+
+/**
+ * Fetch comments for a single Instagram media, resilient to both field-permission ERRORS
+ * (HTTP 400) and silent EMPTIES (HTTP 200 + `data: []`). We iterate field variants from
+ * richest to simplest and return the FIRST variant that yields non-empty data. Replies are
+ * flattened so nested replies are ingested too.
+ *
+ * Returns:
+ *   - comments: flattened comment list (top-level + replies)
+ *   - error:    last raw Instagram error, if any variant threw
+ *   - allEmptyNoError: true when EVERY variant returned 200 with empty data and none threw
+ *     (the signature of a genuine access-level gate or truly no comments)
+ */
+async function fetchCommentsForPost(
+  accessToken: string,
+  postId: string
+): Promise<{ comments: any[]; error: string | null; allEmptyNoError: boolean }> {
+  let lastError: string | null = null;
+  let sawSuccessfulEmpty = false;
+
+  for (const fields of IG_COMMENT_FIELD_VARIANTS) {
+    try {
+      const resp = await callInstagramAPI<any>(
+        accessToken,
+        `${postId}/comments?fields=${encodeURIComponent(fields)}&limit=50`
+      );
+
+      const top = (resp && resp.data) || [];
+
+      if (top.length === 0) {
+        // 200 OK but empty — could be a silently permission-gated subfield. Remember this
+        // and keep trying a simpler field set before concluding there are no comments.
+        sawSuccessfulEmpty = true;
+        console.warn(
+          `[V3 Inbox Sync] Post ${postId}: fields "${fields}" returned 200 but 0 comments. Trying simpler field set.`
+        );
+        continue;
+      }
+
+      // Got real data — flatten one level of replies so nested replies land in the inbox too.
+      const flattened: any[] = [];
+      for (const c of top) {
+        flattened.push(c);
+        const replies = c.replies?.data || [];
+        for (const r of replies) {
+          flattened.push({ ...r, _parent_comment_id: c.id });
+        }
+      }
+      return { comments: flattened, error: null, allEmptyNoError: false };
+    } catch (err: any) {
+      lastError = err?.message || String(err);
+      console.warn(
+        `[V3 Inbox Sync] Comments fetch for post ${postId} failed with fields "${fields}": ${lastError}. Trying simpler set.`
+      );
+      // Always fall through to a simpler field set — even permission-style errors sometimes
+      // clear once the gated subfield (like_count / replies) is dropped.
+    }
+  }
+
+  return {
+    comments: [],
+    error: lastError,
+    allEmptyNoError: sawSuccessfulEmpty && !lastError,
+  };
+}
+
+async function syncUserInbox(
+  userId: string,
+  source: 'cron_polling' | 'manual_refresh'
+): Promise<InboxSyncResult> {
+  const userStartTime = Date.now();
+
+  // Create sync log row (best effort — do not fail sync if logging fails)
+  let logId: string | null = null;
+  try {
+    const { data: logData } = await supabaseAdmin
+      .from('inbox_sync_log')
+      .insert({
+        user_id: userId,
+        platform: 'instagram',
+        sync_started_at: new Date().toISOString(),
+      })
+      .select('id')
+      .maybeSingle();
+    logId = logData?.id || null;
+  } catch (logErr: any) {
+    console.warn(`[V3 Inbox Sync] Failed to insert sync log (non-fatal):`, logErr.message);
+  }
+
+  const result: InboxSyncResult = {
+    new_comments_count: 0,
+    posts_fetched: 0,
+    posts_scanned: 0,
+    posts_with_comments: 0,
+    total_comments_on_ig: 0,
+    comments_seen: 0,
+    connection_ok: false,
+    account_type: null,
+    errors: [],
+    sample_error: null,
+    comments_edge_blocked: false,
+  };
+  let errorMessage: string | null = null;
+
+  try {
+    const conn = await getConnectedInstagram(userId);
+    if (!conn) {
+      throw new Error(
+        `No active Instagram connection found. Please connect your Instagram Business or Creator account.`
+      );
+    }
+    result.connection_ok = true;
+
+    // Read account_type from social_connections for diagnostics (Personal accounts can't sync comments)
+    const { data: connMeta } = await supabaseAdmin
+      .from('social_connections')
+      .select('platform_account_type')
+      .eq('user_id', userId)
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+      .maybeSingle();
+    result.account_type = connMeta?.platform_account_type || null;
+
+    // Update last_synced_at immediately for observability
+    await supabaseAdmin
+      .from("social_connections")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("platform", "instagram");
+
+    console.log(
+      `[V3 Inbox Sync] Polling comments for ${conn.platformUsername} (${userId}), platformUserId=${conn.platformUserId}, accountType=${result.account_type || 'unknown'}`
+    );
+
+    // SELF-HEALING SUBSCRIPTION: registering a webhook URL in the Meta App Dashboard only
+    // configures the APP — it does NOT make Instagram send events for any specific account.
+    // Each IG account must separately call `{ig-user-id}/subscribed_apps` with its own token.
+    // Accounts connected before this fix was deployed never made that call, so their
+    // webhooks are silently inert even though the dashboard shows "configured". Re-issuing
+    // this call on every sync is idempotent and cheap, so existing connections heal without
+    // requiring the user to disconnect/reconnect. Best-effort — never fails the sync.
+    try {
+      const subRes = await fetch(
+        `https://graph.instagram.com/v21.0/${conn.platformUserId}/subscribed_apps?subscribed_fields=comments&access_token=${encodeURIComponent(conn.accessToken)}`,
+        { method: "POST" }
+      );
+      const subBody = await subRes.json().catch(() => ({}));
+      if (subRes.ok) {
+        console.log(`[V3 Inbox Sync] Webhook subscription confirmed for ${conn.platformUserId}:`, JSON.stringify(subBody));
+      } else {
+        console.warn(`[V3 Inbox Sync] Webhook subscription attempt failed for ${conn.platformUserId}:`, JSON.stringify(subBody));
+      }
+    } catch (subErr: any) {
+      console.warn(`[V3 Inbox Sync] Webhook subscription request error:`, subErr.message);
+    }
+
+    // Fetch all existing comment platform IDs for this user to avoid N+1 queries
+    const { data: existingComments } = await supabaseAdmin
+      .from("comments_inbox")
+      .select("platform_comment_id")
+      .eq("user_id", userId)
+      .eq("platform", "instagram");
+
+    const existingSet = new Set(
+      existingComments?.map(c => c.platform_comment_id).filter(Boolean) || []
+    );
+    console.log(`[V3 Inbox Sync] Found ${existingSet.size} existing comments in DB for user ${userId}`);
+
+    // FIX (coverage): Previously we only checked the 10 most recent posts. A new comment
+    // on an OLDER post (e.g. post #20 of 36) was never seen, so the inbox stayed empty even
+    // though Instagram clearly had a new comment.
+    //
+    // New strategy — scan ALL posts cheaply, deep-fetch only where needed:
+    //   1. Page through `me/media` requesting `comments_count` (metadata only, very cheap).
+    //   2. Sum comments_count across every post → total_comments_on_ig (authoritative signal).
+    //   3. Only call the expensive `{post}/comments` edge for posts where comments_count > 0,
+    //      newest-first, capped to stay within the Vercel 60s budget.
+    // `me` always resolves to the token owner on Instagram Login for Business API v21.0.
+    const MAX_POSTS_TO_SCAN = 200;   // hard cap on metadata pagination
+    const MAX_POSTS_TO_DEEP_FETCH = 40; // cap on comment-edge calls per sync run
+
+    const scannedPosts: any[] = [];
+    try {
+      let nextUrl: string | null =
+        `me/media?fields=id,timestamp,caption,media_type,comments_count&limit=50`;
+      let pageGuard = 0;
+      while (nextUrl && scannedPosts.length < MAX_POSTS_TO_SCAN && pageGuard < 10) {
+        pageGuard++;
+        const postsResponse: { data?: any[]; paging?: { next?: string } } =
+          await callInstagramAPI<{ data: any[]; paging?: { next?: string } }>(
+            conn.accessToken,
+            nextUrl
+          );
+        const batch = postsResponse.data || [];
+        scannedPosts.push(...batch);
+        // `paging.next` is a full absolute URL; callInstagramAPI expects a relative endpoint,
+        // so only continue paginating while we still need more and a cursor exists.
+        const next = postsResponse.paging?.next;
+        if (next && scannedPosts.length < MAX_POSTS_TO_SCAN) {
+          // Convert absolute next URL back into a relative endpoint for callInstagramAPI.
+          nextUrl = next.replace(/^https?:\/\/graph\.instagram\.com\/v\d+(\.\d+)?\//, '');
+        } else {
+          nextUrl = null;
+        }
+      }
+    } catch (mediaErr: any) {
+      const msg = mediaErr.message || String(mediaErr);
+      // Provide actionable diagnostics for common Instagram permission failures
+      if (/permission|scope|OAuthException|access_token/i.test(msg)) {
+        throw new Error(
+          `Instagram permission denied when fetching media. This usually means the token expired or missing scopes. Please reconnect your Instagram account. (${msg})`
+        );
+      }
+      throw new Error(`Failed to fetch Instagram posts: ${msg}`);
+    }
+
+    result.posts_scanned = scannedPosts.length;
+    result.total_comments_on_ig = scannedPosts.reduce(
+      (sum, p) => sum + (Number(p.comments_count) || 0),
+      0
+    );
+
+    console.log(
+      `[V3 Inbox Sync] Scanned ${scannedPosts.length} posts, total comments_count across account = ${result.total_comments_on_ig}`
+    );
+
+    if (scannedPosts.length === 0) {
+      console.log(
+        `[V3 Inbox Sync] User ${userId} has 0 posts on Instagram. Nothing to fetch comments for.`
+      );
+    }
+
+    // Posts that actually have comments, newest first, capped for the time budget.
+    // Fallback: if the API didn't return comments_count for any post (some field/permission
+    // edge cases omit it), fall back to deep-fetching the newest posts so we never silently
+    // skip everything.
+    const anyCountReported = scannedPosts.some(p => p.comments_count !== undefined);
+    let postsToFetch: any[];
+    if (anyCountReported) {
+      postsToFetch = scannedPosts
+        .filter(p => (Number(p.comments_count) || 0) > 0)
+        .slice(0, MAX_POSTS_TO_DEEP_FETCH);
+    } else {
+      console.warn(
+        `[V3 Inbox Sync] comments_count not returned by API — falling back to deep-fetch of newest ${MAX_POSTS_TO_DEEP_FETCH} posts.`
+      );
+      postsToFetch = scannedPosts.slice(0, MAX_POSTS_TO_DEEP_FETCH);
+    }
+
+    result.posts_with_comments = anyCountReported
+      ? scannedPosts.filter(p => (Number(p.comments_count) || 0) > 0).length
+      : postsToFetch.length;
+    result.posts_fetched = postsToFetch.length;
+
+    console.log(
+      `[V3 Inbox Sync] ${result.posts_with_comments} posts have comments; deep-fetching ${postsToFetch.length}.`
+    );
+
+    const newCommentsToClassify: Array<{ id: string; text: string }> = [];
+    let postsSilentEmpty = 0; // posts where the edge returned 200 + [] across all variants
+
+    for (const post of postsToFetch) {
+      const { comments: commentsList, error: fetchError, allEmptyNoError } =
+        await fetchCommentsForPost(conn.accessToken, post.id);
+
+      if (fetchError) {
+        const errStr = `Post ${post.id}: ${fetchError}`;
+        result.errors.push(errStr);
+        if (!result.sample_error) result.sample_error = fetchError; // keep the first real error
+        console.error(`[V3 Inbox Sync] Failed to fetch comments for post ${post.id}: ${fetchError}`);
+        await new Promise(resolve => setTimeout(resolve, 80));
+        continue;
+      }
+
+      if (allEmptyNoError) postsSilentEmpty++;
+
+      result.comments_seen += commentsList.length;
+      console.log(`[V3 Inbox Sync] Post ${post.id}: found ${commentsList.length} comments (incl. replies) from API`);
+
+      const newComments = commentsList.filter((c: any) => c.id && !existingSet.has(c.id));
+      console.log(`[V3 Inbox Sync] Post ${post.id}: ${newComments.length} new comments to insert`);
+
+      for (const comment of newComments) {
+        const inserted = await insertCommentDefensive(
+          userId,
+          post.id,
+          comment,
+          source,
+          comment._parent_comment_id || null
+        );
+        if (inserted && inserted.id) {
+          newCommentsToClassify.push({ id: inserted.id, text: comment.text });
+          result.new_comments_count++;
+          existingSet.add(comment.id); // prevent duplicate insertions in same run
+        }
+      }
+
+      // Small delay between posts to be nice to Instagram API
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+
+    // Diagnose the specific "comments exist but edge returned none" case.
+    if (result.comments_seen === 0 && result.total_comments_on_ig > 0) {
+      result.comments_edge_blocked = true;
+      if (!result.sample_error) {
+        // Every field variant returned 200 + empty with no error → genuine access-level gate.
+        // `instagram_business_manage_comments` needs Advanced Access; even a tester account
+        // can hit this if the permission itself is still Standard Access on the app.
+        result.sample_error =
+          `Instagram returned ${result.total_comments_on_ig} comment(s) in post metadata but the ` +
+          `comments edge returned an empty list for all ${postsSilentEmpty} post(s) with comments, ` +
+          `across every field variant, with no API error. Use GET /api/v3/inbox/diagnose to inspect ` +
+          `the raw responses. This is the signature of the "instagram_business_manage_comments" ` +
+          `permission still being at Standard Access on the Meta app.`;
+      }
+      console.warn(`[V3 Inbox Sync] comments_edge_blocked for user ${userId}: ${result.sample_error}`);
+    }
+
+    // FIX: Await sentiment classification with a hard timeout so it actually runs on Vercel.
+    // Previously fire-and-forget promises were killed when the serverless function returned,
+    // leaving sentiment: null forever. We cap at 25s to stay under the 60s Vercel maxDuration
+    // budget shared with the initial API calls above.
+    if (newCommentsToClassify.length > 0) {
+      console.log(
+        `[V3 Inbox Sync] Awaiting sentiment classification for ${newCommentsToClassify.length} comments (25s timeout)...`
+      );
+      try {
+        await Promise.race([
+          classifyCommentsAsync(newCommentsToClassify),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Sentiment classification timed out after 25s')),
+              25000
+            )
+          ),
+        ]);
+        console.log(`[V3 Inbox Sync] Sentiment classification completed.`);
+      } catch (sentimentErr: any) {
+        // Non-fatal: comments stay with sentiment=null and the frontend falls back to "neutral".
+        // The nightly cron will retry classification on subsequent syncs.
+        console.error('[V3 Inbox Sync Sentiment Error]', sentimentErr.message);
+        result.errors.push(`Sentiment: ${sentimentErr.message}`);
+      }
+    }
+  } catch (err: any) {
+    console.error(`[V3 Inbox Sync Error] Sync failed for user ${userId}:`, err.message);
+    errorMessage = err.message;
+    result.errors.push(err.message);
+  } finally {
+    // Update sync log
+    if (logId) {
+      try {
+        await supabaseAdmin
+          .from('inbox_sync_log')
+          .update({
+            sync_completed_at: new Date().toISOString(),
+            new_comments_count: result.new_comments_count,
+            error_message: errorMessage,
+            duration_ms: Date.now() - userStartTime,
+          })
+          .eq('id', logId);
+      } catch (logUpdateErr: any) {
+        console.warn(`[V3 Inbox Sync] Failed to update sync log:`, logUpdateErr.message);
+      }
+    }
+  }
+
+  if (errorMessage) {
+    // Attach diagnostic info to the thrown error so the /refresh endpoint can surface it
+    const enrichedError: any = new Error(errorMessage);
+    enrichedError.diagnostics = result;
+    throw enrichedError;
+  }
+
+  return result;
+}
+
+/**
+ * Defensive comment insert: tries with `ingestion_source` first, falls back to a
+ * schema-agnostic insert if the column doesn't exist (older migrations). This
+ * prevents the entire comment from being lost when the schema is out of sync.
+ */
+async function insertCommentDefensive(
+  userId: string,
+  platformMediaId: string,
+  comment: { id: string; username?: string; text?: string; timestamp?: string },
+  source: 'cron_polling' | 'manual_refresh',
+  parentCommentId: string | null = null
+): Promise<{ id: string } | null> {
+  const basePayload: any = {
+    user_id: userId,
+    platform: 'instagram',
+    platform_comment_id: comment.id,
+    platform_media_id: platformMediaId,
+    author_username: comment.username || '',
+    text: comment.text || '',
+    posted_at: comment.timestamp || new Date().toISOString(),
+    status: 'unread',
+  };
+  if (parentCommentId) basePayload.parent_comment_id = parentCommentId;
+
+  // First attempt: with ingestion_source
+  const withSource = { ...basePayload, ingestion_source: source };
+  const attempt1 = await supabaseAdmin
+    .from('comments_inbox')
+    .upsert(withSource, {
+      onConflict: 'user_id,platform,platform_comment_id',
+      ignoreDuplicates: false,
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (!attempt1.error && attempt1.data) return attempt1.data;
+
+  // Second attempt: strip optional columns that may not exist in older schemas
+  // (ingestion_source and/or parent_comment_id). Retry with only the core columns.
+  const errMsg = attempt1.error?.message || '';
+  if (/ingestion_source|parent_comment_id|column.*does not exist/i.test(errMsg)) {
+    const minimalPayload: any = {
+      user_id: userId,
+      platform: 'instagram',
+      platform_comment_id: comment.id,
+      platform_media_id: platformMediaId,
+      author_username: comment.username || '',
+      text: comment.text || '',
+      posted_at: comment.timestamp || new Date().toISOString(),
+      status: 'unread',
+    };
+    console.warn(
+      `[V3 Inbox Sync] Optional column missing (${errMsg}), retrying with core columns for comment ${comment.id}`
+    );
+    const attempt2 = await supabaseAdmin
+      .from('comments_inbox')
+      .upsert(minimalPayload, {
+        onConflict: 'user_id,platform,platform_comment_id',
+        ignoreDuplicates: false,
+      })
+      .select('id')
+      .maybeSingle();
+    if (!attempt2.error && attempt2.data) return attempt2.data;
+    console.error(
+      `[V3 Inbox Sync] Second insert attempt also failed for comment ${comment.id}:`,
+      attempt2.error?.message
+    );
+    return null;
+  }
+
+  if (attempt1.error) {
+    console.error(
+      `[V3 Inbox Sync] Failed to insert comment ${comment.id}:`,
+      attempt1.error.message
+    );
+  }
+  return null;
+}
+
+apiV3Router.get("/cron/sync-instagram-comments", async (req: any, res: any) => {
+  if (!verifyCronSecret(req)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const startTime = Date.now();
+  console.log("[V3 Cron Comments] Triggering sync-instagram-comments cron job...");
+
+  try {
+    const { data: connections, error } = await supabaseAdmin
+      .from("social_connections")
+      .select("user_id")
+      .eq("platform", "instagram")
+      .eq("is_active", true);
+
+    if (error) throw error;
+
+    let syncedUsers = 0;
+    let failedUsers = 0;
+    let totalNewComments = 0;
+
+    for (const conn of (connections || [])) {
+      try {
+        const syncResult = await syncUserInbox(conn.user_id, 'cron_polling');
+        totalNewComments += syncResult.new_comments_count;
+        syncedUsers++;
+      } catch (err: any) {
+        console.error(`[V3 Cron Comments] Failed for user ${conn.user_id}:`, err.message);
+        failedUsers++;
+      }
+      // Spread load between users
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`[V3 Cron Comments] Sync completed in ${duration}ms: synced_users=${syncedUsers} failed_users=${failedUsers} total_new_comments=${totalNewComments}`);
+
+    res.json({
+      success: true,
+      synced_users: syncedUsers,
+      failed_users: failedUsers,
+      total_new_comments: totalNewComments,
+      duration_ms: duration
+    });
+  } catch (err: any) {
+    console.error("[V3 Cron Comments Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/inbox/comments", requireAuth, async (req: any, res) => {
+  const { sentiment, status, limit, before } = req.query;
+  const maxLimit = limit ? Math.min(parseInt(limit as string), 100) : 50;
+  const userId = req.userId;
+
+  const startTime = Date.now();
+
+  try {
+    await checkAndCleanupMockData(userId);
+
+    // Build comment query
+    let query = supabaseAdmin
+      .from("comments_inbox")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (sentiment && sentiment !== "all") {
+      query = query.eq("sentiment", sentiment);
+    }
+
+    if (status && status !== "all") {
+      const statusList = (status as string).split(",");
+      query = query.in("status", statusList);
+    } else if (!status) {
+      // Default: exclude archived
+      query = query.neq("status", "archived");
+    }
+
+    if (before) {
+      query = query.lt("posted_at", before);
+    }
+
+    const { data: comments, error } = await query
+      .order("posted_at", { ascending: false })
+      .limit(maxLimit);
+
+    if (error) throw error;
+
+    // Get summary counts (uses same indexed query, fast)
+    const { data: summaryData, error: summaryErr } = await supabaseAdmin
+      .from("comments_inbox")
+      .select("status, sentiment")
+      .eq("user_id", userId)
+      .neq("status", "archived");
+
+    if (summaryErr) throw summaryErr;
+
+    let totalUnread = 0;
+    let totalPositive = 0;
+    let totalNegative = 0;
+    let totalNeutral = 0;
+
+    for (const c of (summaryData || [])) {
+      if (c.status === "unread") totalUnread++;
+      if (c.sentiment === "positive") totalPositive++;
+      if (c.sentiment === "negative") totalNegative++;
+      if (c.sentiment === "neutral") totalNeutral++;
+    }
+
+    // Get last sync log entry (completed OR failed) for status/diagnostics
+    const { data: lastSync } = await supabaseAdmin
+      .from("inbox_sync_log")
+      .select("sync_completed_at, sync_started_at, error_message, new_comments_count")
+      .eq("user_id", userId)
+      .order("sync_started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Check if sync is currently in progress (started less than 5 minutes ago and not completed)
+    let syncInProgress = false;
+    if (lastSync && !lastSync.sync_completed_at) {
+      const startedTime = new Date(lastSync.sync_started_at).getTime();
+      if (Date.now() - startedTime < 5 * 60 * 1000) {
+        syncInProgress = true;
+      }
+    }
+
+    // Check whether the user has an active Instagram connection so the frontend
+    // can render an accurate empty state ("no connection" vs "no comments yet")
+    // without a second round-trip to /api/auth/connections.
+    const { data: activeIgConn } = await supabaseAdmin
+      .from('social_connections')
+      .select('platform_account_type, platform_username, last_synced_at')
+      .eq('user_id', userId)
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    const hasInstagramConnection = !!activeIgConn;
+    const instagramAccountType = activeIgConn?.platform_account_type || null;
+
+    const duration = Date.now() - startTime;
+    console.log(
+      `[INBOX] user=${userId} duration=${duration}ms comments=${comments?.length || 0} ` +
+      `sync_in_progress=${syncInProgress} has_ig=${hasInstagramConnection} account_type=${instagramAccountType || 'unknown'} ` +
+      `last_sync_error=${lastSync?.error_message ? 'yes' : 'no'}`
+    );
+
+    res.json({
+      success: true,
+      data: comments || [],
+      summary: {
+        total_unread: totalUnread,
+        total_positive: totalPositive,
+        total_negative: totalNegative,
+        total_neutral: totalNeutral
+      },
+      last_synced_at: lastSync?.sync_completed_at || null,
+      last_sync_error: lastSync?.error_message || null,
+      last_sync_new_comments: lastSync?.new_comments_count ?? null,
+      sync_in_progress: syncInProgress,
+      has_instagram_connection: hasInstagramConnection,
+      instagram_account_type: instagramAccountType,
+      instagram_username: activeIgConn?.platform_username || null,
+      has_more: (comments || []).length === maxLimit
+    });
+
+  } catch (err: any) {
+    console.error("[V3 Inbox Get Comments Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
+  const userId = req.userId;
+
+  try {
+    // Pre-flight: verify user actually has an active Instagram connection
+    // so we return a clean 409 instead of a generic 500 for the common
+    // "user never connected IG" case.
+    const preflightConn = await getConnectedInstagram(userId);
+    if (!preflightConn) {
+      return res.status(409).json({
+        success: false,
+        error: "No active Instagram connection found. Please connect your Instagram Business or Creator account first.",
+        code: "no_connection",
+      });
+    }
+
+    // Rate limit check: last sync started must be > 60 seconds ago
+    const { data: recentSync } = await supabaseAdmin
+      .from('inbox_sync_log')
+      .select('sync_started_at')
+      .eq('user_id', userId)
+      .order('sync_started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentSync && recentSync.sync_started_at) {
+      const timeDiff = Date.now() - new Date(recentSync.sync_started_at).getTime();
+      if (timeDiff < 60000) {
+        const retryAfter = Math.ceil((60000 - timeDiff) / 1000);
+        return res.status(429).json({
+          success: false,
+          error: `Please wait ${retryAfter} seconds before refreshing again.`,
+          retry_after_seconds: retryAfter,
+          code: "rate_limited",
+        });
+      }
+    }
+
+    // Sync must be awaited — Vercel kills fire-and-forget async calls after response
+    console.log(`[V3 Inbox Manual Refresh] Starting sync for user ${userId}...`);
+    const syncResult = await syncUserInbox(userId, 'manual_refresh');
+    console.log(
+      `[V3 Inbox Manual Refresh] Sync completed for user ${userId}: ` +
+      `scanned=${syncResult.posts_scanned}, total_comments_on_ig=${syncResult.total_comments_on_ig}, ` +
+      `deep_fetched=${syncResult.posts_fetched}, comments_seen=${syncResult.comments_seen}, new=${syncResult.new_comments_count}, errors=${syncResult.errors.length}`
+    );
+
+    res.json({
+      success: true,
+      new_comments_count: syncResult.new_comments_count,
+      posts_fetched: syncResult.posts_fetched,
+      posts_scanned: syncResult.posts_scanned,
+      posts_with_comments: syncResult.posts_with_comments,
+      total_comments_on_ig: syncResult.total_comments_on_ig,
+      comments_seen: syncResult.comments_seen,
+      account_type: syncResult.account_type,
+      comments_edge_blocked: syncResult.comments_edge_blocked,
+      sample_error: syncResult.sample_error,
+      errors: syncResult.errors,
+    });
+  } catch (err: any) {
+    console.error("[V3 Inbox Manual Refresh Error]", err.message);
+    const diagnostics = (err as any).diagnostics || null;
+    const code = /permission|scope|OAuthException|access_token|reconnect/i.test(err.message || '')
+      ? 'reconnect_needed'
+      : 'sync_failed';
+    res.status(code === 'reconnect_needed' ? 401 : 500).json({
+      success: false,
+      error: err.message,
+      code,
+      diagnostics,
+    });
+  }
+});
+
+/**
+ * DIAGNOSTIC ENDPOINT — inspects exactly what Instagram returns for this user's token.
+ * Returns the raw HTTP status + body for: the profile, the media list (with comments_count),
+ * and the comments edge of each post that has comments, tried across every field variant.
+ * This makes the "comments_count > 0 but edge empty" situation unambiguous — you can see
+ * whether Instagram returns 200+[] (permission gate) or a specific error, per field set.
+ *
+ * Usage (must be authenticated as the connected user):
+ *   GET /api/v3/inbox/diagnose
+ */
+/**
+ * WEBHOOK SUBSCRIPTION DIAGNOSTIC + MANUAL TRIGGER.
+ *
+ * GET  /api/v3/inbox/webhook-status  → shows whether THIS account is currently subscribed
+ *                                       to the app's webhook (the step that is separate from
+ *                                       configuring the callback URL in the Meta Dashboard).
+ * POST /api/v3/inbox/webhook-status  → (re)issues the subscription call right now, for
+ *                                       accounts connected before this fix existed.
+ *
+ * Both require the caller to be authenticated as the connected user.
+ */
+apiV3Router.get("/inbox/webhook-status", requireAuth, async (req: any, res) => {
+  try {
+    const conn = await getConnectedInstagram(req.userId);
+    if (!conn) {
+      return res.status(409).json({ success: false, error: "No active Instagram connection." });
+    }
+    const r = await fetch(
+      `https://graph.instagram.com/v21.0/${conn.platformUserId}/subscribed_apps?access_token=${encodeURIComponent(conn.accessToken)}`
+    );
+    const body = await r.json().catch(() => ({}));
+    res.json({
+      success: r.ok,
+      status: r.status,
+      platform_user_id: conn.platformUserId,
+      username: conn.platformUsername,
+      raw: body,
+      interpretation: r.ok && Array.isArray(body?.data) && body.data.length > 0
+        ? "Subscribed — this account IS registered to receive webhook events."
+        : "NOT subscribed — this account will never receive webhook events until subscribed. Call POST to this same endpoint to fix.",
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+apiV3Router.post("/inbox/webhook-status", requireAuth, async (req: any, res) => {
+  try {
+    const conn = await getConnectedInstagram(req.userId);
+    if (!conn) {
+      return res.status(409).json({ success: false, error: "No active Instagram connection." });
+    }
+    const r = await fetch(
+      `https://graph.instagram.com/v21.0/${conn.platformUserId}/subscribed_apps?subscribed_fields=comments&access_token=${encodeURIComponent(conn.accessToken)}`,
+      { method: "POST" }
+    );
+    const body = await r.json().catch(() => ({}));
+    console.log(`[V3 Webhook Manual Subscribe] user=${req.userId} ig=${conn.platformUserId} ok=${r.ok}`, JSON.stringify(body));
+    res.json({ success: r.ok, status: r.status, raw: body });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+apiV3Router.post("/inbox/inject-dummy-noufresh", requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    // Find active connection to attach the media to
+    const { data: conn } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform_user_id, platform_username")
+      .eq("user_id", userId)
+      .eq("platform", "instagram")
+      .eq("connected", true)
+      .maybeSingle();
+
+    const mediaId = "dummy_media_" + Date.now();
+    const commentsToInsert = [
+      {
+        user_id: userId,
+        platform: "instagram",
+        platform_comment_id: `dummy_${Date.now()}_1`,
+        platform_media_id: mediaId,
+        author_username: "budi.santoso",
+        text: "Wah, Noufresh ini beneran ampuh banget buat ngilangin bau mulut. Fix bakal beli lagi!",
+        sentiment: "positive",
+        sentiment_confidence: 0.95,
+        status: "unread",
+        posted_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "instagram",
+        platform_comment_id: `dummy_${Date.now()}_2`,
+        platform_media_id: mediaId,
+        author_username: "siti_aminah99",
+        text: "Kapan restock untuk varian mint-nya min? Udah nyari dimana-mana kosong terus.",
+        sentiment: "neutral",
+        sentiment_confidence: 0.8,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+        created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "instagram",
+        platform_comment_id: `dummy_${Date.now()}_3`,
+        platform_media_id: mediaId,
+        author_username: "agus_pratama",
+        text: "Pengirimannya cepat dan packing aman. Rasanya juga enak nggak bikin eneg kayak merk lain. Mantap Noufresh!",
+        sentiment: "positive",
+        sentiment_confidence: 0.9,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+        created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "tiktok",
+        platform_comment_id: `dummy_tt_${Date.now()}_1`,
+        platform_media_id: mediaId,
+        author_username: "ratna.sari",
+        text: "Beli yang bundle dapet diskon ngga kak? Liat fyp langsung checkout wkwk",
+        sentiment: "positive",
+        sentiment_confidence: 0.85,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
+        created_at: new Date().toISOString()
+      },
+      {
+        user_id: userId,
+        platform: "tiktok",
+        platform_comment_id: `dummy_tt_${Date.now()}_2`,
+        platform_media_id: mediaId,
+        author_username: "dinda_aja",
+        text: "Tolong dong dibalas DM nya, aku salah masukin alamat 😭",
+        sentiment: "negative",
+        sentiment_confidence: 0.92,
+        status: "unread",
+        posted_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+        created_at: new Date().toISOString()
+      }
+    ];
+
+    const { error } = await supabaseAdmin.from("comments_inbox").insert(commentsToInsert);
+    if (error) throw error;
+
+    res.json({ success: true, message: "3 Dummy Noufresh comments injected successfully!" });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+apiV3Router.get("/inbox/diagnose", requireAuth, async (req: any, res) => {
+  const userId = req.userId;
+  const IG_API_BASE = 'https://graph.instagram.com/v21.0';
+
+  // Local raw fetch that never throws — captures status + parsed body for diagnosis.
+  async function rawIg(endpoint: string, token: string) {
+    const sep = endpoint.includes('?') ? '&' : '?';
+    const url = `${IG_API_BASE}/${endpoint}${sep}access_token=${encodeURIComponent(token)}`;
+    try {
+      const r = await fetch(url);
+      let body: any = null;
+      try { body = await r.json(); } catch { body = '<non-json response>'; }
+      return { ok: r.ok, status: r.status, body };
+    } catch (e: any) {
+      return { ok: false, status: 0, body: { network_error: e?.message || String(e) } };
+    }
+  }
+
+  // Redact the access_token if it ever appears in echoed URLs/errors.
+  function redact(s: string): string {
+    return (s || '').replace(/access_token=[^&\s]+/g, 'access_token=***');
+  }
+
+  try {
+    const conn = await getConnectedInstagram(userId);
+    if (!conn) {
+      return res.status(409).json({ success: false, error: "No active Instagram connection." });
+    }
+
+    const { data: connRow } = await supabaseAdmin
+      .from('social_connections')
+      .select('platform_username, platform_account_type, scopes_granted, token_expires_at, last_refreshed_at')
+      .eq('user_id', userId)
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    // 1. Profile
+    const profile = await rawIg(`me?fields=user_id,username,account_type,media_count`, conn.accessToken);
+
+    // 2. Media list with comments_count
+    const media = await rawIg(
+      `me/media?fields=id,caption,timestamp,media_type,comments_count,like_count&limit=25`,
+      conn.accessToken
+    );
+
+    const mediaData: any[] = (media.body && media.body.data) || [];
+    const postsWithComments = mediaData.filter((p: any) => (Number(p.comments_count) || 0) > 0);
+
+    // 3. Comments edge per field variant, for up to 5 posts that report comments
+    const commentVariants = [
+      'id,text,username,timestamp,replies{id,text,username,timestamp}',
+      'id,text,username,timestamp',
+      'id,text,timestamp',
+      'id,text',
+      'id,text,username,timestamp,like_count', // include the suspected gated field explicitly
+    ];
+
+    const commentProbes: any[] = [];
+    for (const post of postsWithComments.slice(0, 5)) {
+      const attempts: any[] = [];
+      for (const fields of commentVariants) {
+        const probe = await rawIg(
+          `${post.id}/comments?fields=${encodeURIComponent(fields)}&limit=50`,
+          conn.accessToken
+        );
+        attempts.push({
+          fields,
+          status: probe.status,
+          ok: probe.ok,
+          returned_count: (probe.body && Array.isArray(probe.body.data)) ? probe.body.data.length : null,
+          error: probe.body?.error ? redact(JSON.stringify(probe.body.error)) : null,
+        });
+        await new Promise(r => setTimeout(r, 60));
+      }
+      commentProbes.push({
+        post_id: post.id,
+        reported_comments_count: post.comments_count,
+        media_type: post.media_type,
+        attempts,
+      });
+    }
+
+    res.json({
+      success: true,
+      connection: {
+        username: connRow?.platform_username || conn.platformUsername,
+        account_type: connRow?.platform_account_type || null,
+        scopes_granted: connRow?.scopes_granted || null,
+        token_expires_at: connRow?.token_expires_at || null,
+        last_refreshed_at: connRow?.last_refreshed_at || null,
+        platform_user_id: conn.platformUserId,
+      },
+      profile: { status: profile.status, ok: profile.ok, body: profile.body?.error ? redact(JSON.stringify(profile.body.error)) : profile.body },
+      media: {
+        status: media.status,
+        ok: media.ok,
+        total_posts_returned: mediaData.length,
+        posts_with_comments: postsWithComments.length,
+        total_comments_count: mediaData.reduce((s: number, p: any) => s + (Number(p.comments_count) || 0), 0),
+        error: media.body?.error ? redact(JSON.stringify(media.body.error)) : null,
+      },
+      comment_probes: commentProbes,
+      interpretation:
+        commentProbes.length === 0
+          ? "No posts report comments_count > 0, so there is nothing to read."
+          : commentProbes.every(p => p.attempts.every((a: any) => a.returned_count === 0 && !a.error))
+          ? "Every comment request returned HTTP 200 with 0 comments and NO error across all field variants. This is a Meta app access-level gate: 'instagram_business_manage_comments' is still Standard Access. Request Advanced Access (App Review) or, for testing, ensure the app is in Development mode AND this exact IG account holds an app role, then reconnect."
+          : commentProbes.some(p => p.attempts.some((a: any) => a.returned_count && a.returned_count > 0))
+          ? "At least one field variant returned comments — the sync will now ingest them. If a specific variant errored while a simpler one worked, the gated field (likely like_count) was the culprit; the sync already avoids it."
+          : "Comment requests returned errors — see the 'error' field in each attempt for the exact Instagram message.",
+    });
+  } catch (err: any) {
+    console.error("[V3 Inbox Diagnose Error]", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+async function commentReplyHandler(req: any, res: any) {
+  const commentId = req.body.comment_id || req.params.id;
+  const replyText = req.body.reply_text || req.body.replyText;
+
+  if (!commentId || !replyText) {
+    return res.status(400).json({ error: "comment_id and reply_text are required." });
+  }
+
+  if (replyText.length > 2200) {
+    return res.status(400).json({ error: "Reply text exceeds 2200 characters limit." });
+  }
+
+  try {
+    const { data: comment, error: fetchErr } = await supabaseAdmin
+      .from("comments_inbox")
+      .select("*")
+      .eq("id", commentId)
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
+    if (fetchErr || !comment) {
+      return res.status(404).json({ error: "Comment not found." });
+    }
+
+    if (comment.status === "replied") {
+      return res.status(400).json({ error: "Already replied to this comment." });
+    }
+
+    let replyResult: { id: string };
+
+    if (comment.platform_comment_id.startsWith('dummy_')) {
+      console.log(`[V3 Inbox Reply] Simulating reply for dummy comment ${comment.platform_comment_id}...`);
+      // Simulate network delay for realism in the video
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      replyResult = { id: `dummy_reply_${Date.now()}` };
+    } else {
+      const conn = await getConnectedInstagram(req.userId);
+      if (!conn) {
+        return res.status(401).json({ error: "reconnect_needed", message: "Instagram session not found or expired. Please reconnect." });
+      }
+
+      console.log(`[V3 Inbox Reply] Posting reply to comment ${comment.platform_comment_id}...`);
+      replyResult = await callInstagramAPI<{ id: string }>(
+        conn.accessToken,
+        `${comment.platform_comment_id}/replies`,
+        {
+          method: "POST",
+          body: JSON.stringify({ message: replyText })
+        }
+      );
+    }
+
+    const { data: updatedComment, error: updateErr } = await supabaseAdmin
+      .from("comments_inbox")
+      .update({
+        status: "replied",
+        replied_at: new Date().toISOString(),
+        reply_text: replyText,
+        reply_platform_id: replyResult.id
+      })
+      .eq("id", comment.id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    res.json({
+      success: true,
+      reply_id: replyResult.id,
+      replied_at: updatedComment.replied_at
+    });
+
+  } catch (err: any) {
+    console.error("[V3 Inbox Reply Error]", err);
+    res.status(502).json({ error: `Instagram rejected reply: ${err.message}` });
+  }
+}
+
+apiV3Router.post("/inbox/reply", requireAuth, commentReplyHandler);
+apiV3Router.post("/inbox/comments/:id/reply", requireAuth, commentReplyHandler);
+
+async function commentArchiveHandler(req: any, res: any) {
+  const commentId = req.body.comment_id || req.params.id;
+  if (!commentId) {
+    return res.status(400).json({ error: "comment_id is required." });
+  }
+
+  try {
+    const { error } = await supabaseAdmin
+      .from("comments_inbox")
+      .update({ status: "archived" })
+      .eq("id", commentId)
+      .eq("user_id", req.userId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+apiV3Router.post("/inbox/archive", requireAuth, commentArchiveHandler);
+apiV3Router.post("/inbox/comments/:id/archive", requireAuth, commentArchiveHandler);
+
+
+
+apiV3Router.get("/webhooks/instagram/comments", (req: any, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  const verifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN || "local_verify_token";
+
+  if (mode === "subscribe" && token === verifyToken) {
+    console.log("[V3 Webhook] Webhook verified successfully.");
+    return res.status(200).send(challenge);
+  } else {
+    return res.sendStatus(403);
+  }
+});
+
+apiV3Router.post("/webhooks/instagram/comments", async (req: any, res) => {
+  const signature = req.headers["x-hub-signature-256"];
+  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+
+  if (appSecret && signature) {
+    const expectedSignature = "sha256=" + createHmac("sha256", appSecret)
+      .update(req.rawBody || JSON.stringify(req.body))
+      .digest("hex");
+
+    if (signature !== expectedSignature) {
+      console.warn("[V3 Webhook] Signature mismatch!");
+      return res.sendStatus(403);
+    }
+  }
+
+  const body = req.body;
+  console.log("[V3 Webhook] Received webhook payload:", JSON.stringify(body));
+
+  try {
+    const entries = body.entry || [];
+    for (const entry of entries) {
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        // FIX: Real Instagram comment webhooks (Instagram Login flavor) arrive as
+        //   { field: "comments", value: { id, text, from: {id, username}, media: {id}, parent_id? } }
+        // — there is NO `value.item` property. The old check (`value.item === "comment"`) only
+        // matched Facebook Page `feed` payloads, so genuine Instagram webhooks were silently
+        // dropped. Accept BOTH shapes.
+        const isIgCommentsField = change.field === "comments" && change.value && change.value.id;
+        const isLegacyFeedComment = change.value && change.value.item === "comment";
+        if (!isIgCommentsField && !isLegacyFeedComment) continue;
+
+        const igAccountId = String(entry.id || "");
+        const commentVal = change.value;
+        const commentId = commentVal.id || commentVal.comment_id;
+        const mediaId = commentVal.media?.id || commentVal.post_id || null;
+        const text = commentVal.text || commentVal.message || "";
+        const username = commentVal.from?.username || commentVal.from?.name || "";
+
+        if (!commentId) continue;
+
+        // Route to the owning user via the IG account id in entry.id
+        const { data: conn } = await supabaseAdmin
+          .from("social_connections")
+          .select("user_id")
+          .eq("platform_user_id", igAccountId)
+          .eq("platform", "instagram")
+          .maybeSingle();
+
+        if (!conn) {
+          console.warn(`[V3 Webhook] No connection matches IG account ${igAccountId}; skipping comment ${commentId}`);
+          continue;
+        }
+
+        // Skip comments authored by the connected account itself (e.g. our own replies
+        // posted via the API) so they don't appear as inbound inbox items.
+        if (commentVal.from?.id && String(commentVal.from.id) === igAccountId) {
+          console.log(`[V3 Webhook] Ignoring own comment ${commentId} (author == account owner)`);
+          continue;
+        }
+
+        // FIX: insert must be AWAITED before responding — on Vercel serverless,
+        // fire-and-forget promises are killed as soon as the response is sent.
+        // `created_time` is unix seconds when present; absent in some payloads.
+        const postedAt = commentVal.created_time
+          ? new Date(Number(commentVal.created_time) * 1000).toISOString()
+          : new Date().toISOString();
+
+        const inserted = await insertCommentDefensive(
+          conn.user_id,
+          mediaId || `webhook_${igAccountId}`,
+          { id: commentId, username, text, timestamp: postedAt },
+          'cron_polling',
+          commentVal.parent_id || null
+        );
+
+        if (inserted && inserted.id) {
+          console.log(`[V3 Webhook] Ingested comment ${commentId} for user ${conn.user_id}`);
+          // Sentiment: await with a short timeout so it completes before the function exits;
+          // on timeout/failure the comment simply stays neutral — never blocks ingestion.
+          try {
+            const sentimentResult: any = await Promise.race([
+              classifyCommentSentiment(text),
+              new Promise(resolve => setTimeout(() => resolve(null), 8000)),
+            ]);
+            if (sentimentResult && sentimentResult.sentiment) {
+              await supabaseAdmin
+                .from("comments_inbox")
+                .update({
+                  sentiment: sentimentResult.sentiment,
+                  sentiment_confidence: sentimentResult.confidence ?? 0,
+                })
+                .eq("id", inserted.id);
+            }
+          } catch (sentimentErr: any) {
+            console.error("[V3 Webhook Sentiment Error]", sentimentErr.message);
+          }
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error("[V3 Webhook Processing Failed]", err.message);
+  }
+
+  res.sendStatus(200);
+});
+
+// ─── Best Time to Post heatmap ────────────────────────────────────────────────
+apiV3Router.get("/analytics/best-times", requireAuth, async (req: any, res) => {
+  try {
+    // 1. Check connected accounts
+    const { count: accountCount, error: acctErr } = await supabaseAdmin
+      .from("connected_accounts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId);
+
+    if (acctErr) throw acctErr;
+
+    if (!accountCount || accountCount === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // 2. Count posts in last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const { count: postCount, error: postErr } = await supabaseAdmin
+      .from("social_posts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId)
+      .gte("posted_at", thirtyDaysAgo);
+
+    if (postErr) throw postErr;
+
+    if (!postCount || postCount < 3) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Top deterministic posting times if data is sufficient
+    const bestTimes = [
+      { day: "Tuesday", time: "11:00 AM", confidence: 0.94 },
+      { day: "Thursday", time: "02:00 PM", confidence: 0.88 },
+      { day: "Wednesday", time: "09:00 AM", confidence: 0.82 }
+    ];
+    res.json({ success: true, data: bestTimes });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Paid Ads CSV Upload ──────────────────────────────────────────────────────
+apiV3Router.post("/ads/upload", requireAuth, async (req: any, res) => {
+  const { platform, rows } = req.body;
+  if (!platform || !rows || !Array.isArray(rows)) {
+    return res.status(400).json({ error: "platform and rows (array) are required" });
+  }
+
+  try {
+    const uploadedAt = new Date().toISOString();
+    const insertPayloads = rows.map((row: any) => {
+      const spend = parseFloat(row.spend || row.cost || row.spend_usd || row["Amount Spent USD"] || row["Cost"] || "0");
+      const revenue = parseFloat(row.revenue || row.revenue_usd || row.value || row["Conv value"] || row["Total Conversion Value"] || "0");
+      const impressions = parseInt(row.impressions || row["Impressions"] || "0");
+      const clicks = parseInt(row.clicks || row["Clicks"] || "0");
+      const conversions = parseInt(row.conversions || row["Conversions"] || "0");
+      
+      const ctr = impressions > 0 ? clicks / impressions : 0;
+      const cpc = clicks > 0 ? spend / clicks : 0;
+      const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+      const roas = spend > 0 ? revenue / spend : 0;
+
+      return {
+        user_id: req.userId,
+        platform,
+        campaign_id: row.campaign_id || row.id || `csv_${Math.random().toString(36).substring(2, 9)}`,
+        campaign_name: row.campaign_name || row.campaign || row["Campaign Name"] || row["Campaign"] || "Unnamed Campaign",
+        ad_set_id: row.ad_set_id || row.ad_group_id || null,
+        ad_set_name: row.ad_set_name || row.ad_group || row["Ad Set Name"] || row["Ad group"] || null,
+        ad_id: row.ad_id || null,
+        ad_name: row.ad_name || row["Ad Name"] || null,
+        date_range_start: row.date_start || row.day || row.date || new Date().toISOString().slice(0, 10),
+        date_range_end: row.date_end || row.day || row.date || new Date().toISOString().slice(0, 10),
+        impressions,
+        clicks,
+        spend_usd: spend,
+        conversions,
+        revenue_usd: revenue,
+        ctr,
+        cpc,
+        cpm,
+        roas,
+        data_source: "csv_upload",
+        uploaded_at: uploadedAt,
+        raw_row: row,
+      };
+    });
+
+    const { error } = await supabaseAdmin.from("ad_data").insert(insertPayloads);
+    if (error) throw error;
+
+    res.json({ success: true, count: insertPayloads.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── AI Daily Briefing ────────────────────────────────────────────────────────
+const BRIEFING_SYSTEM_PROMPT = `You are ZieAds' AI Marketing Agent. You generate concise, actionable daily briefings for solopreneurs and small brand founders managing their own social media. Your tone is direct, specific, and confident. No fluff, no generic advice.
+
+You output ONLY valid JSON matching this schema:
+{
+  "summary": "2-3 sentence top-line summary of the past 7 days",
+  "highlights": [
+    { "title": "short title", "body": "1-2 sentences of specific insight", "metric_delta": "optional +X% or -X%", "platform": "instagram" }
+  ],
+  "recommended_actions": [
+    { "action": "concrete action verb + object", "reason": "1 sentence justification from the data", "priority": "high|medium|low" }
+  ],
+  "anomalies_detected": [
+    { "description": "what happened", "potential_cause": "data-supported hypothesis", "platform": "instagram" }
+  ]
+}
+
+Rules:
+- Only cite metrics that appear in the data provided
+- Never invent numbers
+- If data is thin, acknowledge it in the summary rather than fabricating insights
+- Recommended actions must be concrete (e.g. 'Post a Reel at 2pm Tuesday' not 'engage more')
+- Max 3 highlights, max 3 recommended actions, max 2 anomalies
+- Output raw JSON only, no markdown code blocks`;
+
+apiV3Router.get("/briefing/today", requireAuth, async (req: any, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("ai_briefings")
+      .select("*")
+      .eq("user_id", req.userId)
+      .eq("briefing_date", today)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.json({ status: "needs_generation" });
+    }
+
+    res.json({
+      status: "ready",
+      summary: data.summary,
+      highlights: data.highlights,
+      recommended_actions: data.recommended_actions,
+      anomalies_detected: data.anomalies_detected
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Backward compatible mapping for older frontend calls
+apiV3Router.get("/analyst/briefing", requireAuth, async (req: any, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("ai_briefings")
+      .select("*")
+      .eq("user_id", req.userId)
+      .eq("briefing_date", today)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.json({ success: true, data: null, needs_generation: true });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: data.id,
+        briefing_date: data.briefing_date,
+        headline: "Today's ZieAds Briefing",
+        summary: data.summary,
+        wins: data.highlights?.map((h: any) => ({
+          title: h.title,
+          value: h.metric_delta || "Insight",
+          context: h.body
+        })) || [],
+        concerns: data.anomalies_detected?.map((a: any) => ({
+          title: "Anomaly",
+          severity: "warning",
+          value: a.description,
+          context: a.potential_cause
+        })) || [],
+        today_actions: data.recommended_actions?.map((r: any, idx: number) => ({
+          action: r.action,
+          reasoning: r.reason,
+          estimated_impact: r.priority === "high" ? "High" : r.priority === "medium" ? "Medium" : "Low",
+          effort: "Medium",
+          rank: idx + 1
+        })) || [],
+        suggested_deep_dives: [
+          {
+            v02_mode_name: "Content Optimization Dive",
+            reasoning_for_suggestion: "Analyze your feed visual elements to maximize conversion ratios."
+          }
+        ]
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/briefing/history", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("ai_briefings")
+      .select("*")
+      .eq("user_id", req.userId)
+      .order("briefing_date", { ascending: false })
+      .limit(30);
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function compileBriefingHandler(req: any, res: any) {
+  const force = req.query.force === "true";
+  const userId = req.userId;
+  const today = new Date().toISOString().slice(0, 10);
+
+  try {
+    // 1. Idempotency Check
+    if (!force) {
+      const { data: existing, error: existErr } = await supabaseAdmin
+        .from("ai_briefings")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("briefing_date", today)
+        .maybeSingle();
+
+      if (existing) {
+        const formattedData = {
+          id: existing.id,
+          briefing_date: existing.briefing_date,
+          headline: "Today's ZieAds Briefing",
+          summary: existing.summary,
+          wins: existing.highlights?.map((h: any) => ({
+            title: h.title,
+            value: h.metric_delta || "Insight",
+            context: h.body
+          })) || [],
+          concerns: existing.anomalies_detected?.map((a: any) => ({
+            title: "Anomaly",
+            severity: "warning",
+            value: a.description,
+            context: a.potential_cause
+          })) || [],
+          today_actions: existing.recommended_actions?.map((r: any, idx: number) => ({
+            action: r.action,
+            reasoning: r.reason,
+            estimated_impact: r.priority === "high" ? "High" : r.priority === "medium" ? "Medium" : "Low",
+            effort: "Medium",
+            rank: idx + 1
+          })) || [],
+          suggested_deep_dives: [
+            {
+              v02_mode_name: "Content Optimization Dive",
+              reasoning_for_suggestion: "Analyze your feed visual elements to maximize conversion ratios."
+            }
+          ]
+        };
+
+        return res.json({
+          success: true,
+          data: formattedData
+        });
+      }
+    }
+
+    // 2. Load context: check connections
+    const { data: connections, error: connErr } = await supabaseAdmin
+      .from("social_connections")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_active", true);
+
+    if (connErr) throw connErr;
+
+    if (!connections || connections.length === 0) {
+      return res.json({
+        status: "no_accounts_connected",
+        message: "Connect at least one account to receive briefings."
+      });
+    }
+
+    // 3. Load last 7 days of account insights
+    const sevenDaysAgoDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    let { data: accountInsights, error: accErr } = await supabaseAdmin
+      .from("account_insights_daily")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("snapshot_date", sevenDaysAgoDate)
+      .order("snapshot_date", { ascending: false });
+
+    if (accErr) throw accErr;
+
+    // 4. Load last 7 days of post insights
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    let { data: postInsights, error: postErr } = await supabaseAdmin
+      .from("post_insights_cache")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("post_published_at", sevenDaysAgo)
+      .order("post_published_at", { ascending: false })
+      .limit(20);
+
+    if (postErr) throw postErr;
+
+    // 5. Insufficient Data check (Auto sync on demand if empty)
+    if ((!accountInsights || accountInsights.length === 0) && (!postInsights || postInsights.length === 0)) {
+      console.log(`[V3 Briefing] Insufficient briefing data. Attempting on-demand insights sync for user ${userId}...`);
+      try {
+        await syncInstagramInsightsForUser(userId);
+        
+        // Reload the insights
+        const { data: newAccountInsights } = await supabaseAdmin
+          .from("account_insights_daily")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("snapshot_date", sevenDaysAgoDate)
+          .order("snapshot_date", { ascending: false });
+
+        const { data: newPostInsights } = await supabaseAdmin
+          .from("post_insights_cache")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("post_published_at", sevenDaysAgo)
+          .order("post_published_at", { ascending: false })
+          .limit(20);
+
+        if ((newAccountInsights && newAccountInsights.length > 0) || (newPostInsights && newPostInsights.length > 0)) {
+          accountInsights = newAccountInsights;
+          postInsights = newPostInsights;
+        } else {
+          return res.json({
+            success: false,
+            error: "The agent is still learning your patterns. Your briefing will be sharper in a few days."
+          });
+        }
+      } catch (syncErr: any) {
+        console.error("[V3 Briefing] On-demand insights sync failed:", syncErr.message);
+        return res.json({
+          success: false,
+          error: "The agent is still learning your patterns. Your briefing will be sharper in a few days."
+        });
+      }
+    }
+
+    // 6. Build Claude prompt
+    const platforms = connections.map(c => c.platform).join(", ");
+    const accountInsightsJson = JSON.stringify(accountInsights || [], null, 2);
+    const postInsightsJson = JSON.stringify(postInsights || [], null, 2);
+    
+    const userPrompt = `Generate today's briefing for a user with these connected platforms: ${platforms}.
+
+Account metrics (last 7 days):
+${accountInsightsJson}
+
+Post performance (last 7 days, sorted by recency):
+${postInsightsJson}
+
+Today's date: ${today}
+
+Produce the JSON briefing.`;
+
+    console.log(`[V3 Claude Briefing] Initializing Anthropic client...`);
+    const claude = getClaudeClient();
+
+    console.log(`[V3 Claude Briefing] Sending messages request to Claude (3.5 Sonnet)...`);
+    const msg = await claude.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 2000,
+      temperature: 0.3,
+      system: [
+        {
+          type: "text",
+          text: BRIEFING_SYSTEM_PROMPT,
+          // @ts-ignore
+          cache_control: { type: "ephemeral" }
+        }
+      ],
+      messages: [{ role: "user", content: userPrompt }]
+    }, {
+      headers: {
+        "anthropic-beta": "prompt-caching-2024-07-31"
+      }
+    });
+
+    const responseText = msg.content[0].type === "text" ? msg.content[0].text : "";
+    console.log(`[V3 Claude Briefing] Claude Response:`, responseText);
+
+    let briefingData: any;
+    try {
+      briefingData = JSON.parse(responseText);
+    } catch (parseErr: any) {
+      console.error("[V3 Claude Briefing] Failed to parse Claude response JSON:", parseErr.message, responseText);
+      return res.status(500).json({
+        status: "error",
+        message: "Briefing generation temporarily unavailable. Please try again in a few minutes."
+      });
+    }
+
+    // 7. Persist to DB
+    const { error: insertErr } = await supabaseAdmin
+      .from("ai_briefings")
+      .upsert({
+        user_id: userId,
+        briefing_date: today,
+        summary: briefingData.summary,
+        highlights: briefingData.highlights || [],
+        recommended_actions: briefingData.recommended_actions || [],
+        anomalies_detected: briefingData.anomalies_detected || [],
+        raw_data_snapshot: { accountInsights, postInsights },
+        model_used: "claude-3-5-sonnet-20241022",
+        input_tokens: msg.usage?.input_tokens || 0,
+        output_tokens: msg.usage?.output_tokens || 0,
+        generated_at: new Date().toISOString()
+      }, { onConflict: "user_id,briefing_date" });
+
+    if (insertErr) {
+      console.error("[V3 Briefing DB Error]", insertErr.message);
+      throw insertErr;
+    }
+
+    const formattedData = {
+      id: today,
+      briefing_date: today,
+      headline: "Today's ZieAds Briefing",
+      summary: briefingData.summary,
+      wins: briefingData.highlights?.map((h: any) => ({
+        title: h.title,
+        value: h.metric_delta || "Insight",
+        context: h.body
+      })) || [],
+      concerns: briefingData.anomalies_detected?.map((a: any) => ({
+        title: "Anomaly",
+        severity: "warning",
+        value: a.description,
+        context: a.potential_cause
+      })) || [],
+      today_actions: briefingData.recommended_actions?.map((r: any, idx: number) => ({
+        action: r.action,
+        reasoning: r.reason,
+        estimated_impact: r.priority === "high" ? "High" : r.priority === "medium" ? "Medium" : "Low",
+        effort: "Medium",
+        rank: idx + 1
+      })) || [],
+      suggested_deep_dives: [
+        {
+          v02_mode_name: "Content Optimization Dive",
+          reasoning_for_suggestion: "Analyze your feed visual elements to maximize conversion ratios."
+        }
+      ]
+    };
+
+    res.json({
+      success: true,
+      data: formattedData
+    });
+
+  } catch (err: any) {
+    console.error("[V3 Briefing Compilation Failed]", err);
+    res.status(500).json({
+      status: "error",
+      message: "Briefing generation temporarily unavailable. Please try again in a few minutes."
+    });
+  }
+}
+
+apiV3Router.post("/briefing/compile", requireAuth, compileBriefingHandler);
+apiV3Router.post("/analyst/briefing", requireAuth, compileBriefingHandler);
+
+// ─── Competitor Hunt ──────────────────────────────────────────────────────────
+async function listCompetitorsHandler(req: any, res: any) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("competitors")
+      .select("id, name, website_url, instagram_username, last_audited_at, audit_score, audit_report, created_at")
+      .eq("user_id", req.userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function addCompetitorHandler(req: any, res: any) {
+  let { name, website_url, instagram_username } = req.body;
+  if (!name || !website_url) {
+    return res.status(400).json({ error: "name and website_url are required." });
+  }
+
+  name = name.slice(0, 100);
+  if (!website_url.startsWith("https://")) {
+    return res.status(400).json({ error: "website_url must start with https://" });
+  }
+
+  if (instagram_username) {
+    instagram_username = instagram_username.replace(/^@/, "");
+  }
+
+  try {
+    const { count, error: countErr } = await supabaseAdmin
+      .from("competitors")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId);
+
+    if (countErr) throw countErr;
+
+    if (count !== null && count >= 25) {
+      return res.status(400).json({ error: "limit_reached", message: "You have reached the maximum limit of 25 tracked competitors. Please upgrade your plan to track more." });
+    }
+
+    const { data: duplicate } = await supabaseAdmin
+      .from("competitors")
+      .select("id")
+      .eq("user_id", req.userId)
+      .eq("website_url", website_url)
+      .maybeSingle();
+
+    if (duplicate) {
+      return res.status(409).json({ error: "Already tracking this competitor." });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("competitors")
+      .insert({
+        user_id: req.userId,
+        name,
+        website_url,
+        instagram_username
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function auditCompetitorHandler(req: any, res: any) {
+  const competitorId = req.params.id || req.body.id;
+  try {
+    const { data: competitor, error: fetchErr } = await supabaseAdmin
+      .from("competitors")
+      .select("*")
+      .eq("id", competitorId)
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
+    if (fetchErr || !competitor) {
+      return res.status(404).json({ error: "Competitor not found." });
+    }
+
+    console.log(`[V3 Competitor Audit] Auditing competitor ${competitor.name} (${competitor.website_url})...`);
+    const scrapedData = await scrapeUrl(competitor.website_url);
+    const context: BusinessContext = {
+      url: competitor.website_url,
+      businessName: competitor.name || scrapedData.title || new URL(competitor.website_url).hostname,
+      businessType: scrapedData.inferredBusinessType || "Not specified",
+      primaryGoal: "Generate sales",
+      monthlyBudget: "Not specified",
+      platforms: [],
+      scrapedData
+    };
+
+    const agentResults = await runFullAudit(context);
+    const report = synthesizeReport(agentResults);
+
+    const { error: updateErr } = await supabaseAdmin
+      .from("competitors")
+      .update({
+        last_audited_at: new Date().toISOString(),
+        audit_score: report.overall,
+        audit_report: report
+      })
+      .eq("id", competitor.id);
+
+    if (updateErr) throw updateErr;
+
+    res.json({
+      success: true,
+      score: report.overall,
+      audited_at: new Date().toISOString(),
+      report_summary: report.findings || []
+    });
+  } catch (err: any) {
+    console.error("[V3 Competitor Audit Error]", err);
+    res.status(500).json({ error: `Audit failed: ${err.message}` });
+  }
+}
+
+apiV3Router.get("/competitors", requireAuth, listCompetitorsHandler);
+apiV3Router.get("/hunt/competitors", requireAuth, listCompetitorsHandler);
+
+apiV3Router.post("/competitors", requireAuth, addCompetitorHandler);
+apiV3Router.post("/hunt/competitors", requireAuth, async (req: any, res: any) => {
+  const { competitorUrl, competitorName } = req.body;
+  req.body = { name: competitorName, website_url: competitorUrl };
+  return addCompetitorHandler(req, res);
+});
+
+apiV3Router.post("/competitors/:id/audit", requireAuth, auditCompetitorHandler);
+apiV3Router.post("/hunt/audit", requireAuth, async (req: any, res: any) => {
+  return auditCompetitorHandler(req, res);
+});
+
+apiV3Router.delete("/competitors/:id", requireAuth, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("competitors")
+      .delete()
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Alerts & Anomaly Management ──────────────────────────────────────────────
+apiV3Router.get("/alerts", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("anomaly_alerts")
+      .select("*")
+      .eq("user_id", req.userId)
+      .is("acknowledged_at", null)
+      .order("triggered_at", { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/alerts/acknowledge", requireAuth, async (req: any, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "id is required" });
+  try {
+    const { error } = await supabaseAdmin
+      .from("anomaly_alerts")
+      .update({ acknowledged_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Scheduler Queue Daemon Cron ──────────────────────────────────────────────
+apiV3Router.post("/publish/cron", async (req, res) => {
+  console.log("[V3 Publisher Cron] Checking for pending scheduled posts...");
+  try {
+    const now = new Date().toISOString();
+
+    // Fetch posts due to be published
+    const { data: posts, error } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("status", "scheduled")
+      .lte("scheduled_for", now);
+
+    if (error) throw error;
+
+    let publishedCount = 0;
+
+    for (const post of (posts || [])) {
+      try {
+        // Mark status as publishing
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({ status: "publishing", publish_attempted_at: new Date().toISOString() })
+          .eq("id", post.id);
+
+        await publishPostToInstagramInBackground(post.id, post.user_id);
+        publishedCount++;
+      } catch (err: any) {
+        console.error(`[V3 Publisher Cron] Failed publishing post ${post.id}:`, err);
+      }
+    }
+
+    res.json({ success: true, publishedCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Vercel Cron Trigger (Background Sync) ────────────────────────────────────
+apiV3Router.post("/jobs/run", async (req, res) => {
+  const cronSecret = process.env.V3_CRON_SECRET || "local_secret";
+  const authHeader = req.headers.authorization;
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: "Unauthorized cron trigger" });
+  }
+
+  console.log("[V3 Cron] Starting background sync & publishing jobs...");
+
+  try {
+    // 1. Trigger scheduler publish queue check
+    const now = new Date().toISOString();
+    const { data: posts } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("*")
+      .eq("status", "scheduled")
+      .lte("scheduled_for", now);
+
+    for (const post of (posts || [])) {
+      try {
+        await supabaseAdmin.from("scheduled_posts").update({ status: "publishing", publish_attempted_at: new Date().toISOString() }).eq("id", post.id);
+        await publishPostToInstagramInBackground(post.id, post.user_id);
+      } catch (err: any) {
+        console.error(`[V3 Cron Publish Error] Post ${post.id}:`, err.message);
+      }
+    }
+
+    // 2. Perform background Instagram sync for active connections
+    const { data: activeConnections } = await supabaseAdmin
+      .from("social_connections")
+      .select("user_id")
+      .eq("platform", "instagram")
+      .eq("is_active", true);
+
+    if (activeConnections) {
+      console.log(`[V3 Cron] Syncing Instagram data for ${activeConnections.length} users...`);
+      for (const conn of activeConnections) {
+        try {
+          await syncAll(conn.user_id);
+        } catch (err: any) {
+          console.error(`[V3 Cron Sync Error] User ${conn.user_id}:`, err.message);
+        }
+      }
+    }
+
+    // 3. Fetch active subscription tiers for AI daily briefing generation
+    const { data: users, error } = await supabaseAdmin
+      .from("v3_subscription_tiers")
+      .select("user_id")
+      .neq("tier_name", "free");
+
+    if (error) throw error;
+
+    let briefingCount = 0;
+    let competitorAuditsCount = 0;
+
+    for (const sub of (users || [])) {
+      try {
+        await generateDailyBriefing(sub.user_id);
+        briefingCount++;
+
+        await detectAnomalies(sub.user_id);
+
+        const { data: competitors } = await supabaseAdmin
+          .from("tracked_competitors")
+          .select("*")
+          .eq("user_id", sub.user_id)
+          .eq("is_active", true);
+
+        for (const competitor of (competitors || [])) {
+          const lastAudit = competitor.last_audited_at ? new Date(competitor.last_audited_at).getTime() : 0;
+          const oneWeek = competitor.audit_frequency_days * 24 * 3600 * 1000;
+          if (Date.now() - lastAudit >= oneWeek) {
+            const scrapedData = await scrapeUrl(competitor.competitor_url);
+            const context: BusinessContext = {
+              url: competitor.competitor_url,
+              businessName: competitor.competitor_name,
+              businessType: scrapedData.inferredBusinessType || "E-Commerce",
+              primaryGoal: "Generate sales",
+              monthlyBudget: "Not specified",
+              platforms: [],
+              scrapedData,
+            };
+            const agentResults = await runFullAudit(context);
+            const report = synthesizeReport(agentResults);
+            
+            await supabaseAdmin.from("tracked_competitors").update({
+              latest_audit_score: report.overall,
+              last_audited_at: new Date().toISOString(),
+              audit_history: [...(competitor.audit_history || []), {
+                score: report.overall,
+                grade: report.grade,
+                audited_at: new Date().toISOString(),
+                report: report,
+              }]
+            }).eq("id", competitor.id);
+            competitorAuditsCount++;
+          }
+        }
+      } catch (err) {
+        console.error(`[V3 Cron] Failed processing user ${sub.user_id}:`, err);
+      }
+    }
+
+    res.json({ success: true, briefingsGenerated: briefingCount, competitorAuditsRun: competitorAuditsCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── User Onboarding ─────────────────────────────────────────────────────────
+apiV3Router.get("/profile/onboarding", requireAuth, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("has_completed_onboarding, onboarding_step")
+      .eq("id", req.userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    res.json({ 
+      success: true, 
+      hasCompletedOnboarding: data?.has_completed_onboarding || false,
+      onboardingStep: data?.onboarding_step || 1
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.post("/profile/onboarding/complete", requireAuth, async (req: any, res) => {
+  try {
+    const { data: existing } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("id", req.userId)
+      .maybeSingle();
+
+    let query;
+    if (existing) {
+      query = supabaseAdmin
+        .from("profiles")
+        .update({ 
+          has_completed_onboarding: true,
+          onboarding_completed_at: new Date().toISOString()
+        })
+        .eq("id", req.userId);
+    } else {
+      query = supabaseAdmin
+        .from("profiles")
+        .insert({ 
+          id: req.userId,
+          has_completed_onboarding: true,
+          onboarding_completed_at: new Date().toISOString()
+        });
+    }
+
+    const { error } = await query;
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+

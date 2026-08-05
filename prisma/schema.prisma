@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Credits & Subscription
+  credits       Int       @default(200)
+  plan          PlanType  @default(FREE)
+  stripeId      String?   @unique
+  
+  // Relations
+  trackingLists TrackingList[]
+  exports       UserExport[]
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PREMIUM
+  BUSINESS
+}
+
+model Ad {
+  id              String    @id @default(cuid())
+  platform        Platform
+  adId            String    @unique // Platform specific ID
+  creativeUrl     String
+  copy            String?
+  cta             String?
+  
+  // Metrics
+  likes           Int       @default(0)
+  comments        Int       @default(0)
+  shares          Int       @default(0)
+  views           Int       @default(0)
+  
+  // Metadata
+  publishedAt     DateTime
+  countries       String[]
+  language        String?
+  
+  // Enrichment
+  storeDomain     String?
+  aiScore         Int?
+  aiSummary       String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  media           AdMedia[]
+  store           Store?    @relation(fields: [storeId], references: [id])
+  storeId         String?
+}
+
+enum Platform {
+  META
+  TIKTOK
+  PINTEREST
+}
+
+model AdMedia {
+  id          String   @id @default(cuid())
+  adId        String
+  ad          Ad       @relation(fields: [adId], references: [id])
+  type        MediaType
+  url         String
+  duration    Int?     // For videos
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL
+}
+
+model Store {
+  id          String   @id @default(cuid())
+  domain      String   @unique
+  name        String?
+  techStack   String[]
+  estRevenue  Float?
+  
+  ads         Ad[]
+}
+
+model TrackingList {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  keywords    String[]
+  createdAt   DateTime @default(now())
+}
+
+model UserExport {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  format      String   // CSV, JSON
+  status      String   // PENDING, COMPLETED, FAILED
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+}
