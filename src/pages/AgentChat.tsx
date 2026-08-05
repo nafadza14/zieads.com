@@ -171,6 +171,44 @@ export default function AgentChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const [attachedFile, setAttachedFile] = useState<{ name: string; url: string; mimeType: string } | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    try {
+      const headers = await getAuthHeaders();
+      const authHeaders = { ...headers } as any;
+      delete authHeaders['Content-Type'];
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/v3/media/upload?skipLibrary=true', {
+        method: 'POST',
+        headers: authHeaders,
+        body: formData
+      });
+
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Upload failed');
+
+      setAttachedFile({
+        name: file.name,
+        url: j.blob_url || j.url,
+        mimeType: file.type
+      });
+    } catch (err: any) {
+      alert('Upload failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setUploadingFile(false);
+      e.target.value = '';
+    }
+  };
+
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token;
@@ -232,11 +270,21 @@ export default function AgentChat() {
 
   // ─── Send chat message ────────────────────────────────────────────────────
   const sendMessage = async (text?: string) => {
-    const msg = (text || input).trim();
+    let msg = (text || input).trim();
+    if (!msg && !attachedFile) return;
+
+    const originalMsg = msg || (attachedFile ? `[Attached file: ${attachedFile.name}]` : '');
+
+    // Append file info to prompt message sent to Claude
+    if (!text && attachedFile) {
+      msg = `${msg}\n\n[User attached file: ${attachedFile.name} (URL: ${attachedFile.url})]`;
+    }
+
     if (!msg || loading) return;
     setInput('');
+    setAttachedFile(null);
     setLoading(true);
-    setMessages(prev => [...prev, { role: 'user', content: msg }]);
+    setMessages(prev => [...prev, { role: 'user', content: originalMsg }]);
 
     const headers = await getAuthHeaders();
     try {
@@ -571,6 +619,52 @@ export default function AgentChat() {
                       boxShadow: '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)',
                       transition: 'all 0.25s ease'
                     }}>
+                      {/* Attached file chip */}
+                      {attachedFile && (
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          alignSelf: 'flex-start',
+                          gap: 6,
+                          background: '#FAF8F3',
+                          border: '1px solid #E5DFCF',
+                          borderRadius: '10px',
+                          padding: '6px 12px',
+                          marginBottom: '10px',
+                          fontSize: '0.78rem',
+                          color: '#3D4F62'
+                        }}>
+                          <span>📎 {attachedFile.name}</span>
+                          <button
+                            onClick={() => setAttachedFile(null)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#6B7A89',
+                              cursor: 'pointer',
+                              fontSize: '1rem',
+                              fontWeight: 700,
+                              padding: '0 2px'
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+
+                      {uploadingFile && (
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#1E7BFF',
+                          marginBottom: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}>
+                          <span style={{ animation: 'za-pulse 1.2s ease-in-out infinite' }}>Uploading attachment...</span>
+                        </div>
+                      )}
+
                       <textarea
                         ref={inputRef}
                         value={input}
@@ -601,6 +695,8 @@ export default function AgentChat() {
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button
                             type="button"
+                            onClick={() => document.getElementById('agentFileUpload')?.click()}
+                            disabled={uploadingFile || loading}
                             title="Attach File"
                             style={{
                               width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5DFCF',
@@ -626,7 +722,7 @@ export default function AgentChat() {
                         {/* CTA Action button */}
                         <button
                           onClick={() => sendMessage()}
-                          disabled={loading || !input.trim()}
+                          disabled={loading || (!input.trim() && !attachedFile)}
                           className="btn-lp-primary-gradient"
                           style={{ 
                             padding: '10px 20px',
@@ -639,8 +735,8 @@ export default function AgentChat() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: '6px',
-                            cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-                            opacity: loading || !input.trim() ? 0.6 : 1,
+                            cursor: loading || (!input.trim() && !attachedFile) ? 'not-allowed' : 'pointer',
+                            opacity: loading || (!input.trim() && !attachedFile) ? 0.6 : 1,
                             transition: 'all 0.2s ease',
                             boxShadow: 'var(--lp-shadow-cta)'
                           }}
@@ -673,6 +769,12 @@ export default function AgentChat() {
         featureDescription={`${modeGateModal.modeName} is available on Pro and above. Unlock all 6 AI analysis modes with Pro.`}
         requiredPlan={modeGateModal.requiredPlan}
         featureType="mode"
+      />
+      <input
+        type="file"
+        id="agentFileUpload"
+        style={{ display: 'none' }}
+        onChange={handleFileUpload}
       />
     </>
   );
