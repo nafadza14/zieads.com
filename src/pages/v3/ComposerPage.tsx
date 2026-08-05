@@ -210,9 +210,10 @@ export default function ComposerPage() {
       return;
     }
 
-    const hasInstagram = selectedAccounts.some(id => connections.find(c => c.id === id)?.platform === 'instagram');
-    if (!hasInstagram) {
-      setComposerError("ZieAds v0.3 currently supports publishing to connected Instagram Business accounts only.");
+    const selectedConn = connections.find(c => selectedAccounts.includes(c.id));
+    const hasSupportedPlatform = selectedConn?.platform === 'instagram' || selectedConn?.platform === 'tiktok';
+    if (!hasSupportedPlatform) {
+      setComposerError("ZieAds v0.3 currently supports publishing to connected Instagram and TikTok accounts only.");
       return;
     }
 
@@ -235,7 +236,7 @@ export default function ComposerPage() {
           method: 'POST',
           headers,
           body: JSON.stringify({
-            platform: 'instagram',
+            platform: selectedConn.platform,
             caption: contentText,
             media_ids,
             hashtags,
@@ -252,7 +253,7 @@ export default function ComposerPage() {
           method: 'POST',
           headers,
           body: JSON.stringify({
-            platform: 'instagram',
+            platform: selectedConn.platform,
             caption: contentText,
             media_ids,
             hashtags,

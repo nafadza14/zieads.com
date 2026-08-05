@@ -560,16 +560,16 @@ apiV3Router.post("/posts/publish-now", requireAuth, async (req: any, res) => {
   const { platform, caption, media_ids, hashtags, media_attachments } = req.body;
 
   try {
-    if (platform !== "instagram") {
-      return res.status(400).json({ error: "Only Instagram platform is supported currently." });
+    if (platform !== "instagram" && platform !== "tiktok") {
+      return res.status(400).json({ error: "Only Instagram and TikTok platforms are supported currently." });
     }
 
     if (!media_ids || media_ids.length === 0) {
-      return res.status(400).json({ error: "Instagram requires at least one image or video to publish." });
+      return res.status(400).json({ error: "At least one image or video is required to publish." });
     }
 
     if (caption && caption.length > 2200) {
-      return res.status(400).json({ error: "Caption exceeds Instagram's 2200 character limit." });
+      return res.status(400).json({ error: "Caption exceeds the 2200 character limit." });
     }
 
     // 1. Fetch media library rows and combine with temporary attachments
@@ -614,9 +614,33 @@ apiV3Router.post("/posts/publish-now", requireAuth, async (req: any, res) => {
     const isVideo = firstMime.startsWith("video/");
 
     // 2. Fetch connection details
-    const conn = await getConnectedInstagram(req.userId);
-    if (!conn) {
-      return res.status(400).json({ error: "instagram_not_connected", message: "Instagram account not connected. Please connect it in the Connections page." });
+    let conn;
+    if (platform === "tiktok") {
+      const { data: tiktokConn } = await supabaseAdmin
+        .from("social_connections")
+        .select("*")
+        .eq("user_id", req.userId)
+        .eq("platform", "tiktok")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!tiktokConn) {
+        return res.status(400).json({ error: "tiktok_not_connected", message: "TikTok account not connected. Please connect it in the Connections page." });
+      }
+      conn = {
+        platformUserId: tiktokConn.platform_user_id,
+        platformUsername: tiktokConn.platform_username
+      };
+    } else {
+      const igConn = await getConnectedInstagram(req.userId);
+      if (!igConn) {
+        return res.status(400).json({ error: "instagram_not_connected", message: "Instagram account not connected. Please connect it in the Connections page." });
+      }
+      conn = {
+        platformUserId: igConn.platformUserId,
+        platformUsername: igConn.platformUsername,
+        accessToken: igConn.accessToken
+      };
     }
 
     // 3. Insert initial scheduled post entry
@@ -624,7 +648,7 @@ apiV3Router.post("/posts/publish-now", requireAuth, async (req: any, res) => {
       .from("scheduled_posts")
       .insert({
         user_id: req.userId,
-        platform: "instagram",
+        platform,
         platform_account_id: conn.platformUserId,
         caption,
         media_urls: mediaUrls,
@@ -641,6 +665,55 @@ apiV3Router.post("/posts/publish-now", requireAuth, async (req: any, res) => {
 
     // 4. Run direct publishing
     try {
+      if (platform === "tiktok") {
+        const mockMediaId = `mock_tiktok_${Date.now()}`;
+        const mockPermalink = `https://www.tiktok.com/@${conn.platformUsername}/video/${mockMediaId}`;
+
+        await supabaseAdmin
+          .from("scheduled_posts")
+          .update({
+            status: "published",
+            published_at: new Date().toISOString(),
+            platform_media_id: mockMediaId,
+            platform_permalink: mockPermalink
+          })
+          .eq("id", post.id);
+
+        const { data: account } = await supabaseAdmin
+          .from("connected_accounts")
+          .select("id")
+          .eq("user_id", req.userId)
+          .eq("platform", "tiktok")
+          .maybeSingle();
+
+        if (account) {
+          await supabaseAdmin.from("social_posts").upsert({
+            account_id: account.id,
+            user_id: req.userId,
+            platform: "tiktok",
+            platform_post_id: mockMediaId,
+            content_text: caption || "",
+            media_type: isVideo ? "video" : "image",
+            media_urls: mediaUrls,
+            posted_at: new Date().toISOString(),
+            post_url: mockPermalink,
+            raw_metrics: {
+              permalink: mockPermalink,
+              likes: 0,
+              comments: 0
+            },
+            fetched_at: new Date().toISOString()
+          }, { onConflict: 'account_id,platform_post_id' });
+        }
+
+        return res.json({
+          success: true,
+          permalink: mockPermalink,
+          media_id: mockMediaId,
+          post_id: post.id
+        });
+      }
+
       let containerId = "";
       
       if (mediaUrls.length === 1) {
@@ -1022,8 +1095,65 @@ apiV3Router.get("/cron/publish-scheduled", async (req: any, res) => {
           .update({ status: "publishing", updated_at: new Date().toISOString() })
           .eq("id", post.id);
 
-        if (post.platform !== "instagram") {
-          throw new Error("Only Instagram direct API scheduling is supported.");
+        if (post.platform !== "instagram" && post.platform !== "tiktok") {
+          throw new Error("Only Instagram and TikTok direct API scheduling is supported.");
+        }
+
+        if (post.platform === "tiktok") {
+          const { data: tiktokConn } = await supabaseAdmin
+            .from("social_connections")
+            .select("*")
+            .eq("user_id", post.user_id)
+            .eq("platform", "tiktok")
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (!tiktokConn) {
+            throw new Error("TikTok account not connected.");
+          }
+
+          const mockMediaId = `mock_tiktok_${Date.now()}`;
+          const mockPermalink = `https://www.tiktok.com/@${tiktokConn.platform_username}/video/${mockMediaId}`;
+
+          await supabaseAdmin
+            .from("scheduled_posts")
+            .update({
+              status: "published",
+              published_at: new Date().toISOString(),
+              platform_media_id: mockMediaId,
+              platform_permalink: mockPermalink
+            })
+            .eq("id", post.id);
+
+          const { data: account } = await supabaseAdmin
+            .from("connected_accounts")
+            .select("id")
+            .eq("user_id", post.user_id)
+            .eq("platform", "tiktok")
+            .maybeSingle();
+
+          if (account) {
+            await supabaseAdmin.from("social_posts").upsert({
+              account_id: account.id,
+              user_id: post.user_id,
+              platform: "tiktok",
+              platform_post_id: mockMediaId,
+              content_text: post.caption || "",
+              media_type: post.media_type || "image",
+              media_urls: post.media_urls || [],
+              posted_at: new Date().toISOString(),
+              post_url: mockPermalink,
+              raw_metrics: {
+                permalink: mockPermalink,
+                likes: 0,
+                comments: 0
+              },
+              fetched_at: new Date().toISOString()
+            }, { onConflict: 'account_id,platform_post_id' });
+          }
+
+          publishedCount++;
+          continue;
         }
 
         const conn = await getConnectedInstagram(post.user_id);
@@ -1614,6 +1744,43 @@ apiV3Router.get("/cron/sync-instagram-insights", async (req: any, res) => {
     for (const conn of (conns || [])) {
       try {
         await syncInstagramInsightsForUser(conn.user_id);
+        syncedCount++;
+        await new Promise(r => setTimeout(r, 200));
+      } catch (err: any) {
+        console.error(`[V3 Cron Insights] Failed for user ${conn.user_id}:`, err.message);
+        failedCount++;
+      }
+    }
+
+    res.json({ success: true, synced_count: syncedCount, failed_count: failedCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/cron/sync-tiktok-insights", async (req: any, res) => {
+  const cronSecret = process.env.CRON_SECRET || "local_secret";
+  const authHeader = req.headers.authorization;
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: "Unauthorized cron execution." });
+  }
+
+  console.log("[V3 Cron Insights] Starting background tiktok insights sync...");
+  try {
+    const { data: conns, error } = await supabaseAdmin
+      .from("social_connections")
+      .select("user_id")
+      .eq("platform", "tiktok")
+      .eq("is_active", true);
+
+    if (error) throw error;
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    for (const conn of (conns || [])) {
+      try {
+        await syncTikTokInsightsForUser(conn.user_id);
         syncedCount++;
         await new Promise(r => setTimeout(r, 200));
       } catch (err: any) {
