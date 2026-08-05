@@ -130,16 +130,7 @@ export default function AuthPage() {
               Continue with one of the following options
             </p>
 
-            {isSignUp && (location.state as any)?.initialPrompt && (
-              <div className="mb-4 px-4 py-3 bg-violet-50 border border-violet-200 text-violet-900 rounded-xl text-[13px] flex items-start gap-2">
-                <span className="text-[16px]">🤖</span>
-                <div>
-                  <span className="font-bold">ZieAds AI Agent Siap Menjawab:</span>
-                  <p className="text-violet-700 italic mt-0.5">"{(location.state as any).initialPrompt}"</p>
-                  <p className="text-zinc-500 text-[11px] mt-1 font-normal">Daftar akun gratis di bawah untuk langsung membuka jawaban & fitur AI Agent.</p>
-                </div>
-              </div>
-            )}
+
 
             {error && (
               <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-[14px]">

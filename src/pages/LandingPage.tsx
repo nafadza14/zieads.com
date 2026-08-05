@@ -54,6 +54,8 @@ export default function LandingPage({ onScanComplete }: Props) {
  
   const [heroChatInput, setHeroChatInput] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [pendingPrompt, setPendingPrompt] = useState('');
 
   const rotatingPlaceholders = [
     "Ask AI Agent: 'Generate 5 viral TikTok hooks for my brand...'",
@@ -71,12 +73,14 @@ export default function LandingPage({ onScanComplete }: Props) {
 
   const handleHeroChatSend = (promptText?: string) => {
     const textToSend = promptText || heroChatInput || rotatingPlaceholders[placeholderIndex].replace("Ask AI Agent: '", "").replace("'", "");
-    if (!textToSend.trim()) {
-      navigate('/sign-up');
-      return;
-    }
-    // Directly redirect user to auth / signup page upon sending
-    navigate('/sign-up', { state: { initialPrompt: textToSend } });
+    const finalPrompt = textToSend.trim();
+    setPendingPrompt(finalPrompt);
+    setShowOnboardingModal(true);
+  };
+
+  const handleModalConfirm = () => {
+    setShowOnboardingModal(false);
+    navigate('/sign-up', { state: { initialPrompt: pendingPrompt } });
   };
 
   /* ── Hero Rotating Headline Animation State ── */
@@ -481,7 +485,7 @@ export default function LandingPage({ onScanComplete }: Props) {
         
         <h1 className="hero-title flex flex-col items-center">
           <span>The AI Marketing Agent that</span>
-          <span className="lp-pill-highlight mt-2 rotating-container relative inline-block text-[#1A1A1A] text-[0.75em] whitespace-nowrap min-h-[50px] sm:min-h-[60px] md:min-h-[70px] align-middle">
+          <span className="lp-pill-highlight mt-2 rotating-container relative inline-block text-[#1A1A1A] whitespace-nowrap min-h-[50px] sm:min-h-[60px] md:min-h-[70px] align-middle">
             {prefersReducedMotion ? (
               <span>runs your social media.</span>
             ) : (
@@ -667,7 +671,133 @@ export default function LandingPage({ onScanComplete }: Props) {
         </div>
       </section>
 
+      {/* ── Onboarding Modal Popup ── */}
+      {showOnboardingModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setShowOnboardingModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '28px',
+              padding: '40px 36px',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '0'
+            }}
+          >
+            {/* Icon */}
+            <div style={{
+              width: '60px', height: '60px',
+              borderRadius: '18px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: '24px',
+              boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
+            }}>
+              <Sparkles size={28} color="#FFFFFF" />
+            </div>
+
+            {/* Heading */}
+            <h2 style={{
+              fontSize: '24px', fontWeight: 700,
+              color: '#0F0F0F', lineHeight: 1.25,
+              marginBottom: '12px', letterSpacing: '-0.02em'
+            }}>
+              One step away from your<br />AI Marketing Agent
+            </h2>
+
+            {/* Subtext */}
+            <p style={{
+              fontSize: '15px', color: '#6B7280',
+              lineHeight: 1.65, marginBottom: '28px',
+              maxWidth: '360px'
+            }}>
+              Create your ZieAds account and connect your social media — so your AI Agent fully understands your brand and delivers insights that actually matter.
+            </p>
+
+            {/* Prompt preview */}
+            {pendingPrompt && (
+              <div style={{
+                background: '#F5F3FF',
+                border: '1px solid #DDD6FE',
+                borderRadius: '14px',
+                padding: '14px 18px',
+                marginBottom: '28px',
+                width: '100%',
+                textAlign: 'left'
+              }}>
+                <p style={{ fontSize: '11px', fontWeight: 600, color: '#7C3AED', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your question for the AI Agent</p>
+                <p style={{ fontSize: '14px', color: '#4C1D95', fontStyle: 'italic', lineHeight: 1.5 }}>"{pendingPrompt}"</p>
+              </div>
+            )}
+
+            {/* Steps */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginBottom: '28px' }}>
+              {[
+                { icon: '📧', label: 'Create your free account' },
+                { icon: '📱', label: 'Connect your Instagram & social media' },
+                { icon: '🤖', label: 'Get your AI Agent answer instantly' },
+              ].map((step, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  background: '#F9FAFB', borderRadius: '12px', padding: '12px 14px',
+                  border: '1px solid #F3F4F6'
+                }}>
+                  <span style={{ fontSize: '18px' }}>{step.icon}</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>{step.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA Button */}
+            <button
+              onClick={handleModalConfirm}
+              className="btn-lp-primary-gradient"
+              style={{
+                width: '100%', padding: '16px', borderRadius: '14px',
+                border: 'none', color: '#FFFFFF',
+                fontWeight: 700, fontSize: '16px',
+                cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                gap: '8px', boxShadow: '0 8px 24px rgba(99,102,241,0.35)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span>Create Free Account</span>
+              <ArrowRight size={18} />
+            </button>
+
+            {/* Dismiss */}
+            <button
+              onClick={() => setShowOnboardingModal(false)}
+              style={{
+                marginTop: '14px', background: 'none', border: 'none',
+                fontSize: '13px', color: '#9CA3AF', cursor: 'pointer',
+                fontWeight: 500
+              }}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Style for Word Reveal Animation */}
+
       <style>{`
         @keyframes wordReveal {
           to {
