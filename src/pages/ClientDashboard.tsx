@@ -8,6 +8,7 @@ import { useCreditStore } from '../lib/creditStore';
 import CreditBadge from '../components/CreditBadge';
 import FeatureGateModal from '../components/FeatureGateModal';
 import DepletionOverlay from '../components/DepletionOverlay';
+import V3Layout from '../components/v3/V3Layout';
 
 const P = 'var(--primary)';
 const PL = 'var(--primary-bg)';
@@ -60,8 +61,10 @@ export default function ClientDashboard({ reportData }: Props) {
   useEffect(() => {
     if (location.state && (location.state as any).defaultTab) {
       setSidebarNav((location.state as any).defaultTab);
+    } else if (location.pathname === '/clients') {
+      navigate('/analyst', { replace: true });
     }
-  }, [location.state]);
+  }, [location.state, location.pathname, navigate]);
 
   const [selectedSkill, setSelectedSkill] = useState('audit');
   const [urlInput, setUrlInput] = useState('');
@@ -70,7 +73,7 @@ export default function ClientDashboard({ reportData }: Props) {
   const [skillResult] = useState<any>(null);
   const [userEmail, setUserEmail] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [sidebarNav, setSidebarNav] = useState('home');
+  const [sidebarNav, setSidebarNav] = useState('settings');
   const [latestAudit, setLatestAudit] = useState<any>(null);
   const [recentAudits, setRecentAudits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,119 +242,7 @@ export default function ClientDashboard({ reportData }: Props) {
   const getScoreColor = (s: number) => s >= 70 ? '#00c9a7' : s >= 50 ? '#f59e0b' : s > 0 ? '#dc2626' : G;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', fontFamily: 'inherit' }}>
-
-      {/* ─── SIDEBAR ─── */}
-      <aside style={{ width: 240, background: 'var(--bg-soft)', borderRight: `1px solid ${B}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '20px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 24, paddingLeft: 8 }} onClick={() => navigate('/')}>
-            <ZieAdsLogo size={28} />
-            <span style={{ fontSize: '1rem', fontWeight: 600, color: D }}>ZieAds</span>
-          </div>
-
-          <button onClick={() => { setUrlInput(''); setSidebarNav('home'); }} style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '8px 0', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: 'pointer', marginBottom: 24, fontSize: '0.875rem' }}>
-            + New audit
-          </button>
-
-          {/* Score Pill */}
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: 16, marginBottom: 32, boxShadow: 'var(--shadow-sm)' }}>
-            <div style={{ fontSize: '0.75rem', color: G, marginBottom: 4 }}>Ads readiness score</div>
-            {hasReport ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
-                  <span style={{ fontSize: '1.8rem', fontWeight: 600, color: D, fontFamily: 'monospace' }}>{overall}</span>
-                  <span style={{ fontSize: '0.85rem', color: G }}>/100</span>
-                </div>
-                <div style={{ width: '100%', height: 4, background: 'var(--bg-surface)', borderRadius: 2 }}>
-                  <div style={{ width: `${overall}%`, height: '100%', background: getScoreColor(overall), borderRadius: 2 }}></div>
-                </div>
-              </>
-            ) : (
-              <div style={{ fontSize: '0.85rem', color: G }}>No audit yet</div>
-            )}
-          </div>
-
-          {/* Daily Operations */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>Daily Operations</div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {[
-                { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} style={{ color: '#71717A' }} /> },
-                { k: '/composer', l: 'Composer', icon: <PenTool size={15} style={{ color: '#71717A' }} /> },
-                { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} style={{ color: '#71717A' }} /> },
-                { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} style={{ color: '#71717A' }} /> },
-                { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} style={{ color: '#71717A' }} /> },
-                { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} style={{ color: '#71717A' }} /> },
-                { k: '/connections', l: 'Connections', icon: <Link2 size={15} style={{ color: '#71717A' }} /> },
-              ].map(n => (
-                <li key={n.k} onClick={() => navigate(n.k)} style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {n.icon}
-                  {n.l}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Nav */}
-          {['home', 'skills'].map(section => (
-            <div key={section} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>{section === 'home' ? 'TOOLS & REPORTS' : 'SKILLS'}</div>
-              {section === 'home' ? (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {[{k:'home',l:'Audit'},{k:'reports',l:'Reports'},{k:'agent',l:'AI Agent'},{k:'profile-page',l:'Business Profile'},{k:'referrals',l:'Referrals'},{k:'settings',l:'Settings'},{k:'skills',l:'All Skills'}].map(n => (
-                    <li key={n.k} onClick={() => { if (n.k === 'agent') { navigate('/agent'); return; } if (n.k === 'profile-page') { navigate('/profile'); return; } setSidebarNav(n.k); }} style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontWeight: sidebarNav === n.k ? 600 : 400, background: sidebarNav === n.k ? 'var(--primary-bg)' : 'transparent', color: sidebarNav === n.k ? 'var(--text)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {n.k === 'home' && <Search size={15} style={{ color: '#71717A' }} />}
-                      {n.k === 'reports' && <FileText size={15} style={{ color: '#71717A' }} />}
-                      {n.k === 'agent' && <Bot size={15} style={{ color: '#71717A' }} />}
-                      {n.k === 'profile-page' && <User size={15} style={{ color: '#71717A' }} />}
-                      {n.k === 'referrals' && <Share2 size={15} style={{ color: '#71717A' }} />}
-                      {n.k === 'settings' && <SettingsIcon size={15} style={{ color: '#71717A' }} />}
-                      {n.k === 'skills' && <LayoutGrid size={15} style={{ color: '#71717A' }} />}
-                      {n.l}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'monospace', paddingLeft: 8 }}>
-                  {SKILLS.slice(0, 5).map(s => (
-                    <li key={s.id} onClick={() => { setSidebarNav('skills'); setSelectedSkill(s.id); }} style={{ cursor: 'pointer', color: 'var(--text-secondary)' }}>{s.cmd}</li>
-                  ))}
-                  <li onClick={() => setSidebarNav('skills')} style={{ cursor: 'pointer', color: G, fontFamily: 'inherit', fontSize: '0.8rem', paddingTop: 4 }}>+ {SKILLS.length - 5} more</li>
-                </ul>
-              )}
-            </div>
-          ))}
-
-          {/* Clients */}
-          {hasReport && (
-            <div>
-              <div style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, paddingLeft: 8, marginBottom: 8 }}>CLIENTS</div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <li style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', color: 'var(--text-secondary)' }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: P }}></span>{auditUrl}</li>
-              </ul>
-            </div>
-          )}
-        </div>
-
-        {/* User footer */}
-        <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: `1px solid ${B}`, background: '#fff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: D }}>{initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: D, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail || 'User'}</div>
-              <div style={{ fontSize: '0.7rem', color: G }}>{creditStore.plan_display_name || 'Free'} Plan</div>
-            </div>
-          </div>
-          {/* Credit badge row */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-            <CreditBadge pool="ai_chat" />
-            <CreditBadge pool="skill_run" />
-          </div>
-          <button onClick={() => navigate('/pricing')} style={{ marginTop: 10, width: '100%', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '6px 0', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>Upgrade Plan</button>
-          <button onClick={handleSignOut} style={{ marginTop: 6, width: '100%', background: 'transparent', border: 'none', borderRadius: 'var(--radius-sm)', padding: '6px 0', fontSize: '0.78rem', color: G, cursor: 'pointer' }}>Sign out</button>
-        </div>
-      </aside>
-
+    <V3Layout>
       {/* Feature Gate Modal */}
       <FeatureGateModal
         isOpen={gateModal.open}
@@ -363,7 +254,7 @@ export default function ClientDashboard({ reportData }: Props) {
       />
 
       {/* ─── MAIN ─── */}
-      <main style={{ flex: 1, padding: '24px 40px', overflowY: 'auto' }}>
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto', background: '#F7F5F0', fontFamily: 'inherit', height: '100%' }}>
 
         {/* Top Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -843,9 +734,11 @@ export default function ClientDashboard({ reportData }: Props) {
               const headers = await getAuthHeaders();
               const formData = new FormData(e.currentTarget);
               const payload = {
-                agency_name: formData.get('agencyName') || '',
-                agency_logo: formData.get('agencyLogo') || '',
-                weekly_digest: formData.get('weeklyDigest') === 'on'
+                businessName: formData.get('businessName') || '',
+                primaryUrl: formData.get('primaryUrl') || '',
+                businessType: formData.get('businessType') || '',
+                monthlyBudget: formData.get('monthlyBudget') || '',
+                weeklyDigest: formData.get('weeklyDigest') === 'on'
               };
               const res = await fetch('/api/profile', {
                 method: 'POST',
@@ -854,7 +747,14 @@ export default function ClientDashboard({ reportData }: Props) {
               });
               if (res.ok) {
                 alert('Settings saved successfully!');
-                setUserProfile({ ...userProfile, ...payload });
+                setUserProfile({
+                  ...userProfile,
+                  business_name: payload.businessName,
+                  primary_url: payload.primaryUrl,
+                  business_type: payload.businessType,
+                  monthly_budget: payload.monthlyBudget,
+                  weekly_digest: payload.weeklyDigest
+                });
               } else {
                 alert('Failed to save settings');
               }
@@ -967,6 +867,6 @@ export default function ClientDashboard({ reportData }: Props) {
         )}
 
       </main>
-    </div>
+    </V3Layout>
   );
 }
