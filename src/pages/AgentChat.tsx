@@ -142,6 +142,49 @@ const USE_CASES = [
 type UseCaseId = typeof USE_CASES[number]['id'];
 
 // ─── Suggested questions grouped by category ─────────────────────────────────
+const DYNAMIC_SUGGESTIONS = [
+  {
+    tag: 'Meta Ads',
+    q: 'What Meta audience should I target for my business?',
+    match: (p: any) => p.platforms_in_focus?.includes('Meta') || p.platforms?.includes('Meta') || p.challenge?.toLowerCase().includes('meta')
+  },
+  {
+    tag: 'Meta Ads',
+    q: "My Meta ROAS dropped 40% this week. What's wrong?",
+    match: (p: any) => p.challenge?.toLowerCase().includes('roas') || p.goals?.includes('Improve ROAS / CPA')
+  },
+  {
+    tag: 'Google Ads',
+    q: 'Build me a Google Search campaign structure with ad groups',
+    match: (p: any) => p.platforms_in_focus?.includes('Google') || p.platforms?.includes('Google') || p.challenge?.toLowerCase().includes('google')
+  },
+  {
+    tag: 'Google Ads',
+    q: 'How do I fix a low Quality Score on my top keywords?',
+    match: (p: any) => p.platforms_in_focus?.includes('Google') || p.platforms?.includes('Google') || p.challenge?.toLowerCase().includes('keywords')
+  },
+  {
+    tag: 'Creative',
+    q: 'Write 5 Meta ad headlines with strong hooks for my product',
+    match: (p: any) => p.goals?.includes('Write high converting copy') || p.challenge?.toLowerCase().includes('copy') || p.challenge?.toLowerCase().includes('creative')
+  },
+  {
+    tag: 'Creative',
+    q: 'What video creative format is winning on TikTok right now?',
+    match: (p: any) => p.platforms_in_focus?.includes('TikTok') || p.platforms?.includes('TikTok') || p.challenge?.toLowerCase().includes('tiktok')
+  },
+  {
+    tag: 'Strategy',
+    q: 'How should I split a $10K/month budget across Meta and Google?',
+    match: (p: any) => p.goals?.includes('Scale ad spend budget') || p.monthly_budget === 'Over $100K' || p.monthly_budget === '$20K to $100K'
+  },
+  {
+    tag: 'Strategy',
+    q: 'Map my full-funnel ad strategy (TOFU → MOFU → BOFU)',
+    match: (p: any) => p.goals?.includes('Structure full funnel strategy') || p.challenge?.toLowerCase().includes('funnel')
+  }
+];
+
 const QUICK_QUESTIONS = [
   { cat: 'Meta Ads', q: 'What Meta audience should I target for my business?' },
   { cat: 'Meta Ads', q: 'My Meta ROAS dropped 40% this week. What\'s wrong?' },
@@ -173,6 +216,37 @@ export default function AgentChat() {
 
   const [attachedFile, setAttachedFile] = useState<{ name: string; url: string; mimeType: string } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  const getTailoredSuggestions = () => {
+    let rawList: Array<{ tag: string; q: string }> = [];
+
+    if (!userProfile) {
+      rawList = [
+        { tag: 'Strategy', q: 'Map my full-funnel ad strategy (TOFU → MOFU → BOFU)' },
+        { tag: 'Meta Ads', q: 'What Meta audience should I target for my business?' },
+        { tag: 'Creative', q: 'Write 5 Meta ad headlines with strong hooks for my product' }
+      ];
+    } else {
+      const matched = DYNAMIC_SUGGESTIONS.filter(item => item.match(userProfile));
+      rawList = matched.map(m => ({ tag: m.tag, q: m.q }));
+
+      const defaultSuggestions = [
+        { tag: 'Strategy', q: 'Map my full-funnel ad strategy (TOFU → MOFU → BOFU)' },
+        { tag: 'Meta Ads', q: 'What Meta audience should I target for my business?' },
+        { tag: 'Creative', q: 'Write 5 Meta ad headlines with strong hooks for my product' },
+        { tag: 'Google Ads', q: 'Build me a Google Search campaign structure with ad groups' }
+      ];
+
+      for (const item of defaultSuggestions) {
+        if (rawList.length >= 4) break;
+        if (!rawList.some(r => r.q === item.q)) {
+          rawList.push(item);
+        }
+      }
+    }
+
+    return rawList;
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -585,9 +659,7 @@ export default function AgentChat() {
             <>
               {/* Messages viewport */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px' }}>
-                {messages.length === 0 ? (
-                  <EmptyState onSuggest={q => sendMessage(q)} onSwitchModes={() => setActiveTab('modes')} businessName={userProfile?.business_name} />
-                ) : (
+                {messages.length === 0 ? null : (
                   <div style={{ maxWidth: 760, margin: '0 auto' }}>
                     {messages.map((msg, i) => (
                       <MessageBubble key={i} message={msg} />
@@ -752,7 +824,10 @@ export default function AgentChat() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
                     {/* Analysis Modes Pills */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>⚡ Run Mode:</span>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
+                        <Zap size={13} style={{ marginRight: 4, color: '#1E7BFF' }} />
+                        Run Mode:
+                      </span>
                       {[
                         { id: 'daily', label: 'Daily Diagnosis' },
                         { id: 'roas', label: 'ROAS Drop Analysis' },
@@ -785,8 +860,11 @@ export default function AgentChat() {
 
                     {/* Quick Suggestions Pills */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>💡 Suggestions:</span>
-                      {QUICK_QUESTIONS.slice(0, 4).map((q, idx) => (
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
+                        <Sparkles size={13} style={{ marginRight: 4, color: '#0EA5E9' }} />
+                        Suggestions:
+                      </span>
+                      {getTailoredSuggestions().map((q, idx) => (
                         <button
                           key={idx}
                           onClick={() => sendMessage(q.q)}
@@ -803,7 +881,7 @@ export default function AgentChat() {
                             whiteSpace: 'nowrap',
                             textOverflow: 'ellipsis',
                             overflow: 'hidden',
-                            maxWidth: '240px'
+                            maxWidth: '280px'
                           }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
