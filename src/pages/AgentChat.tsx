@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, PlayCircle } from 'lucide-react';
+import { Bot, PlayCircle, Send, Sparkles, ArrowRight, Zap, Link2 } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
   UilSearchAlt, UilBedDouble, UilChartDown, UilMoneyBill, UilEye, UilMedicalSquare, 
@@ -9,14 +9,14 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { useCreditStore } from '../lib/creditStore';
 import CreditBadge from '../components/CreditBadge';
-import DepletionOverlay from '../components/DepletionOverlay';
 import FeatureGateModal from '../components/FeatureGateModal';
+import V3Layout from '../components/v3/V3Layout';
 
-const P = 'var(--primary)';
-const PL = 'var(--primary-bg)';
-const G = 'var(--text-muted)';
-const D = 'var(--text)';
-const B = 'var(--border)';
+const P = '#1E7BFF'; // Premium electric blue accent
+const G = '#6B7A89'; // Muted editorial text
+const D = '#0B1B2B'; // Deep ink dark text
+const B = '#E5DFCF'; // Vintage construction grid/cream border
+const PL = '#FAF8F3'; // Soft sand inset
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Message {
@@ -278,7 +278,7 @@ export default function AgentChat() {
     const modeInfo = USE_CASES.find(u => u.id === modeId)!;
     setMessages(prev => [...prev, {
       role: 'user',
-      content: `${modeInfo.icon} Running **${modeInfo.label}**...`,
+      content: `${modeInfo.label} initiated...`,
       isAnalysis: true,
       analysisMode: modeId,
     }]);
@@ -318,12 +318,7 @@ export default function AgentChat() {
   };
 
   const isAtLimit = usage.used >= usage.limit;
-  const usagePct = Math.min((usage.used / Math.max(usage.limit, 1)) * 100, 100);
-  const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : 'ZA';
-
-  // Credit system integration
   const creditStore = useCreditStore();
-  const isChatDepleted = creditStore.ai_chat.state === 'DEPLETED' || creditStore.ai_chat.state === 'RESET_IMMINENT';
   const [modeGateModal, setModeGateModal] = useState<{ open: boolean; modeName: string; requiredPlan: 'starter' | 'pro' | 'agency' }>({ open: false, modeName: '', requiredPlan: 'pro' });
 
   const handleModeClick = (modeId: string, modeLabel: string) => {
@@ -335,273 +330,326 @@ export default function AgentChat() {
   };
 
   return (
-    <>
-    <div style={{ display: 'flex', height: '100vh', background: '#f8fafc', fontFamily: "'DM Sans', sans-serif" }}>
+    <V3Layout>
+      <div style={{
+        display: 'flex',
+        flex: 1,
+        height: '100%',
+        background: '#F7F5F0', // Cream editorial background
+        fontFamily: 'var(--font-primary, "General Sans", ui-sans-serif, system-ui, sans-serif)',
+        overflow: 'hidden'
+      }}>
 
-      {/* ─── LEFT SIDEBAR ─── */}
-      <aside style={{ width: 256, background: '#fff', borderRight: `1px solid ${B}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        {/* Logo + new */}
-        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${B}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }} onClick={() => navigate('/')}>
-            <ZieAdsLogo size={26} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: D }}>ZieAds</span>
-            <span style={{ fontSize: '0.7rem', background: PL, color: P, borderRadius: 4, padding: '2px 6px', fontWeight: 700, marginLeft: 2 }}>AI</span>
-          </div>
-          <button onClick={startNew} style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '9px 0', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
-            + New conversation
-          </button>
-        </div>
-
-        {/* Credit badges */}
-        <div style={{ padding: '12px 20px', borderBottom: `1px solid ${B}` }}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: G, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Credits</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <CreditBadge pool="ai_chat" />
-            <CreditBadge pool="skill_run" compact />
-          </div>
-          {isChatDepleted && (
-            <button onClick={() => navigate('/pricing')} style={{ marginTop: 8, width: '100%', background: PL, border: `1px solid rgba(123,47,190,0.2)`, borderRadius: 5, padding: '5px 0', fontSize: '0.75rem', fontWeight: 600, color: P, cursor: 'pointer' }}>
-              Upgrade for more credits →
+        {/* ─── LEFT SUB-SIDEBAR (CONVERSATIONS LIST) ─── */}
+        <aside style={{
+          width: 260,
+          background: '#FFFFFF',
+          borderRight: '1px solid #E5DFCF',
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0
+        }}>
+          {/* New Conversation Trigger */}
+          <div style={{ padding: '20px', borderBottom: '1px solid #E5DFCF', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button
+              onClick={startNew}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '12px 0',
+                borderRadius: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.88rem',
+                boxShadow: '0 4px 12px rgba(30,123,255,0.15)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <span>+ New Conversation</span>
             </button>
-          )}
-        </div>
-
-        {/* Back to dashboard */}
-        <div style={{ padding: '8px 20px', borderBottom: `1px solid ${B}` }}>
-          <button onClick={() => navigate('/clients')} style={{ background: 'transparent', border: 'none', color: G, fontSize: '0.82rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-            ← Dashboard
-          </button>
-        </div>
-
-        {/* Business context pill */}
-        {userProfile?.business_name && (
-          <div style={{ padding: '10px 16px', borderBottom: `1px solid ${B}` }}>
-            <div style={{ fontSize: '0.63rem', fontWeight: 700, color: G, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>Analyzing</div>
-            <div style={{ background: PL, border: `1px solid rgba(123,47,190,0.18)`, borderRadius: 6, padding: '8px 10px' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: D, marginBottom: 1 }}>{userProfile.business_name}</div>
-              {userProfile.business_type && <div style={{ fontSize: '0.7rem', color: G, marginBottom: 1 }}>{userProfile.business_type}</div>}
-              {userProfile.monthly_budget && <div style={{ fontSize: '0.7rem', color: G, marginBottom: 1 }}>Budget: {userProfile.monthly_budget}</div>}
-              {userProfile.platforms?.length > 0 && <div style={{ fontSize: '0.7rem', color: G }}>Platforms: {userProfile.platforms.join(', ')}</div>}
-            </div>
-            <button onClick={() => navigate('/profile')} style={{ marginTop: 5, background: 'none', border: 'none', fontSize: '0.68rem', color: P, cursor: 'pointer', padding: 0, fontWeight: 600 }}>
-              Update profile →
-            </button>
-          </div>
-        )}
-
-        {/* Conversation list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          <div style={{ padding: '6px 20px 4px', fontSize: '0.68rem', fontWeight: 700, color: G, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent</div>
-          {loadingConvs ? (
-            <div style={{ padding: '12px 20px', color: G, fontSize: '0.82rem' }}>Loading...</div>
-          ) : conversations.length === 0 ? (
-            <div style={{ padding: '12px 20px', color: G, fontSize: '0.82rem' }}>No conversations yet</div>
-          ) : conversations.map(conv => (
-            <div key={conv.id} onClick={() => loadConversation(conv.id)} style={{ padding: '8px 20px', cursor: 'pointer', background: activeConvId === conv.id ? '#f1f5f9' : 'transparent', borderLeft: activeConvId === conv.id ? `3px solid ${P}` : '3px solid transparent', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: activeConvId === conv.id ? 600 : 400, color: D, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.title}</div>
-                <div style={{ fontSize: '0.7rem', color: G, marginTop: 1 }}>{new Date(conv.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+            
+            {userProfile?.business_name && (
+              <div style={{
+                background: '#FAF8F3',
+                border: '1px solid #EBE6DC',
+                borderRadius: '12px',
+                padding: '12px 14px',
+                marginTop: '4px'
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7A89', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Business Context</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0B1B2B', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{userProfile.business_name}</div>
+                {userProfile.business_type && <div style={{ fontSize: '0.72rem', color: '#6B7A89', marginTop: 1 }}>{userProfile.business_type}</div>}
+                <button onClick={() => navigate('/profile')} style={{ marginTop: '6px', background: 'none', border: 'none', fontSize: '11px', color: '#1E7BFF', cursor: 'pointer', padding: 0, fontWeight: 600 }}>
+                  Edit Profile →
+                </button>
               </div>
-              <button onClick={e => deleteConv(conv.id, e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: G, fontSize: '1rem', padding: '1px 3px', opacity: 0.5 }} title="Delete">×</button>
-            </div>
-          ))}
-        </div>
-
-        {/* User */}
-        <div style={{ padding: '14px 20px', borderTop: `1px solid ${B}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: D }}>{initials}</div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: D, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{userEmail || 'User'}</div>
-              <div style={{ fontSize: '0.68rem', color: G, textTransform: 'capitalize' }}>{usage.plan} plan</div>
-            </div>
+            )}
           </div>
-        </div>
-      </aside>
 
-      {/* ─── MAIN AREA ─── */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-        {/* Header with tabs */}
-        <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, flexShrink: 0 }}>
-          <div style={{ padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 8, background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <Bot size={18} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.97rem', color: D }}>ZieAds AI Agent</div>
-              <div style={{ fontSize: '0.74rem', color: G }}>Expert paid ads strategist · 10 deep analysis modes · powered by Claude</div>
-            </div>
-            {/* Status badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 20, padding: '4px 10px', fontSize: '0.72rem', fontWeight: 600, color: '#065f46' }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
-              Ready
-            </div>
+          {/* Conversations feed */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
+            <div style={{ padding: '0 20px 8px', fontSize: '10px', fontWeight: 700, color: '#6B7A89', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recent Chats</div>
+            {loadingConvs ? (
+              <div style={{ padding: '12px 20px', color: '#6B7A89', fontSize: '0.82rem' }}>Loading...</div>
+            ) : conversations.length === 0 ? (
+              <div style={{ padding: '12px 20px', color: '#6B7A89', fontSize: '0.82rem' }}>No conversations yet</div>
+            ) : conversations.map(conv => {
+              const isActive = activeConvId === conv.id;
+              return (
+                <div
+                  key={conv.id}
+                  onClick={() => loadConversation(conv.id)}
+                  style={{
+                    padding: '11px 20px',
+                    cursor: 'pointer',
+                    background: isActive ? '#FAF8F3' : 'transparent',
+                    borderLeft: isActive ? '3px solid #1E7BFF' : '3px solid transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: isActive ? 600 : 500, color: '#0B1B2B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.title}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#6B7A89', marginTop: 2 }}>{new Date(conv.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                  </div>
+                  <button onClick={e => deleteConv(conv.id, e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7A89', fontSize: '1rem', padding: '0 4px', opacity: 0.5 }} title="Delete">×</button>
+                </div>
+              );
+            })}
           </div>
-          {/* Tabs */}
-          <div style={{ display: 'flex', paddingLeft: 28, gap: 0, borderTop: `1px solid ${B}` }}>
-            {(['chat', 'modes'] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{ background: 'transparent', border: 'none', padding: '10px 20px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: activeTab === tab ? 700 : 400, color: activeTab === tab ? P : G, borderBottom: activeTab === tab ? `2px solid ${P}` : '2px solid transparent', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {tab === 'chat' ? (
-                  <><UilChat size={16} /> Chat</>
-                ) : (
-                  <><UilBolt size={16} /> Analysis Modes</>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        </aside>
 
-        {/* Tab: Analysis Modes */}
-        {activeTab === 'modes' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-            <div style={{ maxWidth: 900, margin: '0 auto' }}>
-              <div style={{ marginBottom: 20 }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: D, margin: '0 0 6px' }}>10 Deep Analysis Modes</h2>
-                <p style={{ color: G, fontSize: '0.88rem', margin: 0 }}>Each mode runs a full structured analysis using your audit data as context. Paste any extra data (metrics, screenshots text, campaign stats) below to get more specific results.</p>
+        {/* ─── WORKSPACE CONTENT ─── */}
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Header */}
+          <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E5DFCF', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: '12px', background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                <Bot size={18} />
               </div>
-
-              {/* Optional data input */}
-              <div style={{ marginBottom: 20, background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 16 }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: G, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Optional: Paste your campaign data (metrics, numbers, issues)</div>
-                <textarea
-                  value={additionalData}
-                  onChange={e => setAdditionalData(e.target.value)}
-                  placeholder="e.g. 'Meta ROAS: 1.8, CPA: $42, CTR: 0.9%, Daily spend: $800, Campaign: Prospecting-Broad' (the more specific you are, the better the analysis)"
-                  rows={3}
-                  style={{ width: '100%', border: `1px solid ${B}`, borderRadius: 6, padding: '10px 12px', fontSize: '0.85rem', color: D, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
-                />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.97rem', color: '#0B1B2B' }}>ZieAds AI Agent</div>
+                <div style={{ fontSize: '0.74rem', color: '#6B7A89' }}>Strategic Ads Analyst · Claude 3.5 Sonnet</div>
               </div>
+            </div>
 
-              {/* Mode grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                {USE_CASES.map(uc => (
-                  <UseCaseCard
-                    key={uc.id}
-                    useCase={uc}
-                    isRunning={runningMode === uc.id && loading}
-                    isDisabled={loading || isAtLimit}
-                    onRun={() => runAnalysis(uc.id)}
+            {/* Toggle tabs */}
+            <div style={{ display: 'flex', gap: 6, background: '#FAF8F3', border: '1px solid #E5DFCF', padding: '3px', borderRadius: '10px' }}>
+              {(['chat', 'modes'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  style={{
+                    background: activeTab === tab ? '#FFFFFF' : 'transparent',
+                    border: activeTab === tab ? '1px solid #E5DFCF' : '1px solid transparent',
+                    boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.03)' : 'none',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    color: activeTab === tab ? '#1E7BFF' : '#6B7A89',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {tab === 'chat' ? <UilChat size={14} /> : <UilBolt size={14} />}
+                  {tab === 'chat' ? 'Chat Workspace' : 'Analysis Modes'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab: Analysis Modes */}
+          {activeTab === 'modes' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px' }}>
+              <div style={{ maxWidth: 900, margin: '0 auto' }}>
+                <div style={{ marginBottom: 24 }}>
+                  <h2 style={{ fontFamily: 'var(--font-display, "Bricolage Grotesque", sans-serif)', fontSize: '1.25rem', fontWeight: 700, color: '#0B1B2B', margin: '0 0 8px' }}>10 Deep Analysis Modes</h2>
+                  <p style={{ color: '#6B7A89', fontSize: '0.88rem', lineHeight: 1.5, margin: 0 }}>Select a mode to run a structured diagnostic based on your audit data. You can paste custom raw campaign metrics below to deliver extra precision.</p>
+                </div>
+
+                {/* Additional context input card */}
+                <div style={{ marginBottom: 24, background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(9, 9, 11, 0.02)' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6B7A89', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Optional: Paste Campaign Data (Metrics, ROAS, CPA, Spend)</div>
+                  <textarea
+                    value={additionalData}
+                    onChange={e => setAdditionalData(e.target.value)}
+                    placeholder="e.g., 'Meta Spend: $400/day, ROAS: 2.1, CTR: 1.2%, primary issue: creative ad fatigue on variant A.'"
+                    rows={3}
+                    style={{ width: '100%', border: '1px solid #E5DFCF', borderRadius: '10px', padding: '12px', fontSize: '0.85rem', color: '#0B1B2B', fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
                   />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+                </div>
 
-        {/* Tab: Chat */}
-        {activeTab === 'chat' && (
-          <>
-            {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-              {messages.length === 0 ? (
-                <EmptyState onSuggest={q => sendMessage(q)} onSwitchModes={() => setActiveTab('modes')} businessName={userProfile?.business_name} />
-              ) : (
-                <>
-                  {messages.map((msg, i) => (
-                    <MessageBubble key={i} message={msg} />
-                  ))}
-                  {loading && <TypingIndicator />}
-                  <div ref={messagesEndRef} />
-                </>
-              )}
-            </div>
-
-            {/* Input */}
-            <div style={{ padding: '16px 28px 24px', background: '#fff', borderTop: `1px solid ${B}`, flexShrink: 0 }}>
-              <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
-                {isAtLimit ? (
-                  <div style={{ padding: 14, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
-                    <div style={{ color: 'var(--red-text)', fontWeight: 600, marginBottom: 6 }}>Monthly limit reached</div>
-                    <div style={{ color: G, fontSize: '0.83rem', marginBottom: 10 }}>You've used all {usage.limit} messages this month.</div>
-                    <button onClick={() => navigate('/pricing')} style={{ background: P, color: '#fff', border: 'none', padding: '7px 20px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>Upgrade Plan</button>
-                  </div>
-                ) : (
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    background: '#FFFFFF', 
-                    border: `1px solid ${B}`, 
-                    borderRadius: 12, 
-                    padding: '12px 16px',
-                    boxShadow: '0 1px 3px rgba(9, 9, 11, 0.04)',
-                    minHeight: 56
-                  }}>
-                    <textarea
-                      ref={inputRef}
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ask anything: ad strategy, copy, analysis, ROAS issues..."
-                      rows={1}
-                      style={{ 
-                        flex: 1, 
-                        resize: 'none', 
-                        border: 'none', 
-                        background: 'transparent', 
-                        outline: 'none', 
-                        fontSize: '15px', 
-                        color: D, 
-                        fontFamily: 'inherit', 
-                        lineHeight: '1.5', 
-                        maxHeight: 120, 
-                        overflowY: 'auto' 
-                      }}
-                      onInput={e => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }}
-                      disabled={loading}
+                {/* Modes grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                  {USE_CASES.map(uc => (
+                    <UseCaseCard
+                      key={uc.id}
+                      useCase={uc}
+                      isRunning={runningMode === uc.id && loading}
+                      isDisabled={loading || isAtLimit}
+                      onRun={() => handleModeClick(uc.id, uc.label)}
                     />
-                    {/* Bottom Toolbar */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, borderTop: `1px solid ${B}`, paddingTop: 10 }}>
-                      <div style={{ display: 'flex', gap: 12, fontSize: '13px', color: G }}>
-                        <span style={{ cursor: 'pointer' }}>Attach</span>
-                        <span style={{ cursor: 'pointer' }}>Search</span>
-                        <span style={{ cursor: 'pointer' }}>Style</span>
-                      </div>
-                      <button
-                        onClick={() => sendMessage()}
-                        disabled={loading || !input.trim()}
-                        style={{ 
-                          background: loading || !input.trim() ? 'var(--bg-surface)' : 'var(--primary)', 
-                          color: loading || !input.trim() ? G : '#fff', 
-                          border: 'none', 
-                          width: 28, 
-                          height: 28, 
-                          borderRadius: '50%', 
-                          cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          flexShrink: 0 
-                        }}
-                      >
-                        {loading ? '…' : <UilArrowUp size={16} />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, padding: '0 4px' }}>
-                  <span style={{ fontSize: '0.68rem', color: G }}>Uses your audit history · Enter to send · Shift+Enter for new line</span>
-                  <button onClick={() => setActiveTab('modes')} style={{ fontSize: '0.72rem', color: P, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <UilBolt size={14} /> Run deep analysis <UilArrowRight size={14} />
-                  </button>
+                  ))}
                 </div>
               </div>
             </div>
-          </>
-        )}
-      </main>
-    </div>
+          )}
 
-    {/* Mode Feature Gate Modal */}
-    <FeatureGateModal
-      isOpen={modeGateModal.open}
-      onClose={() => setModeGateModal(m => ({ ...m, open: false }))}
-      featureName={modeGateModal.modeName}
-      featureDescription={`${modeGateModal.modeName} is available on Pro and above. Unlock all 6 AI analysis modes with Pro.`}
-      requiredPlan={modeGateModal.requiredPlan}
-      featureType="mode"
-    />
-    </>
+          {/* Tab: Chat */}
+          {activeTab === 'chat' && (
+            <>
+              {/* Messages viewport */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px' }}>
+                {messages.length === 0 ? (
+                  <EmptyState onSuggest={q => sendMessage(q)} onSwitchModes={() => setActiveTab('modes')} businessName={userProfile?.business_name} />
+                ) : (
+                  <div style={{ maxWidth: 760, margin: '0 auto' }}>
+                    {messages.map((msg, i) => (
+                      <MessageBubble key={i} message={msg} />
+                    ))}
+                    {loading && <TypingIndicator />}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input outer bar */}
+              <div style={{ padding: '24px 40px 32px', background: 'transparent', flexShrink: 0 }}>
+                <div style={{ maxWidth: 760, margin: '0 auto', width: '100%' }}>
+                  {isAtLimit ? (
+                    <div style={{ padding: 20, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '16px', textAlign: 'center' }}>
+                      <div style={{ color: '#991B1B', fontWeight: 600, fontSize: '0.92rem', marginBottom: 4 }}>Monthly Message Limit Reached</div>
+                      <div style={{ color: '#7F1D1D', fontSize: '0.83rem', marginBottom: 14 }}>You've reached your free plan limit of {usage.limit} messages.</div>
+                      <button onClick={() => navigate('/pricing')} style={{ background: '#1E7BFF', color: '#fff', border: 'none', padding: '9px 24px', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>Upgrade Plan</button>
+                    </div>
+                  ) : (
+                    /* Redesigned Premium Chat Card */
+                    <div className="hero-chat-card-outer" style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      background: '#FFFFFF', 
+                      border: '1px solid #E5DFCF', 
+                      borderRadius: '24px', 
+                      padding: '20px 24px',
+                      boxShadow: '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)',
+                      transition: 'all 0.25s ease'
+                    }}>
+                      <textarea
+                        ref={inputRef}
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Ask anything: ad strategy, hook headlines, budget split, target audience..."
+                        rows={1}
+                        style={{ 
+                          width: '100%',
+                          background: 'transparent',
+                          border: 'none',
+                          fontSize: '16px',
+                          lineHeight: '1.6',
+                          color: '#0B1B2B',
+                          outline: 'none',
+                          resize: 'none',
+                          minHeight: '60px',
+                          maxHeight: '150px',
+                          overflowY: 'auto'
+                        }}
+                        onInput={e => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 150) + 'px'; }}
+                        disabled={loading}
+                      />
+                      
+                      {/* Toolbar matching landing page style */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, borderTop: '1px solid #E5DFCF', paddingTop: 14 }}>
+                        {/* Attachments / contextual labels */}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            type="button"
+                            title="Attach File"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5DFCF',
+                              background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <Link2 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Quick Actions"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5DFCF',
+                              background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <Zap size={16} />
+                          </button>
+                        </div>
+
+                        {/* CTA Action button */}
+                        <button
+                          onClick={() => sendMessage()}
+                          disabled={loading || !input.trim()}
+                          className="btn-lp-primary-gradient"
+                          style={{ 
+                            padding: '10px 20px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            color: '#FFFFFF',
+                            fontWeight: 600,
+                            fontSize: '13.5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                            opacity: loading || !input.trim() ? 0.6 : 1,
+                            transition: 'all 0.2s ease',
+                            boxShadow: 'var(--lp-shadow-cta)'
+                          }}
+                        >
+                          <span>Ask AI Agent</span>
+                          <Send size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, padding: '0 6px' }}>
+                    <span style={{ fontSize: '11px', color: '#6B7A89' }}>Uses your audit history · Enter to send</span>
+                    <button onClick={() => setActiveTab('modes')} style={{ fontSize: '11px', color: '#1E7BFF', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <UilBolt size={12} /> Run deep analysis <UilArrowRight size={12} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* Mode Feature Gate Modal */}
+      <FeatureGateModal
+        isOpen={modeGateModal.open}
+        onClose={() => setModeGateModal(m => ({ ...m, open: false }))}
+        featureName={modeGateModal.modeName}
+        featureDescription={`${modeGateModal.modeName} is available on Pro and above. Unlock all 6 AI analysis modes with Pro.`}
+        requiredPlan={modeGateModal.requiredPlan}
+        featureType="mode"
+      />
+    </V3Layout>
   );
 }
 
@@ -613,38 +661,60 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun }: {
   onRun: () => void;
 }) {
   return (
-    <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, transition: 'border-color 0.1s, box-shadow 0.1s' }}
-      onMouseOver={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'; }}
-      onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.borderColor = B; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+    <div style={{ 
+      background: '#FFFFFF', 
+      border: '1px solid #E5DFCF', 
+      borderRadius: '16px', 
+      padding: '20px', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: 14, 
+      transition: 'all 0.2s ease',
+      boxShadow: '0 2px 8px rgba(11, 27, 43, 0.03)'
+    }}
+      onMouseOver={e => { 
+        (e.currentTarget as HTMLDivElement).style.borderColor = '#1E7BFF'; 
+        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 32px rgba(11, 27, 43, 0.06)'; 
+      }}
+      onMouseOut={e => { 
+        (e.currentTarget as HTMLDivElement).style.borderColor = '#E5DFCF'; 
+        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(11, 27, 43, 0.03)'; 
+      }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', border: `1px solid ${B}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ 
+          width: 42, height: 42, borderRadius: '10px', 
+          background: '#FAF8F3', border: '1px solid #EBE6DC', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center', 
+          color: '#3D4F62', flexShrink: 0 
+        }}>
           {useCase.icon}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text)' }}>{useCase.label}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>{useCase.shortDesc}</div>
+          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0B1B2B' }}>{useCase.label}</div>
+          <div style={{ fontSize: '0.75rem', color: '#6B7A89', marginTop: 2 }}>{useCase.shortDesc}</div>
         </div>
       </div>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5, flex: 1 }}>{useCase.prompt.slice(0, 100)}…</div>
+      <div style={{ fontSize: '0.8rem', color: '#3D4F62', lineHeight: 1.55, flex: 1 }}>{useCase.prompt.slice(0, 110)}…</div>
       <button
         onClick={onRun}
         disabled={isDisabled}
         style={{
-          background: isRunning ? 'var(--bg-surface)' : 'var(--primary)',
-          color: isRunning ? 'var(--text)' : '#fff',
-          border: isRunning ? `1px solid ${B}` : 'none',
-          borderRadius: 'var(--radius-sm)',
-          padding: '6px 0',
+          background: isRunning ? '#FAF8F3' : 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)',
+          color: isRunning ? '#0B1B2B' : '#fff',
+          border: isRunning ? '1px solid #E5DFCF' : 'none',
+          borderRadius: '10px',
+          padding: '8px 0',
           fontWeight: 600,
           cursor: isDisabled ? 'not-allowed' : 'pointer',
           fontSize: '0.82rem',
-          opacity: isDisabled && !isRunning ? 0.5 : 1,
-          transition: 'all 0.1s',
+          opacity: isDisabled && !isRunning ? 0.6 : 1,
+          transition: 'all 0.15s ease',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 6,
+          boxShadow: isRunning ? 'none' : '0 4px 12px rgba(30,123,255,0.15)'
         }}
       >
         {isRunning ? (
@@ -662,47 +732,77 @@ function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q:
   const cats = [...new Set(QUICK_QUESTIONS.map(q => q.cat))];
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', paddingTop: 40 }}>
+    <div style={{ maxWidth: 680, margin: '0 auto', paddingTop: 20 }}>
       {/* Hero */}
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
-        <div style={{ width: 48, height: 48, background: 'var(--bg-surface)', border: `1px solid ${B}`, borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--text)' }}>
-          <Bot size={22} />
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ width: 50, height: 50, background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#1E7BFF', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+          <Bot size={24} />
         </div>
-        <h2 style={{ fontSize: '32px', fontWeight: 500, color: 'var(--text)', letterSpacing: '-0.02em', margin: '0 0 16px', lineHeight: 1.2 }}>
-          Ask ZieAds anything about <span style={{ fontStyle: 'italic', fontWeight: 600 }}>paid ads strategy</span>.
+        <h2 style={{ fontFamily: 'var(--font-display, "Bricolage Grotesque", sans-serif)', fontSize: '30px', fontWeight: 700, color: '#0B1B2B', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.25 }}>
+          Ask ZieAds anything about <span style={{ fontStyle: 'italic', color: '#1E7BFF', fontWeight: 800 }}>paid ads strategy</span>.
         </h2>
-        <p style={{ color: G, fontSize: '0.875rem', lineHeight: 1.5, margin: '0 auto 24px', maxWidth: 520 }}>
+        <p style={{ color: '#6B7A89', fontSize: '0.88rem', lineHeight: 1.6, margin: '0 auto 24px', maxWidth: 520 }}>
           Your expert paid ads strategist. Ask anything about Meta, Google, TikTok or LinkedIn, or run one of our 10 deep analysis modes.
         </p>
         {businessName && (
-          <div style={{ display: 'inline-block', background: 'var(--bg-soft)', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '4px 12px', fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 20 }}>
-            Context: {businessName}
+          <div style={{ display: 'inline-block', background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '20px', padding: '4px 14px', fontSize: '0.78rem', color: '#3D4F62', fontWeight: 600, marginBottom: 20 }}>
+            Analyzing: {businessName}
           </div>
         )}
         <div>
-          <button onClick={onSwitchModes} style={{ background: P, color: '#fff', border: 'none', padding: '8px 18px', borderRadius: 'var(--radius-sm)', fontWeight: 500, cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <button 
+            onClick={onSwitchModes} 
+            className="btn-lp-primary-gradient"
+            style={{ 
+              color: '#fff', 
+              border: 'none', 
+              padding: '10px 22px', 
+              borderRadius: '10px', 
+              fontWeight: 600, 
+              cursor: 'pointer', 
+              fontSize: '0.85rem', 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: 6,
+              boxShadow: 'var(--lp-shadow-cta)'
+            }}
+          >
             <UilBolt size={14} /> Run Deep Analysis <UilArrowRight size={14} />
           </button>
         </div>
       </div>
 
       {/* Feature pills */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 28 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 32 }}>
         {['Daily Diagnosis', 'ROAS Drop Analysis', 'Creative Fatigue', 'Budget Optimization', 'Competitive Intel', 'Launch Readiness'].map(f => (
-          <span key={f} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 20, padding: '4px 12px', fontSize: '0.75rem', color: G, fontWeight: 500 }}>{f}</span>
+          <span key={f} style={{ background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '20px', padding: '5px 14px', fontSize: '0.75rem', color: '#3D4F62', fontWeight: 600 }}>{f}</span>
         ))}
       </div>
 
       {/* Quick questions by category */}
-      <div style={{ marginBottom: 10, fontSize: '0.72rem', fontWeight: 600, color: G, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quick questions</div>
+      <div style={{ marginBottom: 12, fontSize: '0.72rem', fontWeight: 700, color: '#6B7A89', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quick Suggestions</div>
       {cats.map(cat => (
-        <div key={cat} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{cat}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div key={cat} style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#3D4F62', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{cat}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {QUICK_QUESTIONS.filter(q => q.cat === cat).map((q, i) => (
-              <button key={i} onClick={() => onSuggest(q.q)} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', padding: '10px 14px', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', color: D, lineHeight: 1.4, transition: 'all 0.1s' }}
-                onMouseOver={e => { e.currentTarget.style.borderColor = P; e.currentTarget.style.background = 'var(--bg-surface)'; }}
-                onMouseOut={e => { e.currentTarget.style.borderColor = B; e.currentTarget.style.background = '#fff'; }}
+              <button 
+                key={i} 
+                onClick={() => onSuggest(q.q)} 
+                style={{ 
+                  background: '#FFFFFF', 
+                  border: '1px solid #E5DFCF', 
+                  borderRadius: '12px', 
+                  padding: '12px 16px', 
+                  textAlign: 'left', 
+                  cursor: 'pointer', 
+                  fontSize: '0.82rem', 
+                  color: '#0B1B2B', 
+                  lineHeight: 1.45, 
+                  transition: 'all 0.15s ease' 
+                }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
               >
                 {q.q}
               </button>
@@ -722,11 +822,11 @@ function MessageBubble({ message }: { message: Message }) {
   if (isUser && message.isAnalysis) {
     const uc = USE_CASES.find(u => u.id === message.analysisMode);
     return (
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 6, background: uc?.bg || '#f1f5f9', border: `1px solid ${uc?.border || B}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
+        <div style={{ width: 30, height: 30, borderRadius: '8px', background: uc?.bg || '#FAF8F3', border: `1px solid ${uc?.border || '#E5DFCF'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
           {uc?.icon || '⚡'}
         </div>
-        <div style={{ padding: '8px 14px', background: uc?.bg || '#f1f5f9', border: `1px solid ${uc?.border || B}`, borderRadius: '10px 10px 10px 4px', fontSize: '0.85rem', color: uc?.color || D, fontWeight: 600 }}>
+        <div style={{ padding: '10px 16px', background: uc?.bg || '#FAF8F3', border: `1px solid ${uc?.border || '#E5DFCF'}`, borderRadius: '12px 12px 12px 4px', fontSize: '0.85rem', color: uc?.color || '#0B1B2B', fontWeight: 600 }}>
           {message.content}
         </div>
       </div>
@@ -734,28 +834,28 @@ function MessageBubble({ message }: { message: Message }) {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: 18, justifyContent: isUser ? 'flex-end' : 'flex-start', maxWidth: isAnalysisResult ? '100%' : undefined }}>
+    <div style={{ display: 'flex', gap: 12, marginBottom: 20, justifyContent: isUser ? 'flex-end' : 'flex-start', maxWidth: isAnalysisResult ? '100%' : undefined }}>
       {!isUser && (
-        <div style={{ width: 28, height: 28, borderRadius: 7, background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
-          <Bot size={15} />
+        <div style={{ width: 30, height: 30, borderRadius: '9px', background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
+          <Bot size={16} />
         </div>
       )}
       <div style={{
-        maxWidth: isAnalysisResult ? '100%' : '74%',
+        maxWidth: isAnalysisResult ? '100%' : '75%',
         width: isAnalysisResult ? '100%' : undefined,
-        padding: isAnalysisResult ? '16px 20px' : '11px 14px',
-        borderRadius: isUser ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-        background: isUser ? P : '#fff',
-        color: isUser ? '#fff' : D,
-        border: isUser ? 'none' : `1px solid ${B}`,
+        padding: isAnalysisResult ? '20px 24px' : '12px 16px',
+        borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+        background: isUser ? '#EBF3FF' : '#FFFFFF',
+        color: '#0B1B2B',
+        border: isUser ? '1px solid #BFDBFE' : '1px solid #E5DFCF',
         fontSize: '0.88rem',
-        lineHeight: 1.65,
-        boxShadow: isAnalysisResult ? '0 2px 8px rgba(0,0,0,0.06)' : undefined,
+        lineHeight: 1.7,
+        boxShadow: '0 2px 8px rgba(11, 27, 43, 0.02)',
       }}>
         <MarkdownContent content={message.content} isUser={isUser} />
       </div>
       {isUser && !message.isAnalysis && (
-        <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.7rem', fontWeight: 700, color: D }}>You</div>
+        <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#E5DFCF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.72rem', fontWeight: 700, color: '#0B1B2B' }}>Me</div>
       )}
     </div>
   );
@@ -785,29 +885,29 @@ function MarkdownContent({ content, isUser }: { content: string; isUser: boolean
     }
 
     if (line.startsWith('### ')) {
-      result.push(<div key={i} style={{ fontWeight: 700, fontSize: '0.92rem', color: isUser ? '#fff' : P, marginTop: 14, marginBottom: 5 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^###\s/, '') }} />);
+      result.push(<div key={i} style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1E7BFF', marginTop: 14, marginBottom: 5 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^###\s/, '') }} />);
     } else if (line.startsWith('## ')) {
-      result.push(<div key={i} style={{ fontWeight: 800, fontSize: '0.97rem', color: isUser ? '#fff' : D, marginTop: 16, marginBottom: 6, borderBottom: isUser ? 'none' : `1px solid ${B}`, paddingBottom: 4 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^##\s/, '') }} />);
+      result.push(<div key={i} style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0B1B2B', marginTop: 16, marginBottom: 6, borderBottom: '1px solid #E5DFCF', paddingBottom: 4 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^##\s/, '') }} />);
     } else if (line.startsWith('# ')) {
-      result.push(<div key={i} style={{ fontWeight: 800, fontSize: '1.05rem', color: isUser ? '#fff' : D, marginTop: 16, marginBottom: 8 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^#\s/, '') }} />);
+      result.push(<div key={i} style={{ fontWeight: 800, fontSize: '1.15rem', color: '#0B1B2B', marginTop: 16, marginBottom: 8 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^#\s/, '') }} />);
     } else if (line.match(/^(\d+)\.\s/)) {
       const num = line.match(/^(\d+)\./)?.[1];
       result.push(
         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
-          <span style={{ flexShrink: 0, fontWeight: 700, color: isUser ? 'rgba(255,255,255,0.7)' : P, minWidth: 16 }}>{num}.</span>
+          <span style={{ flexShrink: 0, fontWeight: 700, color: '#1E7BFF', minWidth: 16 }}>{num}.</span>
           <span dangerouslySetInnerHTML={{ __html: rendered.replace(/^\d+\.\s/, '') }} />
         </div>
       );
     } else if (line.startsWith('- ') || line.startsWith('• ')) {
       result.push(
         <div key={i} style={{ display: 'flex', gap: 7, marginBottom: 4 }}>
-          <span style={{ flexShrink: 0, marginTop: 3, color: isUser ? 'rgba(255,255,255,0.6)' : P, fontSize: '0.6rem' }}>●</span>
+          <span style={{ flexShrink: 0, marginTop: 4, color: '#1E7BFF', fontSize: '0.65rem' }}>●</span>
           <span dangerouslySetInnerHTML={{ __html: rendered.replace(/^[-•]\s/, '') }} />
         </div>
       );
     } else if (line.startsWith('🔴') || line.startsWith('🟡') || line.startsWith('🟢')) {
       result.push(
-        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, padding: '8px 12px', background: isUser ? 'rgba(255,255,255,0.1)' : (line.startsWith('🔴') ? '#fef2f2' : line.startsWith('🟡') ? '#fffbeb' : '#f0fdf4'), borderRadius: 6 }}>
+        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, padding: '8px 12px', background: line.startsWith('🔴') ? '#fef2f2' : line.startsWith('🟡') ? '#fffbeb' : '#f0fdf4', borderRadius: 8 }}>
           <span dangerouslySetInnerHTML={{ __html: rendered }} />
         </div>
       );
@@ -828,12 +928,12 @@ function MarkdownTable({ rows, isUser }: { rows: string[]; isUser: boolean }) {
   const body = rows.slice(2).map(parseRow);
 
   return (
-    <div style={{ overflowX: 'auto', margin: '10px 0' }}>
+    <div style={{ overflowX: 'auto', margin: '12px 0' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
         <thead>
-          <tr style={{ background: isUser ? 'rgba(255,255,255,0.15)' : '#f8fafc' }}>
+          <tr style={{ background: '#FAF8F3', borderTop: '1px solid #E5DFCF', borderBottom: '2px solid #E5DFCF' }}>
             {header.map((h, i) => (
-              <th key={i} style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, color: isUser ? '#fff' : D, borderBottom: `2px solid ${isUser ? 'rgba(255,255,255,0.3)' : B}`, whiteSpace: 'nowrap' }}
+              <th key={i} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: '#0B1B2B', whiteSpace: 'nowrap' }}
                 dangerouslySetInnerHTML={{ __html: h.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
               />
             ))}
@@ -841,9 +941,9 @@ function MarkdownTable({ rows, isUser }: { rows: string[]; isUser: boolean }) {
         </thead>
         <tbody>
           {body.map((row, ri) => (
-            <tr key={ri} style={{ borderBottom: `1px solid ${isUser ? 'rgba(255,255,255,0.1)' : B}`, background: ri % 2 === 1 ? (isUser ? 'rgba(255,255,255,0.05)' : '#fafafa') : 'transparent' }}>
+            <tr key={ri} style={{ borderBottom: '1px solid #E5DFCF', background: ri % 2 === 1 ? '#FAF8F3' : 'transparent' }}>
               {row.map((cell, ci) => (
-                <td key={ci} style={{ padding: '6px 12px', color: isUser ? '#fff' : D }}
+                <td key={ci} style={{ padding: '8px 12px', color: '#0B1B2B' }}
                   dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
                 />
               ))}
@@ -858,13 +958,13 @@ function MarkdownTable({ rows, isUser }: { rows: string[]; isUser: boolean }) {
 // ─── Typing / loading indicator ───────────────────────────────────────────────
 function TypingIndicator() {
   return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-      <div style={{ width: 28, height: 28, borderRadius: 7, background: P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
-        <Bot size={15} />
+    <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ width: 30, height: 30, borderRadius: '9px', background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
+        <Bot size={16} />
       </div>
-      <div style={{ padding: '12px 16px', background: '#fff', border: `1px solid ${B}`, borderRadius: '12px 12px 12px 4px', display: 'flex', gap: 5, alignItems: 'center' }}>
+      <div style={{ padding: '12px 18px', background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '16px 16px 16px 4px', display: 'flex', gap: 5, alignItems: 'center', boxShadow: '0 2px 8px rgba(11,27,43,0.02)' }}>
         {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: P, animation: `za-pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#1E7BFF', animation: `za-pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
         ))}
       </div>
       <style>{`@keyframes za-pulse { 0%,80%,100%{transform:scale(0.7);opacity:0.35} 40%{transform:scale(1);opacity:1} }`}</style>
