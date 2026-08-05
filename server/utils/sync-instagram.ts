@@ -120,7 +120,8 @@ export async function syncRecentPosts(userId: string): Promise<void> {
           raw_metrics: { 
             permalink: post.permalink || '',
             likes: Number(post.like_count || 0),
-            comments: Number(post.comments_count || 0)
+            comments: Number(post.comments_count || 0),
+            media_product_type: post.media_product_type || null
           },
           fetched_at: new Date().toISOString(),
         }, { onConflict: 'account_id,platform_post_id' });
@@ -156,7 +157,7 @@ export async function syncPostInsights(userId: string): Promise<void> {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { data: posts } = await supabaseAdmin
       .from('social_posts')
-      .select('id, platform_post_id, media_type, posted_at')
+      .select('id, platform_post_id, media_type, raw_metrics, posted_at')
       .eq('user_id', userId)
       .eq('platform', 'instagram')
       .lt('posted_at', twentyFourHoursAgo)
@@ -172,7 +173,9 @@ export async function syncPostInsights(userId: string): Promise<void> {
       }
 
       try {
-        const insights = await igApi.getMediaInsights(conn.token, post.platform_post_id, post.media_type?.toUpperCase() || 'IMAGE');
+        const postRawMetrics = (post.raw_metrics as Record<string, any>) || {};
+        const mediaProductType = postRawMetrics.media_product_type || post.media_type?.toUpperCase() || 'IMAGE';
+        const insights = await igApi.getMediaInsights(conn.token, post.platform_post_id, mediaProductType);
         incrementRateLimit(userId);
 
         if (insights.length === 0) continue;
@@ -186,7 +189,7 @@ export async function syncPostInsights(userId: string): Promise<void> {
         const likes = metricsObj.likes || 0;
         const comments = metricsObj.comments || 0;
         const reach = metricsObj.reach || 0;
-        const impressions = metricsObj.impressions || 0;
+        const impressions = metricsObj.impressions || metricsObj.views || metricsObj.plays || 0;
         const saves = metricsObj.saved || 0;
         const shares = metricsObj.shares || 0;
 

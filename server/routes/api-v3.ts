@@ -1265,7 +1265,7 @@ async function syncInstagramInsightsForUser(userId: string) {
   console.log(`[V3 Insights Sync] Fetching recent media...`);
   const mediaResponse = await callInstagramAPI<{ data: any[] }>(
     conn.accessToken,
-    `${conn.platformUserId}/media?fields=id,caption,media_type,permalink,timestamp,like_count,comments_count&limit=50`
+    `${conn.platformUserId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count&limit=50`
   );
 
   const mediaList = mediaResponse.data || [];
@@ -1273,10 +1273,20 @@ async function syncInstagramInsightsForUser(userId: string) {
 
   for (const item of mediaList) {
     try {
-      const isReel = item.media_type === "VIDEO" || item.media_type === "REELS";
-      const metrics = isReel 
-        ? "plays,reach,likes,comments,shares,saved,total_interactions" 
-        : "impressions,reach,saved,likes,comments,shares";
+      const rawProductType = item.media_product_type?.toUpperCase();
+      const mediaType = item.media_type?.toUpperCase();
+      const isReel = rawProductType === "REELS" || mediaType === "REELS" || mediaType === "VIDEO";
+      
+      let metrics = "";
+      if (rawProductType === "REELS" || mediaType === "REELS" || mediaType === "VIDEO") {
+        metrics = "views,reach,likes,comments,saved,shares";
+      } else if (rawProductType === "STORY" || mediaType === "STORY") {
+        metrics = "views,reach,taps_forward,taps_back,exits,replies";
+      } else if (mediaType === "CAROUSEL_ALBUM" || mediaType === "CAROUSEL") {
+        metrics = "reach,likes,comments,saved,shares";
+      } else {
+        metrics = "impressions,reach,likes,comments,saved,shares";
+      }
       
       let metricsObj: Record<string, number> = {};
       try {
@@ -1287,14 +1297,25 @@ async function syncInstagramInsightsForUser(userId: string) {
         for (const m of (insightsResponse.data || [])) {
           metricsObj[m.name] = m.values?.[0]?.value || 0;
         }
-      } catch (e) {
-        console.warn(`[V3 Insights Sync] Detailed insights not available for media ${item.id}, using basic counts.`);
+      } catch (e: any) {
+        const errorSubcode = e.body?.error?.error_subcode;
+        const errorMessage = e.body?.error?.message || e.message || '';
+        if (
+          errorSubcode === 2108006 ||
+          errorMessage.includes('converted to a business account') ||
+          errorMessage.includes('predates the account') ||
+          errorMessage.includes('before the most recent time')
+        ) {
+          console.info(`[V3 Insights Sync] Gracefully skipping insights for media ${item.id} as it predates account conversion to business. Detail: ${errorMessage}`);
+        } else {
+          console.warn(`[V3 Insights Sync] Detailed insights not available for media ${item.id}, using basic counts. Error: ${errorMessage}`);
+        }
       }
 
       const likes = metricsObj.likes || item.like_count || 0;
       const comments = metricsObj.comments || item.comments_count || 0;
       const reach = metricsObj.reach || (likes + comments) * 12 + 10;
-      const impressions = metricsObj.impressions || metricsObj.plays || reach + 15;
+      const impressions = metricsObj.impressions || metricsObj.views || metricsObj.plays || reach + 15;
       const saves = metricsObj.saved || 0;
       const shares = metricsObj.shares || 0;
       const engagement = likes + comments + saves + shares;

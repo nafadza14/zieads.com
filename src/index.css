@@ -1359,7 +1359,7 @@ a:hover { color: var(--primary); }
 }
 
 .landing-page .hero-title {
-  font-size: 76px !important;
+  font-size: 57px !important;
   line-height: 1.05 !important;
   margin-bottom: 24px !important;
   max-width: 920px !important;
@@ -1440,7 +1440,7 @@ a:hover { color: var(--primary); }
 
 @media (max-width: 768px) {
   .landing-page .hero-title {
-    font-size: 40px !important;
+    font-size: 30px !important;
     line-height: 1.1 !important;
   }
   .landing-page .hero-input-container {

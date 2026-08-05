@@ -35,7 +35,8 @@ import {
   Calendar,
   BarChart3,
   Inbox,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Zap
 } from 'lucide-react';
 
 interface Props {
@@ -513,102 +514,147 @@ export default function LandingPage({ onScanComplete }: Props) {
           ZieAds connects to your social accounts and ad data, powered by an AI Marketing Agent that never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. Try asking your AI Agent:
         </p>
 
-        {/* ── Minimal English Hero AI Agent Chat Box (Full Card, 5x Taller Input, ZieAds Icon) ── */}
+        {/* ── Redesigned Hero AI Agent Chat Box (Reference Match) ── */}
         <div className="hero-chat-wrapper w-full max-w-3xl mx-auto mt-8 text-left relative px-2 sm:px-0">
           <div 
             style={{
               position: 'relative',
               zIndex: 1,
-              background: 'var(--lp-bg-card)',
-              border: '1px solid var(--lp-border-default)',
+              background: '#FFFFFF',
+              border: '1.5px solid var(--lp-border-default)',
               borderRadius: '24px',
-              boxShadow: 'var(--lp-shadow-showcase)',
+              boxShadow: '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)',
               padding: '24px 28px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px'
+              gap: '16px',
+              transition: 'all 0.3s ease-in-out'
             }}
+            className="hero-chat-card-outer"
           >
-            {/* 5x Taller Chat Box Container with ZieAds Icon */}
-            <div 
-              style={{ 
-                position: 'relative',
-                width: '100%',
-                background: 'var(--lp-bg-canvas)',
-                border: '1px solid var(--lp-border-default)',
-                borderRadius: '16px',
-                padding: '18px 20px',
-                transition: 'all 0.3s ease-in-out'
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--lp-accent)';
-                e.currentTarget.style.background = '#FFFFFF';
-                e.currentTarget.style.boxShadow = '0 0 0 3px var(--lp-focus-ring)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--lp-border-default)';
-                e.currentTarget.style.background = 'var(--lp-bg-canvas)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                <div style={{ paddingTop: '3px', flexShrink: 0 }}>
-                  <ZieAdsLogo size={22} />
-                </div>
-                <textarea
-                  rows={4}
-                  placeholder={rotatingPlaceholders[placeholderIndex]}
-                  value={heroChatInput}
-                  onChange={(e) => setHeroChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleHeroChatSend();
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    fontSize: '15px',
-                    lineHeight: '1.6',
-                    color: 'var(--lp-text-primary)',
-                    outline: 'none',
-                    resize: 'none',
-                    minHeight: '110px'
-                  }}
-                />
-              </div>
+            {/* Input area */}
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', width: '100%' }}>
+              <textarea
+                rows={3}
+                placeholder={rotatingPlaceholders[placeholderIndex]}
+                value={heroChatInput}
+                onChange={(e) => setHeroChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleHeroChatSend();
+                  }
+                }}
+                onFocus={(e) => {
+                  const card = e.currentTarget.closest('.hero-chat-card-outer') as HTMLDivElement;
+                  if (card) {
+                    card.style.borderColor = 'var(--lp-accent)';
+                    card.style.boxShadow = '0 20px 40px -15px rgba(30,123,255,0.12), 0 0 0 3px var(--lp-focus-ring)';
+                  }
+                }}
+                onBlur={(e) => {
+                  const card = e.currentTarget.closest('.hero-chat-card-outer') as HTMLDivElement;
+                  if (card) {
+                    card.style.borderColor = 'var(--lp-border-default)';
+                    card.style.boxShadow = '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)';
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '17px',
+                  lineHeight: '1.6',
+                  color: 'var(--lp-text-primary)',
+                  outline: 'none',
+                  resize: 'none',
+                  minHeight: '110px'
+                }}
+              />
+            </div>
 
-              {/* Action Bar inside Chat Box Card */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--lp-border-subtle)' }}>
-                <span style={{ fontSize: '12px', color: 'var(--lp-text-tertiary)', fontWeight: 500 }}>
-                  Press <kbd style={{ padding: '2px 6px', borderRadius: '4px', background: 'var(--lp-bg-inset)', border: '1px solid var(--lp-border-subtle)', fontSize: '11px' }}>Enter ↵</kbd> to ask AI Agent
-                </span>
+            {/* Bottom action bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              {/* Left side icons */}
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={() => handleHeroChatSend()}
-                  className="btn-lp-primary-gradient"
+                  type="button"
                   style={{
-                    padding: '12px 24px',
-                    borderRadius: 'var(--lp-radius-button)',
-                    border: 'none',
-                    color: '#FFFFFF',
-                    fontWeight: 600,
-                    fontSize: '14px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--lp-border-default)',
+                    background: '#F9FAFB',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    boxShadow: 'var(--lp-shadow-cta)',
+                    color: '#6B7280',
                     transition: 'all 0.2s ease'
                   }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#F3F4F6';
+                    e.currentTarget.style.borderColor = '#D1D5DB';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#F9FAFB';
+                    e.currentTarget.style.borderColor = 'var(--lp-border-default)';
+                  }}
                 >
-                  <span>Ask AI Agent</span>
-                  <Send size={15} />
+                  <Link2 size={18} />
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--lp-border-default)',
+                    background: '#F9FAFB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#6B7280',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#F3F4F6';
+                    e.currentTarget.style.borderColor = '#D1D5DB';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#F9FAFB';
+                    e.currentTarget.style.borderColor = 'var(--lp-border-default)';
+                  }}
+                >
+                  <Zap size={18} />
                 </button>
               </div>
+
+              {/* Right side CTA */}
+              <button
+                onClick={() => handleHeroChatSend()}
+                className="btn-lp-primary-gradient"
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: 'var(--lp-shadow-cta)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>Ask AI Agent</span>
+                <Send size={15} />
+              </button>
             </div>
           </div>
 

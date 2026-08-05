@@ -17,6 +17,7 @@ export interface IGMedia {
   id: string;
   caption: string;
   media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' | 'REELS';
+  media_product_type?: string;
   media_url: string;
   permalink: string;
   thumbnail_url: string;
@@ -60,7 +61,10 @@ async function igFetch<T>(url: string, token: string, options?: RequestInit): Pr
   if (!res.ok) {
     const errMsg = body?.error?.message || JSON.stringify(body);
     console.error(`[InstagramAPI] ${res.status} Error:`, errMsg);
-    throw new Error(`Instagram API Error (${res.status}): ${errMsg}`);
+    const error = new Error(`Instagram API Error (${res.status}): ${errMsg}`) as any;
+    error.status = res.status;
+    error.body = body;
+    throw error;
   }
 
   return body as T;
@@ -86,7 +90,7 @@ export async function getRecentMedia(
   limit: number = 25,
   after?: string
 ): Promise<{ data: IGMedia[]; paging?: { cursors: { after: string }; next?: string } }> {
-  const fields = 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username,is_shared_to_feed,like_count,comments_count';
+  const fields = 'id,caption,media_type,media_product_type,media_url,permalink,thumbnail_url,timestamp,username,is_shared_to_feed,like_count,comments_count';
   let url = `${IG_API_BASE}/me/media?fields=${fields}&limit=${limit}`;
   if (after) url += `&after=${after}`;
   return igFetch(url, token);
@@ -99,17 +103,20 @@ export async function getRecentMedia(
 export async function getMediaInsights(
   token: string,
   mediaId: string,
-  mediaType: string
+  mediaProductTypeOrType: string
 ): Promise<IGMediaInsight[]> {
+  const norm = mediaProductTypeOrType.toUpperCase();
   let metrics: string;
   
-  if (mediaType === 'REELS' || mediaType === 'VIDEO') {
-    metrics = 'plays,reach,likes,comments,shares,saved,total_interactions';
-  } else if (mediaType === 'STORY') {
-    metrics = 'impressions,reach,replies,taps_forward,taps_back,exits';
+  if (norm === 'REELS' || norm === 'VIDEO') {
+    metrics = 'views,reach,likes,comments,saved,shares';
+  } else if (norm === 'STORY') {
+    metrics = 'views,reach,taps_forward,taps_back,exits,replies';
+  } else if (norm === 'CAROUSEL_ALBUM' || norm === 'CAROUSEL') {
+    metrics = 'reach,likes,comments,saved,shares';
   } else {
-    // IMAGE, CAROUSEL_ALBUM
-    metrics = 'impressions,reach,saved,likes,comments,shares';
+    // FEED, IMAGE, default
+    metrics = 'impressions,reach,likes,comments,saved,shares';
   }
 
   try {
@@ -122,6 +129,19 @@ export async function getMediaInsights(
     // Insights may not be available for posts < 24h old
     if (err.message?.includes('not enough data') || err.message?.includes('Insights are not available')) {
       console.log(`[InstagramAPI] Insights not yet available for media ${mediaId}`);
+      return [];
+    }
+    
+    // Graceful skip for posts that predate account conversion to business (error subcode 2108006 or related messages)
+    const errorSubcode = err.body?.error?.error_subcode;
+    const errorMessage = err.body?.error?.message || err.message || '';
+    if (
+      errorSubcode === 2108006 ||
+      errorMessage.includes('converted to a business account') ||
+      errorMessage.includes('predates the account') ||
+      errorMessage.includes('before the most recent time')
+    ) {
+      console.info(`[InstagramAPI] Gracefully skipping insights for media ${mediaId} as it predates account conversion to business. Detail: ${errorMessage}`);
       return [];
     }
     throw err;

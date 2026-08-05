@@ -47,7 +47,10 @@ export async function callInstagramAPI<T = any>(
   if (!res.ok) {
     const errMsg = body?.error?.message || JSON.stringify(body);
     console.error(`[InstagramAPI Helper] ${res.status} Error:`, errMsg);
-    throw new Error(`Instagram API Error (${res.status}): ${errMsg}`);
+    const error = new Error(`Instagram API Error (${res.status}): ${errMsg}`) as any;
+    error.status = res.status;
+    error.body = body;
+    throw error;
   }
 
   return body as T;
