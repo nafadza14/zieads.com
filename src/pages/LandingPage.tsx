@@ -1272,7 +1272,7 @@ export default function LandingPage({ onScanComplete }: Props) {
             /* PLACEHOLDER TESTIMONIALS - To be replaced with real user quotes post-launch */
             {
               quote: "I used to spend Sunday nights planning the week's posts and guessing what to boost. Now the briefing is waiting when I wake up. I read it in five minutes and I know exactly what to do. I got my Sundays back.",
-              name: "Agenes Angelina",
+              name: "Agnes Angelina",
               role: "Founder, DTC skincare brand",
               avatar: "/testimonial-agnes.jpg",
             },
