@@ -1272,21 +1272,21 @@ export default function LandingPage({ onScanComplete }: Props) {
             /* PLACEHOLDER TESTIMONIALS - To be replaced with real user quotes post-launch */
             {
               quote: "I used to spend Sunday nights planning the week's posts and guessing what to boost. Now the briefing is waiting when I wake up. I read it in five minutes and I know exactly what to do. I got my Sundays back.",
-              name: "Sarah K.",
+              name: "Agenes Angelina",
               role: "Founder, DTC skincare brand",
-              avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80",
+              avatar: "/testimonial-agnes.jpg",
             },
             {
               quote: "The agent flagged that my best-performing Reel format had gone stale two weeks before I would have noticed. It suggested three new angles based on what had worked for me before. Two of them are now my top posts this month.",
-              name: "Alex M.",
+              name: "Andreas L Lino",
               role: "Solo founder, 2-person team",
-              avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80",
+              avatar: "/testimonial-andreas.jpg",
             },
             {
               quote: "I run marketing for six clients. The agent gives each one its own briefing and tracks their accounts separately. What used to take me a full day of dashboard-hopping every Monday now takes an hour.",
-              name: "David L.",
+              name: "Lucas Keneth",
               role: "Freelance marketing consultant",
-              avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80",
+              avatar: "/testimonial-lucas.jpg",
             },
           ].map((t, i) => (
             <div key={i} className="testimonial-card">
