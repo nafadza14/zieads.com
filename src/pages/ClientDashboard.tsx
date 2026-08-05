@@ -43,6 +43,13 @@ const RHYTHM = [
   { day: 'FRI', label: 'Client PDF report delivery', cmds: '/ads report-pdf', color: P },
 ];
 
+const BUSINESS_TYPES = ['E-commerce', 'SaaS', 'Local Business', 'B2B Lead Gen', 'Creator', 'Other'];
+const BUDGETS = ['Under $1K', '$1K to $5K', '$5K to $20K', '$20K to $100K', 'Over $100K'];
+const ROLES = ['Founder / CEO', 'Marketing Manager', 'Agency Owner / Freelancer', 'Creator', 'Other'];
+const ONBOARDING_GOALS = ['Improve ROAS / CPA', 'Scale ad spend budget', 'Generate high quality leads', 'Optimize landing page CRO', 'Research competitors ads', 'Write high converting copy', 'Structure full funnel strategy'];
+const ONBOARDING_TOOLS = ['Meta Ads', 'Google Ads', 'TikTok Ads', 'Google Analytics', 'Shopify', 'HubSpot', 'Klaviyo', 'Excel / Sheets'];
+const PLATFORMS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'YouTube'];
+
 import { generatePDF } from '../lib/pdfGenerator';
 import CompareAuditView from '../components/CompareAuditView';
 import IndustryInsights from '../components/IndustryInsights';
@@ -79,6 +86,46 @@ export default function ClientDashboard({ reportData }: Props) {
   const [loading, setLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [copyActiveTab, setCopyActiveTab] = useState('metaAds');
+
+  const [profileForm, setProfileForm] = useState({
+    businessName: '',
+    primaryUrl: '',
+    businessType: '',
+    monthlyBudget: '',
+    role: '',
+    goals: [] as string[],
+    currentTools: [] as string[],
+    platformsInFocus: [] as string[],
+    challenge: '',
+    weeklyDigest: false
+  });
+
+  const toggleGoalSetting = (g: string) => {
+    setProfileForm(prev => ({
+      ...prev,
+      goals: prev.goals.includes(g)
+        ? prev.goals.filter(x => x !== g)
+        : [...prev.goals, g],
+    }));
+  };
+
+  const toggleToolSetting = (t: string) => {
+    setProfileForm(prev => ({
+      ...prev,
+      currentTools: prev.currentTools.includes(t)
+        ? prev.currentTools.filter(x => x !== t)
+        : [...prev.currentTools, t],
+    }));
+  };
+
+  const togglePlatformSetting = (pl: string) => {
+    setProfileForm(prev => ({
+      ...prev,
+      platformsInFocus: prev.platformsInFocus.includes(pl)
+        ? prev.platformsInFocus.filter(x => x !== pl)
+        : [...prev.platformsInFocus, pl],
+    }));
+  };
 
   // Feature gate modal state
   const [gateModal, setGateModal] = useState<{ open: boolean; featureName: string; featureDesc?: string; requiredPlan?: 'starter' | 'pro' | 'agency'; featureType?: 'skill' | 'mode' }>({
@@ -119,10 +166,23 @@ export default function ClientDashboard({ reportData }: Props) {
         if (latestJson.data) dbLatest = latestJson.data;
         if (allJson.data?.length) dbAll = allJson.data;
         if (profileJson.data) {
-          setUserProfile(profileJson.data);
+          const p = profileJson.data;
+          setUserProfile(p);
+          setProfileForm({
+            businessName: p.business_name || '',
+            primaryUrl: p.primary_url || '',
+            businessType: p.business_type || '',
+            monthlyBudget: p.monthly_budget || '',
+            role: p.role || '',
+            goals: p.goals || [],
+            currentTools: p.current_tools || [],
+            platformsInFocus: p.platforms_in_focus || [],
+            challenge: p.challenge || '',
+            weeklyDigest: !!p.weekly_digest
+          });
           // Pre-fill URL input from saved profile if user hasn't typed one
-          if (profileJson.data.primary_url) {
-            setUrlInput(prev => prev || profileJson.data.primary_url);
+          if (p.primary_url) {
+            setUrlInput(prev => prev || p.primary_url);
           }
         }
       } catch (err) {
@@ -226,6 +286,51 @@ export default function ClientDashboard({ reportData }: Props) {
     localStorage.removeItem('zieads_onboarding_completed');
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const settingPillBtn = (active: boolean) => ({
+    padding: '8px 16px',
+    borderRadius: '12px',
+    border: `1px solid ${active ? '#1E7BFF' : '#E5DFCF'}`,
+    background: active ? 'rgba(30, 123, 255, 0.08)' : '#fff',
+    color: active ? '#1E7BFF' : '#3D4F62',
+    fontWeight: active ? 600 : 500,
+    cursor: 'pointer' as const,
+    fontSize: '0.85rem',
+    fontFamily: 'inherit',
+    transition: 'all 0.15s ease'
+  });
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(profileForm)
+      });
+      if (res.ok) {
+        alert('Settings & Onboarding profile saved successfully!');
+        setUserProfile({
+          ...userProfile,
+          business_name: profileForm.businessName,
+          primary_url: profileForm.primaryUrl,
+          business_type: profileForm.businessType,
+          monthly_budget: profileForm.monthlyBudget,
+          role: profileForm.role,
+          goals: profileForm.goals,
+          current_tools: profileForm.currentTools,
+          platforms_in_focus: profileForm.platformsInFocus,
+          challenge: profileForm.challenge,
+          weekly_digest: profileForm.weeklyDigest
+        });
+      } else {
+        alert('Failed to save settings');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
   };
 
   // Extract report data from latestAudit (fetched from DB)
@@ -728,78 +833,178 @@ export default function ClientDashboard({ reportData }: Props) {
 
         {/* ══════ SETTINGS VIEW ══════ */}
         {sidebarNav === 'settings' && (
-          <form style={{ maxWidth: 640 }} onSubmit={async (e) => {
-            e.preventDefault();
-            try {
-              const headers = await getAuthHeaders();
-              const formData = new FormData(e.currentTarget);
-              const payload = {
-                businessName: formData.get('businessName') || '',
-                primaryUrl: formData.get('primaryUrl') || '',
-                businessType: formData.get('businessType') || '',
-                monthlyBudget: formData.get('monthlyBudget') || '',
-                weeklyDigest: formData.get('weeklyDigest') === 'on'
-              };
-              const res = await fetch('/api/profile', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload)
-              });
-              if (res.ok) {
-                alert('Settings saved successfully!');
-                setUserProfile({
-                  ...userProfile,
-                  business_name: payload.businessName,
-                  primary_url: payload.primaryUrl,
-                  business_type: payload.businessType,
-                  monthly_budget: payload.monthlyBudget,
-                  weekly_digest: payload.weeklyDigest
-                });
-              } else {
-                alert('Failed to save settings');
-              }
-            } catch (err) { alert('Network error'); }
-          }}>
-            <h2 style={{ fontSize: '1.4rem', color: D, marginBottom: 24, fontWeight: 700 }}>Workspace Settings</h2>
+          <form style={{ maxWidth: 720 }} onSubmit={handleSaveSettings}>
+            <h2 style={{ fontSize: '1.4rem', color: D, marginBottom: 8, fontWeight: 700 }}>Workspace Settings</h2>
+            <p style={{ fontSize: '0.88rem', color: G, marginBottom: 24 }}>Customize your business profile and campaign objectives. These settings frame all AI Agent audit analysis and daily Briefing insights.</p>
             
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 24 }}>
-              <h3 style={{ fontSize: '1.1rem', color: D, marginBottom: 16 }}>Business Profile</h3>
+            {/* Card 1: Business Basics */}
+            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 16 }}>Business Basics</h3>
               
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Business Name</label>
-                <input name="businessName" defaultValue={userProfile?.business_name} type="text" style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none' }} placeholder="E.g. Acme Corp" />
+                <input 
+                  type="text" 
+                  value={profileForm.businessName} 
+                  onChange={e => setProfileForm(p => ({ ...p, businessName: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} 
+                  placeholder="E.g. Acme Corp" 
+                />
               </div>
+
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Primary Website URL</label>
-                <input name="primaryUrl" defaultValue={userProfile?.primary_url} type="url" style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none' }} placeholder="https://..." />
+                <input 
+                  type="url" 
+                  value={profileForm.primaryUrl} 
+                  onChange={e => setProfileForm(p => ({ ...p, primaryUrl: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} 
+                  placeholder="https://example.com" 
+                />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Industry / Type</label>
-                  <input name="businessType" defaultValue={userProfile?.business_type} type="text" style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none' }} />
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Business Type</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {BUSINESS_TYPES.map(t => (
+                    <button 
+                      key={t} 
+                      type="button" 
+                      onClick={() => setProfileForm(p => ({ ...p, businessType: t }))} 
+                      style={settingPillBtn(profileForm.businessType === t)}
+                    >
+                      {t}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Monthly Budget</label>
-                  <select name="monthlyBudget" defaultValue={userProfile?.monthly_budget} style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none', background: '#fff' }}>
-                    <option value="Under $1K">Under $1K</option>
-                    <option value="$1K to $5K">$1K to $5K</option>
-                    <option value="$5K to $20K">$5K to $20K</option>
-                    <option value="$20K to $100K">$20K to $100K</option>
-                    <option value="Over $100K">Over $100K</option>
-                  </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Monthly Ads Budget</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {BUDGETS.map(b => (
+                    <button 
+                      key={b} 
+                      type="button" 
+                      onClick={() => setProfileForm(p => ({ ...p, monthlyBudget: b }))} 
+                      style={settingPillBtn(profileForm.monthlyBudget === b)}
+                    >
+                      {b}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
+            {/* Card 2: AI Context & Onboarding Profile */}
+            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 16 }}>AI Context & Onboarding Profile</h3>
+
+              {/* Your Role */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Your Role in the Business</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {ROLES.map(r => (
+                    <button 
+                      key={r} 
+                      type="button" 
+                      onClick={() => setProfileForm(p => ({ ...p, role: r }))} 
+                      style={settingPillBtn(profileForm.role === r)}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Strategic Marketing Goals */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Strategic Marketing Goals (Multi-select)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {ONBOARDING_GOALS.map(g => (
+                    <button 
+                      key={g} 
+                      type="button" 
+                      onClick={() => toggleGoalSetting(g)} 
+                      style={settingPillBtn(profileForm.goals.includes(g))}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Stack Tools */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Active Marketing Stack Tools (Multi-select)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {ONBOARDING_TOOLS.map(t => (
+                    <button 
+                      key={t} 
+                      type="button" 
+                      onClick={() => toggleToolSetting(t)} 
+                      style={settingPillBtn(profileForm.currentTools.includes(t))}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Channels in Focus */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Marketing Channels in Focus (Multi-select)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {PLATFORMS.map(pl => (
+                    <button 
+                      key={pl} 
+                      type="button" 
+                      onClick={() => togglePlatformSetting(pl)} 
+                      style={settingPillBtn(profileForm.platformsInFocus.includes(pl))}
+                    >
+                      {pl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Biggest Challenge */}
+            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 6 }}>Your Biggest Challenge</h3>
+              <p style={{ fontSize: '0.83rem', color: G, margin: '0 0 12px' }}>The AI agent uses this to frame analysis around your specific pain point.</p>
+              <textarea
+                value={profileForm.challenge}
+                onChange={e => setProfileForm(p => ({ ...p, challenge: e.target.value }))}
+                placeholder="e.g. My ROAS keeps dropping after 7 days of a new campaign..."
+                rows={3}
+                style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.9rem', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Card 4: Notifications */}
             <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 32 }}>
-              <h3 style={{ fontSize: '1.1rem', color: D, marginBottom: 16 }}>Notifications</h3>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 16 }}>Notifications</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input type="checkbox" name="weeklyDigest" defaultChecked={userProfile?.weekly_digest} id="wd" style={{ width: 18, height: 18, accentColor: P, cursor: 'pointer' }} />
+                <input 
+                  type="checkbox" 
+                  checked={profileForm.weeklyDigest} 
+                  onChange={e => setProfileForm(p => ({ ...p, weeklyDigest: e.target.checked }))}
+                  id="wd" 
+                  style={{ width: 18, height: 18, accentColor: '#1E7BFF', cursor: 'pointer' }} 
+                />
                 <label htmlFor="wd" style={{ fontSize: '0.9rem', color: D, cursor: 'pointer' }}>Receive Monday weekly score digest emails</label>
               </div>
             </div>
 
-            <button type="submit" style={{ background: P, color: '#fff', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', transition: 'opacity 0.2s' }} onMouseOver={e=>e.currentTarget.style.opacity='0.9'} onMouseOut={e=>e.currentTarget.style.opacity='1'}>Save Settings</button>
+            <button 
+              type="submit" 
+              style={{ background: '#1E7BFF', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.15s ease', fontFamily: 'inherit' }}
+              onMouseOver={e => e.currentTarget.style.background = '#0062E3'}
+              onMouseOut={e => e.currentTarget.style.background = '#1E7BFF'}
+            >
+              Save Settings
+            </button>
           </form>
         )}
 
