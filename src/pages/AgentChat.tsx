@@ -330,49 +330,74 @@ export default function AgentChat() {
   };
 
   return (
-    <V3Layout>
+    <>
       <div style={{
         display: 'flex',
-        flex: 1,
-        height: '100%',
+        height: '100vh',
+        width: '100vw',
         background: '#F7F5F0', // Cream editorial background
         fontFamily: 'var(--font-primary, "General Sans", ui-sans-serif, system-ui, sans-serif)',
         overflow: 'hidden'
       }}>
 
-        {/* ─── LEFT SUB-SIDEBAR (CONVERSATIONS LIST) ─── */}
-        <aside style={{
-          width: 260,
-          background: '#FFFFFF',
-          borderRight: '1px solid #E5DFCF',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0
-        }}>
-          {/* New Conversation Trigger */}
-          <div style={{ padding: '20px', borderBottom: '1px solid #E5DFCF', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button
-              onClick={startNew}
-              style={{
-                width: '100%',
-                background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)',
-                color: '#fff',
-                border: 'none',
-                padding: '12px 0',
-                borderRadius: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontSize: '0.88rem',
-                boxShadow: '0 4px 12px rgba(30,123,255,0.15)',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6
-              }}
-            >
-              <span>+ New Conversation</span>
-            </button>
+      {/* ─── LEFT SUB-SIDEBAR (CONVERSATIONS LIST) ─── */}
+      <aside style={{
+        width: 260,
+        background: '#FFFFFF',
+        borderRight: '1px solid #E5DFCF',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0
+      }}>
+        {/* New Conversation Trigger */}
+        <div style={{ padding: '20px', borderBottom: '1px solid #E5DFCF', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Back to Dashboard Button */}
+          <button
+            onClick={() => navigate('/clients')}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              border: '1px solid #E5DFCF',
+              color: '#3D4F62',
+              padding: '10px 0',
+              borderRadius: '12px',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#FAF8F3'; e.currentTarget.style.borderColor = '#1E7BFF'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#E5DFCF'; }}
+          >
+            <span>← Back to Dashboard</span>
+          </button>
+
+          <button
+            onClick={startNew}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '12px 0',
+              borderRadius: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '0.88rem',
+              boxShadow: '0 4px 12px rgba(30,123,255,0.15)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
+            }}
+          >
+            <span>+ New Conversation</span>
+          </button>
             
             {userProfile?.business_name && (
               <div style={{
@@ -649,7 +674,7 @@ export default function AgentChat() {
         requiredPlan={modeGateModal.requiredPlan}
         featureType="mode"
       />
-    </V3Layout>
+    </>
   );
 }
 
