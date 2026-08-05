@@ -676,122 +676,171 @@ export default function LandingPage({ onScanComplete }: Props) {
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(0,0,0,0.45)',
-            backdropFilter: 'blur(6px)',
+            background: 'rgba(11, 27, 43, 0.55)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px'
+            padding: '20px',
+            fontFamily: 'var(--font-primary, "General Sans", ui-sans-serif, system-ui, sans-serif)'
           }}
           onClick={() => setShowOnboardingModal(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#FFFFFF',
+              background: 'var(--lp-bg-canvas, #F7F5F0)',
+              border: '1px solid var(--lp-border-default, #DDD6C8)',
               borderRadius: '28px',
-              padding: '40px 36px',
-              maxWidth: '480px',
+              padding: '0',
+              maxWidth: '460px',
               width: '100%',
-              boxShadow: '0 32px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04)',
+              boxShadow: 'var(--lp-shadow-showcase, 0 24px 64px rgba(11,27,43,0.12))',
+              overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              gap: '0'
             }}
           >
-            {/* Icon */}
+            {/* Top band — brand accent */}
             <div style={{
-              width: '60px', height: '60px',
-              borderRadius: '18px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '24px',
-              boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
+              background: 'var(--lp-accent-gradient, linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%))',
+              padding: '32px 36px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '20px',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
-              <Sparkles size={28} color="#FFFFFF" />
-            </div>
-
-            {/* Heading */}
-            <h2 style={{
-              fontSize: '24px', fontWeight: 700,
-              color: '#0F0F0F', lineHeight: 1.25,
-              marginBottom: '12px', letterSpacing: '-0.02em'
-            }}>
-              One step away from your<br />AI Marketing Agent
-            </h2>
-
-            {/* Subtext */}
-            <p style={{
-              fontSize: '15px', color: '#6B7280',
-              lineHeight: 1.65, marginBottom: '28px',
-              maxWidth: '360px'
-            }}>
-              Create your ZieAds account and connect your social media — so your AI Agent fully understands your brand and delivers insights that actually matter.
-            </p>
-
-            {/* Prompt preview */}
-            {pendingPrompt && (
+              {/* Subtle noise texture overlay */}
               <div style={{
-                background: '#F5F3FF',
-                border: '1px solid #DDD6FE',
-                borderRadius: '14px',
-                padding: '14px 18px',
-                marginBottom: '28px',
-                width: '100%',
-                textAlign: 'left'
-              }}>
-                <p style={{ fontSize: '11px', fontWeight: 600, color: '#7C3AED', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your question for the AI Agent</p>
-                <p style={{ fontSize: '14px', color: '#4C1D95', fontStyle: 'italic', lineHeight: 1.5 }}>"{pendingPrompt}"</p>
-              </div>
-            )}
+                position: 'absolute', inset: 0,
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")',
+                opacity: 0.4,
+                pointerEvents: 'none'
+              }} />
 
-            {/* Steps */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginBottom: '28px' }}>
-              {[
-                { icon: '📧', label: 'Create your free account' },
-                { icon: '📱', label: 'Connect your Instagram & social media' },
-                { icon: '🤖', label: 'Get your AI Agent answer instantly' },
-              ].map((step, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: '12px',
-                  background: '#F9FAFB', borderRadius: '12px', padding: '12px 14px',
-                  border: '1px solid #F3F4F6'
+              {/* ZieAds Logo icon */}
+              <div style={{
+                width: '52px', height: '52px',
+                borderRadius: '14px',
+                background: 'rgba(255,255,255,0.18)',
+                border: '1px solid rgba(255,255,255,0.25)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(4px)',
+                flexShrink: 0
+              }}>
+                <ZieAdsLogo size={30} />
+              </div>
+
+              {/* Heading */}
+              <div>
+                <h2 style={{
+                  fontFamily: 'var(--font-display, "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif)',
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  lineHeight: 1.25,
+                  letterSpacing: '-0.02em',
+                  margin: 0
                 }}>
-                  <span style={{ fontSize: '18px' }}>{step.icon}</span>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>{step.label}</span>
-                </div>
-              ))}
+                  One step away from your<br />AI Marketing Agent
+                </h2>
+              </div>
             </div>
 
-            {/* CTA Button */}
-            <button
-              onClick={handleModalConfirm}
-              className="btn-lp-primary-gradient"
-              style={{
-                width: '100%', padding: '16px', borderRadius: '14px',
-                border: 'none', color: '#FFFFFF',
-                fontWeight: 700, fontSize: '16px',
-                cursor: 'pointer', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                gap: '8px', boxShadow: '0 8px 24px rgba(99,102,241,0.35)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>Create Free Account</span>
-              <ArrowRight size={18} />
-            </button>
+            {/* Body */}
+            <div style={{ padding: '28px 36px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* Dismiss */}
-            <button
-              onClick={() => setShowOnboardingModal(false)}
-              style={{
-                marginTop: '14px', background: 'none', border: 'none',
-                fontSize: '13px', color: '#9CA3AF', cursor: 'pointer',
-                fontWeight: 500
-              }}
-            >
-              Maybe later
-            </button>
+              {/* Description */}
+              <p style={{
+                fontSize: '15px',
+                color: 'var(--lp-text-secondary, #3D4F62)',
+                lineHeight: 1.65,
+                margin: 0
+              }}>
+                Create your ZieAds account and connect your social media, so your AI Agent fully understands your brand and delivers insights that actually matter.
+              </p>
+
+              {/* Prompt preview card */}
+              {pendingPrompt && (
+                <div style={{
+                  background: 'var(--lp-bg-card, #FFFFFF)',
+                  border: '1px solid var(--lp-border-default, #DDD6C8)',
+                  borderRadius: '14px',
+                  padding: '14px 18px',
+                  position: 'relative'
+                }}>
+                  <p style={{
+                    fontSize: '11px', fontWeight: 600,
+                    color: 'var(--lp-accent, #1E7BFF)',
+                    marginBottom: '6px', margin: '0 0 6px',
+                    textTransform: 'uppercase', letterSpacing: '0.07em'
+                  }}>Your AI Agent question</p>
+                  <p style={{
+                    fontSize: '14px',
+                    color: 'var(--lp-text-primary, #0B1B2B)',
+                    fontStyle: 'italic',
+                    lineHeight: 1.55,
+                    margin: 0
+                  }}>"{pendingPrompt}"</p>
+                </div>
+              )}
+
+              {/* Steps */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { num: '01', label: 'Create your free ZieAds account' },
+                  { num: '02', label: 'Connect your Instagram & social media' },
+                  { num: '03', label: 'Get your AI Agent answer instantly' },
+                ].map((step) => (
+                  <div key={step.num} style={{
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    background: 'var(--lp-bg-card, #FFFFFF)',
+                    border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+                    borderRadius: '12px',
+                    padding: '13px 16px'
+                  }}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700,
+                      color: 'var(--lp-accent, #1E7BFF)',
+                      letterSpacing: '0.04em',
+                      minWidth: '22px'
+                    }}>{step.num}</span>
+                    <span style={{
+                      fontSize: '14px', fontWeight: 500,
+                      color: 'var(--lp-text-primary, #0B1B2B)',
+                      lineHeight: 1.4
+                    }}>{step.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={handleModalConfirm}
+                className="btn-lp-primary-gradient"
+                style={{
+                  width: '100%',
+                  padding: '15px 24px',
+                  borderRadius: 'var(--lp-radius-button, 10px)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: 'var(--lp-shadow-cta)',
+                  transition: 'all 0.2s ease',
+                  letterSpacing: '-0.01em'
+                }}
+              >
+                <span>Create Free Account</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
       )}
