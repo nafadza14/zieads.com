@@ -748,11 +748,71 @@ export default function AgentChat() {
                     </div>
                   )}
                   
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, padding: '0 6px' }}>
-                    <span style={{ fontSize: '11px', color: '#6B7A89' }}>Uses your audit history · Enter to send</span>
-                    <button onClick={() => setActiveTab('modes')} style={{ fontSize: '11px', color: '#1E7BFF', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <UilBolt size={12} /> Run deep analysis <UilArrowRight size={12} />
-                    </button>
+                  {/* Pills suggestion block underneath the chat input card */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                    {/* Analysis Modes Pills */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>⚡ Run Mode:</span>
+                      {[
+                        { id: 'daily', label: 'Daily Diagnosis' },
+                        { id: 'roas', label: 'ROAS Drop Analysis' },
+                        { id: 'fatigue', label: 'Creative Fatigue' },
+                        { id: 'budget', label: 'Budget Optimization' },
+                        { id: 'competitive', label: 'Competitive Intel' },
+                        { id: 'launch', label: 'Launch Readiness' }
+                      ].map(m => (
+                        <button
+                          key={m.id}
+                          onClick={() => handleModeClick(m.id, m.label)}
+                          style={{
+                            background: '#FFFFFF',
+                            border: '1px solid #E5DFCF',
+                            borderRadius: '20px',
+                            padding: '5px 12px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: '#3D4F62',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Quick Suggestions Pills */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>💡 Suggestions:</span>
+                      {QUICK_QUESTIONS.slice(0, 4).map((q, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => sendMessage(q.q)}
+                          style={{
+                            background: '#FFFFFF',
+                            border: '1px solid #E5DFCF',
+                            borderRadius: '20px',
+                            padding: '5px 12px',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            color: '#3D4F62',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            overflow: 'hidden',
+                            maxWidth: '240px'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
+                          title={q.q}
+                        >
+                          {q.q}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
