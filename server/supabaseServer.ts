@@ -302,8 +302,20 @@ export async function isTestUser(reqOrUserId: any): Promise<boolean> {
 
     if (reqOrUserId && reqOrUserId.headers && reqOrUserId.headers.authorization) {
       const token = reqOrUserId.headers.authorization.replace("Bearer ", "");
-      const { data } = await supabaseAdmin.auth.getUser(token);
-      userEmail = data?.user?.email;
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+          userEmail = payload.email;
+        }
+      } catch (e) {
+        console.error("[isTestUser] JWT decode failed:", e);
+      }
+      
+      if (!userEmail) {
+        const { data } = await supabaseAdmin.auth.getUser(token);
+        userEmail = data?.user?.email;
+      }
     } else if (typeof reqOrUserId === 'string') {
       const { data } = await supabaseAdmin.auth.admin.getUserById(reqOrUserId);
       userEmail = data?.user?.email;

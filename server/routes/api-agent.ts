@@ -23,7 +23,7 @@ export const agentRouter = express.Router();
 const RATE_LIMITS: Record<string, number> = {
   free: 5,
   solo: 100,
-  agency: Infinity,
+  agency: 999999,
 };
 
 function getRateLimit(plan: string | null | undefined): number {
@@ -273,7 +273,7 @@ agentRouter.post("/message", async (req, res) => {
     plan = userPlan?.plan_id || "free";
   }
 
-  const limit = isTest ? Infinity : getRateLimit(plan);
+  const limit = isTest ? 999999 : getRateLimit(plan);
   const used = await getAgentMessageCount(userId);
   if (used >= limit) {
     return res.status(429).json({
@@ -430,7 +430,7 @@ agentRouter.post("/analyze", async (req, res) => {
     plan = userPlan?.plan_id || "free";
   }
 
-  const limit = isTest ? Infinity : getRateLimit(plan);
+  const limit = isTest ? 999999 : getRateLimit(plan);
   const used = await getAgentMessageCount(userId);
   if (used >= limit) {
     return res.status(429).json({
@@ -549,7 +549,7 @@ agentRouter.get("/usage", async (req, res) => {
     plan = userPlan?.plan_id || "free";
   }
 
-  const limit = isTest ? Infinity : getRateLimit(plan);
+  const limit = isTest ? 999999 : getRateLimit(plan);
   const used = await getAgentMessageCount(userId);
   res.json({ success: true, data: { used, limit, plan } });
 });
