@@ -209,7 +209,6 @@ export default function AgentChat() {
   const [userEmail, setUserEmail] = useState('');
   const [activeTab, setActiveTab] = useState<'chat' | 'modes'>('chat');
   const [runningMode, setRunningMode] = useState<UseCaseId | null>(null);
-  const [selectedRunMode, setSelectedRunMode] = useState<string>('');
   const [additionalData, setAdditionalData] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -569,7 +568,6 @@ export default function AgentChat() {
       }
 
       abortControllerRef.current = null;
-      setSelectedRunMode('');
 
       simulateTypewriter(j.result || 'Analysis complete.', () => {
         setRunningMode(null);
@@ -586,21 +584,8 @@ export default function AgentChat() {
     }
   };
 
-  const handleSendAction = () => {
-    if (selectedRunMode) {
-      if (creditStore.isModeLocked(selectedRunMode)) {
-        const modeInfo = USE_CASES.find(u => u.id === selectedRunMode)!;
-        setModeGateModal({ open: true, modeName: modeInfo.label, requiredPlan: 'pro' });
-        return;
-      }
-      runAnalysis(selectedRunMode as UseCaseId);
-    } else {
-      sendMessage();
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendAction(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
   const isAtLimit = usage.used >= usage.limit;
@@ -949,7 +934,7 @@ export default function AgentChat() {
                       
                       {/* Toolbar matching landing page style */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, borderTop: '1px solid #E5DFCF', paddingTop: 14 }}>
-                         {/* Attachments & Run Mode Selector */}
+                         {/* Attachments */}
                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                            <button
                              type="button"
@@ -964,35 +949,6 @@ export default function AgentChat() {
                            >
                              <Link2 size={16} />
                            </button>
-
-                           {/* Run Mode Selector Dropdown inside the box */}
-                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #E5DFCF', borderRadius: '8px', padding: '0 10px', background: '#F9FAFB', height: '36px', boxSizing: 'border-box' }}>
-                             <Zap size={14} style={{ color: '#1E7BFF' }} />
-                             <select
-                               value={selectedRunMode || ''}
-                               onChange={e => setSelectedRunMode(e.target.value)}
-                               disabled={loading}
-                               style={{ 
-                                 border: 'none', 
-                                 background: 'transparent', 
-                                 fontSize: '12px', 
-                                 fontWeight: 600, 
-                                 color: '#3D4F62', 
-                                 outline: 'none', 
-                                 cursor: 'pointer', 
-                                 paddingRight: '4px',
-                                 fontFamily: 'inherit'
-                               }}
-                             >
-                               <option value="">Standard Chat</option>
-                               <option value="daily">Daily Diagnosis</option>
-                               <option value="roas">ROAS Drop Analysis</option>
-                               <option value="fatigue">Creative Fatigue</option>
-                               <option value="budget">Budget Optimization</option>
-                               <option value="competitive">Competitive Intel</option>
-                               <option value="launch">Launch Readiness</option>
-                             </select>
-                           </div>
                          </div>
  
                          {/* Action buttons (Mic + Send) */}
@@ -1046,72 +1002,38 @@ export default function AgentChat() {
                            ) : (
                              <button
                                type="button"
-                               onClick={handleSendAction}
+                               onClick={() => sendMessage()}
                                disabled={loading || (!input.trim() && !attachedFile)}
-                              style={{ 
-                                width: '38px',
-                                height: '38px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                background: '#1E7BFF',
-                                color: '#FFFFFF',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: loading || (!input.trim() && !attachedFile) ? 'not-allowed' : 'pointer',
-                                opacity: loading || (!input.trim() && !attachedFile) ? 0.6 : 1,
-                                transition: 'all 0.2s ease',
-                                boxShadow: '0 4px 12px rgba(30, 123, 255, 0.25)'
-                              }}
-                              onMouseEnter={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#0056b3'; }}
-                              onMouseLeave={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#1E7BFF'; }}
-                            >
-                              <Send size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Pills suggestion block underneath the chat input card (disappears when chat starts) */}
-                  {messages.length === 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-                      {/* Analysis Modes Pills */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
-                          <Zap size={13} style={{ marginRight: 4, color: '#1E7BFF' }} />
-                          Run Mode:
-                        </span>
-                        {[
-                          { id: 'daily', label: 'Daily Diagnosis' },
-                          { id: 'roas', label: 'ROAS Drop Analysis' },
-                          { id: 'fatigue', label: 'Creative Fatigue' },
-                          { id: 'budget', label: 'Budget Optimization' },
-                          { id: 'competitive', label: 'Competitive Intel' },
-                          { id: 'launch', label: 'Launch Readiness' }
-                        ].map(m => (
-                          <button
-                            key={m.id}
-                            onClick={() => handleModeClick(m.id, m.label)}
-                            style={{
-                              background: '#FFFFFF',
-                              border: '1px solid #E5DFCF',
-                              borderRadius: '20px',
-                              padding: '5px 12px',
-                              fontSize: '11px',
-                              fontWeight: 600,
-                              color: '#3D4F62',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
-                          >
-                            {m.label}
-                          </button>
-                        ))}
-                      </div>
+                               style={{ 
+                                 width: '38px',
+                                 height: '38px',
+                                 borderRadius: '50%',
+                                 border: 'none',
+                                 background: '#1E7BFF',
+                                 color: '#FFFFFF',
+                                 display: 'flex',
+                                 alignItems: 'center',
+                                 justifyContent: 'center',
+                                 cursor: loading || (!input.trim() && !attachedFile) ? 'not-allowed' : 'pointer',
+                                 opacity: loading || (!input.trim() && !attachedFile) ? 0.6 : 1,
+                                 transition: 'all 0.2s ease',
+                                 boxShadow: '0 4px 12px rgba(30, 123, 255, 0.25)'
+                               }}
+                               onMouseEnter={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#0056b3'; }}
+                               onMouseLeave={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#1E7BFF'; }}
+                             >
+                               <Send size={15} />
+                             </button>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                   
+                   {/* Pills suggestion block underneath the chat input card (disappears when chat starts) */}
+                   {messages.length === 0 && (
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+
 
                       {/* Quick Suggestions Pills */}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
