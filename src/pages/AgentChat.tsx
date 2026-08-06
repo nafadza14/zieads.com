@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, PlayCircle, Send, Sparkles, ArrowRight, Zap, Link2, Mic, MicOff } from 'lucide-react';
+import { Bot, PlayCircle, Send, Sparkles, ArrowRight, Zap, Link2, Mic, MicOff, Square } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
   UilSearchAlt, UilBedDouble, UilChartDown, UilMoneyBill, UilEye, UilMedicalSquare, 
@@ -213,6 +213,49 @@ export default function AgentChat() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const typewriterIntervalRef = useRef<any>(null);
+
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (typewriterIntervalRef.current) {
+      clearInterval(typewriterIntervalRef.current);
+      typewriterIntervalRef.current = null;
+    }
+    setLoading(false);
+    setRunningMode(null);
+  };
+
+  const simulateTypewriter = (text: string, onFinish?: () => void) => {
+    // Append initial empty assistant message
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+    let currentLength = 0;
+    const interval = setInterval(() => {
+      currentLength += Math.min(4, text.length - currentLength);
+      const partial = text.slice(0, currentLength);
+      
+      setMessages(prev => {
+        const copy = [...prev];
+        if (copy.length > 0) {
+          copy[copy.length - 1] = { ...copy[copy.length - 1], content: partial };
+        }
+        return copy;
+      });
+
+      if (currentLength >= text.length) {
+        clearInterval(interval);
+        typewriterIntervalRef.current = null;
+        setLoading(false);
+        if (onFinish) onFinish();
+      }
+    }, 15);
+
+    typewriterIntervalRef.current = interval;
+  };
 
   const [attachedFile, setAttachedFile] = useState<{ name: string; url: string; mimeType: string } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -436,7 +479,6 @@ export default function AgentChat() {
 
     const originalMsg = msg || (attachedFile ? `[Attached file: ${attachedFile.name}]` : '');
 
-    // Append file info to prompt message sent to Claude
     if (!text && attachedFile) {
       msg = `${msg}\n\n[User attached file: ${attachedFile.name} (URL: ${attachedFile.url})]`;
     }
@@ -447,33 +489,45 @@ export default function AgentChat() {
     setLoading(true);
     setMessages(prev => [...prev, { role: 'user', content: originalMsg }]);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const headers = await getAuthHeaders();
     try {
       const res = await fetch('/api/agent/message', {
         method: 'POST',
         headers,
         body: JSON.stringify({ message: msg, conversationId: activeConvId }),
+        signal: controller.signal
       });
       const j = await res.json();
 
       if (res.status === 429) {
         setMessages(prev => [...prev, { role: 'assistant', content: `**Rate limit reached.** ${j.message}` }]);
+        setLoading(false);
         return;
       }
       if (!j.success) {
         setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]);
+        setLoading(false);
         return;
       }
       if (!activeConvId && j.conversationId) {
         setActiveConvId(j.conversationId);
         await refreshConversations();
       }
-      setMessages(prev => [...prev, { role: 'assistant', content: j.reply }]);
+
+      abortControllerRef.current = null;
+      simulateTypewriter(j.reply || '');
       if (j.usage) setUsage(prev => ({ ...prev, used: j.usage.used, limit: j.usage.limit }));
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Network error. Please check your connection.' }]);
-    } finally {
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setMessages(prev => [...prev, { role: 'assistant', content: '_Generation stopped._' }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Network error. Please check your connection.' }]);
+      }
       setLoading(false);
+    } finally {
       inputRef.current?.focus();
     }
   };
@@ -492,12 +546,16 @@ export default function AgentChat() {
       analysisMode: modeId,
     }]);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const headers = await getAuthHeaders();
     try {
       const res = await fetch('/api/agent/analyze', {
         method: 'POST',
         headers,
         body: JSON.stringify({ mode: modeId, data: additionalData, conversationId: activeConvId }),
+        signal: controller.signal
       });
       const j = await res.json();
 
@@ -506,16 +564,18 @@ export default function AgentChat() {
         await refreshConversations();
       }
 
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: j.result || 'Analysis complete.',
-        isAnalysis: true,
-        analysisMode: modeId,
-      }]);
+      abortControllerRef.current = null;
+      simulateTypewriter(j.result || 'Analysis complete.', () => {
+        setRunningMode(null);
+        setAdditionalData('');
+      });
       if (j.usage) setUsage(prev => ({ ...prev, used: j.usage.used, limit: j.usage.limit }));
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Analysis failed. Please try again.' }]);
-    } finally {
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setMessages(prev => [...prev, { role: 'assistant', content: '_Analysis stopped._' }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Analysis failed. Please try again.' }]);
+      }
       setLoading(false);
       setRunningMode(null);
       setAdditionalData('');
@@ -887,17 +947,6 @@ export default function AgentChat() {
                           >
                             <Link2 size={16} />
                           </button>
-                          <button
-                            type="button"
-                            title="Quick Actions"
-                            style={{
-                              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5DFCF',
-                              background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s ease'
-                            }}
-                          >
-                            <Zap size={16} />
-                          </button>
                         </div>
 
                         {/* Action buttons (Mic + Send) */}
@@ -925,105 +974,131 @@ export default function AgentChat() {
                             {isListening ? <MicOff size={16} /> : <Mic size={16} />}
                           </button>
 
-                          {/* Send Button */}
-                          <button
-                            onClick={() => sendMessage()}
-                            disabled={loading || (!input.trim() && !attachedFile)}
-                            className="btn-lp-primary-gradient"
-                            style={{ 
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '50%',
-                              border: 'none',
-                              color: '#FFFFFF',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: loading || (!input.trim() && !attachedFile) ? 'not-allowed' : 'pointer',
-                              opacity: loading || (!input.trim() && !attachedFile) ? 0.6 : 1,
-                              transition: 'all 0.2s ease',
-                              boxShadow: 'var(--lp-shadow-cta)'
-                            }}
-                          >
-                            <Send size={15} />
-                          </button>
+                          {/* Stop/Send Button */}
+                          {loading ? (
+                            <button
+                              type="button"
+                              onClick={stopGeneration}
+                              title="Stop generating"
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                background: '#EF4444',
+                                color: '#FFFFFF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
+                              }}
+                            >
+                              <Square size={14} fill="#FFFFFF" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => sendMessage()}
+                              disabled={loading || (!input.trim() && !attachedFile)}
+                              className="btn-lp-primary-gradient"
+                              style={{ 
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                color: '#FFFFFF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: loading || (!input.trim() && !attachedFile) ? 'not-allowed' : 'pointer',
+                                opacity: loading || (!input.trim() && !attachedFile) ? 0.6 : 1,
+                                transition: 'all 0.2s ease',
+                                boxShadow: 'var(--lp-shadow-cta)'
+                              }}
+                            >
+                              <Send size={15} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
                   )}
                   
-                  {/* Pills suggestion block underneath the chat input card */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-                    {/* Analysis Modes Pills */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
-                        <Zap size={13} style={{ marginRight: 4, color: '#1E7BFF' }} />
-                        Run Mode:
-                      </span>
-                      {[
-                        { id: 'daily', label: 'Daily Diagnosis' },
-                        { id: 'roas', label: 'ROAS Drop Analysis' },
-                        { id: 'fatigue', label: 'Creative Fatigue' },
-                        { id: 'budget', label: 'Budget Optimization' },
-                        { id: 'competitive', label: 'Competitive Intel' },
-                        { id: 'launch', label: 'Launch Readiness' }
-                      ].map(m => (
-                        <button
-                          key={m.id}
-                          onClick={() => handleModeClick(m.id, m.label)}
-                          style={{
-                            background: '#FFFFFF',
-                            border: '1px solid #E5DFCF',
-                            borderRadius: '20px',
-                            padding: '5px 12px',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            color: '#3D4F62',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
+                  {/* Pills suggestion block underneath the chat input card (disappears when chat starts) */}
+                  {messages.length === 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                      {/* Analysis Modes Pills */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
+                          <Zap size={13} style={{ marginRight: 4, color: '#1E7BFF' }} />
+                          Run Mode:
+                        </span>
+                        {[
+                          { id: 'daily', label: 'Daily Diagnosis' },
+                          { id: 'roas', label: 'ROAS Drop Analysis' },
+                          { id: 'fatigue', label: 'Creative Fatigue' },
+                          { id: 'budget', label: 'Budget Optimization' },
+                          { id: 'competitive', label: 'Competitive Intel' },
+                          { id: 'launch', label: 'Launch Readiness' }
+                        ].map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => handleModeClick(m.id, m.label)}
+                            style={{
+                              background: '#FFFFFF',
+                              border: '1px solid #E5DFCF',
+                              borderRadius: '20px',
+                              padding: '5px 12px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: '#3D4F62',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
 
-                    {/* Quick Suggestions Pills */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
-                        <Sparkles size={13} style={{ marginRight: 4, color: '#0EA5E9' }} />
-                        Suggestions:
-                      </span>
-                      {getTailoredSuggestions().map((q, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => sendMessage(q.q)}
-                          style={{
-                            background: '#FFFFFF',
-                            border: '1px solid #E5DFCF',
-                            borderRadius: '20px',
-                            padding: '5px 12px',
-                            fontSize: '11px',
-                            fontWeight: 500,
-                            color: '#3D4F62',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                            whiteSpace: 'nowrap',
-                            textOverflow: 'ellipsis',
-                            overflow: 'hidden',
-                            maxWidth: '280px'
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
-                          title={q.q}
-                        >
-                          {q.q}
-                        </button>
-                      ))}
+                      {/* Quick Suggestions Pills */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
+                          <Sparkles size={13} style={{ marginRight: 4, color: '#0EA5E9' }} />
+                          Suggestions:
+                        </span>
+                        {getTailoredSuggestions().map((q, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => sendMessage(q.q)}
+                            style={{
+                              background: '#FFFFFF',
+                              border: '1px solid #E5DFCF',
+                              borderRadius: '20px',
+                              padding: '5px 12px',
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: '#3D4F62',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden',
+                              maxWidth: '280px'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
+                            title={q.q}
+                          >
+                            {q.q}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </>
