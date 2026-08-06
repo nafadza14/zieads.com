@@ -268,10 +268,13 @@ apiV3Router.post("/media/upload", requireAuth, upload.single("file"), async (req
       "image/png",
       "image/webp",
       "video/mp4",
-      "video/quicktime"
+      "video/quicktime",
+      "text/csv",
+      "text/plain",
+      "application/pdf"
     ];
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      return res.status(415).json({ error: `Unsupported media type: ${file.mimetype}. Allowed: jpeg, png, webp, mp4, quicktime.` });
+      return res.status(415).json({ error: `Unsupported media type: ${file.mimetype}. Allowed: jpeg, png, webp, mp4, quicktime, csv, txt, pdf.` });
     }
 
     // Validate file size

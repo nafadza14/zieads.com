@@ -103,7 +103,7 @@ creditsRouter.get('/balance', async (req, res) => {
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const isTest = await isTestUser(userId);
+    const isTest = await isTestUser(req);
     if (isTest) {
       return res.json({
         ai_chat: {
@@ -118,14 +118,11 @@ creditsRouter.get('/balance', async (req, res) => {
           monthly_limit: 999999,
           state: "normal",
         },
-        plan: {
-          id: "agency",
-          name: "Agency (Testing)",
-          is_lifetime: true,
-          badge: "UNLIMITED",
-        },
-        has_active_subscription: true,
-        trial: null,
+        plan_id: "agency",
+        plan_display_name: "Agency (Testing)",
+        feature_flags: PLANS["agency"].featureFlags,
+        upgrade_available: false,
+        next_plan_id: null,
       });
     }
     const { planData, creditsData } = await getUserPlanAndCredits(userId);

@@ -107,6 +107,7 @@ Output: Pass/Fail checklist, critical blockers (do not launch until fixed), warn
 - **No filler phrases**. No "Great question!", no "I hope this helps." Start every response with the insight.
 - **Ready-to-use outputs**. If asked for copy, write the actual ad copy. If asked for a campaign structure, write the actual structure with naming conventions.
 - **Reference audit data first**. If the user's audit context is available, lead with what you know about their specific business before adding general advice.
+- **NEVER use the em-dash character '—' in your responses**. Use standard hyphens '-' or other punctuation instead. Using em-dashes makes the text look like generic AI slop.
 
 ## Tone:
 Senior strategist at a top-5 performance agency. Honest, direct, technically precise, focused on ROI. You tell users hard truths when their setup is wrong.`;
@@ -286,18 +287,70 @@ agentRouter.post("/message", async (req, res) => {
   const auditContext = await getRecentAuditContext(userId);
   const v3Context = await getV3DataContext(userId);
 
-  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+  // Process attachments in the current message
+  let finalContent: any = message;
+  const attachmentRegex = /\[User attached file: (.*?) \(URL: (https?:\/\/[^\)]+)\)\]/;
+  const attachmentMatch = message.match(attachmentRegex);
+  
+  if (attachmentMatch) {
+    const fileName = attachmentMatch[1];
+    const fileUrl = attachmentMatch[2];
+    
+    try {
+      const fileRes = await fetch(fileUrl);
+      if (fileRes.ok) {
+        const contentType = fileRes.headers.get('content-type') || '';
+        
+        if (contentType.startsWith('image/')) {
+          const arrayBuffer = await fileRes.arrayBuffer();
+          const base64 = Buffer.from(arrayBuffer).toString('base64');
+          
+          finalContent = [
+            { type: "text", text: message },
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: contentType === 'image/jpg' ? 'image/jpeg' : contentType,
+                data: base64
+              }
+            }
+          ];
+        } else if (contentType.startsWith('text/') || contentType === 'application/csv') {
+          const textContent = await fileRes.text();
+          const truncatedText = textContent.slice(0, 15000); // approx 4000 tokens limit
+          finalContent = `${message}\n\n[Content of attached file ${fileName}]:\n${truncatedText}`;
+        }
+        // Auto-delete from storage to save space
+        const urlObj = new URL(fileUrl);
+        const pathParts = urlObj.pathname.split('/object/public/media/');
+        if (pathParts.length > 1) {
+          await supabaseAdmin.storage.from("media").remove([pathParts[1]]);
+        }
+      }
+    } catch (e) {
+      console.error("[Agent] Failed to process attachment:", e);
+    }
+  }
+
+  const messages: Array<{ role: "user" | "assistant"; content: any }> = [];
 
   if (recentHistory.length <= 1) {
     const contextIntro = auditContext !== "No audit history available yet."
-      ? `My recent audit context:\n\n${auditContext}\n\nQuestion: ${message}`
-      : message;
-    messages.push({ role: "user", content: contextIntro });
+      ? `My recent audit context:\n\n${auditContext}\n\nQuestion: `
+      : "";
+    if (typeof finalContent === "string") {
+      messages.push({ role: "user", content: contextIntro + finalContent });
+    } else {
+      const newContent = [...finalContent];
+      newContent[0] = { type: "text", text: contextIntro + newContent[0].text };
+      messages.push({ role: "user", content: newContent });
+    }
   } else {
     for (const m of recentHistory.slice(0, -1)) {
       messages.push({ role: m.role as "user" | "assistant", content: m.content });
     }
-    messages.push({ role: "user", content: message });
+    messages.push({ role: "user", content: finalContent });
   }
 
   try {

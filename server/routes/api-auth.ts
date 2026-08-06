@@ -1023,6 +1023,13 @@ authRouter.post("/:platform/disconnect", requireAuth, async (req: any, res) => {
       .eq("user_id", userId)
       .eq("platform", platform);
 
+    // Also delete any mock connections in connected_accounts to prevent it requiring two clicks to fully disconnect
+    await supabaseAdmin
+      .from("connected_accounts")
+      .delete()
+      .eq("user_id", userId)
+      .eq("platform", platform);
+
     if (dbErr) {
       console.error(`[OAuth] Disconnect DB failure for ${platform}:`, dbErr.message);
       return res.status(500).json({ error: "Failed to disconnect account in database" });

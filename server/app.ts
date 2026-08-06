@@ -205,7 +205,7 @@ app.post("/api/audit", async (req, res) => {
   // Credit pre-flight check
   if (userId) {
     try {
-      const isTest = await isTestUser(userId);
+      const isTest = await isTestUser(req);
       if (!isTest) {
         const [planRes, creditsRes] = await Promise.all([
           supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
@@ -272,7 +272,7 @@ app.post("/api/skill/:name", async (req, res) => {
     const op = OPERATION_COSTS[operationId];
     cost = op?.cost ?? 2;
     try {
-      const isTest = await isTestUser(userId);
+      const isTest = await isTestUser(req);
       if (!isTest) {
         const [planRes, creditsRes] = await Promise.all([
           supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),

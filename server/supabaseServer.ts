@@ -296,10 +296,21 @@ export async function getRecentAuditContext(userId: string): Promise<string> {
   }).join("\n\n");
 }
 
-export async function isTestUser(userId: string): Promise<boolean> {
+export async function isTestUser(reqOrUserId: any): Promise<boolean> {
   try {
-    const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
-    return data?.user?.email === "ceo@zieads.com";
+    let userEmail = null;
+
+    if (reqOrUserId && reqOrUserId.headers && reqOrUserId.headers.authorization) {
+      const token = reqOrUserId.headers.authorization.replace("Bearer ", "");
+      const { data } = await supabaseAdmin.auth.getUser(token);
+      userEmail = data?.user?.email;
+    } else if (typeof reqOrUserId === 'string') {
+      const { data } = await supabaseAdmin.auth.admin.getUserById(reqOrUserId);
+      userEmail = data?.user?.email;
+    }
+
+    const email = userEmail?.toLowerCase();
+    return email === "ceo@zieads.com" || email === "admin@zieads.com";
   } catch {
     return false;
   }
