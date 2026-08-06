@@ -14,6 +14,7 @@ import {
   getProfile,
   supabaseAdmin,
   deductCredits,
+  isTestUser,
 } from "../supabaseServer.js";
 
 export const agentRouter = express.Router();
@@ -259,9 +260,20 @@ agentRouter.post("/message", async (req, res) => {
 
   if (!message?.trim()) return res.status(400).json({ error: "message is required" });
 
-  const profile = await getProfile(userId);
-  const plan = profile?.plan || "free";
-  const limit = getRateLimit(plan);
+  const isTest = await isTestUser(req);
+  let plan = "free";
+  if (isTest) {
+    plan = "agency";
+  } else {
+    const { data: userPlan } = await supabaseAdmin
+      .from("user_plan")
+      .select("plan_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    plan = userPlan?.plan_id || "free";
+  }
+
+  const limit = isTest ? Infinity : getRateLimit(plan);
   const used = await getAgentMessageCount(userId);
   if (used >= limit) {
     return res.status(429).json({
@@ -405,9 +417,20 @@ agentRouter.post("/analyze", async (req, res) => {
 
   if (!mode) return res.status(400).json({ error: "mode is required" });
 
-  const profile = await getProfile(userId);
-  const plan = profile?.plan || "free";
-  const limit = getRateLimit(plan);
+  const isTest = await isTestUser(req);
+  let plan = "free";
+  if (isTest) {
+    plan = "agency";
+  } else {
+    const { data: userPlan } = await supabaseAdmin
+      .from("user_plan")
+      .select("plan_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    plan = userPlan?.plan_id || "free";
+  }
+
+  const limit = isTest ? Infinity : getRateLimit(plan);
   const used = await getAgentMessageCount(userId);
   if (used >= limit) {
     return res.status(429).json({
