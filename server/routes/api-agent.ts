@@ -535,9 +535,21 @@ agentRouter.delete("/conversations/:id", async (req, res) => {
 agentRouter.get("/usage", async (req, res) => {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  const profile = await getProfile(userId);
-  const plan = profile?.plan || "free";
-  const limit = getRateLimit(plan);
+
+  const isTest = await isTestUser(req);
+  let plan = "free";
+  if (isTest) {
+    plan = "agency";
+  } else {
+    const { data: userPlan } = await supabaseAdmin
+      .from("user_plan")
+      .select("plan_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    plan = userPlan?.plan_id || "free";
+  }
+
+  const limit = isTest ? Infinity : getRateLimit(plan);
   const used = await getAgentMessageCount(userId);
   res.json({ success: true, data: { used, limit, plan } });
 });
