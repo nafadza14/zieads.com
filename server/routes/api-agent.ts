@@ -31,6 +31,28 @@ function getRateLimit(plan: string | null | undefined): number {
   return RATE_LIMITS[plan.toLowerCase()] ?? RATE_LIMITS.free;
 }
 
+async function getUserPlanAndLimit(userId: string, req: any) {
+  let plan = "free";
+  let isTest = false;
+  try {
+    isTest = await isTestUser(req);
+    if (isTest) {
+      plan = "agency";
+    } else {
+      const { data: userPlan } = await supabaseAdmin
+        .from("user_plan")
+        .select("plan_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      plan = userPlan?.plan_id || "free";
+    }
+  } catch (e: any) {
+    console.error("[Agent] Plan fetch failed, defaulting to free plan:", e.message);
+  }
+  const limit = isTest ? 999999 : getRateLimit(plan);
+  return { plan, limit, isTest };
+}
+
 function getAnthropicClient() {
   if (process.env.SUMOPOD_API_KEY) {
     return new MockAnthropic() as any;
@@ -260,20 +282,7 @@ agentRouter.post("/message", async (req, res) => {
 
   if (!message?.trim()) return res.status(400).json({ error: "message is required" });
 
-  const isTest = await isTestUser(req);
-  let plan = "free";
-  if (isTest) {
-    plan = "agency";
-  } else {
-    const { data: userPlan } = await supabaseAdmin
-      .from("user_plan")
-      .select("plan_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    plan = userPlan?.plan_id || "free";
-  }
-
-  const limit = isTest ? 999999 : getRateLimit(plan);
+  const { plan, limit, isTest } = await getUserPlanAndLimit(userId, req);
   const used = await getAgentMessageCount(userId);
   if (used >= limit) {
     return res.status(429).json({
@@ -417,20 +426,7 @@ agentRouter.post("/analyze", async (req, res) => {
 
   if (!mode) return res.status(400).json({ error: "mode is required" });
 
-  const isTest = await isTestUser(req);
-  let plan = "free";
-  if (isTest) {
-    plan = "agency";
-  } else {
-    const { data: userPlan } = await supabaseAdmin
-      .from("user_plan")
-      .select("plan_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    plan = userPlan?.plan_id || "free";
-  }
-
-  const limit = isTest ? 999999 : getRateLimit(plan);
+  const { plan, limit, isTest } = await getUserPlanAndLimit(userId, req);
   const used = await getAgentMessageCount(userId);
   if (used >= limit) {
     return res.status(429).json({
@@ -536,20 +532,7 @@ agentRouter.get("/usage", async (req, res) => {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const isTest = await isTestUser(req);
-  let plan = "free";
-  if (isTest) {
-    plan = "agency";
-  } else {
-    const { data: userPlan } = await supabaseAdmin
-      .from("user_plan")
-      .select("plan_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    plan = userPlan?.plan_id || "free";
-  }
-
-  const limit = isTest ? 999999 : getRateLimit(plan);
+  const { plan, limit, isTest } = await getUserPlanAndLimit(userId, req);
   const used = await getAgentMessageCount(userId);
   res.json({ success: true, data: { used, limit, plan } });
 });

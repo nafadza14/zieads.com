@@ -301,7 +301,15 @@ function decodeJwtEmail(token: string): string | null {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     
-    // Pure JS Base64 decoding
+    // Try Node's Buffer first (fast & correct in Node environments)
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+      if (payload.email) return payload.email;
+    } catch (e) {
+      console.warn("[isTestUser] Buffer decode failed, trying JS fallback:", e);
+    }
+    
+    // Fallback: Pure JS Base64 decoding
     let base64Url = parts[1];
     let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     
