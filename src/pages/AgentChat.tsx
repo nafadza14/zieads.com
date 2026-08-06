@@ -209,6 +209,7 @@ export default function AgentChat() {
   const [userEmail, setUserEmail] = useState('');
   const [activeTab, setActiveTab] = useState<'chat' | 'modes'>('chat');
   const [runningMode, setRunningMode] = useState<UseCaseId | null>(null);
+  const [selectedRunMode, setSelectedRunMode] = useState<string>('');
   const [additionalData, setAdditionalData] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -539,9 +540,12 @@ export default function AgentChat() {
     setLoading(true);
 
     const modeInfo = USE_CASES.find(u => u.id === modeId)!;
+    const analysisContext = input.trim();
+    setInput('');
+
     setMessages(prev => [...prev, {
       role: 'user',
-      content: `${modeInfo.label} initiated...`,
+      content: `${modeInfo.label} initiated...${analysisContext ? `\n\nContext: ${analysisContext}` : ''}`,
       isAnalysis: true,
       analysisMode: modeId,
     }]);
@@ -554,7 +558,7 @@ export default function AgentChat() {
       const res = await fetch('/api/agent/analyze', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ mode: modeId, data: additionalData, conversationId: activeConvId }),
+        body: JSON.stringify({ mode: modeId, data: analysisContext, conversationId: activeConvId }),
         signal: controller.signal
       });
       const j = await res.json();
@@ -565,9 +569,10 @@ export default function AgentChat() {
       }
 
       abortControllerRef.current = null;
+      setSelectedRunMode('');
+
       simulateTypewriter(j.result || 'Analysis complete.', () => {
         setRunningMode(null);
-        setAdditionalData('');
       });
       if (j.usage) setUsage(prev => ({ ...prev, used: j.usage.used, limit: j.usage.limit }));
     } catch (err: any) {
@@ -578,12 +583,24 @@ export default function AgentChat() {
       }
       setLoading(false);
       setRunningMode(null);
-      setAdditionalData('');
+    }
+  };
+
+  const handleSendAction = () => {
+    if (selectedRunMode) {
+      if (creditStore.isModeLocked(selectedRunMode)) {
+        const modeInfo = USE_CASES.find(u => u.id === selectedRunMode)!;
+        setModeGateModal({ open: true, modeName: modeInfo.label, requiredPlan: 'pro' });
+        return;
+      }
+      runAnalysis(selectedRunMode as UseCaseId);
+    } else {
+      sendMessage();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendAction(); }
   };
 
   const isAtLimit = usage.used >= usage.limit;
@@ -932,76 +949,105 @@ export default function AgentChat() {
                       
                       {/* Toolbar matching landing page style */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, borderTop: '1px solid #E5DFCF', paddingTop: 14 }}>
-                        {/* Attachments / contextual labels */}
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById('agentFileUpload')?.click()}
-                            disabled={uploadingFile || loading}
-                            title="Attach File"
-                            style={{
-                              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5DFCF',
-                              background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s ease'
-                            }}
-                          >
-                            <Link2 size={16} />
-                          </button>
-                        </div>
+                         {/* Attachments & Run Mode Selector */}
+                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                           <button
+                             type="button"
+                             onClick={() => document.getElementById('agentFileUpload')?.click()}
+                             disabled={uploadingFile || loading}
+                             title="Attach File"
+                             style={{
+                               width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5DFCF',
+                               background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                               cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s ease'
+                             }}
+                           >
+                             <Link2 size={16} />
+                           </button>
 
-                        {/* Action buttons (Mic + Send) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          {/* Microphone Button */}
-                          <button
-                            type="button"
-                            onClick={toggleListening}
-                            title={isListening ? "Stop recording voice" : "Record voice context"}
-                            style={{
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '50%',
-                              border: `1px solid ${isListening ? '#EF4444' : '#E5DFCF'}`,
-                              background: isListening ? '#FEF2F2' : '#F9FAFB',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              color: isListening ? '#EF4444' : '#6B7280',
-                              transition: 'all 0.2s ease',
-                              animation: isListening ? 'za-pulse 1.2s ease-in-out infinite' : 'none'
-                            }}
-                          >
-                            {isListening ? <MicOff size={16} /> : <Mic size={16} />}
-                          </button>
-
-                          {/* Stop/Send Button */}
-                          {loading ? (
-                            <button
-                              type="button"
-                              onClick={stopGeneration}
-                              title="Stop generating"
-                              style={{
-                                width: '38px',
-                                height: '38px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                background: '#EF4444',
-                                color: '#FFFFFF',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
-                              }}
-                            >
-                              <Square size={14} fill="#FFFFFF" />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => sendMessage()}
-                              disabled={loading || (!input.trim() && !attachedFile)}
+                           {/* Run Mode Selector Dropdown inside the box */}
+                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #E5DFCF', borderRadius: '8px', padding: '0 10px', background: '#F9FAFB', height: '36px', boxSizing: 'border-box' }}>
+                             <Zap size={14} style={{ color: '#1E7BFF' }} />
+                             <select
+                               value={selectedRunMode || ''}
+                               onChange={e => setSelectedRunMode(e.target.value)}
+                               disabled={loading}
+                               style={{ 
+                                 border: 'none', 
+                                 background: 'transparent', 
+                                 fontSize: '12px', 
+                                 fontWeight: 600, 
+                                 color: '#3D4F62', 
+                                 outline: 'none', 
+                                 cursor: 'pointer', 
+                                 paddingRight: '4px',
+                                 fontFamily: 'inherit'
+                               }}
+                             >
+                               <option value="">Standard Chat</option>
+                               <option value="daily">Daily Diagnosis</option>
+                               <option value="roas">ROAS Drop Analysis</option>
+                               <option value="fatigue">Creative Fatigue</option>
+                               <option value="budget">Budget Optimization</option>
+                               <option value="competitive">Competitive Intel</option>
+                               <option value="launch">Launch Readiness</option>
+                             </select>
+                           </div>
+                         </div>
+ 
+                         {/* Action buttons (Mic + Send) */}
+                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                           {/* Microphone Button */}
+                           <button
+                             type="button"
+                             onClick={toggleListening}
+                             title={isListening ? "Stop recording voice" : "Record voice context"}
+                             style={{
+                               width: '38px',
+                               height: '38px',
+                               borderRadius: '50%',
+                               border: `1px solid ${isListening ? '#EF4444' : '#E5DFCF'}`,
+                               background: isListening ? '#FEF2F2' : '#F9FAFB',
+                               display: 'flex',
+                               alignItems: 'center',
+                               justifyContent: 'center',
+                               cursor: 'pointer',
+                               color: isListening ? '#EF4444' : '#6B7280',
+                               transition: 'all 0.2s ease',
+                               animation: isListening ? 'za-pulse 1.2s ease-in-out infinite' : 'none'
+                             }}
+                           >
+                             {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+                           </button>
+ 
+                           {/* Stop/Send Button */}
+                           {loading ? (
+                             <button
+                               type="button"
+                               onClick={stopGeneration}
+                               title="Stop generating"
+                               style={{
+                                 width: '38px',
+                                 height: '38px',
+                                 borderRadius: '50%',
+                                 border: 'none',
+                                 background: '#EF4444',
+                                 color: '#FFFFFF',
+                                 display: 'flex',
+                                 alignItems: 'center',
+                                 justifyContent: 'center',
+                                 cursor: 'pointer',
+                                 transition: 'all 0.2s ease',
+                                 boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
+                               }}
+                             >
+                               <Square size={14} fill="#FFFFFF" />
+                             </button>
+                           ) : (
+                             <button
+                               type="button"
+                               onClick={handleSendAction}
+                               disabled={loading || (!input.trim() && !attachedFile)}
                               style={{ 
                                 width: '38px',
                                 height: '38px',
@@ -1289,7 +1335,11 @@ function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q:
   );
 }
 
-// ─── Message bubble ───────────────────────────────────────────────────────────
+// Helper to strip emojis/emoticons from chatbot responses
+const stripEmojis = (text: string) => {
+  return text.replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/gu, '');
+};
+
 function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === 'user';
   const isAnalysisResult = !isUser && message.isAnalysis;
@@ -1302,7 +1352,7 @@ function MessageBubble({ message }: { message: Message }) {
           {uc?.icon || '⚡'}
         </div>
         <div style={{ padding: '10px 16px', background: uc?.bg || '#FAF8F3', border: `1px solid ${uc?.border || '#E5DFCF'}`, borderRadius: '12px 12px 12px 4px', fontSize: '0.85rem', color: uc?.color || '#0B1B2B', fontWeight: 600 }}>
-          {message.content}
+          {stripEmojis(message.content)}
         </div>
       </div>
     );
@@ -1327,7 +1377,7 @@ function MessageBubble({ message }: { message: Message }) {
         lineHeight: 1.7,
         boxShadow: '0 2px 8px rgba(11, 27, 43, 0.02)',
       }}>
-        <MarkdownContent content={message.content} isUser={isUser} />
+        <MarkdownContent content={stripEmojis(message.content)} isUser={isUser} />
       </div>
       {isUser && !message.isAnalysis && (
         <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#E5DFCF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.72rem', fontWeight: 700, color: '#0B1B2B' }}>Me</div>
@@ -1345,7 +1395,7 @@ function MarkdownContent({ content, isUser }: { content: string; isUser: boolean
   while (i < lines.length) {
     const line = lines[i];
     const rendered = line
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 550; color: #0B1B2B;">$1</strong>')
       .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:0.88em">$1</code>');
 
     // Table detection
@@ -1360,30 +1410,31 @@ function MarkdownContent({ content, isUser }: { content: string; isUser: boolean
     }
 
     if (line.startsWith('### ')) {
-      result.push(<div key={i} style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1E7BFF', marginTop: 14, marginBottom: 5 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^###\s/, '') }} />);
+      result.push(<div key={i} style={{ fontWeight: 600, fontSize: '0.92rem', color: '#0B1B2B', marginTop: 14, marginBottom: 5 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^###\s/, '') }} />);
     } else if (line.startsWith('## ')) {
-      result.push(<div key={i} style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0B1B2B', marginTop: 16, marginBottom: 6, borderBottom: '1px solid #E5DFCF', paddingBottom: 4 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^##\s/, '') }} />);
+      result.push(<div key={i} style={{ fontWeight: 700, fontSize: '1.02rem', color: '#0B1B2B', marginTop: 16, marginBottom: 6, borderBottom: '1px solid #E5DFCF', paddingBottom: 4 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^##\s/, '') }} />);
     } else if (line.startsWith('# ')) {
-      result.push(<div key={i} style={{ fontWeight: 800, fontSize: '1.15rem', color: '#0B1B2B', marginTop: 16, marginBottom: 8 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^#\s/, '') }} />);
+      result.push(<div key={i} style={{ fontWeight: 700, fontSize: '1.12rem', color: '#0B1B2B', marginTop: 16, marginBottom: 8 }} dangerouslySetInnerHTML={{ __html: rendered.replace(/^#\s/, '') }} />);
     } else if (line.match(/^(\d+)\.\s/)) {
       const num = line.match(/^(\d+)\./)?.[1];
       result.push(
         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
-          <span style={{ flexShrink: 0, fontWeight: 700, color: '#1E7BFF', minWidth: 16 }}>{num}.</span>
+          <span style={{ flexShrink: 0, fontWeight: 600, color: '#6B7A89', minWidth: 16 }}>{num}.</span>
           <span dangerouslySetInnerHTML={{ __html: rendered.replace(/^\d+\.\s/, '') }} />
         </div>
       );
     } else if (line.startsWith('- ') || line.startsWith('• ')) {
       result.push(
         <div key={i} style={{ display: 'flex', gap: 7, marginBottom: 4 }}>
-          <span style={{ flexShrink: 0, marginTop: 4, color: '#1E7BFF', fontSize: '0.65rem' }}>●</span>
+          <span style={{ flexShrink: 0, marginTop: 7, color: '#6B7A89', fontSize: '0.45rem' }}>●</span>
           <span dangerouslySetInnerHTML={{ __html: rendered.replace(/^[-•]\s/, '') }} />
         </div>
       );
     } else if (line.startsWith('🔴') || line.startsWith('🟡') || line.startsWith('🟢')) {
+      const cleanText = rendered.replace(/^[🔴🟡🟢]/, '').trim();
       result.push(
-        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, padding: '8px 12px', background: line.startsWith('🔴') ? '#fef2f2' : line.startsWith('🟡') ? '#fffbeb' : '#f0fdf4', borderRadius: 8 }}>
-          <span dangerouslySetInnerHTML={{ __html: rendered }} />
+        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, padding: '8px 12px', background: '#FAF8F3', border: '1px solid #E5DFCF', borderRadius: 8 }}>
+          <span dangerouslySetInnerHTML={{ __html: cleanText }} />
         </div>
       );
     } else if (line.trim() === '') {
