@@ -999,14 +999,15 @@ export default function AgentChat() {
                             </button>
                           ) : (
                             <button
+                              type="button"
                               onClick={() => sendMessage()}
                               disabled={loading || (!input.trim() && !attachedFile)}
-                              className="btn-lp-primary-gradient"
                               style={{ 
                                 width: '38px',
                                 height: '38px',
                                 borderRadius: '50%',
                                 border: 'none',
+                                background: '#1E7BFF',
                                 color: '#FFFFFF',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1014,8 +1015,10 @@ export default function AgentChat() {
                                 cursor: loading || (!input.trim() && !attachedFile) ? 'not-allowed' : 'pointer',
                                 opacity: loading || (!input.trim() && !attachedFile) ? 0.6 : 1,
                                 transition: 'all 0.2s ease',
-                                boxShadow: 'var(--lp-shadow-cta)'
+                                boxShadow: '0 4px 12px rgba(30, 123, 255, 0.25)'
                               }}
+                              onMouseEnter={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#0056b3'; }}
+                              onMouseLeave={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#1E7BFF'; }}
                             >
                               <Send size={15} />
                             </button>
