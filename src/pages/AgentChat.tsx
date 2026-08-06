@@ -831,7 +831,7 @@ export default function AgentChat() {
                     </p>
                   </div>
                 ) : (
-                  <div style={{ maxWidth: 760, margin: '0 auto', width: '100%' }}>
+                  <div style={{ maxWidth: 950, margin: '0 auto', width: '100%' }}>
                     {messages.map((msg, i) => (
                       <MessageBubble key={i} message={msg} />
                     ))}
@@ -1288,7 +1288,7 @@ function MessageBubble({ message }: { message: Message }) {
         </div>
       )}
       <div style={{
-        maxWidth: isAnalysisResult ? '100%' : '75%',
+        maxWidth: isAnalysisResult ? '100%' : (isUser ? '75%' : '90%'),
         width: isAnalysisResult ? '100%' : undefined,
         padding: isAnalysisResult ? '20px 24px' : '12px 16px',
         borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
