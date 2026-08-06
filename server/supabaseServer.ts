@@ -296,21 +296,62 @@ export async function getRecentAuditContext(userId: string): Promise<string> {
   }).join("\n\n");
 }
 
+function decodeJwtEmail(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    // Pure JS Base64 decoding
+    let base64Url = parts[1];
+    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    
+    // Add padding if missing
+    const pad = base64.length % 4;
+    if (pad) {
+      if (pad === 1) return null;
+      base64 += new Array(5 - pad).join('=');
+    }
+    
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    let decoded = '';
+    let buffer = 0;
+    let bits = 0;
+    
+    for (let i = 0; i < base64.length; i++) {
+      const c = base64.charAt(i);
+      if (c === '=') break;
+      const val = chars.indexOf(c);
+      if (val === -1) continue;
+      
+      buffer = (buffer << 6) | val;
+      bits += 6;
+      
+      if (bits >= 8) {
+        bits -= 8;
+        decoded += String.fromCharCode((buffer >> bits) & 0xff);
+      }
+    }
+    
+    // Decode UTF-8 correctly
+    const utf8Decoded = decodeURIComponent(
+      decoded.split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+    );
+    
+    const payload = JSON.parse(utf8Decoded);
+    return payload.email || null;
+  } catch (e) {
+    console.error("[isTestUser] Pure JS JWT decode failed:", e);
+    return null;
+  }
+}
+
 export async function isTestUser(reqOrUserId: any): Promise<boolean> {
   try {
     let userEmail = null;
 
     if (reqOrUserId && reqOrUserId.headers && reqOrUserId.headers.authorization) {
       const token = reqOrUserId.headers.authorization.replace("Bearer ", "");
-      try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
-          userEmail = payload.email;
-        }
-      } catch (e) {
-        console.error("[isTestUser] JWT decode failed:", e);
-      }
+      userEmail = decodeJwtEmail(token);
       
       if (!userEmail) {
         const { data } = await supabaseAdmin.auth.getUser(token);
