@@ -778,6 +778,292 @@ export default function LandingPage({ onScanComplete }: Props) {
                     padding: '16px 18px',
                     fontSize: '14px',
                     color: 'var(--lp-text-primary, #0B1B2B)',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'flex-start'
+                  }}>
+                    <Bot size={18} style={{ color: 'var(--lp-accent, #1E7BFF)', flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--lp-text-tertiary, #6B7A89)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>Your Request</span>
+                      <span style={{ fontStyle: 'italic', color: 'var(--lp-text-secondary, #3D4F62)' }}>"{pendingPrompt || 'Ready to analyze your marketing channels'}"</span>
+                    </div>
+                  </div>
+
+                  {/* Value steps */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[
+                      { num: '01', label: 'Create your free account in 30 seconds' },
+                      { num: '02', label: 'Connect your Instagram, TikTok, or LinkedIn' },
+                      { num: '03', label: 'AI Agent executes your marketing strategy' }
+                    ].map((step, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        background: '#FFFFFF',
+                        border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+                        borderRadius: '12px',
+                        padding: '13px 16px'
+                      }}>
+                        <span style={{
+                          fontSize: '11px', fontWeight: 700,
+                          color: 'var(--lp-accent, #1E7BFF)',
+                          letterSpacing: '0.04em',
+                          minWidth: '22px'
+                        }}>{step.num}</span>
+                        <span style={{
+                          fontSize: '14px', fontWeight: 500,
+                          color: 'var(--lp-text-primary, #0B1B2B)',
+                          lineHeight: 1.4
+                        }}>{step.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* CTA */}
+                  <button
+                    onClick={handleModalConfirm}
+                    className="btn-lp-primary-gradient"
+                    style={{
+                      width: '100%',
+                      padding: '15px 24px',
+                      borderRadius: 'var(--lp-radius-button, 10px)',
+                      border: 'none',
+                      color: '#FFFFFF',
+                      fontWeight: 600,
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: 'var(--lp-shadow-cta)',
+                      transition: 'all 0.2s ease',
+                      letterSpacing: '-0.01em'
+                    }}
+                  >
+                    <span>Create Free Account</span>
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+      {/* ══════════════════════════════════ STEP 3: HOW IT WORKS ══════════════════════════════════ */}
+      <section id="how-it-works" style={{ padding: '90px 24px', background: 'var(--lp-bg-canvas, #FAF8F3)', borderTop: '1px solid var(--lp-border-subtle, #EBE6DC)', textAlign: 'center' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 700, color: 'var(--lp-accent, #1E7BFF)', letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
+          Simple 3-Step Workflow
+        </span>
+        <h2 className="section-title" style={{ marginTop: 0, marginBottom: 14 }}>
+          How ZieAds Works
+        </h2>
+        <p className="section-subtitle" style={{ maxWidth: '620px', margin: '0 auto 52px', fontSize: '16.5px', color: 'var(--lp-text-secondary, #4B5563)' }}>
+          You approve, AI executes. The safest and most powerful way to automate your growth.
+        </p>
+
+        <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '28px', textAlign: 'left' }}>
+          {/* Step 1: AI Suggests */}
+          <div style={{
+            background: 'var(--lp-bg-card, #FFFFFF)',
+            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+            borderRadius: '20px',
+            padding: '32px 28px',
+            boxShadow: 'var(--lp-shadow-card, 0 4px 12px rgba(0,0,0,0.03))',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(30, 123, 255, 0.1)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sparkles size={24} />
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E7BFF', background: 'rgba(30,123,255,0.08)', padding: '4px 10px', borderRadius: '8px', letterSpacing: '0.04em' }}>STEP 01</span>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--lp-text-primary, #0B1B2B)', margin: '0 0 10px' }}>AI Suggests</h3>
+            <p style={{ fontSize: '14.5px', lineHeight: '1.6', color: 'var(--lp-text-secondary, #4B5563)', margin: 0 }}>
+              Ask the AI Agent for a content plan, analytics summary, or reply strategy. It uses your real data to generate proposals.
+            </p>
+          </div>
+
+          {/* Step 2: You Approve */}
+          <div style={{
+            background: 'var(--lp-bg-card, #FFFFFF)',
+            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+            borderRadius: '20px',
+            padding: '32px 28px',
+            boxShadow: 'var(--lp-shadow-card, 0 4px 12px rgba(0,0,0,0.03))',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <UserCheck size={24} />
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '4px 10px', borderRadius: '8px', letterSpacing: '0.04em' }}>STEP 02</span>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--lp-text-primary, #0B1B2B)', margin: '0 0 10px' }}>You Approve</h3>
+            <p style={{ fontSize: '14.5px', lineHeight: '1.6', color: 'var(--lp-text-secondary, #4B5563)', margin: 0 }}>
+              Every action is a draft you can review, edit, or reject. Nothing goes live without your explicit approval.
+            </p>
+          </div>
+
+          {/* Step 3: AI Executes */}
+          <div style={{
+            background: 'var(--lp-bg-card, #FFFFFF)',
+            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+            borderRadius: '20px',
+            padding: '32px 28px',
+            boxShadow: 'var(--lp-shadow-card, 0 4px 12px rgba(0,0,0,0.03))',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Rocket size={24} />
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#8B5CF6', background: 'rgba(139,92,246,0.08)', padding: '4px 10px', borderRadius: '8px', letterSpacing: '0.04em' }}>STEP 03</span>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--lp-text-primary, #0B1B2B)', margin: '0 0 10px' }}>AI Executes</h3>
+            <p style={{ fontSize: '14.5px', lineHeight: '1.6', color: 'var(--lp-text-secondary, #4B5563)', margin: 0 }}>
+              Once approved, the AI Agent handles the execution - publishing posts, syncing analytics, replying to comments. You stay in control.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════ S2: FEATURES & CORE CAPABILITIES ══════════════════════════════════ */}
+      <section id="dashboard-preview" className="ai-strategist-section" style={{ padding: '100px 24px', background: '#FFFFFF', textAlign: 'center', borderTop: '1px solid var(--lp-border-subtle)' }}>
+        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>Platform Capabilities</span>
+        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>Everything your AI Marketing Agent does for you</h2>
+        <p className="section-subtitle" style={{ maxWidth: '680px', margin: '0 auto 48px' }}>
+          You approve, AI executes across Instagram, TikTok, and LinkedIn. Manage and automate your marketing from a single unified workspace.
+        </p>
+
+        {/* 3 Core Highlight Cards */}
+        <div style={{ maxWidth: '1080px', margin: '0 auto 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', textAlign: 'left' }}>
+          <div style={{
+            background: 'var(--lp-bg-canvas, #FAF8F3)',
+            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+            borderRadius: '20px',
+            padding: '30px 26px',
+            boxShadow: 'var(--lp-shadow-card)'
+          }}>
+            <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(30,123,255,0.1)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+              <PenTool size={24} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 10px' }}>Composer</h3>
+            <p style={{ fontSize: '14.5px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.6' }}>
+              The AI drafts posts based on your top-performing content. You approve, it publishes across Instagram, TikTok, and LinkedIn.
+            </p>
+          </div>
+
+          <div style={{
+            background: 'var(--lp-bg-canvas, #FAF8F3)',
+            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+            borderRadius: '20px',
+            padding: '30px 26px',
+            boxShadow: 'var(--lp-shadow-card)'
+          }}>
+            <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(16,185,129,0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+              <BarChart3 size={24} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 10px' }}>Analytics</h3>
+            <p style={{ fontSize: '14.5px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.6' }}>
+              The AI reads your real-time performance data and tells you what's working. No manual dashboard scanning required.
+            </p>
+          </div>
+
+          <div style={{
+            background: 'var(--lp-bg-canvas, #FAF8F3)',
+            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+            borderRadius: '20px',
+            padding: '30px 26px',
+            boxShadow: 'var(--lp-shadow-card)'
+          }}>
+            <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(139,92,246,0.1)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+              <Inbox size={24} />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 10px' }}>Inbox</h3>
+            <p style={{ fontSize: '14.5px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.6' }}>
+              The AI classifies comments by sentiment and drafts replies for you. You approve each one, keeping your voice authentic.
+            </p>
+          </div>
+        </div>
+
+        {/* SHOWCASE CARD */}
+        <div className="lp-showcase-container" style={{ marginTop: 0, marginBottom: 48, marginLeft: 'auto', marginRight: 'auto' }}>
+          <div className="lp-rainbow-glow"></div>
+          <div className="lp-showcase-card">
+            <div className="lp-showcase-header">
+              <div className="lp-chrome-dots">
+                <span className="lp-dot-red"></span>
+                <span className="lp-dot-yellow"></span>
+                <span className="lp-dot-green"></span>
+              </div>
+              <div className="lp-chrome-title">app.zieads.com - AI Agent Workspace</div>
+            </div>
+            <div className="lp-showcase-body" style={{ height: 'auto' }}>
+              <img 
+                src="/zieads-dashboard.png" 
+                alt="app.zieads.com - AI Agent Workspace" 
+                style={{ 
+                  width: '100%', 
+                  height: 'auto', 
+                  display: 'block',
+                  borderBottomLeftRadius: 'inherit',
+                  borderBottomRightRadius: 'inherit'
+                }} 
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Active Feature Suite Grid */}
+        <div style={{ maxWidth: '960px', margin: '0 auto 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', textAlign: 'left' }}>
+          {( [
+            { title: "AI Analyst", desc: "Automated social performance diagnosis and key growth drivers.", Icon: Sparkles },
+            { title: "AI Agent", desc: "Deep strategic reasoning & prioritized daily action plans.", Icon: Bot },
+            { title: "Composer", desc: "Multi-channel post creator with AI captions tailored per platform.", Icon: PenTool },
+            { title: "Calendar", desc: "Visual content scheduling with recommended audience active times.", Icon: Calendar },
+            { title: "Analytics", desc: "Cross-platform reach, engagement, and audience retention breakdown.", Icon: BarChart3 },
+            { title: "Inbox", desc: "Unified comments inbox with sentiment checks & quick AI replies.", Icon: Inbox },
+            { title: "Competitor Hunt", desc: "Real-time competitor content monitoring and market gap analysis.", Icon: Target },
+            { title: "Connections", desc: "One-click OAuth integration for Instagram, TikTok, and LinkedIn.", Icon: Link2 },
+            { title: "Settings", desc: "Custom brand voice, persona profiles, and workspace preferences.", Icon: SettingsIcon }
+          ] as Array<{title: string, desc: string, Icon: any}> ).map((f, i) => {
+            const IconComp = f.Icon;
+            return (
+              <div 
+                key={i} 
+                style={{
+                  background: 'var(--lp-bg-card)',
+                  border: '1px solid var(--lp-border-subtle)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  boxShadow: 'var(--lp-shadow-card)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--lp-bg-inset)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--lp-accent)', marginBottom: '12px' }}>
+                  <IconComp size={20} />
+                </div>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 6px' }}>{f.title}</h3>
+                <p style={{ fontSize: '13px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.5' }}>{f.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Supporting stat row */}
+        <div className="proof-stats animate-fade-in" style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '40px', marginTop: '40px' }}>
+          <div className="stat">
+            <span className="stat-number mono-num">Under 3 min</span>
+            <span className="stat-label">From connect to first insight</span>
+          </div>
           <div className="stat-divider"></div>
           <div className="stat">
             <span className="stat-number mono-num">Every morning</span>
