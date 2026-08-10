@@ -48,12 +48,21 @@ async function enrichContextFromProfile(
   if (!userId) return partial;
   const profile = await getProfile(userId);
   if (!profile) return partial;
+
+  const resolvedGoal = partial.primaryGoal !== 'Generate leads' 
+    ? partial.primaryGoal 
+    : (profile.primary_goal || (Array.isArray(profile.goals) && profile.goals.length > 0 ? profile.goals.join(', ') : 'Generate leads'));
+
+  const resolvedPlatforms = partial.platforms.length > 0 
+    ? partial.platforms 
+    : (profile.platforms?.length > 0 ? profile.platforms : (profile.platforms_in_focus || []));
+
   return {
-    businessName: partial.businessName || profile.business_name || '',
+    businessName: partial.businessName || profile.business_name || (profile.role ? `${profile.role} Business` : ''),
     businessType: partial.businessType || profile.business_type || '',
-    primaryGoal: partial.primaryGoal !== 'Generate leads' ? partial.primaryGoal : (profile.primary_goal || 'Generate leads'),
+    primaryGoal: resolvedGoal,
     monthlyBudget: partial.monthlyBudget !== 'Not specified' ? partial.monthlyBudget : (profile.monthly_budget || 'Not specified'),
-    platforms: partial.platforms.length > 0 ? partial.platforms : (profile.platforms || []),
+    platforms: resolvedPlatforms,
   };
 }
 

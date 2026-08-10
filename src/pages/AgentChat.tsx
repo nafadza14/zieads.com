@@ -143,45 +143,73 @@ type UseCaseId = typeof USE_CASES[number]['id'];
 
 // ─── Suggested questions grouped by category ─────────────────────────────────
 const DYNAMIC_SUGGESTIONS = [
+  // Onboarding Goal matches
   {
-    tag: 'Meta Ads',
-    q: 'What Meta audience should I target for my business?',
-    match: (p: any) => p.platforms_in_focus?.includes('Meta') || p.platforms?.includes('Meta') || p.challenge?.toLowerCase().includes('meta')
+    tag: 'Daily Direction',
+    q: 'What high-performing ad or content should I publish today based on my goals?',
+    match: (p: any) => p.goals?.some((g: string) => g.toLowerCase().includes('post') || g.toLowerCase().includes('daily') || g.toLowerCase().includes('content'))
   },
   {
+    tag: 'Performance',
+    q: 'Which of my ads are generating the highest ROI and which should I pause?',
+    match: (p: any) => p.goals?.some((g: string) => g.toLowerCase().includes('working') || g.toLowerCase().includes('roas') || g.toLowerCase().includes('cpa'))
+  },
+  {
+    tag: 'Diagnosis',
+    q: 'Diagnose why my ads performance or ROAS dropped recently and how to fix it',
+    match: (p: any) => p.goals?.some((g: string) => g.toLowerCase().includes('drop') || g.toLowerCase().includes('numbers') || g.toLowerCase().includes('slump')) || p.challenge?.toLowerCase().includes('roas')
+  },
+  {
+    tag: 'Competitor Intel',
+    q: 'Analyze what competitors in my niche are doing with their ad creatives and offers',
+    match: (p: any) => p.goals?.some((g: string) => g.toLowerCase().includes('competitor') || g.toLowerCase().includes('market'))
+  },
+  {
+    tag: 'Audit & Scaling',
+    q: 'Audit my advertising setup and tell me how to scale winning campaigns',
+    match: (p: any) => p.goals?.some((g: string) => g.toLowerCase().includes('ready') || g.toLowerCase().includes('scale') || g.toLowerCase().includes('budget'))
+  },
+  {
+    tag: 'Copy & Hooks',
+    q: 'Write 5 high-converting ad headlines with strong hooks for my target audience',
+    match: (p: any) => p.goals?.some((g: string) => g.toLowerCase().includes('copy') || g.toLowerCase().includes('hook') || g.toLowerCase().includes('converting'))
+  },
+  // Role matches
+  {
+    tag: 'Solo Founder',
+    q: 'As a solo founder, what is the single highest-leverage ads task I should execute today?',
+    match: (p: any) => p.role?.toLowerCase().includes('solo') || p.role?.toLowerCase().includes('founder')
+  },
+  {
+    tag: 'Agency & Consultant',
+    q: 'Generate a structured performance audit breakdown for my client accounts',
+    match: (p: any) => p.role?.toLowerCase().includes('agency') || p.role?.toLowerCase().includes('freelance') || p.role?.toLowerCase().includes('consultant')
+  },
+  {
+    tag: 'In-house Marketer',
+    q: 'Draft a full-funnel ad budget allocation and channel strategy proposal',
+    match: (p: any) => p.role?.toLowerCase().includes('in-house') || p.role?.toLowerCase().includes('manager')
+  },
+  // Platform matches
+  {
     tag: 'Meta Ads',
-    q: "My Meta ROAS dropped 40% this week. What's wrong?",
-    match: (p: any) => p.challenge?.toLowerCase().includes('roas') || p.goals?.includes('Improve ROAS / CPA')
+    q: 'What Meta audience structure should I target for my business?',
+    match: (p: any) => p.platforms_in_focus?.some((pl: string) => pl.toLowerCase().includes('meta') || pl.toLowerCase().includes('instagram') || pl.toLowerCase().includes('facebook')) || p.platforms?.includes('Meta')
+  },
+  {
+    tag: 'TikTok Ads',
+    q: 'What short-form video hooks and creative angles are working on TikTok right now?',
+    match: (p: any) => p.platforms_in_focus?.some((pl: string) => pl.toLowerCase().includes('tiktok')) || p.platforms?.includes('TikTok')
+  },
+  {
+    tag: 'LinkedIn Ads',
+    q: 'How should I structure B2B LinkedIn sponsored content for high-intent leads?',
+    match: (p: any) => p.platforms_in_focus?.some((pl: string) => pl.toLowerCase().includes('linkedin')) || p.platforms?.includes('LinkedIn')
   },
   {
     tag: 'Google Ads',
-    q: 'Build me a Google Search campaign structure with ad groups',
-    match: (p: any) => p.platforms_in_focus?.includes('Google') || p.platforms?.includes('Google') || p.challenge?.toLowerCase().includes('google')
-  },
-  {
-    tag: 'Google Ads',
-    q: 'How do I fix a low Quality Score on my top keywords?',
-    match: (p: any) => p.platforms_in_focus?.includes('Google') || p.platforms?.includes('Google') || p.challenge?.toLowerCase().includes('keywords')
-  },
-  {
-    tag: 'Creative',
-    q: 'Write 5 Meta ad headlines with strong hooks for my product',
-    match: (p: any) => p.goals?.includes('Write high converting copy') || p.challenge?.toLowerCase().includes('copy') || p.challenge?.toLowerCase().includes('creative')
-  },
-  {
-    tag: 'Creative',
-    q: 'What video creative format is winning on TikTok right now?',
-    match: (p: any) => p.platforms_in_focus?.includes('TikTok') || p.platforms?.includes('TikTok') || p.challenge?.toLowerCase().includes('tiktok')
-  },
-  {
-    tag: 'Strategy',
-    q: 'How should I split a $10K/month budget across Meta and Google?',
-    match: (p: any) => p.goals?.includes('Scale ad spend budget') || p.monthly_budget === 'Over $100K' || p.monthly_budget === '$20K to $100K'
-  },
-  {
-    tag: 'Strategy',
-    q: 'Map my full-funnel ad strategy (TOFU → MOFU → BOFU)',
-    match: (p: any) => p.goals?.includes('Structure full funnel strategy') || p.challenge?.toLowerCase().includes('funnel')
+    q: 'Build me a high-intent Google Search campaign structure with negative keywords',
+    match: (p: any) => p.platforms_in_focus?.some((pl: string) => pl.toLowerCase().includes('google')) || p.platforms?.includes('Google')
   }
 ];
 
@@ -670,7 +698,7 @@ export default function AgentChat() {
             <span>+ New Conversation</span>
           </button>
             
-            {userProfile?.business_name && (
+            {(userProfile?.business_name || userProfile?.role || (userProfile?.goals && userProfile.goals.length > 0)) && (
               <div style={{
                 background: '#FAF8F3',
                 border: '1px solid #EBE6DC',
@@ -678,11 +706,39 @@ export default function AgentChat() {
                 padding: '12px 14px',
                 marginTop: '4px'
               }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7A89', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Business Context</div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0B1B2B', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{userProfile.business_name}</div>
-                {userProfile.business_type && <div style={{ fontSize: '0.72rem', color: '#6B7A89', marginTop: 1 }}>{userProfile.business_type}</div>}
-                <button onClick={() => navigate('/profile')} style={{ marginTop: '6px', background: 'none', border: 'none', fontSize: '11px', color: '#1E7BFF', cursor: 'pointer', padding: 0, fontWeight: 600 }}>
-                  Edit Profile →
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7A89', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Persona Context</div>
+                  {userProfile?.role && (
+                    <span style={{ fontSize: '9.5px', fontWeight: 700, color: '#1E7BFF', background: 'rgba(30,123,255,0.08)', padding: '2px 6px', borderRadius: '6px' }}>
+                      {userProfile.role}
+                    </span>
+                  )}
+                </div>
+                
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0B1B2B', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {userProfile.business_name || 'Active Workspace'}
+                </div>
+                
+                {userProfile.business_type && (
+                  <div style={{ fontSize: '0.72rem', color: '#6B7A89', marginTop: 1 }}>{userProfile.business_type}</div>
+                )}
+
+                {userProfile.platforms_in_focus && userProfile.platforms_in_focus.length > 0 && (
+                  <div style={{ fontSize: '0.70rem', color: '#8A99A8', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                    {userProfile.platforms_in_focus.slice(0, 3).map((pl: string) => (
+                      <span key={pl} style={{ background: '#FFFFFF', border: '1px solid #EBE6DC', padding: '1px 5px', borderRadius: '4px' }}>
+                        {pl}
+                      </span>
+                    ))}
+                    {userProfile.platforms_in_focus.length > 3 && (
+                      <span style={{ color: '#6B7A89', padding: '1px 2px' }}>+{userProfile.platforms_in_focus.length - 3}</span>
+                    )}
+                  </div>
+                )}
+
+                <button onClick={() => navigate('/profile')} style={{ marginTop: '8px', background: 'none', border: 'none', fontSize: '11px', color: '#1E7BFF', cursor: 'pointer', padding: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>Edit Profile & Goals</span>
+                  <span>→</span>
                 </button>
               </div>
             )}

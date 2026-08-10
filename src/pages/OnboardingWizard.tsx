@@ -289,29 +289,49 @@ export default function OnboardingWizard() {
       const sessionRes = await supabase.auth.getSession();
       const token = sessionRes.data?.session?.access_token;
       if (token) {
-        // Complete onboarding database flag
+        // 1. Ensure full profile answers are saved
+        const payload = {
+          role: answers.role,
+          goals: answers.goals,
+          current_tools: answers.currentTools,
+          account_volume: answers.accountVolume,
+          platforms_in_focus: answers.platformsInFocus,
+          onboardingStep: 8,
+          hasCompletedOnboarding: true
+        };
+
+        await fetch('/api/profile', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // 2. Complete onboarding database flag & save payload
         const res = await fetch('/api/v3/profile/onboarding/complete', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
         });
+
         if (!res.ok) {
           const errText = await res.text();
           console.error('Failed to complete onboarding wizard session:', errText);
-          alert('Database Onboarding Complete Error: ' + errText);
-          setSavingStep(false);
-          return;
         }
         localStorage.setItem('zieads_onboarding_completed', 'true');
         sessionStorage.setItem('zieads_onboarding_check_done', 'true');
       }
     } catch (e) {
       console.error('Failed to complete onboarding wizard session', e);
-      alert('Network Error completing onboarding: ' + e);
+    } finally {
       setSavingStep(false);
-      return;
+      navigate('/analyst');
     }
-    setSavingStep(false);
-    navigate('/analyst');
   };
 
   const toggleMultiSelect = (key: 'goals' | 'currentTools' | 'platformsInFocus', value: string) => {

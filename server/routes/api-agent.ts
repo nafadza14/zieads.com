@@ -130,24 +130,53 @@ Output: Pass/Fail checklist, critical blockers (do not launch until fixed), warn
 - **No filler phrases**. No "Great question!", no "I hope this helps." Start every response with the insight.
 - **Ready-to-use outputs**. If asked for copy, write the actual ad copy. If asked for a campaign structure, write the actual structure with naming conventions.
 - **Reference audit data first**. If the user's audit context is available, lead with what you know about their specific business before adding general advice.
+- **Incorporate Onboarding & Persona Profile**: Always tailor your advice, tone, workflows, and solutions to the user's specific persona/role (e.g. Solo founder, Agency owner, In-house marketer), their stated strategic goals, current marketing tool stack, scale, and focus platforms provided in the profile.
 - **NEVER use the em-dash character '—' in your responses**. Use standard hyphens '-' or other punctuation instead. Using em-dashes makes the text look like generic AI slop.
 
 ## Tone:
 Senior strategist at a top-5 performance agency. Honest, direct, technically precise, focused on ROI. You tell users hard truths when their setup is wrong.`;
 
-// ─── Dynamic business context injected per user ───────────────────────────
+// ─── Dynamic business & onboarding context injected per user ───────────────
 function buildBusinessContext(profile: any): string {
   if (!profile) return '';
   const parts: string[] = [];
-  if (profile.business_name)     parts.push(`Business: ${profile.business_name}`);
-  if (profile.business_type)     parts.push(`Industry: ${profile.business_type}`);
-  if (profile.primary_goal)      parts.push(`Primary goal: ${profile.primary_goal}`);
-  if (profile.monthly_budget)    parts.push(`Monthly ads budget: ${profile.monthly_budget}`);
-  if (profile.platforms?.length) parts.push(`Active platforms: ${profile.platforms.join(', ')}`);
-  if (profile.primary_url)       parts.push(`Website: ${profile.primary_url}`);
-  if (profile.challenge)         parts.push(`Stated challenge: ${profile.challenge}`);
+
+  // 1. Business Basics
+  if (profile.business_name)     parts.push(`- Business Name: ${profile.business_name}`);
+  if (profile.business_type)     parts.push(`- Industry / Niche: ${profile.business_type}`);
+  if (profile.primary_url)       parts.push(`- Website URL: ${profile.primary_url}`);
+  if (profile.monthly_budget)    parts.push(`- Monthly Ads Budget: ${profile.monthly_budget}`);
+  if (profile.challenge)         parts.push(`- Core Challenge: ${profile.challenge}`);
+
+  // 2. Onboarding Questionnaire Data
+  if (profile.role)              parts.push(`- User Role & Persona: ${profile.role}`);
+  
+  if (profile.goals && (Array.isArray(profile.goals) ? profile.goals.length > 0 : Boolean(profile.goals))) {
+    const goalsStr = Array.isArray(profile.goals) ? profile.goals.join(', ') : profile.goals;
+    parts.push(`- Strategic Priorities & Goals: ${goalsStr}`);
+  } else if (profile.primary_goal) {
+    parts.push(`- Primary Strategic Goal: ${profile.primary_goal}`);
+  }
+
+  if (profile.current_tools && (Array.isArray(profile.current_tools) ? profile.current_tools.length > 0 : Boolean(profile.current_tools))) {
+    const toolsStr = Array.isArray(profile.current_tools) ? profile.current_tools.join(', ') : profile.current_tools;
+    parts.push(`- Current Marketing Tool Stack: ${toolsStr}`);
+  }
+
+  if (profile.account_volume) {
+    parts.push(`- Accounts / Scale Managed: ${profile.account_volume} accounts`);
+  }
+
+  if (profile.platforms_in_focus && (Array.isArray(profile.platforms_in_focus) ? profile.platforms_in_focus.length > 0 : Boolean(profile.platforms_in_focus))) {
+    const pStr = Array.isArray(profile.platforms_in_focus) ? profile.platforms_in_focus.join(', ') : profile.platforms_in_focus;
+    parts.push(`- Priority Platforms in Focus: ${pStr}`);
+  } else if (profile.platforms && (Array.isArray(profile.platforms) ? profile.platforms.length > 0 : Boolean(profile.platforms))) {
+    const pStr = Array.isArray(profile.platforms) ? profile.platforms.join(', ') : profile.platforms;
+    parts.push(`- Active Ad Platforms: ${pStr}`);
+  }
+
   if (parts.length === 0) return '';
-  return `\n\n## USER'S BUSINESS PROFILE (always reference this first):\n${parts.join('\n')}`;
+  return `\n\n## USER ONBOARDING & BUSINESS PROFILE (Crucial Context — tailor your advice, tone, and strategic depth directly to this profile):\n${parts.join('\n')}`;
 }
 
 function buildSystemPrompt(profile: any): string {

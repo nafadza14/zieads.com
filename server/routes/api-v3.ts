@@ -4510,6 +4510,24 @@ apiV3Router.get("/profile/onboarding", requireAuth, async (req: any, res) => {
 
 apiV3Router.post("/profile/onboarding/complete", requireAuth, async (req: any, res) => {
   try {
+    const { role, goals, current_tools, currentTools, account_volume, accountVolume, platforms_in_focus, platformsInFocus } = req.body || {};
+    
+    const updatePayload: any = {
+      has_completed_onboarding: true,
+      onboarding_completed_at: new Date().toISOString(),
+      onboarding_step: 8,
+      updated_at: new Date().toISOString()
+    };
+
+    if (role !== undefined) updatePayload.role = role;
+    if (goals !== undefined) updatePayload.goals = goals;
+    if (current_tools !== undefined) updatePayload.current_tools = current_tools;
+    else if (currentTools !== undefined) updatePayload.current_tools = currentTools;
+    if (account_volume !== undefined) updatePayload.account_volume = account_volume;
+    else if (accountVolume !== undefined) updatePayload.account_volume = accountVolume;
+    if (platforms_in_focus !== undefined) updatePayload.platforms_in_focus = platforms_in_focus;
+    else if (platformsInFocus !== undefined) updatePayload.platforms_in_focus = platformsInFocus;
+
     const { data: existing } = await supabaseAdmin
       .from("profiles")
       .select("id")
@@ -4520,18 +4538,14 @@ apiV3Router.post("/profile/onboarding/complete", requireAuth, async (req: any, r
     if (existing) {
       query = supabaseAdmin
         .from("profiles")
-        .update({ 
-          has_completed_onboarding: true,
-          onboarding_completed_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq("id", req.userId);
     } else {
       query = supabaseAdmin
         .from("profiles")
-        .insert({ 
+        .insert({
           id: req.userId,
-          has_completed_onboarding: true,
-          onboarding_completed_at: new Date().toISOString()
+          ...updatePayload
         });
     }
 
