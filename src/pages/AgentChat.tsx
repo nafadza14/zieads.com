@@ -291,6 +291,17 @@ export default function AgentChat() {
   const [randomGreeting, setRandomGreeting] = useState('');
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const baseInputRef = useRef<string>('');
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const greetings = [
@@ -342,10 +353,18 @@ export default function AgentChat() {
       return;
     }
 
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+
+    baseInputRef.current = input.trim();
+
     const rec = new SpeechRecognition();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = 'en-US';
+    rec.lang = navigator.language || 'en-US';
 
     rec.onstart = () => {
       setIsListening(true);
@@ -361,18 +380,32 @@ export default function AgentChat() {
     };
 
     rec.onresult = (event: any) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = 0; i < event.results.length; i++) {
+        const item = event.results[i];
+        const text = item[0]?.transcript || '';
+        if (item.isFinal) {
+          finalTranscript += text + ' ';
+        } else {
+          interimTranscript += text;
+        }
       }
-      setInput(prev => {
-        const base = prev.trim() ? prev + ' ' : '';
-        return base + transcript;
-      });
+
+      const spoken = (finalTranscript + interimTranscript).trim();
+      const base = baseInputRef.current;
+      const combined = base ? (spoken ? `${base} ${spoken}` : base) : spoken;
+      setInput(combined);
     };
 
     recognitionRef.current = rec;
-    rec.start();
+    try {
+      rec.start();
+    } catch (err) {
+      console.error("Failed to start speech recognition:", err);
+      setIsListening(false);
+    }
   };
 
   const getTailoredSuggestions = () => {
