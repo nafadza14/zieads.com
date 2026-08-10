@@ -418,7 +418,7 @@ export default function LandingPage({ onScanComplete }: Props) {
             <span className="brand-name">zieads</span>
           </div>
           <div className="nav-links hidden md:flex">
-            <a href="#how-it-works">How It Works</a>
+            <a href="#free-audit-try">Try Free Scan</a>
             <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
           </div>
@@ -451,7 +451,7 @@ export default function LandingPage({ onScanComplete }: Props) {
           {isMobileMenuOpen && (
             <div className="absolute top-[60px] left-0 right-0 w-full bg-white/95 border border-gray-100 rounded-3xl shadow-xl p-6 flex flex-col gap-4 text-left z-50 backdrop-blur-xl md:hidden">
               <div className="flex flex-col gap-3 font-semibold text-gray-750 text-[15px] pl-2">
-                <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)}>How It Works</a>
+                <a href="#free-audit-try" onClick={() => setIsMobileMenuOpen(false)}>Try Free Scan</a>
                 <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</a>
                 <a href="#faq" onClick={() => setIsMobileMenuOpen(false)}>FAQ</a>
               </div>
@@ -477,70 +477,49 @@ export default function LandingPage({ onScanComplete }: Props) {
         </div>
       </nav>
 
-          {/* ══════════════════════════════════ S1: HERO ══════════════════════════════════ */}
-          <section className="hero-section">
-            <div className="lp-hero-eyebrow">
-              <span className="lp-rating-text">You approve, AI executes</span>
-            </div>
-            
-            <h1 className="hero-title flex flex-col items-center">
-              <span>Your AI Marketing Agent</span>
-            </h1>
-            
-            <p className="hero-subtitle">
-              You approve, AI executes. Schedule content, analyze performance, and manage engagement across Instagram, TikTok, and LinkedIn from one dashboard.
-            </p>
-
-            {/* Primary & Secondary Hero CTAs */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginTop: '28px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => navigate('/sign-up')}
-                className="btn-lp-primary-gradient"
-                style={{
-                  padding: '14px 32px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  color: '#FFFFFF',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--lp-shadow-cta)',
-                  transition: 'all 0.2s ease'
-                }}
+      {/* ══════════════════════════════════ S1: HERO ══════════════════════════════════ */}
+      <section className="hero-section">
+        <div className="lp-hero-eyebrow">
+          <span className="lp-rating-text">Your marketing, handled</span>
+        </div>
+        
+        <h1 className="hero-title flex flex-col items-center">
+          <span>The AI Marketing Agent that</span>
+          <span className="lp-pill-highlight mt-2 rotating-container relative inline-block text-[#1A1A1A] whitespace-nowrap min-h-[50px] sm:min-h-[60px] md:min-h-[70px] align-middle">
+            {prefersReducedMotion ? (
+              <span>runs your social media.</span>
+            ) : (
+              <span 
+                className={`inline-flex flex-nowrap justify-center transition-all duration-300 ${
+                  animationPhase === 'exit' 
+                    ? 'opacity-0 translate-y-[-10px] blur-sm' 
+                    : 'opacity-100 translate-y-0 blur-0'
+                }`}
+                style={{ columnGap: '0.28em' }}
               >
-                <span>Get Started Free</span>
-                <ArrowRight size={18} />
-              </button>
-              <a
-                href="#how-it-works"
-                style={{
-                  padding: '14px 28px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--lp-border-default)',
-                  background: '#FFFFFF',
-                  color: 'var(--lp-text-primary)',
-                  fontWeight: 600,
-                  fontSize: '15px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  textDecoration: 'none',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>See How It Works</span>
-                <ChevronDown size={16} />
-              </a>
-            </div>
+                {phraseWords.map((word, wIdx) => (
+                  <span
+                    key={wIdx}
+                    className="inline-block opacity-0 translate-y-[8px] animate-word-reveal"
+                    style={{
+                      animationDelay: `${wIdx * 0.25}s`,
+                      animationFillMode: 'forwards'
+                    }}
+                  >
+                    {word}
+                  </span>
+                ))}
+              </span>
+            )}
+          </span>
+        </h1>
+        
+        <p className="hero-subtitle">
+          ZieAds connects to your social accounts and ad data, powered by an AI Marketing Agent that never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. Try asking your AI Agent:
+        </p>
 
-            {/* ── Hero AI Agent Interactive Box ── */}
-            <div className="hero-chat-wrapper w-full max-w-3xl mx-auto mt-10 text-left relative px-2 sm:px-0">
+        {/* ── Redesigned Hero AI Agent Chat Box (Reference Match) ── */}
+        <div className="hero-chat-wrapper w-full max-w-3xl mx-auto mt-8 text-left relative px-2 sm:px-0">
               <div 
                 style={{
                   position: 'relative',
@@ -850,232 +829,6 @@ export default function LandingPage({ onScanComplete }: Props) {
               </div>
             </div>
           )}
-
-      {/* ══════════════════════════════════ STEP 3: HOW IT WORKS ══════════════════════════════════ */}
-      <section id="how-it-works" style={{ padding: '90px 24px', background: 'var(--lp-bg-canvas, #FAF8F3)', borderTop: '1px solid var(--lp-border-subtle, #EBE6DC)', textAlign: 'center' }}>
-        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 700, color: 'var(--lp-accent, #1E7BFF)', letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-          Simple 3-Step Workflow
-        </span>
-        <h2 className="section-title" style={{ marginTop: 0, marginBottom: 14 }}>
-          How ZieAds Works
-        </h2>
-        <p className="section-subtitle" style={{ maxWidth: '620px', margin: '0 auto 52px', fontSize: '16.5px', color: 'var(--lp-text-secondary, #4B5563)' }}>
-          You approve, AI executes. The safest and most powerful way to automate your growth.
-        </p>
-
-        <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '28px', textAlign: 'left' }}>
-          {/* Step 1: AI Suggests */}
-          <div style={{
-            background: 'var(--lp-bg-card, #FFFFFF)',
-            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
-            borderRadius: '20px',
-            padding: '32px 28px',
-            boxShadow: 'var(--lp-shadow-card, 0 4px 12px rgba(0,0,0,0.03))',
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'relative'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(30, 123, 255, 0.1)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Sparkles size={24} />
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E7BFF', background: 'rgba(30,123,255,0.08)', padding: '4px 10px', borderRadius: '8px', letterSpacing: '0.04em' }}>STEP 01</span>
-            </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--lp-text-primary, #0B1B2B)', margin: '0 0 10px' }}>AI Suggests</h3>
-            <p style={{ fontSize: '14.5px', lineHeight: '1.6', color: 'var(--lp-text-secondary, #4B5563)', margin: 0 }}>
-              Ask the AI Agent for a content plan, analytics summary, or reply strategy. It uses your real data to generate proposals.
-            </p>
-          </div>
-
-          {/* Step 2: You Approve */}
-          <div style={{
-            background: 'var(--lp-bg-card, #FFFFFF)',
-            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
-            borderRadius: '20px',
-            padding: '32px 28px',
-            boxShadow: 'var(--lp-shadow-card, 0 4px 12px rgba(0,0,0,0.03))',
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'relative'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <UserCheck size={24} />
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '4px 10px', borderRadius: '8px', letterSpacing: '0.04em' }}>STEP 02</span>
-            </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--lp-text-primary, #0B1B2B)', margin: '0 0 10px' }}>You Approve</h3>
-            <p style={{ fontSize: '14.5px', lineHeight: '1.6', color: 'var(--lp-text-secondary, #4B5563)', margin: 0 }}>
-              Every action is a draft you can review, edit, or reject. Nothing goes live without your explicit approval.
-            </p>
-          </div>
-
-          {/* Step 3: AI Executes */}
-          <div style={{
-            background: 'var(--lp-bg-card, #FFFFFF)',
-            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
-            borderRadius: '20px',
-            padding: '32px 28px',
-            boxShadow: 'var(--lp-shadow-card, 0 4px 12px rgba(0,0,0,0.03))',
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'relative'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Rocket size={24} />
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#8B5CF6', background: 'rgba(139,92,246,0.08)', padding: '4px 10px', borderRadius: '8px', letterSpacing: '0.04em' }}>STEP 03</span>
-            </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--lp-text-primary, #0B1B2B)', margin: '0 0 10px' }}>AI Executes</h3>
-            <p style={{ fontSize: '14.5px', lineHeight: '1.6', color: 'var(--lp-text-secondary, #4B5563)', margin: 0 }}>
-              Once approved, the AI Agent handles the execution - publishing posts, syncing analytics, replying to comments. You stay in control.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════ S2: FEATURES & CORE CAPABILITIES ══════════════════════════════════ */}
-      <section id="dashboard-preview" className="ai-strategist-section" style={{ padding: '100px 24px', background: '#FFFFFF', textAlign: 'center', borderTop: '1px solid var(--lp-border-subtle)' }}>
-        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>Platform Capabilities</span>
-        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>Everything your AI Marketing Agent does for you</h2>
-        <p className="section-subtitle" style={{ maxWidth: '680px', margin: '0 auto 48px' }}>
-          You approve, AI executes across Instagram, TikTok, and LinkedIn. Manage and automate your marketing from a single unified workspace.
-        </p>
-
-        {/* 3 Core Highlight Cards */}
-        <div style={{ maxWidth: '1080px', margin: '0 auto 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', textAlign: 'left' }}>
-          <div style={{
-            background: 'var(--lp-bg-canvas, #FAF8F3)',
-            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
-            borderRadius: '20px',
-            padding: '30px 26px',
-            boxShadow: 'var(--lp-shadow-card)'
-          }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(30,123,255,0.1)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
-              <PenTool size={24} />
-            </div>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 10px' }}>Composer</h3>
-            <p style={{ fontSize: '14.5px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.6' }}>
-              The AI drafts posts based on your top-performing content. You approve, it publishes across Instagram, TikTok, and LinkedIn.
-            </p>
-          </div>
-
-          <div style={{
-            background: 'var(--lp-bg-canvas, #FAF8F3)',
-            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
-            borderRadius: '20px',
-            padding: '30px 26px',
-            boxShadow: 'var(--lp-shadow-card)'
-          }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(16,185,129,0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
-              <BarChart3 size={24} />
-            </div>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 10px' }}>Analytics</h3>
-            <p style={{ fontSize: '14.5px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.6' }}>
-              The AI reads your real-time performance data and tells you what's working. No manual dashboard scanning required.
-            </p>
-          </div>
-
-          <div style={{
-            background: 'var(--lp-bg-canvas, #FAF8F3)',
-            border: '1px solid var(--lp-border-subtle, #EBE6DC)',
-            borderRadius: '20px',
-            padding: '30px 26px',
-            boxShadow: 'var(--lp-shadow-card)'
-          }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'rgba(139,92,246,0.1)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
-              <Inbox size={24} />
-            </div>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 10px' }}>Inbox</h3>
-            <p style={{ fontSize: '14.5px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.6' }}>
-              The AI classifies comments by sentiment and drafts replies for you. You approve each one, keeping your voice authentic.
-            </p>
-          </div>
-        </div>
-
-        {/* SHOWCASE CARD */}
-        <div className="lp-showcase-container" style={{ marginTop: 0, marginBottom: 48, marginLeft: 'auto', marginRight: 'auto' }}>
-          <div className="lp-rainbow-glow"></div>
-          <div className="lp-showcase-card">
-            <div className="lp-showcase-header">
-              <div className="lp-chrome-dots">
-                <span className="lp-dot-red"></span>
-                <span className="lp-dot-yellow"></span>
-                <span className="lp-dot-green"></span>
-              </div>
-              <div className="lp-chrome-title">app.zieads.com - AI Agent Workspace</div>
-            </div>
-            <div className="lp-showcase-body" style={{ height: 'auto' }}>
-              <img 
-                src="/zieads-dashboard.png" 
-                alt="app.zieads.com - AI Agent Workspace" 
-                style={{ 
-                  width: '100%', 
-                  height: 'auto', 
-                  display: 'block',
-                  borderBottomLeftRadius: 'inherit',
-                  borderBottomRightRadius: 'inherit'
-                }} 
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Active Feature Suite Grid */}
-        <div style={{ maxWidth: '960px', margin: '0 auto 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', textAlign: 'left' }}>
-          {( [
-            { title: "AI Analyst", desc: "Automated social performance diagnosis and key growth drivers.", Icon: Sparkles },
-            { title: "AI Agent", desc: "Deep strategic reasoning & prioritized daily action plans.", Icon: Bot },
-            { title: "Composer", desc: "Multi-channel post creator with AI captions tailored per platform.", Icon: PenTool },
-            { title: "Calendar", desc: "Visual content scheduling with recommended audience active times.", Icon: Calendar },
-            { title: "Analytics", desc: "Cross-platform reach, engagement, and audience retention breakdown.", Icon: BarChart3 },
-            { title: "Inbox", desc: "Unified comments inbox with sentiment checks & quick AI replies.", Icon: Inbox },
-            { title: "Competitor Hunt", desc: "Real-time competitor content monitoring and market gap analysis.", Icon: Target },
-            { title: "Connections", desc: "One-click OAuth integration for Instagram, TikTok, and LinkedIn.", Icon: Link2 },
-            { title: "Settings", desc: "Custom brand voice, persona profiles, and workspace preferences.", Icon: SettingsIcon }
-          ] as Array<{title: string, desc: string, Icon: any}> ).map((f, i) => {
-            const IconComp = f.Icon;
-            return (
-              <div 
-                key={i} 
-                style={{
-                  background: 'var(--lp-bg-card)',
-                  border: '1px solid var(--lp-border-subtle)',
-                  borderRadius: '16px',
-                  padding: '20px',
-                  boxShadow: 'var(--lp-shadow-card)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--lp-bg-inset)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--lp-accent)', marginBottom: '12px' }}>
-                  <IconComp size={20} />
-                </div>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 6px' }}>{f.title}</h3>
-                <p style={{ fontSize: '13px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.5' }}>{f.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Supporting stat row */}
-        <div className="proof-stats animate-fade-in" style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '40px', marginTop: '40px' }}>
-          <div className="stat">
-            <span className="stat-number mono-num">Under 3 min</span>
-            <span className="stat-label">From connect to first insight</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat">
-            <span className="stat-number mono-num">Every morning</span>
-            <span className="stat-label">A fresh briefing, before your coffee</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat">
-            <span className="stat-number mono-num">One place</span>
-            <span className="stat-label">Organic and paid, together</span>
-          </div>
-        </div>
-      </section>
 
       {/* ══════════════════════════════════ S3: FREE AUDIT TRY ══════════════════════════════════ */}
       <section id="free-audit-try" className="scoring-section" style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '100px' }}>
@@ -1654,8 +1407,7 @@ export default function LandingPage({ onScanComplete }: Props) {
           </div>
           <div className="footer-col">
             <h4 className="footer-col-title">Product</h4>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#free-audit-try">Try Free Scan</a>
+            <a href="#free-audit-try">Free Scan Audit</a>
             <a href="#pricing">Pricing</a>
             <a href="#" onClick={(e) => { e.preventDefault(); navigate('/clients'); }}>Agency Plan</a>
           </div>
