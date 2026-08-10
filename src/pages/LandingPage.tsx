@@ -379,7 +379,7 @@ export default function LandingPage({ onScanComplete }: Props) {
   const faqItems = [
     {
       q: 'What does the ZieAds agent actually do?',
-      a: 'The agent connects to your social accounts and ad data, then works like a marketing analyst. It audits your setup, tracks your accounts daily, and delivers a morning briefing on what worked, what is slipping, and what to do today. You can also run any of its fifteen skills on demand, from a full audit to a creative brief. It watches and recommends. You approve what goes live.',
+      a: 'The agent connects to your social accounts and ad data, then works like an AI marketing team. It tracks your accounts daily, drafts high-performing content, analyzes metrics, and delivers morning briefings. It proposes the actions and strategies. You approve what goes live, and the AI executes.',
     },
     {
       q: 'Does it post and spend on its own?',
@@ -477,481 +477,307 @@ export default function LandingPage({ onScanComplete }: Props) {
         </div>
       </nav>
 
-      {/* ══════════════════════════════════ S1: HERO ══════════════════════════════════ */}
-      <section className="hero-section">
-        <div className="lp-hero-eyebrow">
-          <span className="lp-rating-text">Your marketing, handled</span>
-        </div>
-        
-        <h1 className="hero-title flex flex-col items-center">
-          <span>The AI Marketing Agent that</span>
-          <span className="lp-pill-highlight mt-2 rotating-container relative inline-block text-[#1A1A1A] whitespace-nowrap min-h-[50px] sm:min-h-[60px] md:min-h-[70px] align-middle">
-            {prefersReducedMotion ? (
-              <span>runs your social media.</span>
-            ) : (
-              <span 
-                className={`inline-flex flex-nowrap justify-center transition-all duration-300 ${
-                  animationPhase === 'exit' 
-                    ? 'opacity-0 translate-y-[-10px] blur-sm' 
-                    : 'opacity-100 translate-y-0 blur-0'
-                }`}
-                style={{ columnGap: '0.28em' }}
-              >
-                {phraseWords.map((word, wIdx) => (
-                  <span
-                    key={wIdx}
-                    className="inline-block opacity-0 translate-y-[8px] animate-word-reveal"
-                    style={{
-                      animationDelay: `${wIdx * 0.25}s`,
-                      animationFillMode: 'forwards'
-                    }}
-                  >
-                    {word}
-                  </span>
-                ))}
-              </span>
-            )}
-          </span>
-        </h1>
-        
-        <p className="hero-subtitle">
-          ZieAds connects to your social accounts and ad data, powered by an AI Marketing Agent that never clocks out. Every morning it tells you what worked, what is slipping, and exactly what to do next. Try asking your AI Agent:
-        </p>
-
-        {/* ── Redesigned Hero AI Agent Chat Box (Reference Match) ── */}
-        <div className="hero-chat-wrapper w-full max-w-3xl mx-auto mt-8 text-left relative px-2 sm:px-0">
-          <div 
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              background: '#FFFFFF',
-              border: '1.5px solid var(--lp-border-default)',
-              borderRadius: '24px',
-              boxShadow: '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)',
-              padding: '24px 28px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              transition: 'all 0.3s ease-in-out'
-            }}
-            className="hero-chat-card-outer"
-          >
-            {/* Input area */}
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', width: '100%' }}>
-              <textarea
-                rows={3}
-                placeholder={rotatingPlaceholders[placeholderIndex]}
-                value={heroChatInput}
-                onChange={(e) => setHeroChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleHeroChatSend();
-                  }
-                }}
-                onFocus={(e) => {
-                  const card = e.currentTarget.closest('.hero-chat-card-outer') as HTMLDivElement;
-                  if (card) {
-                    card.style.borderColor = 'var(--lp-accent)';
-                    card.style.boxShadow = '0 20px 40px -15px rgba(30,123,255,0.12), 0 0 0 3px var(--lp-focus-ring)';
-                  }
-                }}
-                onBlur={(e) => {
-                  const card = e.currentTarget.closest('.hero-chat-card-outer') as HTMLDivElement;
-                  if (card) {
-                    card.style.borderColor = 'var(--lp-border-default)';
-                    card.style.boxShadow = '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)';
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '17px',
-                  lineHeight: '1.6',
-                  color: 'var(--lp-text-primary)',
-                  outline: 'none',
-                  resize: 'none',
-                  minHeight: '110px'
-                }}
-              />
+          {/* ══════════════════════════════════ S1: HERO ══════════════════════════════════ */}
+          <section className="hero-section">
+            <div className="lp-hero-eyebrow">
+              <span className="lp-rating-text">You approve, AI executes</span>
             </div>
+            
+            <h1 className="hero-title flex flex-col items-center">
+              <span>Your AI Marketing Agent</span>
+            </h1>
+            
+            <p className="hero-subtitle">
+              You approve, AI executes. Schedule content, analyze performance, and manage engagement across Instagram, TikTok, and LinkedIn from one dashboard.
+            </p>
 
-            {/* Bottom action bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              {/* Left side icons */}
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--lp-border-default)',
-                    background: '#F9FAFB',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: '#6B7280',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#F3F4F6';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#F9FAFB';
-                    e.currentTarget.style.borderColor = 'var(--lp-border-default)';
-                  }}
-                >
-                  <Link2 size={18} />
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--lp-border-default)',
-                    background: '#F9FAFB',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: '#6B7280',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#F3F4F6';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#F9FAFB';
-                    e.currentTarget.style.borderColor = 'var(--lp-border-default)';
-                  }}
-                >
-                  <Zap size={18} />
-                </button>
-              </div>
-
-              {/* Right side CTA */}
+            {/* Primary & Secondary Hero CTAs */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginTop: '28px', flexWrap: 'wrap' }}>
               <button
-                onClick={() => handleHeroChatSend()}
+                onClick={() => navigate('/sign-up')}
                 className="btn-lp-primary-gradient"
                 style={{
-                  padding: '12px 24px',
+                  padding: '14px 32px',
                   borderRadius: '12px',
                   border: 'none',
                   color: '#FFFFFF',
-                  fontWeight: 600,
-                  fontSize: '14px',
+                  fontWeight: 700,
+                  fontSize: '16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
                   boxShadow: 'var(--lp-shadow-cta)',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span>Ask AI Agent</span>
-                <Send size={15} />
+                <span>Get Started Free</span>
+                <ArrowRight size={18} />
               </button>
-            </div>
-          </div>
-
-          {/* Trust Strip */}
-          <div className="final-cta-trust-strip mt-5 justify-center flex flex-wrap gap-4 sm:gap-6 text-[13px]" style={{ color: 'var(--lp-text-tertiary)' }}>
-            <span><Shield size={14} className="inline mr-1" style={{ color: 'var(--lp-accent)' }} /> Free plan, no card required</span>
-            <span><Check size={14} className="inline mr-1" style={{ color: '#10B981' }} /> Instant AI Response & Signup</span>
-            <span><Clock size={14} className="inline mr-1" style={{ color: 'var(--lp-accent)' }} /> First briefing tomorrow morning</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Onboarding Modal Popup ── */}
-      {showOnboardingModal && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(11, 27, 43, 0.55)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px',
-            fontFamily: 'var(--font-primary, "General Sans", ui-sans-serif, system-ui, sans-serif)'
-          }}
-          onClick={() => setShowOnboardingModal(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--lp-bg-canvas, #F7F5F0)',
-              border: '1px solid var(--lp-border-default, #DDD6C8)',
-              borderRadius: '28px',
-              padding: '0',
-              maxWidth: '460px',
-              width: '100%',
-              boxShadow: 'var(--lp-shadow-showcase, 0 24px 64px rgba(11,27,43,0.12))',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {/* Top band — brand accent */}
-            <div style={{
-              background: 'var(--lp-accent-gradient, linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%))',
-              padding: '32px 36px 28px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '20px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Subtle noise texture overlay */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")',
-                opacity: 0.4,
-                pointerEvents: 'none'
-              }} />
-
-              {/* ZieAds Logo icon */}
-              <div style={{
-                width: '52px', height: '52px',
-                borderRadius: '14px',
-                background: 'rgba(255,255,255,0.18)',
-                border: '1px solid rgba(255,255,255,0.25)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                backdropFilter: 'blur(4px)',
-                flexShrink: 0
-              }}>
-                <ZieAdsLogo size={30} />
-              </div>
-
-              {/* Heading */}
-              <div>
-                <h2 style={{
-                  fontFamily: 'var(--font-display, "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif)',
-                  fontSize: '22px',
-                  fontWeight: 700,
-                  color: '#FFFFFF',
-                  lineHeight: 1.25,
-                  letterSpacing: '-0.02em',
-                  margin: 0
-                }}>
-                  One step away from your<br />AI Marketing Agent
-                </h2>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: '28px 36px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-              {/* Description */}
-              <p style={{
-                fontSize: '15px',
-                color: 'var(--lp-text-secondary, #3D4F62)',
-                lineHeight: 1.65,
-                margin: 0
-              }}>
-                Create your ZieAds account and connect your social media, so your AI Agent fully understands your brand and delivers insights that actually matter.
-              </p>
-
-              {/* Prompt preview card */}
-              {pendingPrompt && (
-                <div style={{
-                  background: 'var(--lp-bg-card, #FFFFFF)',
-                  border: '1px solid var(--lp-border-default, #DDD6C8)',
-                  borderRadius: '14px',
-                  padding: '14px 18px',
-                  position: 'relative'
-                }}>
-                  <p style={{
-                    fontSize: '11px', fontWeight: 600,
-                    color: 'var(--lp-accent, #1E7BFF)',
-                    marginBottom: '6px', margin: '0 0 6px',
-                    textTransform: 'uppercase', letterSpacing: '0.07em'
-                  }}>Your AI Agent question</p>
-                  <p style={{
-                    fontSize: '14px',
-                    color: 'var(--lp-text-primary, #0B1B2B)',
-                    fontStyle: 'italic',
-                    lineHeight: 1.55,
-                    margin: 0
-                  }}>"{pendingPrompt}"</p>
-                </div>
-              )}
-
-              {/* Steps */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { num: '01', label: 'Create your free ZieAds account' },
-                  { num: '02', label: 'Connect your Instagram & social media' },
-                  { num: '03', label: 'Get your AI Agent answer instantly' },
-                ].map((step) => (
-                  <div key={step.num} style={{
-                    display: 'flex', alignItems: 'center', gap: '14px',
-                    background: 'var(--lp-bg-card, #FFFFFF)',
-                    border: '1px solid var(--lp-border-subtle, #EBE6DC)',
-                    borderRadius: '12px',
-                    padding: '13px 16px'
-                  }}>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700,
-                      color: 'var(--lp-accent, #1E7BFF)',
-                      letterSpacing: '0.04em',
-                      minWidth: '22px'
-                    }}>{step.num}</span>
-                    <span style={{
-                      fontSize: '14px', fontWeight: 500,
-                      color: 'var(--lp-text-primary, #0B1B2B)',
-                      lineHeight: 1.4
-                    }}>{step.label}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA */}
-              <button
-                onClick={handleModalConfirm}
-                className="btn-lp-primary-gradient"
+              <a
+                href="#how-it-works"
                 style={{
-                  width: '100%',
-                  padding: '15px 24px',
-                  borderRadius: 'var(--lp-radius-button, 10px)',
-                  border: 'none',
-                  color: '#FFFFFF',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--lp-border-default)',
+                  background: '#FFFFFF',
+                  color: 'var(--lp-text-primary)',
                   fontWeight: 600,
                   fontSize: '15px',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: 'var(--lp-shadow-cta)',
-                  transition: 'all 0.2s ease',
-                  letterSpacing: '-0.01em'
-                }}
-              >
-                <span>Create Free Account</span>
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Dynamic Style for Word Reveal Animation */}
-
-      <style>{`
-        @keyframes wordReveal {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-word-reveal {
-          animation: wordReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .rotating-container {
-          display: inline-block;
-          min-height: 50px;
-          vertical-align: middle;
-        }
-        @media (min-width: 640px) {
-          .rotating-container {
-            min-height: 60px;
-          }
-        }
-        @media (min-width: 768px) {
-          .rotating-container {
-            min-height: 70px;
-          }
-        }
-      `}</style>
-
-      {/* ══════════════════════════════════ S2: DASHBOARD PREVIEW & V0.3 FEATURES ══════════════════════════════════ */}
-      <section id="dashboard-preview" className="ai-strategist-section" style={{ padding: '100px 24px', background: 'var(--lp-bg-canvas)', textAlign: 'center' }}>
-        <span className="section-eyebrow" style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600, color: 'var(--lp-accent)', letterSpacing: '0.05em' }}>See it work</span>
-        <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16 }}>This is what waits for you every morning.</h2>
-        <p className="section-subtitle" style={{ maxWidth: '680px', margin: '0 auto 40px' }}>
-          No complex dashboards to decode or raw charts to analyze. ZieAds v0.3 connects your accounts and delivers an intelligent AI Agent briefing with clear daily recommendations.
-        </p>
-
-        {/* SHOWCASE CARD */}
-        <div className="lp-showcase-container" style={{ marginTop: 0, marginBottom: 48, marginLeft: 'auto', marginRight: 'auto' }}>
-          <div className="lp-rainbow-glow"></div>
-          <div className="lp-showcase-card">
-            <div className="lp-showcase-header">
-              <div className="lp-chrome-dots">
-                <span className="lp-dot-red"></span>
-                <span className="lp-dot-yellow"></span>
-                <span className="lp-dot-green"></span>
-              </div>
-              <div className="lp-chrome-title">app.zieads.com — v0.3 AI Agent Workspace</div>
-            </div>
-            <div className="lp-showcase-body" style={{ height: 'auto' }}>
-              <img 
-                src="/zieads-dashboard.png" 
-                alt="app.zieads.com — v0.3 AI Agent Workspace" 
-                style={{ 
-                  width: '100%', 
-                  height: 'auto', 
-                  display: 'block',
-                  borderBottomLeftRadius: 'inherit',
-                  borderBottomRightRadius: 'inherit'
-                }} 
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* v0.3 Active Feature Suite Grid */}
-        <div style={{ maxWidth: '960px', margin: '0 auto 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', textAlign: 'left' }}>
-          {( [
-            { title: "AI Analyst", desc: "Automated social performance diagnosis and key growth drivers.", Icon: Sparkles },
-            { title: "AI Agent", desc: "Deep strategic reasoning & prioritized daily action plans.", Icon: Bot },
-            { title: "Composer", desc: "Multi-channel post creator with AI captions tailored per platform.", Icon: PenTool },
-            { title: "Calendar", desc: "Visual content scheduling with recommended audience active times.", Icon: Calendar },
-            { title: "Analytics", desc: "Cross-platform reach, engagement, and ROAS fatigue breakdown.", Icon: BarChart3 },
-            { title: "Inbox", desc: "Unified comments inbox with sentiment checks & quick AI replies.", Icon: Inbox },
-            { title: "Competitor Hunt", desc: "Real-time competitor content monitoring and market gap analysis.", Icon: Target },
-            { title: "Connections", desc: "One-click OAuth integration for Instagram, TikTok, and ad data.", Icon: Link2 },
-            { title: "Settings", desc: "Custom brand voice, team seats, and workspace preferences.", Icon: SettingsIcon }
-          ] as Array<{title: string, desc: string, Icon: any}> ).map((f, i) => {
-            const IconComp = f.Icon;
-            return (
-              <div 
-                key={i} 
-                style={{
-                  background: 'var(--lp-bg-card)',
-                  border: '1px solid var(--lp-border-subtle)',
-                  borderRadius: '16px',
-                  padding: '20px',
-                  boxShadow: 'var(--lp-shadow-card)',
+                  gap: '6px',
+                  textDecoration: 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--lp-bg-inset)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--lp-accent)', marginBottom: '12px' }}>
-                  <IconComp size={20} />
-                </div>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--lp-text-primary)', margin: '0 0 6px' }}>{f.title}</h3>
-                <p style={{ fontSize: '13px', color: 'var(--lp-text-secondary)', margin: 0, lineHeight: '1.5' }}>{f.desc}</p>
-              </div>
-            );
-          })}
-        </div>
+                <span>See How It Works</span>
+                <ChevronDown size={16} />
+              </a>
+            </div>
 
-        {/* Supporting stat row */}
-        <div className="proof-stats animate-fade-in" style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '40px', marginTop: '40px' }}>
-          <div className="stat">
-            <span className="stat-number mono-num">Under 3 min</span>
-            <span className="stat-label">From connect to first insight</span>
-          </div>
+            {/* ── Hero AI Agent Interactive Box ── */}
+            <div className="hero-chat-wrapper w-full max-w-3xl mx-auto mt-10 text-left relative px-2 sm:px-0">
+              <div 
+                style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  background: '#FFFFFF',
+                  border: '1.5px solid var(--lp-border-default)',
+                  borderRadius: '24px',
+                  boxShadow: '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)',
+                  padding: '24px 28px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  transition: 'all 0.3s ease-in-out'
+                }}
+                className="hero-chat-card-outer"
+              >
+                {/* Input area */}
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', width: '100%' }}>
+                  <textarea
+                    rows={3}
+                    placeholder={rotatingPlaceholders[placeholderIndex]}
+                    value={heroChatInput}
+                    onChange={(e) => setHeroChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleHeroChatSend();
+                      }
+                    }}
+                    onFocus={(e) => {
+                      const card = e.currentTarget.closest('.hero-chat-card-outer') as HTMLDivElement;
+                      if (card) {
+                        card.style.borderColor = 'var(--lp-accent)';
+                        card.style.boxShadow = '0 20px 40px -15px rgba(30,123,255,0.12), 0 0 0 3px var(--lp-focus-ring)';
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const card = e.currentTarget.closest('.hero-chat-card-outer') as HTMLDivElement;
+                      if (card) {
+                        card.style.borderColor = 'var(--lp-border-default)';
+                        card.style.boxShadow = '0 20px 40px -15px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)';
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      fontSize: '17px',
+                      lineHeight: '1.6',
+                      color: 'var(--lp-text-primary)',
+                      outline: 'none',
+                      resize: 'none',
+                      minHeight: '110px'
+                    }}
+                  />
+                </div>
+
+                {/* Bottom action bar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  {/* Left side icons */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--lp-border-default)',
+                        background: '#F9FAFB',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: '#6B7280',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#F3F4F6';
+                        e.currentTarget.style.borderColor = '#D1D5DB';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#F9FAFB';
+                        e.currentTarget.style.borderColor = 'var(--lp-border-default)';
+                      }}
+                    >
+                      <Link2 size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--lp-border-default)',
+                        background: '#F9FAFB',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: '#6B7280',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#F3F4F6';
+                        e.currentTarget.style.borderColor = '#D1D5DB';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#F9FAFB';
+                        e.currentTarget.style.borderColor = 'var(--lp-border-default)';
+                      }}
+                    >
+                      <Zap size={18} />
+                    </button>
+                  </div>
+
+                  {/* Right side CTA */}
+                  <button
+                    onClick={() => handleHeroChatSend()}
+                    className="btn-lp-primary-gradient"
+                    style={{
+                      padding: '12px 24px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      color: '#FFFFFF',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      boxShadow: 'var(--lp-shadow-cta)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>Ask AI Agent</span>
+                    <Send size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Trust Strip */}
+              <div className="final-cta-trust-strip mt-5 justify-center flex flex-wrap gap-4 sm:gap-6 text-[13px]" style={{ color: 'var(--lp-text-tertiary)' }}>
+                <span><Shield size={14} className="inline mr-1" style={{ color: 'var(--lp-accent)' }} /> Free plan, no card required</span>
+                <span><Check size={14} className="inline mr-1" style={{ color: '#10B981' }} /> Instant AI Response & Signup</span>
+                <span><Clock size={14} className="inline mr-1" style={{ color: 'var(--lp-accent)' }} /> First briefing tomorrow morning</span>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Onboarding Modal Popup ── */}
+          {showOnboardingModal && (
+            <div
+              style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(11, 27, 43, 0.55)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '20px',
+                fontFamily: 'var(--font-primary, "General Sans", ui-sans-serif, system-ui, sans-serif)'
+              }}
+              onClick={() => setShowOnboardingModal(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'var(--lp-bg-canvas, #F7F5F0)',
+                  border: '1px solid var(--lp-border-default, #DDD6C8)',
+                  borderRadius: '28px',
+                  padding: '0',
+                  maxWidth: '460px',
+                  width: '100%',
+                  boxShadow: 'var(--lp-shadow-showcase, 0 24px 64px rgba(11,27,43,0.12))',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {/* Top band - brand accent */}
+                <div style={{
+                  background: 'var(--lp-accent-gradient, linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%))',
+                  padding: '32px 36px 28px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  gap: '20px',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  {/* Subtle noise texture overlay */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")',
+                    opacity: 0.4,
+                    pointerEvents: 'none'
+                  }} />
+
+                  {/* ZieAds Logo icon */}
+                  <div style={{
+                    width: '52px', height: '52px',
+                    borderRadius: '14px',
+                    background: 'rgba(255,255,255,0.18)',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(4px)',
+                    flexShrink: 0
+                  }}>
+                    <ZieAdsLogo size={30} />
+                  </div>
+
+                  {/* Heading */}
+                  <div>
+                    <h2 style={{
+                      fontFamily: 'var(--font-display, "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif)',
+                      fontSize: '22px',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      lineHeight: 1.25,
+                      letterSpacing: '-0.02em',
+                      margin: 0
+                    }}>
+                      One step away from your<br />AI Marketing Agent
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Bottom section */}
+                <div style={{ padding: '28px 36px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{
+                    background: '#FFFFFF',
+                    border: '1px solid var(--lp-border-subtle, #EBE6DC)',
+                    borderRadius: '16px',
+                    padding: '16px 18px',
+                    fontSize: '14px',
+                    color: 'var(--lp-text-primary, #0B1B2B)',
           <div className="stat-divider"></div>
           <div className="stat">
             <span className="stat-number mono-num">Every morning</span>
