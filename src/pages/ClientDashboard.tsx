@@ -45,10 +45,38 @@ const RHYTHM = [
 
 const BUSINESS_TYPES = ['E-commerce', 'SaaS', 'Local Business', 'B2B Lead Gen', 'Creator', 'Other'];
 const BUDGETS = ['Under $1K', '$1K to $5K', '$5K to $20K', '$20K to $100K', 'Over $100K'];
-const ROLES = ['Founder / CEO', 'Marketing Manager', 'Agency Owner / Freelancer', 'Creator', 'Other'];
-const ONBOARDING_GOALS = ['Improve ROAS / CPA', 'Scale ad spend budget', 'Generate high quality leads', 'Optimize landing page CRO', 'Research competitors ads', 'Write high converting copy', 'Structure full funnel strategy'];
-const ONBOARDING_TOOLS = ['Meta Ads', 'Google Ads', 'TikTok Ads', 'Google Analytics', 'Shopify', 'HubSpot', 'Klaviyo', 'Excel / Sheets'];
-const PLATFORMS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'YouTube'];
+const ROLES = [
+  'Solo founder',
+  'Small business owner',
+  'In-house marketer',
+  'Freelance marketer or consultant',
+  'Marketing agency',
+  'Content creator',
+  'Other'
+];
+const ACCOUNT_VOLUMES = ['1-3', '4-6', '7-10', '11-20', '21-50', '50+'];
+const ONBOARDING_GOALS = [
+  'What to post today',
+  'Which of my ads are working',
+  'Why my numbers dropped',
+  'What competitors are doing',
+  'Whether my setup is ready',
+  'How to scale what works',
+  'Write high converting copy',
+  'Improve ROAS / CPA',
+  'Scale ad spend budget'
+];
+const ONBOARDING_TOOLS = [
+  'Native platform tools',
+  'A social media scheduler',
+  'A general AI assistant',
+  'A hired analyst or agency',
+  'Spreadsheets and notes',
+  'Meta Ads Manager',
+  'Google Analytics',
+  'Shopify'
+];
+const PLATFORMS = ['Instagram', 'TikTok', 'LinkedIn', 'Facebook', 'Google Ads', 'YouTube', 'X (Twitter)', 'Threads'];
 
 import { generatePDF } from '../lib/pdfGenerator';
 import CompareAuditView from '../components/CompareAuditView';
@@ -66,12 +94,16 @@ export default function ClientDashboard({ reportData }: Props) {
   const creditStore = useCreditStore();
 
   useEffect(() => {
-    if (location.state && (location.state as any).defaultTab) {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam) {
+      setSidebarNav(tabParam);
+    } else if (location.state && (location.state as any).defaultTab) {
       setSidebarNav((location.state as any).defaultTab);
     } else if (location.pathname === '/clients') {
-      navigate('/analyst', { replace: true });
+      setSidebarNav('settings');
     }
-  }, [location.state, location.pathname, navigate]);
+  }, [location.state, location.pathname, location.search]);
 
   const [selectedSkill, setSelectedSkill] = useState('audit');
   const [urlInput, setUrlInput] = useState('');
@@ -93,6 +125,7 @@ export default function ClientDashboard({ reportData }: Props) {
     businessType: '',
     monthlyBudget: '',
     role: '',
+    accountVolume: '',
     goals: [] as string[],
     currentTools: [] as string[],
     platformsInFocus: [] as string[],
@@ -174,11 +207,12 @@ export default function ClientDashboard({ reportData }: Props) {
             businessType: p.business_type || '',
             monthlyBudget: p.monthly_budget || '',
             role: p.role || '',
+            accountVolume: p.account_volume || '',
             goals: p.goals || [],
             currentTools: p.current_tools || [],
-            platformsInFocus: p.platforms_in_focus || [],
+            platformsInFocus: p.platforms_in_focus || (p.platforms || []),
             challenge: p.challenge || '',
-            weeklyDigest: !!p.weekly_digest
+            weeklyDigest: p.weekly_digest || false
           });
           // Pre-fill URL input from saved profile if user hasn't typed one
           if (p.primary_url) {
@@ -319,6 +353,7 @@ export default function ClientDashboard({ reportData }: Props) {
           business_type: profileForm.businessType,
           monthly_budget: profileForm.monthlyBudget,
           role: profileForm.role,
+          account_volume: profileForm.accountVolume,
           goals: profileForm.goals,
           current_tools: profileForm.currentTools,
           platforms_in_focus: profileForm.platformsInFocus,
@@ -896,13 +931,21 @@ export default function ClientDashboard({ reportData }: Props) {
               </div>
             </div>
 
-            {/* Card 2: AI Context & Onboarding Profile */}
+            {/* Card 2: AI Context & Onboarding Persona Profile */}
             <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 16 }}>AI Context & Onboarding Profile</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, margin: 0 }}>AI Persona & Onboarding Profile</h3>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#1E7BFF', background: 'rgba(30, 123, 255, 0.08)', padding: '3px 8px', borderRadius: '6px' }}>
+                  Used by AI Agent & Analytics
+                </span>
+              </div>
+              <p style={{ fontSize: '0.83rem', color: G, margin: '0 0 20px' }}>
+                Your responses from onboarding customize the AI Agent's tone, strategic depth, and recommendations across ZieAds.
+              </p>
 
-              {/* Your Role */}
+              {/* Your Role / Persona */}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Your Role in the Business</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Your Role & Persona</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {ROLES.map(r => (
                     <button 
@@ -917,9 +960,26 @@ export default function ClientDashboard({ reportData }: Props) {
                 </div>
               </div>
 
+              {/* Scale / Accounts Volume */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Accounts / Scale Managed</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {ACCOUNT_VOLUMES.map(v => (
+                    <button 
+                      key={v} 
+                      type="button" 
+                      onClick={() => setProfileForm(p => ({ ...p, accountVolume: v }))} 
+                      style={settingPillBtn(profileForm.accountVolume === v)}
+                    >
+                      {v} {v === '50+' ? 'accounts' : 'accounts'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Strategic Marketing Goals */}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Strategic Marketing Goals (Multi-select)</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Strategic Marketing Priorities (Multi-select)</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {ONBOARDING_GOALS.map(g => (
                     <button 
@@ -936,7 +996,7 @@ export default function ClientDashboard({ reportData }: Props) {
 
               {/* Active Stack Tools */}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Active Marketing Stack Tools (Multi-select)</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Active Marketing Tool Stack (Multi-select)</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {ONBOARDING_TOOLS.map(t => (
                     <button 

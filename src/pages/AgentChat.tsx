@@ -695,53 +695,8 @@ export default function AgentChat() {
               gap: 6
             }}
           >
-            <span>+ New Conversation</span>
-          </button>
-            
-            {(userProfile?.business_name || userProfile?.role || (userProfile?.goals && userProfile.goals.length > 0)) && (
-              <div style={{
-                background: '#FAF8F3',
-                border: '1px solid #EBE6DC',
-                borderRadius: '12px',
-                padding: '12px 14px',
-                marginTop: '4px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7A89', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Persona Context</div>
-                  {userProfile?.role && (
-                    <span style={{ fontSize: '9.5px', fontWeight: 700, color: '#1E7BFF', background: 'rgba(30,123,255,0.08)', padding: '2px 6px', borderRadius: '6px' }}>
-                      {userProfile.role}
-                    </span>
-                  )}
-                </div>
-                
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0B1B2B', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                  {userProfile.business_name || 'Active Workspace'}
-                </div>
-                
-                {userProfile.business_type && (
-                  <div style={{ fontSize: '0.72rem', color: '#6B7A89', marginTop: 1 }}>{userProfile.business_type}</div>
-                )}
-
-                {userProfile.platforms_in_focus && userProfile.platforms_in_focus.length > 0 && (
-                  <div style={{ fontSize: '0.70rem', color: '#8A99A8', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                    {userProfile.platforms_in_focus.slice(0, 3).map((pl: string) => (
-                      <span key={pl} style={{ background: '#FFFFFF', border: '1px solid #EBE6DC', padding: '1px 5px', borderRadius: '4px' }}>
-                        {pl}
-                      </span>
-                    ))}
-                    {userProfile.platforms_in_focus.length > 3 && (
-                      <span style={{ color: '#6B7A89', padding: '1px 2px' }}>+{userProfile.platforms_in_focus.length - 3}</span>
-                    )}
-                  </div>
-                )}
-
-                <button onClick={() => navigate('/profile')} style={{ marginTop: '8px', background: 'none', border: 'none', fontSize: '11px', color: '#1E7BFF', cursor: 'pointer', padding: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>Edit Profile & Goals</span>
-                  <span>→</span>
-                </button>
-              </div>
-            )}
+              <span>+ New Conversation</span>
+            </button>
           </div>
 
           {/* Conversations feed */}
