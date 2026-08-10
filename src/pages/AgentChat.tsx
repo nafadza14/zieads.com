@@ -531,12 +531,13 @@ export default function AgentChat() {
       const j = await res.json();
 
       if (res.status === 429) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `**Rate limit reached.** ${j.message}` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: `**Rate limit reached.** ${j.message || 'Limit reached.'}` }]);
         setLoading(false);
         return;
       }
       if (!j.success) {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]);
+        const errorContent = j.error || j.message || 'Something went wrong. Please try again.';
+        setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${errorContent}` }]);
         setLoading(false);
         return;
       }
@@ -744,7 +745,6 @@ export default function AgentChat() {
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: '0.97rem', color: '#0B1B2B' }}>ZieAds AI Agent</div>
-                <div style={{ fontSize: '0.74rem', color: '#6B7A89' }}>Strategic Ads Analyst · Claude 3.5 Sonnet</div>
               </div>
             </div>
 

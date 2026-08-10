@@ -336,6 +336,7 @@ agentRouter.post("/message", async (req, res) => {
   const recentHistory = history.slice(-20);
   const auditContext = await getRecentAuditContext(userId);
   const v3Context = await getV3DataContext(userId);
+  const profile = await getProfile(userId);
 
   // Process attachments in the current message
   let finalContent: any = message;
@@ -436,8 +437,8 @@ ${auditContext}`,
       await saveMessage({ conversationId: convId, userId, role: "assistant", content: fallback });
       return res.json({ success: true, conversationId: convId, reply: fallback, usage: { used, limit } });
     }
-    console.error("[Agent] Error:", err.message);
-    res.status(500).json({ error: err.message });
+    console.error("[Agent] Error in /message:", err);
+    res.status(500).json({ error: err.message || "Failed to process message" });
   }
 });
 
@@ -468,6 +469,7 @@ agentRouter.post("/analyze", async (req, res) => {
 
   const auditContext = await getRecentAuditContext(userId);
   const v3Context = await getV3DataContext(userId);
+  const profile = await getProfile(userId);
   const prompt = buildAnalysisPrompt(mode, data || "", auditContext);
 
   // Resolve or create a conversation for this analysis
