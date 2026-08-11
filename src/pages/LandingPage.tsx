@@ -499,10 +499,10 @@ export default function LandingPage({ onScanComplete }: Props) {
               >
                 {phraseWords.map((word, wIdx) => (
                   <span
-                    key={wIdx}
+                    key={`${phraseIndex}-${wIdx}`}
                     className="inline-block opacity-0 translate-y-[8px] animate-word-reveal"
                     style={{
-                      animationDelay: `${wIdx * 0.25}s`,
+                      animationDelay: `${wIdx * 0.15}s`,
                       animationFillMode: 'forwards'
                     }}
                   >

@@ -1159,6 +1159,37 @@ a:hover { color: var(--primary); }
   vertical-align: baseline;
 }
 
+@keyframes wordReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-word-reveal {
+  animation: wordReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.rotating-container {
+  display: inline-block;
+  min-height: 50px;
+  vertical-align: middle;
+}
+@media (min-width: 640px) {
+  .rotating-container {
+    min-height: 60px;
+  }
+}
+@media (min-width: 768px) {
+  .rotating-container {
+    min-height: 70px;
+  }
+}
+
 /* Grid Construction Lines */
 .landing-page .lp-grid-line {
   position: absolute;
