@@ -161,7 +161,7 @@ export default function Hero() {
           {/* CTA Row */}
           <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5">
             <TextRollButton
-              text="Start a project"
+              text="Get started free"
               onClick={() => navigate('/sign-up')}
               variant="orange"
             />

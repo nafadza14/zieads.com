@@ -62,8 +62,8 @@ export default function Navbar() {
           >
             <span className="overflow-hidden h-[18px]">
               <span className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:-translate-y-1/2">
-                <span className="h-[18px] flex items-center">Start a project</span>
-                <span className="h-[18px] flex items-center">Start a project</span>
+                <span className="h-[18px] flex items-center">Start free</span>
+                <span className="h-[18px] flex items-center">Start free</span>
               </span>
             </span>
             <span className="w-6 h-6 bg-white rounded-full flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:rotate-0 -rotate-45">
@@ -109,7 +109,7 @@ export default function Navbar() {
                 className="mobile-nav-cta"
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-up'); }}
               >
-                Start a project
+                Start free
               </button>
               <button
                 className="mobile-nav-btn-outline"
