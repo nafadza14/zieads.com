@@ -1,6 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import ZieAdsLogo from '../../../components/ZieAdsLogo';
+
+function LiveClock() {
+  const [time, setTime] = useState('');
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const h = now.getHours() % 12 || 12;
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+      setTime(`${h}:${m} ${ampm}`);
+    };
+    update();
+    const id = setInterval(update, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <span className="nav-clock text-[12px] text-gray-500 font-medium tracking-wide hidden lg:inline">
+      {time}
+    </span>
+  );
+}
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -31,8 +55,21 @@ export default function Navbar() {
 
         {/* Desktop Actions */}
         <div className="nav-actions hidden md:flex">
-          <button className="btn-signup-nav" onClick={() => navigate('/sign-up')}>Sign Up</button>
-          <button className="btn-login-nav" onClick={() => navigate('/sign-in')}>Log In</button>
+          <LiveClock />
+          <button
+            className="group inline-flex items-center gap-1.5 bg-[#F26522] hover:bg-[#e05a1a] text-white text-[13px] font-medium rounded-full pl-4 pr-1.5 py-1.5 transition-colors duration-300 cursor-pointer"
+            onClick={() => navigate('/sign-up')}
+          >
+            <span className="overflow-hidden h-[18px]">
+              <span className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:-translate-y-1/2">
+                <span className="h-[18px] flex items-center">Start a project</span>
+                <span className="h-[18px] flex items-center">Start a project</span>
+              </span>
+            </span>
+            <span className="w-6 h-6 bg-white rounded-full flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:rotate-0 -rotate-45">
+              <ArrowRight size={12} className="text-[#F26522]" />
+            </span>
+          </button>
         </div>
 
         {/* Mobile Hamburger */}
@@ -53,31 +90,35 @@ export default function Navbar() {
           )}
         </button>
 
-        {/* Mobile Dropdown */}
+        {/* Mobile Bottom Sheet Overlay */}
         {isMobileMenuOpen && (
-          <div className="mobile-nav-dropdown">
-            <div className="mobile-nav-links">
-              <a href="#free-audit-try" onClick={() => setIsMobileMenuOpen(false)}>Platform</a>
-              <a href="#features-overview" onClick={() => setIsMobileMenuOpen(false)}>Features</a>
-              <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</a>
-              <a href="#faq" onClick={() => setIsMobileMenuOpen(false)}>Community</a>
-            </div>
-            <hr style={{ border: 'none', borderTop: '1px solid #f0f0f0', margin: '8px 0' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <>
+            <div
+              className="fixed inset-0 bg-black/30 z-[200] md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+            <div className="mobile-nav-sheet">
+              <div className="mobile-nav-links">
+                <a href="#free-audit-try" onClick={() => setIsMobileMenuOpen(false)}>Platform</a>
+                <a href="#features-overview" onClick={() => setIsMobileMenuOpen(false)}>Features</a>
+                <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</a>
+                <a href="#faq" onClick={() => setIsMobileMenuOpen(false)}>Community</a>
+              </div>
+              <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '12px 0' }} />
               <button
-                className="mobile-nav-btn-outline"
+                className="mobile-nav-cta"
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-up'); }}
               >
-                Sign Up
+                Start a project
               </button>
               <button
-                className="mobile-nav-btn-solid"
+                className="mobile-nav-btn-outline"
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-in'); }}
               >
                 Log In
               </button>
             </div>
-          </div>
+          </>
         )}
       </div>
     </nav>

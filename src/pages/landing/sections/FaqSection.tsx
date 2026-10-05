@@ -7,6 +7,12 @@ export default function FaqSection() {
 
   return (
     <section id="faq" className="faq-section">
+      {/* Numbered Badge */}
+      <div className="axion-badge-row" style={{ justifyContent: 'center' }}>
+        <span className="axion-badge-number">11</span>
+        <span className="axion-badge-label">FAQ</span>
+      </div>
+
       <h2 className="section-title">Frequently Asked Questions</h2>
       <div className="faq-grid">
         {faqItems.map((item, i) => (

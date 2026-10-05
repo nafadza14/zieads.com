@@ -35,6 +35,7 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.13.1",
     "react-to-print": "^3.3.0",
+    "shaders": "^3.2.475",
     "sharp": "^0.35.3",
     "vite": "^6.2.0"
   },

@@ -1,24 +1,12 @@
 export default function SchedulingSection() {
   return (
-    <section
-      className="pain-section"
-      style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'var(--lp-bg-card)' }}
-    >
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-text-muted)',
-          letterSpacing: '0.08em',
-          display: 'block',
-          textAlign: 'center',
-          marginBottom: 8,
-        }}
-      >
-        Publishing and scheduling
-      </span>
+    <section className="axion-section axion-section-white">
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">03</span>
+        <span className="axion-badge-label">Publishing & Scheduling</span>
+      </div>
+
       <h2 className="section-title">Draft once. The agent handles every platform.</h2>
       <div className="pain-body" style={{ marginBottom: 40 }}>
         <p>
@@ -32,86 +20,21 @@ export default function SchedulingSection() {
         </p>
       </div>
 
-      <div
-        style={{
-          maxWidth: '640px',
-          margin: '0 auto',
-          background: 'var(--lp-bg-card)',
-          border: '1px solid var(--lp-border-subtle)',
-          borderRadius: '20px',
-          padding: '24px',
-          boxShadow: 'var(--lp-shadow-card)',
-          textAlign: 'left',
-        }}
-      >
+      <div className="axion-showcase-card">
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <span
-            style={{
-              background: '#000000',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 600,
-              padding: '4px 10px',
-              borderRadius: '6px',
-            }}
-          >
-            Instagram
-          </span>
-          <span
-            style={{
-              background: 'var(--lp-bg-canvas-alt)',
-              color: 'var(--lp-text-secondary)',
-              fontSize: '12px',
-              fontWeight: 600,
-              padding: '4px 10px',
-              borderRadius: '6px',
-            }}
-          >
-            TikTok
-          </span>
-          <span
-            style={{
-              background: 'var(--lp-bg-canvas-alt)',
-              color: 'var(--lp-text-secondary)',
-              fontSize: '12px',
-              fontWeight: 600,
-              padding: '4px 10px',
-              borderRadius: '6px',
-            }}
-          >
-            LinkedIn
-          </span>
+          <span className="axion-platform-tab axion-platform-active">Instagram</span>
+          <span className="axion-platform-tab">TikTok</span>
+          <span className="axion-platform-tab">LinkedIn</span>
         </div>
-        <div
-          style={{
-            background: 'var(--lp-bg-inset)',
-            padding: '16px',
-            borderRadius: '12px',
-            minHeight: '80px',
-            fontSize: '14px',
-            color: 'var(--lp-text-primary)',
-            border: '1px solid var(--lp-border-subtle)',
-          }}
-        >
+        <div className="axion-showcase-content">
           We've analyzed your engagement profiles. Recommended post adjustments: Add vertical captions for TikTok
           viewport safety, and move the call-to-action link to client bio.
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--lp-text-secondary)', fontWeight: 600 }}>
+          <span style={{ fontSize: '12px', color: '#717171', fontWeight: 600 }}>
             Suggested Time: Tuesday, 5:45 PM (Local)
           </span>
-          <button
-            className="btn-lp-primary-gradient"
-            style={{
-              border: 'none',
-              borderRadius: '8px',
-              color: 'white',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
+          <button className="axion-btn-orange" style={{ padding: '8px 16px', fontSize: '13px' }}>
             Approve & Schedule
           </button>
         </div>

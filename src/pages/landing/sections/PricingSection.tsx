@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { pricingPlans } from '../data';
+import { TextRollButton } from './Hero';
 
 export default function PricingSection() {
   const navigate = useNavigate();
@@ -12,6 +13,12 @@ export default function PricingSection() {
 
   return (
     <section id="pricing" className="pricing-section">
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">10</span>
+        <span className="axion-badge-label">Pricing</span>
+      </div>
+
       <h2 className="section-title">Predictable cost. No surprises.</h2>
       <p className="section-subtitle">Start free. Upgrade when the agent has earned it.</p>
       <div className="pricing-grid">
@@ -49,9 +56,7 @@ export default function PricingSection() {
           The agent starts free and runs from $29. If it catches one bad spend decision, flags one fatiguing campaign,
           or saves you one Sunday of planning, it has already paid for itself for the year.
         </p>
-        <button className="btn-lp-primary-gradient" onClick={scrollToFreeAudit} style={{ cursor: 'pointer' }}>
-          See what the agent finds
-        </button>
+        <TextRollButton text="See what the agent finds" onClick={scrollToFreeAudit} variant="orange" />
       </div>
     </section>
   );

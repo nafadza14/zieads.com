@@ -1,14 +1,15 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Clock, Shield } from 'lucide-react';
+import { ArrowRight, Check, Clock, Shield } from 'lucide-react';
+import { Shader, Swirl, ChromaFlow, FlutedGlass, FilmGrain } from 'shaders/react';
 import { rotatingPhrases, rotatingPlaceholders } from '../data';
 import { usePrefersReducedMotion, useRotatingIndex, useRotatingPhrase } from '../hooks';
 import OnboardingModal from './OnboardingModal';
 
 /* ── SVG Icon Components ── */
-const StarIcon = () => (
+const AISparkleIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
   </svg>
 );
 
@@ -41,148 +42,82 @@ const PromptsIcon = () => (
   </svg>
 );
 
-const AISparkleIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+/* ── Partner Badge SVG ── */
+const PartnerStarburst = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-5 h-5 sm:w-6 sm:h-6 fill-current text-[#E8704E]">
+    <path d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z" />
   </svg>
 );
 
-/* ── Video Background Component ── */
-function VideoBackground() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const fadeFrameRef = useRef<number>(0);
-  const fadingOutRef = useRef(false);
+/* ── Shader Background ── */
+function ShaderBackground() {
+  return (
+    <div className="absolute inset-0 z-10 pointer-events-none">
+      <Shader style={{ width: '100%', height: '100%' }}>
+        <Swirl colorA="#ffffff" colorB="#f0f0f0" detail={1.7} />
+        <ChromaFlow
+          baseColor="#ffffff"
+          downColor="#ff5f03"
+          leftColor="#ff5f03"
+          rightColor="#ff5f03"
+          upColor="#ff5f03"
+          momentum={13}
+          radius={3.5}
+        />
+        <FlutedGlass
+          aberration={0.61}
+          angle={31}
+          frequency={8}
+          highlight={0.12}
+          highlightSoftness={0}
+          lightAngle={-90}
+          refraction={4}
+          shape="rounded"
+          softness={1}
+          speed={0.15}
+        />
+        <FilmGrain strength={0.05} />
+      </Shader>
+    </div>
+  );
+}
 
-  const cancelFade = useCallback(() => {
-    if (fadeFrameRef.current) {
-      cancelAnimationFrame(fadeFrameRef.current);
-      fadeFrameRef.current = 0;
-    }
-  }, []);
-
-  const fadeIn = useCallback((startOpacity: number) => {
-    cancelFade();
-    const video = videoRef.current;
-    if (!video) return;
-
-    const duration = 250;
-    const startTime = performance.now();
-    const from = startOpacity;
-
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      video.style.opacity = String(from + (1 - from) * progress);
-      if (progress < 1) {
-        fadeFrameRef.current = requestAnimationFrame(step);
-      } else {
-        fadeFrameRef.current = 0;
-      }
-    };
-    fadeFrameRef.current = requestAnimationFrame(step);
-  }, [cancelFade]);
-
-  const fadeOut = useCallback((startOpacity: number) => {
-    cancelFade();
-    const video = videoRef.current;
-    if (!video) return;
-
-    const duration = 250;
-    const startTime = performance.now();
-    const from = startOpacity;
-
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      video.style.opacity = String(from * (1 - progress));
-      if (progress < 1) {
-        fadeFrameRef.current = requestAnimationFrame(step);
-      } else {
-        fadeFrameRef.current = 0;
-      }
-    };
-    fadeFrameRef.current = requestAnimationFrame(step);
-  }, [cancelFade]);
-
-  const handleTimeUpdate = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !video.duration) return;
-
-    const remaining = video.duration - video.currentTime;
-    if (remaining <= 0.55 && !fadingOutRef.current) {
-      fadingOutRef.current = true;
-      const currentOpacity = parseFloat(video.style.opacity || '1');
-      fadeOut(currentOpacity);
-    }
-  }, [fadeOut]);
-
-  const handleEnded = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.style.opacity = '0';
-    fadingOutRef.current = false;
-
-    setTimeout(() => {
-      video.currentTime = 0;
-      video.play().then(() => {
-        fadeIn(0);
-      }).catch(() => {});
-    }, 100);
-  }, [fadeIn]);
-
-  const handleCanPlay = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    fadingOutRef.current = false;
-    const currentOpacity = parseFloat(video.style.opacity || '0');
-    fadeIn(currentOpacity);
-  }, [fadeIn]);
-
-  useEffect(() => {
-    return () => cancelFade();
-  }, [cancelFade]);
+/* ── Text Roll Hover Button ── */
+export function TextRollButton({
+  text,
+  onClick,
+  variant = 'orange',
+  className: extraClass = '',
+}: {
+  text: string;
+  onClick?: () => void;
+  variant?: 'orange' | 'white' | 'dark';
+  className?: string;
+}) {
+  const bgClass = variant === 'orange'
+    ? 'bg-[#F26522] hover:bg-[#e05a1a]'
+    : variant === 'white'
+    ? 'bg-white hover:bg-gray-50'
+    : 'bg-gray-900 hover:bg-gray-800';
+  const textColor = variant === 'white' ? 'text-gray-900' : 'text-white';
+  const arrowBg = variant === 'orange' ? 'bg-white' : variant === 'white' ? 'bg-gray-900' : 'bg-white';
+  const arrowColor = variant === 'orange' ? 'text-[#F26522]' : variant === 'white' ? 'text-white' : 'text-gray-900';
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        overflow: 'hidden',
-        zIndex: 0,
-      }}
+    <button
+      onClick={onClick}
+      className={`group inline-flex items-center gap-2 ${bgClass} ${textColor} text-[13px] sm:text-[14px] font-medium rounded-full pl-5 sm:pl-6 pr-2 py-2 transition-colors duration-300 cursor-pointer ${extraClass}`}
     >
-      <video
-        ref={videoRef}
-        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260329_050842_be71947f-f16e-4a14-810c-06e83d23ddb5.mp4"
-        muted
-        playsInline
-        autoPlay
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleEnded}
-        onCanPlay={handleCanPlay}
-        style={{
-          width: '115%',
-          height: '115%',
-          objectFit: 'cover',
-          objectPosition: 'center top',
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          opacity: 0,
-        }}
-      />
-      {/* Overlay for text readability */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(248,248,248,0.7) 60%, rgba(248,248,248,0.92) 100%)',
-          zIndex: 1,
-        }}
-      />
-    </div>
+      <span className="overflow-hidden h-[20px]">
+        <span className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:-translate-y-1/2">
+          <span className="h-[20px] flex items-center">{text}</span>
+          <span className="h-[20px] flex items-center">{text}</span>
+        </span>
+      </span>
+      <span className={`w-7 h-7 sm:w-8 sm:h-8 ${arrowBg} rounded-full flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:rotate-0 -rotate-45`}>
+        <ArrowRight size={14} className={arrowColor} />
+      </span>
+    </button>
   );
 }
 
@@ -218,16 +153,16 @@ export default function Hero() {
   return (
     <>
       <section className="hero-section">
-        <VideoBackground />
+        <ShaderBackground />
 
-        <div className="hero-content" style={{ position: 'relative', zIndex: 2 }}>
-          {/* Badge */}
-          <div className="hero-badge-new">
-            <span className="hero-badge-dark">
-              <StarIcon /> <span>New</span>
-            </span>
-            <span className="hero-badge-light">Your marketing, handled</span>
-          </div>
+        {/* Spacer pushes content to bottom of viewport */}
+        <div className="flex-1" />
+
+        <div className="hero-content" style={{ position: 'relative', zIndex: 20 }}>
+          {/* Small label */}
+          <p className="text-[13px] sm:text-[14px] text-gray-900 tracking-wide mb-5 sm:mb-8" style={{ fontFamily: 'inherit' }}>
+            ZieAds AI Agent
+          </p>
 
           {/* Headline */}
           <h1 className="hero-title">
@@ -261,18 +196,27 @@ export default function Hero() {
             </span>
           </h1>
 
-          {/* Subtitle */}
-          <p className="hero-subtitle">
-            ZieAds connects to your social accounts and ad data, powered by an AI Marketing Agent that never clocks out.
-            Every morning it tells you what worked, what is slipping, and exactly what to do next.
-          </p>
+          {/* CTA Row */}
+          <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+            <TextRollButton
+              text="Start a project"
+              onClick={() => navigate('/sign-up')}
+              variant="orange"
+            />
+
+            {/* Partner Badge */}
+            <div className="inline-flex items-center gap-2 bg-white rounded-[4px] px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 cursor-default">
+              <PartnerStarburst />
+              <span className="text-[13px] sm:text-[14px] font-medium text-gray-900" style={{ fontFamily: 'inherit' }}>AI Marketing Agent</span>
+              <span className="text-[10px] sm:text-[11px] bg-gray-900 text-white px-1.5 sm:px-2 py-0.5 rounded font-medium">Featured</span>
+            </div>
+          </div>
 
           {/* Search / Chat Input Box */}
-          <div className="hero-search-box">
-            {/* Top credit row */}
+          <div className="hero-search-box mt-12">
             <div className="hero-search-topbar">
               <div className="hero-search-credits">
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>60/450 credits</span>
+                <span style={{ color: 'rgba(0,0,0,0.4)' }}>60/450 credits</span>
                 <button className="hero-upgrade-btn">Upgrade</button>
               </div>
               <div className="hero-search-powered">
@@ -281,7 +225,6 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Main input */}
             <div className="hero-search-input-wrap">
               <textarea
                 rows={2}
@@ -305,7 +248,6 @@ export default function Hero() {
               </button>
             </div>
 
-            {/* Bottom action row */}
             <div className="hero-search-bottombar">
               <div className="hero-search-actions">
                 <button className="hero-action-chip"><AttachIcon /> <span>Attach</span></button>

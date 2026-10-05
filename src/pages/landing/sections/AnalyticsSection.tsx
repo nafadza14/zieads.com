@@ -2,25 +2,19 @@ import { analyticsDimensions } from '../data';
 
 export default function AnalyticsSection() {
   return (
-    <section className="scoring-section" style={{ borderTop: '1px solid var(--lp-border-subtle)' }}>
-      <span className="section-eyebrow">
-        Analytics that decide, not just display
-      </span>
+    <section className="axion-section axion-section-gray">
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">04</span>
+        <span className="axion-badge-label">Analytics</span>
+      </div>
+
       <h2 className="section-title">Your numbers, already interpreted.</h2>
       <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px', textAlign: 'center' }}>
         Follower growth, engagement, reach, top and worst performers, best posting windows, all in one view across every
         connected account.
       </p>
-      <div
-        className="pain-body"
-        style={{
-          maxWidth: '780px',
-          margin: '0 auto 48px',
-          fontSize: '15.5px',
-          lineHeight: '1.75',
-          color: 'var(--lp-text-secondary)',
-        }}
-      >
+      <div className="pain-body" style={{ maxWidth: '780px', margin: '0 auto 48px' }}>
         <p>
           But the agent does not stop at showing you the chart. It tells you the Tuesday Reel format is fatiguing, the
           LinkedIn carousels are your quiet winners, and the paid campaign you are about to scale is built on a creative

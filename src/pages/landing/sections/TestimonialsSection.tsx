@@ -3,9 +3,12 @@ import { testimonials } from '../data';
 export default function TestimonialsSection() {
   return (
     <section className="testimonials-section">
-      <span className="section-eyebrow">
-        From people using it
-      </span>
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">08</span>
+        <span className="axion-badge-label">Testimonials</span>
+      </div>
+
       <h2 className="section-title" style={{ marginTop: 8 }}>
         What changed when the agent took over.
       </h2>

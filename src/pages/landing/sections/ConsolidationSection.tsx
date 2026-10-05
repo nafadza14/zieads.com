@@ -2,13 +2,13 @@ const tools = ['Scheduler', 'Analytics', 'Ad Reporting', 'Spreadsheets', 'Generi
 
 export default function ConsolidationSection() {
   return (
-    <section
-      className="pain-section"
-      style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'var(--lp-bg-card)', textAlign: 'center' }}
-    >
-      <span className="section-eyebrow">
-        One agent, not five tools
-      </span>
+    <section className="axion-section axion-section-gray" style={{ textAlign: 'center' }}>
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">06</span>
+        <span className="axion-badge-label">Consolidation</span>
+      </div>
+
       <h2 className="section-title">Stop paying for five tools that don't talk to each other.</h2>
       <div className="pain-body" style={{ maxWidth: '780px', margin: '0 auto 40px' }}>
         <p>
@@ -21,18 +21,7 @@ export default function ConsolidationSection() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px' }}>
         {tools.map((tool) => (
-          <span
-            key={tool}
-            style={{
-              border: '1px solid var(--lp-border-subtle)',
-              padding: '10px 20px',
-              borderRadius: '9999px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: 'var(--lp-text-secondary)',
-              background: 'var(--lp-bg-canvas)',
-            }}
-          >
+          <span key={tool} className="axion-tool-pill">
             {tool}
           </span>
         ))}

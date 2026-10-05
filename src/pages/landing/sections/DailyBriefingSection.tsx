@@ -2,17 +2,13 @@ import { dailyBriefingCards } from '../data';
 
 export default function DailyBriefingSection() {
   return (
-    <section
-      className="ai-strategist-section"
-      style={{
-        padding: '120px 24px',
-        background: 'var(--lp-bg-canvas)',
-        borderTop: '1px solid var(--lp-border-subtle)',
-      }}
-    >
-      <span className="section-eyebrow">
-        The daily briefing
-      </span>
+    <section className="axion-section axion-section-gray">
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">02</span>
+        <span className="axion-badge-label">The Daily Briefing</span>
+      </div>
+
       <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16, textAlign: 'center' }}>
         A marketing analyst's report. Every single morning.
       </h2>
@@ -21,22 +17,7 @@ export default function DailyBriefingSection() {
         hands you decisions.
       </p>
 
-      <div
-        className="ai-strategist-explanation"
-        style={{
-          maxWidth: '780px',
-          margin: '0 auto 48px',
-          textAlign: 'left',
-          fontSize: '15.5px',
-          lineHeight: '1.75',
-          color: 'var(--lp-text-secondary)',
-          background: 'var(--lp-bg-card)',
-          border: '1px solid var(--lp-border-subtle)',
-          borderRadius: '20px',
-          padding: '32px',
-          boxShadow: 'var(--lp-shadow-card)',
-        }}
-      >
+      <div className="axion-explanation-card">
         <p style={{ margin: 0 }}>
           It knows your pixel was misfiring last week. It knows your best angle has been problem-first. It knows you
           have been running cold audiences only. So when it says boost the Tuesday Reel and pause ad set three, it is
@@ -47,20 +28,7 @@ export default function DailyBriefingSection() {
       <div className="pain-grid" style={{ marginBottom: 48 }}>
         {dailyBriefingCards.map((mode, i) => (
           <div key={i} className="pain-card">
-            <div
-              className="pain-icon-wrap"
-              style={{
-                width: '48px',
-                height: '48px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '12px',
-                background: 'var(--lp-pill-bg)',
-                color: 'var(--lp-text-primary)',
-                marginBottom: '20px',
-              }}
-            >
+            <div className="axion-icon-wrap">
               <mode.Icon size={24} />
             </div>
             <h3>{mode.name}</h3>

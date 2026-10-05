@@ -3,19 +3,16 @@ import { comparisonRows } from '../data';
 export default function ComparisonSection() {
   return (
     <section className="comparison-section">
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">07</span>
+        <span className="axion-badge-label">Comparison</span>
+      </div>
+
       <h2 className="section-title">Why not just use ChatGPT?</h2>
       <p className="section-subtitle">Fair question. Honest answer.</p>
 
-      <div
-        style={{
-          maxWidth: '780px',
-          margin: '0 auto 40px',
-          textAlign: 'left',
-          fontSize: '15px',
-          lineHeight: '1.6',
-          color: 'var(--lp-text-secondary)',
-        }}
-      >
+      <div style={{ maxWidth: '780px', margin: '0 auto 40px', textAlign: 'left', fontSize: '15px', lineHeight: '1.6', color: '#505050' }}>
         <p>
           ChatGPT is a good thinking partner. It helps you brainstorm and structure ideas. But it starts from zero every
           time you open a new chat, it cannot see your accounts, and it has no memory of what you posted last week or
@@ -48,23 +45,11 @@ export default function ComparisonSection() {
         </table>
       </div>
 
-      <div
-        className="comparison-disclaimer"
-        style={{
-          background: 'var(--lp-bg-inset)',
-          borderLeft: '4px solid var(--lp-text-primary)',
-          padding: '24px',
-          borderRadius: '0 12px 12px 0',
-          marginTop: '32px',
-          textAlign: 'left',
-          maxWidth: '780px',
-          margin: '32px auto 0',
-        }}
-      >
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 700, color: 'var(--lp-text-primary)' }}>
+      <div className="axion-disclaimer-card">
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 700, color: '#000' }}>
           What the agent does not do
         </h4>
-        <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: 'var(--lp-text-secondary)' }}>
+        <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#505050' }}>
           The agent does not autonomously spend your money or publish without your approval. You stay in control of what
           goes live and what gets boosted. It watches, analyzes, drafts, and recommends. You make the call, and it
           handles the execution once you do. We think that is the right balance for marketing you actually care about.

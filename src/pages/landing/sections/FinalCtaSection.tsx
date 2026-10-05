@@ -1,4 +1,5 @@
 import { Check, Clock, Shield } from 'lucide-react';
+import { TextRollButton } from './Hero';
 
 export default function FinalCtaSection() {
   const scrollToHero = () => window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -13,9 +14,7 @@ export default function FinalCtaSection() {
         <p className="final-cta-subtitle">
           Start with a free audit, no signup and no card. Connect when you're ready and wake up to your first briefing.
         </p>
-        <button className="btn-lp-primary-gradient final-cta-btn" onClick={scrollToHero} style={{ cursor: 'pointer' }}>
-          Start Free
-        </button>
+        <TextRollButton text="Start Free" onClick={scrollToHero} variant="white" />
         <div className="final-cta-trust-strip">
           <span>
             <Shield size={14} /> No ad account access to start

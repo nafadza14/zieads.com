@@ -4,16 +4,19 @@ import { personas } from '../data';
 export default function WhoForSection() {
   return (
     <section className="who-section">
-      <span className="section-eyebrow">
-        Built for people who take marketing seriously
-      </span>
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">09</span>
+        <span className="axion-badge-label">Who It's For</span>
+      </div>
+
       <h2 className="section-title" style={{ marginTop: 8 }}>
         Whether it is your brand or your clients'.
       </h2>
       <div className="who-grid">
         {personas.map((persona, i) => (
           <div key={i} className="persona-card">
-            <div className="persona-icon-wrap">
+            <div className="axion-icon-wrap">
               <persona.Icon size={24} />
             </div>
             <span className="persona-type">{persona.title}</span>
@@ -26,16 +29,7 @@ export default function WhoForSection() {
                 </li>
               ))}
             </ul>
-            <div
-              className="persona-suggestion"
-              style={{
-                fontSize: '13px',
-                fontStyle: 'italic',
-                color: 'var(--lp-text-secondary)',
-                borderTop: '1px solid var(--lp-border-subtle)',
-                paddingTop: '12px',
-              }}
-            >
+            <div className="persona-suggestion">
               {persona.plan_suggestion}
             </div>
           </div>

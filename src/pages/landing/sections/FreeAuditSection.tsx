@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { reportTabs } from '../data';
+import { TextRollButton } from './Hero';
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -49,14 +50,13 @@ export default function FreeAuditSection({ onScanComplete }: Props) {
   };
 
   return (
-    <section
-      id="free-audit-try"
-      className="scoring-section"
-      style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '100px' }}
-    >
-      <span className="section-eyebrow">
-        Try it free, no signup
-      </span>
+    <section id="free-audit-try" className="axion-section axion-section-white">
+      {/* Numbered Badge */}
+      <div className="axion-badge-row">
+        <span className="axion-badge-number">01</span>
+        <span className="axion-badge-label">Free Audit</span>
+      </div>
+
       <h2 className="section-title">Curious what the agent sees? Paste a URL.</h2>
       <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px', textAlign: 'center' }}>
         Before you connect anything, drop in any website and the agent reads it like a strategist would. Your offer,
