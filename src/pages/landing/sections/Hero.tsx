@@ -160,7 +160,7 @@ export default function Hero() {
 
         <div className="hero-content" style={{ position: 'relative', zIndex: 20 }}>
           {/* Small label */}
-          <p className="text-[13px] sm:text-[14px] text-gray-900 tracking-wide mb-5 sm:mb-8" style={{ fontFamily: 'inherit' }}>
+          <p className="text-[13px] sm:text-[14px] text-gray-900 tracking-wide mb-5 sm:mb-8 text-center" style={{ fontFamily: 'inherit' }}>
             ZieAds AI Agent
           </p>
 
@@ -197,7 +197,7 @@ export default function Hero() {
           </h1>
 
           {/* CTA Row */}
-          <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+          <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5">
             <TextRollButton
               text="Start a project"
               onClick={() => navigate('/sign-up')}

@@ -193,7 +193,7 @@ export default function AnalystPage() {
               <X size={16} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#1E7BFF' }}>Get Started</span>
+              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#F26522' }}>Get Started</span>
             </div>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 20px', letterSpacing: '-0.01em' }}>First Steps Checklist</h2>
             
@@ -201,7 +201,7 @@ export default function AnalystPage() {
               {/* Card 1: Connect Accounts */}
               <div style={{ 
                 background: 'rgba(30, 123, 255, 0.01)', 
-                border: '1px solid #1E7BFF', 
+                border: '1px solid #F26522', 
                 borderRadius: 12, 
                 padding: 20, 
                 display: 'flex', 
@@ -215,13 +215,13 @@ export default function AnalystPage() {
                   right: 12, 
                   fontSize: '9px', 
                   fontWeight: 700, 
-                  color: '#1E7BFF', 
+                  color: '#F26522', 
                   background: 'rgba(30, 123, 255, 0.1)', 
                   padding: '2px 8px', 
                   borderRadius: 100 
                 }}>Start here</span>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#F26522', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Link2 size={18} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -259,7 +259,7 @@ export default function AnalystPage() {
                 gap: 16 
               }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#F26522', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Search size={18} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -297,7 +297,7 @@ export default function AnalystPage() {
                 gap: 16 
               }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#F26522', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <MessageSquare size={18} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>

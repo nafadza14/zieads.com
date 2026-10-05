@@ -49,7 +49,7 @@ export default function OnboardingModal({ pendingPrompt, onConfirm, onClose }: P
         {/* Top band - brand accent */}
         <div
           style={{
-            background: 'var(--lp-accent-gradient, linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%))',
+            background: 'var(--lp-accent-gradient, linear-gradient(135deg, #F26522 0%, #E8571B 100%))',
             padding: '32px 36px 28px',
             display: 'flex',
             flexDirection: 'column',
@@ -122,7 +122,7 @@ export default function OnboardingModal({ pendingPrompt, onConfirm, onClose }: P
               alignItems: 'flex-start',
             }}
           >
-            <Bot size={18} style={{ color: 'var(--lp-accent, #1E7BFF)', flexShrink: 0, marginTop: '2px' }} />
+            <Bot size={18} style={{ color: 'var(--lp-accent, #F26522)', flexShrink: 0, marginTop: '2px' }} />
             <div>
               <span
                 style={{
@@ -161,7 +161,7 @@ export default function OnboardingModal({ pendingPrompt, onConfirm, onClose }: P
                   style={{
                     fontSize: '11px',
                     fontWeight: 700,
-                    color: 'var(--lp-accent, #1E7BFF)',
+                    color: 'var(--lp-accent, #F26522)',
                     letterSpacing: '0.04em',
                     minWidth: '22px',
                   }}

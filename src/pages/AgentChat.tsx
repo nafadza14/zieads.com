@@ -12,7 +12,7 @@ import CreditBadge from '../components/CreditBadge';
 import FeatureGateModal from '../components/FeatureGateModal';
 import V3Layout from '../components/v3/V3Layout';
 
-const P = '#1E7BFF'; // Premium electric blue accent
+const P = '#F26522'; // Orange accent (matches landing page)
 const G = '#6B7A89'; // Muted editorial text
 const D = '#0B1B2B'; // Deep ink dark text
 const B = '#E5DFCF'; // Vintage construction grid/cream border
@@ -703,7 +703,7 @@ export default function AgentChat() {
               gap: 6,
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#FAF8F3'; e.currentTarget.style.borderColor = '#1E7BFF'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#FFF5EE'; e.currentTarget.style.borderColor = '#F26522'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#E5DFCF'; }}
           >
             <span>← Back to Dashboard</span>
@@ -713,7 +713,7 @@ export default function AgentChat() {
             onClick={startNew}
             style={{
               width: '100%',
-              background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)',
+              background: 'linear-gradient(135deg, #F26522 0%, #E8571B 100%)',
               color: '#fff',
               border: 'none',
               padding: '12px 0',
@@ -721,7 +721,7 @@ export default function AgentChat() {
               fontWeight: 600,
               cursor: 'pointer',
               fontSize: '0.88rem',
-              boxShadow: '0 4px 12px rgba(30,123,255,0.15)',
+              boxShadow: '0 4px 12px rgba(242,101,34,0.15)',
               transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
@@ -750,7 +750,8 @@ export default function AgentChat() {
                     padding: '11px 20px',
                     cursor: 'pointer',
                     background: isActive ? '#FAF8F3' : 'transparent',
-                    borderLeft: isActive ? '3px solid #1E7BFF' : '3px solid transparent',
+                    borderLeft: isActive ? '3px solid #F26522' : '3px solid transparent',
+
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
@@ -773,7 +774,7 @@ export default function AgentChat() {
           {/* Header */}
           <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E5DFCF', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 38, height: 38, borderRadius: '12px', background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <div style={{ width: 38, height: 38, borderRadius: '12px', background: 'linear-gradient(135deg, #F26522 0%, #E8571B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                 <Bot size={18} />
               </div>
               <div>
@@ -796,7 +797,7 @@ export default function AgentChat() {
                     cursor: 'pointer',
                     fontSize: '0.82rem',
                     fontWeight: 600,
-                    color: activeTab === tab ? '#1E7BFF' : '#6B7A89',
+                    color: activeTab === tab ? '#F26522' : '#6B7A89',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
@@ -864,7 +865,7 @@ export default function AgentChat() {
                     boxShadow: '0 12px 32px rgba(11,27,43,0.03)',
                     margin: 'auto'
                   }}>
-                    <div style={{ width: 56, height: 56, borderRadius: '16px', background: '#1E7BFF', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#FFFFFF' }}>
+                    <div style={{ width: 56, height: 56, borderRadius: '16px', background: '#F26522', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#FFFFFF' }}>
                       <Bot size={28} />
                     </div>
                     <h1 style={{ fontFamily: 'var(--font-display, "Bricolage Grotesque", sans-serif)', fontSize: '1.65rem', fontWeight: 700, color: '#0B1B2B', margin: '0 0 12px', lineHeight: 1.35 }}>
@@ -892,7 +893,7 @@ export default function AgentChat() {
                     <div style={{ padding: 20, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '16px', textAlign: 'center' }}>
                       <div style={{ color: '#991B1B', fontWeight: 600, fontSize: '0.92rem', marginBottom: 4 }}>Monthly Message Limit Reached</div>
                       <div style={{ color: '#7F1D1D', fontSize: '0.83rem', marginBottom: 14 }}>You've reached your free plan limit of {usage.limit} messages.</div>
-                      <button onClick={() => navigate('/pricing')} style={{ background: '#1E7BFF', color: '#fff', border: 'none', padding: '9px 24px', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>Upgrade Plan</button>
+                      <button onClick={() => navigate('/pricing')} style={{ background: '#F26522', color: '#fff', border: 'none', padding: '9px 24px', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>Upgrade Plan</button>
                     </div>
                   ) : (
                     /* Redesigned Premium Chat Card */
@@ -942,7 +943,7 @@ export default function AgentChat() {
                       {uploadingFile && (
                         <div style={{
                           fontSize: '0.75rem',
-                          color: '#1E7BFF',
+                          color: '#F26522',
                           marginBottom: '10px',
                           display: 'flex',
                           alignItems: 'center',
@@ -1053,7 +1054,7 @@ export default function AgentChat() {
                                  height: '38px',
                                  borderRadius: '50%',
                                  border: 'none',
-                                 background: '#1E7BFF',
+                                 background: '#F26522',
                                  color: '#FFFFFF',
                                  display: 'flex',
                                  alignItems: 'center',
@@ -1061,10 +1062,10 @@ export default function AgentChat() {
                                  cursor: loading || (!input.trim() && !attachedFile) ? 'not-allowed' : 'pointer',
                                  opacity: loading || (!input.trim() && !attachedFile) ? 0.6 : 1,
                                  transition: 'all 0.2s ease',
-                                 boxShadow: '0 4px 12px rgba(30, 123, 255, 0.25)'
+                                 boxShadow: '0 4px 12px rgba(242, 101, 34, 0.25)'
                                }}
-                               onMouseEnter={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#0056b3'; }}
-                               onMouseLeave={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#1E7BFF'; }}
+                               onMouseEnter={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#e05a1a'; }}
+                               onMouseLeave={e => { if (!loading && (input.trim() || attachedFile)) e.currentTarget.style.background = '#F26522'; }}
                              >
                                <Send size={15} />
                              </button>
@@ -1082,7 +1083,7 @@ export default function AgentChat() {
                       {/* Quick Suggestions Pills */}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                         <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7A89', display: 'flex', alignItems: 'center', marginRight: 4 }}>
-                          <Sparkles size={13} style={{ marginRight: 4, color: '#0EA5E9' }} />
+                          <Sparkles size={13} style={{ marginRight: 4, color: '#F26522' }} />
                           Suggestions:
                         </span>
                         {getTailoredSuggestions().map((q, idx) => (
@@ -1104,7 +1105,7 @@ export default function AgentChat() {
                               overflow: 'hidden',
                               maxWidth: '280px'
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#F26522'; e.currentTarget.style.background = '#FFF5EE'; }}
                             onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
                             title={q.q}
                           >
@@ -1159,13 +1160,13 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun }: {
       transition: 'all 0.2s ease',
       boxShadow: '0 2px 8px rgba(11, 27, 43, 0.03)'
     }}
-      onMouseOver={e => { 
-        (e.currentTarget as HTMLDivElement).style.borderColor = '#1E7BFF'; 
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 32px rgba(11, 27, 43, 0.06)'; 
+      onMouseOver={e => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = '#F26522';
+        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 32px rgba(242, 101, 34, 0.08)';
       }}
-      onMouseOut={e => { 
-        (e.currentTarget as HTMLDivElement).style.borderColor = '#E5DFCF'; 
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(11, 27, 43, 0.03)'; 
+      onMouseOut={e => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = '#E5DFCF';
+        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(11, 27, 43, 0.03)';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -1187,7 +1188,7 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun }: {
         onClick={onRun}
         disabled={isDisabled}
         style={{
-          background: isRunning ? '#FAF8F3' : 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)',
+          background: isRunning ? '#FAF8F3' : 'linear-gradient(135deg, #F26522 0%, #E8571B 100%)',
           color: isRunning ? '#0B1B2B' : '#fff',
           border: isRunning ? '1px solid #E5DFCF' : 'none',
           borderRadius: '10px',
@@ -1201,7 +1202,7 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun }: {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 6,
-          boxShadow: isRunning ? 'none' : '0 4px 12px rgba(30,123,255,0.15)'
+          boxShadow: isRunning ? 'none' : '0 4px 12px rgba(242,101,34,0.15)'
         }}
       >
         {isRunning ? (
@@ -1222,11 +1223,11 @@ function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q:
     <div style={{ maxWidth: 680, margin: '0 auto', paddingTop: 20 }}>
       {/* Hero */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ width: 50, height: 50, background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#1E7BFF', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+        <div style={{ width: 50, height: 50, background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#F26522', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
           <Bot size={24} />
         </div>
-        <h2 style={{ fontFamily: 'var(--font-display, "Bricolage Grotesque", sans-serif)', fontSize: '30px', fontWeight: 700, color: '#0B1B2B', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.25 }}>
-          Ask ZieAds anything about <span style={{ fontStyle: 'italic', color: '#1E7BFF', fontWeight: 800 }}>paid ads strategy</span>.
+        <h2 style={{ fontSize: '30px', fontWeight: 700, color: '#0B1B2B', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.25 }}>
+          Ask ZieAds anything about <span style={{ fontStyle: 'italic', color: '#F26522', fontWeight: 800 }}>paid ads strategy</span>.
         </h2>
         <p style={{ color: '#6B7A89', fontSize: '0.88rem', lineHeight: 1.6, margin: '0 auto 24px', maxWidth: 520 }}>
           Your expert paid ads strategist. Ask anything about Meta, Google, TikTok or LinkedIn, or run one of our 10 deep analysis modes.
@@ -1288,7 +1289,7 @@ function EmptyState({ onSuggest, onSwitchModes, businessName }: { onSuggest: (q:
                   lineHeight: 1.45, 
                   transition: 'all 0.15s ease' 
                 }}
-                onMouseOver={e => { e.currentTarget.style.borderColor = '#1E7BFF'; e.currentTarget.style.background = '#FAF8F3'; }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = '#F26522'; e.currentTarget.style.background = '#FFF5EE'; }}
                 onMouseOut={e => { e.currentTarget.style.borderColor = '#E5DFCF'; e.currentTarget.style.background = '#FFFFFF'; }}
               >
                 {q.q}
@@ -1327,7 +1328,7 @@ function MessageBubble({ message }: { message: Message }) {
   return (
     <div style={{ display: 'flex', gap: 12, marginBottom: 20, justifyContent: isUser ? 'flex-end' : 'flex-start', maxWidth: isAnalysisResult ? '100%' : undefined }}>
       {!isUser && (
-        <div style={{ width: 30, height: 30, borderRadius: '9px', background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
+        <div style={{ width: 30, height: 30, borderRadius: '9px', background: 'linear-gradient(135deg, #F26522 0%, #E8571B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
           <Bot size={16} />
         </div>
       )}
@@ -1336,9 +1337,9 @@ function MessageBubble({ message }: { message: Message }) {
         width: isAnalysisResult ? '100%' : undefined,
         padding: isAnalysisResult ? '20px 24px' : '12px 16px',
         borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-        background: isUser ? '#EBF3FF' : '#FFFFFF',
+        background: isUser ? '#FFF5EE' : '#FFFFFF',
         color: '#0B1B2B',
-        border: isUser ? '1px solid #BFDBFE' : '1px solid #E5DFCF',
+        border: isUser ? '1px solid #FDDCC8' : '1px solid #E5DFCF',
         fontSize: '0.88rem',
         lineHeight: 1.7,
         boxShadow: '0 2px 8px rgba(11, 27, 43, 0.02)',
@@ -1451,12 +1452,12 @@ function MarkdownTable({ rows, isUser }: { rows: string[]; isUser: boolean }) {
 function TypingIndicator() {
   return (
     <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-      <div style={{ width: 30, height: 30, borderRadius: '9px', background: 'linear-gradient(135deg, #1E7BFF 0%, #0EA5E9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
+      <div style={{ width: 30, height: 30, borderRadius: '9px', background: 'linear-gradient(135deg, #F26522 0%, #E8571B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
         <Bot size={16} />
       </div>
       <div style={{ padding: '12px 18px', background: '#FFFFFF', border: '1px solid #E5DFCF', borderRadius: '16px 16px 16px 4px', display: 'flex', gap: 5, alignItems: 'center', boxShadow: '0 2px 8px rgba(11,27,43,0.02)' }}>
         {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#1E7BFF', animation: `za-pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#F26522', animation: `za-pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
         ))}
       </div>
       <style>{`@keyframes za-pulse { 0%,80%,100%{transform:scale(0.7);opacity:0.35} 40%{transform:scale(1);opacity:1} }`}</style>

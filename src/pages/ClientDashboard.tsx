@@ -325,9 +325,9 @@ export default function ClientDashboard({ reportData }: Props) {
   const settingPillBtn = (active: boolean) => ({
     padding: '8px 16px',
     borderRadius: '12px',
-    border: `1px solid ${active ? '#1E7BFF' : '#E5DFCF'}`,
+    border: `1px solid ${active ? '#F26522' : '#E5DFCF'}`,
     background: active ? 'rgba(30, 123, 255, 0.08)' : '#fff',
-    color: active ? '#1E7BFF' : '#3D4F62',
+    color: active ? '#F26522' : '#3D4F62',
     fontWeight: active ? 600 : 500,
     cursor: 'pointer' as const,
     fontSize: '0.85rem',
@@ -935,7 +935,7 @@ export default function ClientDashboard({ reportData }: Props) {
             <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, margin: 0 }}>AI Persona & Onboarding Profile</h3>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: '#1E7BFF', background: 'rgba(30, 123, 255, 0.08)', padding: '3px 8px', borderRadius: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#F26522', background: 'rgba(30, 123, 255, 0.08)', padding: '3px 8px', borderRadius: '6px' }}>
                   Used by AI Agent & Analytics
                 </span>
               </div>
@@ -1051,7 +1051,7 @@ export default function ClientDashboard({ reportData }: Props) {
                   checked={profileForm.weeklyDigest} 
                   onChange={e => setProfileForm(p => ({ ...p, weeklyDigest: e.target.checked }))}
                   id="wd" 
-                  style={{ width: 18, height: 18, accentColor: '#1E7BFF', cursor: 'pointer' }} 
+                  style={{ width: 18, height: 18, accentColor: '#F26522', cursor: 'pointer' }} 
                 />
                 <label htmlFor="wd" style={{ fontSize: '0.9rem', color: D, cursor: 'pointer' }}>Receive Monday weekly score digest emails</label>
               </div>
@@ -1059,9 +1059,9 @@ export default function ClientDashboard({ reportData }: Props) {
 
             <button 
               type="submit" 
-              style={{ background: '#1E7BFF', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.15s ease', fontFamily: 'inherit' }}
+              style={{ background: '#F26522', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.15s ease', fontFamily: 'inherit' }}
               onMouseOver={e => e.currentTarget.style.background = '#0062E3'}
-              onMouseOut={e => e.currentTarget.style.background = '#1E7BFF'}
+              onMouseOut={e => e.currentTarget.style.background = '#F26522'}
             >
               Save Settings
             </button>

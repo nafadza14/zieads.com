@@ -27,7 +27,7 @@ import {
   Clock
 } from 'lucide-react';
 
-const ACCENT_BLUE = '#1E7BFF';
+const ACCENT_BLUE = '#F26522';
 
 // Brand accurate SVG icons for Step 6 Platform focus
 const BrandIcons: Record<string, React.ReactNode> = {
@@ -1136,7 +1136,7 @@ export default function OnboardingWizard() {
                   left: '-12px',
                   right: '-12px',
                   bottom: '-12px',
-                  background: 'linear-gradient(135deg, #1E7BFF 0%, #a78bfa 50%, #EC4899 100%)',
+                  background: 'linear-gradient(135deg, #F26522 0%, #a78bfa 50%, #EC4899 100%)',
                   filter: 'blur(32px)',
                   opacity: 0.12,
                   zIndex: 0,

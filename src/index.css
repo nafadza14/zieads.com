@@ -9,12 +9,12 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #09090B;
-  --primary-light: #27272A;
-  --primary-bg: #F4F4F5;
-  --primary-border: #E4E4E7;
-  --gradient: linear-gradient(135deg, #09090B 0%, #27272A 100%);
-  --gradient-btn: linear-gradient(135deg, #09090B 0%, #27272A 100%);
+  --primary: #F26522;
+  --primary-light: #e05a1a;
+  --primary-bg: #FFF5EE;
+  --primary-border: #FDDCC8;
+  --gradient: linear-gradient(135deg, #F26522 0%, #E8571B 100%);
+  --gradient-btn: linear-gradient(135deg, #F26522 0%, #E8571B 100%);
   
   --bg: #FFFFFF;
   --bg-soft: #FAFAFA;
@@ -1351,7 +1351,7 @@ a:hover { color: var(--primary); }
   background-image: none !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: flex-start !important;
+  align-items: center !important;
   max-width: 100% !important;
   margin: 0 !important;
   min-height: 100vh;
@@ -1362,7 +1362,10 @@ a:hover { color: var(--primary); }
   width: 100%;
   margin: 0 auto;
   padding: 0 24px;
-  text-align: left;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* Badge — dark + light pill */
@@ -1407,7 +1410,7 @@ a:hover { color: var(--primary); }
   line-height: 1.0 !important;
   margin-bottom: 24px !important;
   max-width: 960px !important;
-  text-align: left !important;
+  text-align: center !important;
   color: var(--lp-text-primary) !important;
   letter-spacing: -0.035em !important;
 }
@@ -1590,7 +1593,7 @@ a:hover { color: var(--primary); }
   .landing-page .hero-trust-strip {
     gap: 12px;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
   }
   .landing-page .hero-content {
     padding: 0 !important;

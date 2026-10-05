@@ -157,7 +157,7 @@ export default function V3Layout({ children }: Props) {
         <ZieAdsLogo size={28} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', color: D }}>
-            ZieAds <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: '#F59E0B', color: '#fff', borderRadius: 4, marginLeft: 4 }}>v0.3</span>
+            ZieAds <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: '#F26522', color: '#fff', borderRadius: 4, marginLeft: 4 }}>v0.3</span>
           </span>
           <span style={{ fontSize: '11px', color: G, marginTop: 4, letterSpacing: '0.02em', fontWeight: 400 }}>Schedule, analyze, act.</span>
         </div>
@@ -228,7 +228,7 @@ export default function V3Layout({ children }: Props) {
             <Menu size={20} />
           </button>
           <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>
-            ZieAds <span style={{ fontSize: '0.55rem', padding: '1px 4px', background: '#F59E0B', color: '#fff', borderRadius: 3 }}>v0.3</span>
+            ZieAds <span style={{ fontSize: '0.55rem', padding: '1px 4px', background: '#F26522', color: '#fff', borderRadius: 3 }}>v0.3</span>
           </span>
           <div style={{ width: 28 }} />
         </div>
