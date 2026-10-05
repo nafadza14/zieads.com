@@ -12,6 +12,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { IMG } from './images';
 
 export const rotatingPlaceholders = [
   "Ask AI Agent: 'Generate 5 viral TikTok hooks for my brand...'",
@@ -289,28 +290,36 @@ export interface FaqItem {
 
 export const faqItems: FaqItem[] = [
   {
-    q: 'What does the ZieAds agent actually do?',
-    a: 'The agent connects to your social accounts and ad data, then works like an AI marketing team. It tracks your accounts daily, drafts high-performing content, analyzes metrics, and delivers morning briefings. It proposes the actions and strategies. You approve what goes live, and the AI executes.',
+    q: 'What is ZieAds?',
+    a: 'ZieAds is an AI marketing agent for founders, freelancers and agencies. It connects to your social media accounts and ad performance data, sends you a daily briefing, schedules posts, analyzes results, tracks competitors and recommends your next move. You approve what goes live and the agent handles the execution.',
   },
   {
-    q: 'Does it post and spend on its own?',
-    a: 'No. The agent drafts, schedules, and recommends, but you approve what publishes and what gets boosted. You stay in control of anything that costs money or goes public. Once you approve, it handles the execution. We built it this way on purpose, because marketing you care about should not run without you.',
+    q: 'Does the AI agent post or spend money on its own?',
+    a: 'No. The agent drafts, schedules and recommends, but nothing publishes and no budget is spent without your approval. You stay in control of anything that goes public or costs money. Once you approve, the agent takes care of the rest.',
   },
   {
-    q: 'Do I need to connect my ad accounts?',
-    a: 'Not to start. The free audit works with just a URL, no account access. To get the full agent experience with daily briefings, you connect your social accounts and upload your ad performance data. We never need write access to your ad spend.',
+    q: 'Do I need to connect my ad accounts to start?',
+    a: 'No. The free website audit only needs a URL. For daily briefings you connect your social media accounts and upload ad performance data from Meta Ads, Google Ads or TikTok Ads. ZieAds never needs write access to your ad spend.',
   },
   {
-    q: 'What platforms does it work with?',
-    a: 'For scheduling and organic tracking: Instagram, TikTok, and LinkedIn. For paid performance: upload your data from Meta, Google, and TikTok Ads. More platforms are on the way as the agent grows.',
+    q: 'Which social media platforms does ZieAds support?',
+    a: 'Scheduling, analytics and the unified inbox support Instagram, TikTok, LinkedIn and Facebook. For paid performance you can upload data from Meta Ads, Google Ads and TikTok Ads. More integrations are on the roadmap.',
   },
   {
-    q: 'Does this work if I have never run ads before?',
-    a: 'Yes. The audit tells you whether your setup is ready before you spend a rupiah or a dollar. Many people use ZieAds specifically to find out what to fix before their first campaign, so the first one is not a waste.',
+    q: 'Is there a free plan?',
+    a: 'Yes. The Free plan includes a website audit with a readiness score across six dimensions and your top three critical gaps. No credit card is required to sign up.',
   },
   {
-    q: 'How is this different from a scheduler or an analytics dashboard?',
-    a: 'A scheduler tells you when a post goes out. A dashboard shows you charts. Neither tells you what any of it means or what to do next. The agent does. It reads your numbers in the context of your specific setup and gives you a decision, not just data.',
+    q: 'Does ZieAds work if I have never run paid ads before?',
+    a: 'Yes. The audit shows whether your website, tracking and offer are ready before you spend anything. Many users run ZieAds specifically to fix their setup before the first campaign, so their first budget is not wasted.',
+  },
+  {
+    q: 'How is ZieAds different from Buffer, Hootsuite or an analytics dashboard?',
+    a: 'Schedulers tell you when a post goes out and dashboards show you charts. Neither tells you what your numbers mean or what to do next. ZieAds reads your data in the context of your brand and gives you a clear decision, not just another report.',
+  },
+  {
+    q: 'Can I use ZieAds for multiple brands or clients?',
+    a: 'Yes. The Pro plan covers up to three accounts with white label PDF reports. The Agency plan includes unlimited briefings, ten team seats and client portals for every brand you manage.',
   },
 ];
 
@@ -318,54 +327,61 @@ export interface BriefingCard {
   Icon: LucideIcon;
   name: string;
   desc: string;
+  image: string;
 }
 
 export const dailyBriefingCards: BriefingCard[] = [
   {
     Icon: Activity,
     name: 'Daily Diagnosis',
-    desc: 'What changed across your accounts today and what it likely means. Not a data dump. A read on what actually matters this morning.',
+    desc: 'A five minute summary of what moved across your accounts overnight, ranked by impact so you know exactly where to focus first.',
+    image: IMG.cardDiagnosis,
   },
   {
     Icon: TrendingDown,
     name: 'ROAS Drop Analysis',
-    desc: 'When returns fall, there is usually one specific cause. The agent works through the likely culprits in order of probability, using what it knows about your setup.',
+    desc: 'When return on ad spend falls, the agent ranks the most likely causes by probability and shows you the evidence behind each one.',
+    image: IMG.cardRoas,
   },
   {
     Icon: EyeOff,
-    name: 'Creative Fatigue',
-    desc: 'Your audience has seen the ad. The agent flags it before performance craters and suggests new angles based on what has worked for you before.',
+    name: 'Creative Fatigue Alerts',
+    desc: 'Spot tired ads and stale content formats before performance drops, with fresh hooks based on what already works for your audience.',
+    image: IMG.cardFatigue,
   },
   {
     Icon: Sliders,
-    name: 'Content Scheduling',
-    desc: 'Draft once, customize per platform, and queue across Instagram, TikTok, and LinkedIn. The agent suggests the times your audience actually shows up.',
+    name: 'Smart Scheduling',
+    desc: 'Plan and queue posts for Instagram, TikTok, LinkedIn and Facebook at the times your own audience is most active.',
+    image: IMG.cardScheduling,
   },
   {
     Icon: Radar,
-    name: 'Competitor Watch',
-    desc: 'What the accounts you track are doing right now. What they are posting, where they are gaining, and where the gaps are for you.',
+    name: 'Competitor Hunt',
+    desc: 'Track competitor accounts, see what they publish and where they grow, then find the content gaps you can win.',
+    image: IMG.cardCompetitor,
   },
   {
     Icon: Rocket,
     name: 'Unified Inbox',
-    desc: 'Every comment across every connected account in one place, sorted by sentiment, so you reply to what matters and skip the noise.',
+    desc: 'Reply to comments from every connected account in one inbox, sorted by sentiment and priority so warm leads never slip away.',
+    image: IMG.cardInbox,
   },
 ];
 
 export interface AnalyticsDimension {
   name: string;
   weight: string;
-  color: string;
+  value: number;
 }
 
 export const analyticsDimensions: AnalyticsDimension[] = [
-  { name: 'Creative and Offer', weight: '25%', color: 'var(--lp-accent)' },
-  { name: 'Audience Clarity', weight: '20%', color: 'var(--lp-accent-hover)' },
-  { name: 'Landing Page', weight: '20%', color: 'var(--lp-text-secondary)' },
-  { name: 'Platform Fit', weight: '15%', color: 'var(--lp-text-tertiary)' },
-  { name: 'Funnel Coverage', weight: '10%', color: 'var(--lp-text-muted)' },
-  { name: 'Competitive', weight: '10%', color: 'var(--lp-border-strong)' },
+  { name: 'Creative and Offer', weight: '25%', value: 72 },
+  { name: 'Audience Clarity', weight: '20%', value: 80 },
+  { name: 'Landing Page', weight: '20%', value: 64 },
+  { name: 'Platform Fit', weight: '15%', value: 76 },
+  { name: 'Funnel Coverage', weight: '10%', value: 58 },
+  { name: 'Competitive Position', weight: '10%', value: 69 },
 ];
 
 export interface ComparisonRow {
@@ -378,39 +394,46 @@ export interface ComparisonRow {
 
 export const comparisonRows: ComparisonRow[] = [
   {
-    criteria: 'Knows your actual accounts',
-    zieads: 'Yes. Connected and synced daily',
-    chatgpt: 'No. Only what you describe',
-    agency: 'Yes, after two weeks of onboarding',
+    criteria: 'Connects to your real accounts',
+    zieads: 'Yes. Synced every day',
+    chatgpt: 'No. Only what you type in',
+    agency: 'Yes, after weeks of onboarding',
     manual: 'Yes, if you remember to check',
   },
   {
     criteria: 'Remembers your history',
     zieads: 'Yes. Every briefing builds on the last',
-    chatgpt: 'No. Fresh start every chat',
-    agency: 'Partially. Notes in a doc',
+    chatgpt: 'No. Starts fresh every chat',
+    agency: 'Partly, in shared notes',
     manual: 'Only if you keep records',
   },
   {
-    criteria: 'Works every morning',
-    zieads: 'Yes. Briefing before your coffee',
+    criteria: 'Daily insights without asking',
+    zieads: 'Yes. Briefing before your first coffee',
     chatgpt: 'Only when you prompt it',
     agency: 'During business hours',
     manual: 'When you find the time',
   },
   {
-    criteria: 'Monthly cost',
-    zieads: 'Free to start, from $29',
-    chatgpt: '$20, plus all your prompting time',
-    agency: '$3,000 to $5,000',
-    manual: 'Your time, which has a cost',
+    criteria: 'Schedules and publishes posts',
+    zieads: 'Yes. Built in, with your approval',
+    chatgpt: 'No',
+    agency: 'Yes, usually at extra cost',
+    manual: 'Manually, platform by platform',
   },
   {
-    criteria: 'Acts across organic and paid',
-    zieads: 'Yes. Both in one view',
+    criteria: 'Organic and paid in one view',
+    zieads: 'Yes. Read together, side by side',
     chatgpt: 'No',
     agency: 'Yes, if you brief them',
     manual: 'Depends on your bandwidth',
+  },
+  {
+    criteria: 'Monthly cost',
+    zieads: 'Free to start, paid from $29',
+    chatgpt: '$20 plus your prompting time',
+    agency: '$3,000 to $5,000',
+    manual: 'Your time, which is not free',
   },
 ];
 
@@ -419,30 +442,38 @@ export interface Testimonial {
   name: string;
   role: string;
   avatar: string;
+  cover: string;
+  result: string;
 }
 
-/* PLACEHOLDER TESTIMONIALS - To be replaced with real user quotes post-launch */
+/* PLACEHOLDER TESTIMONIALS: replace with real customer quotes after launch */
 export const testimonials: Testimonial[] = [
   {
     quote:
-      "I used to spend Sunday nights planning the week's posts and guessing what to boost. Now the briefing is waiting when I wake up. I read it in five minutes and I know exactly what to do. I got my Sundays back.",
+      'I used to spend Sunday nights planning posts and guessing what to boost. Now the briefing is waiting when I wake up. Five minutes of reading and I know exactly what to do. I got my weekends back.',
     name: 'Agnes Angelina',
     role: 'Founder, DTC skincare brand',
     avatar: '/testimonial-agnes.jpg',
+    cover: IMG.testimonial1,
+    result: '6 hours saved every week',
   },
   {
     quote:
-      'The agent flagged that my best-performing Reel format had gone stale two weeks before I would have noticed. It suggested three new angles based on what had worked for me before. Two of them are now my top posts this month.',
+      'The agent flagged that my best Reel format was going stale two weeks before I would have noticed. It suggested three new angles based on my own past winners. Two of them became my top posts that month.',
     name: 'Andreas L Lino',
-    role: 'Solo founder, 2-person team',
+    role: 'Solo founder, 2 person team',
     avatar: '/testimonial-andreas.jpg',
+    cover: IMG.testimonial2,
+    result: '2 of 3 new angles became top posts',
   },
   {
     quote:
-      'I run marketing for six clients. The agent gives each one its own briefing and tracks their accounts separately. What used to take me a full day of dashboard-hopping every Monday now takes an hour.',
+      'I manage marketing for six clients. Each one gets its own briefing and tracking. What used to take a full Monday of jumping between dashboards now takes about an hour.',
     name: 'Lucas Keneth',
     role: 'Freelance marketing consultant',
     avatar: '/testimonial-lucas.jpg',
+    cover: IMG.testimonial3,
+    result: 'Monday reporting cut from 8 hours to 1',
   },
 ];
 
@@ -453,40 +484,36 @@ export interface Persona {
   body: string;
   features: string[];
   plan_suggestion: string;
+  image: string;
 }
 
 export const personas: Persona[] = [
   {
     Icon: Briefcase,
-    title: 'You run your own marketing.',
-    headline: 'You want a marketing analyst without hiring one.',
-    body: 'The agent watches your accounts, briefs you every morning, and tells you what to do next. You get analyst-level insight without the analyst-level salary or the two-week onboarding.',
-    features: [
-      'Free audit with no signup',
-      'Daily briefing across all channels',
-      'Scheduling and analytics in one place',
-    ],
-    plan_suggestion: 'Start free. Upgrade when the agent proves its worth.',
+    title: 'Founders and small businesses',
+    headline: 'Get a marketing analyst without hiring one.',
+    body: 'ZieAds monitors your social media and ads, sends a daily briefing and tells you exactly what to do next. Analyst level insight for a fraction of the cost of a full time hire.',
+    features: ['Free website audit, no signup', 'Daily briefing across every channel', 'Scheduling and analytics in one place'],
+    plan_suggestion: 'Start free and upgrade when it pays for itself.',
+    image: IMG.personaFounder,
   },
   {
     Icon: UserCheck,
-    title: 'You do this for clients.',
-    headline: 'You want to walk in already knowing what is wrong.',
-    body: 'Run an audit on any client URL before your first call. Show up with a readiness score, a gap breakdown, and a plan already prepared. Then let the agent track their accounts so you are never caught off guard.',
-    features: [
-      'Audit any URL in minutes',
-      'White-label reports you can share',
-      'Per-client briefings and tracking',
-    ],
+    title: 'Freelancers and consultants',
+    headline: 'Walk into every client call already knowing what is wrong.',
+    body: 'Audit any client website before the first meeting. Arrive with a readiness score, a prioritized gap list and an action plan, then let the agent watch their accounts between calls.',
+    features: ['Audit any URL in minutes', 'White label PDF reports', 'Separate briefings for each client'],
     plan_suggestion: 'Pro is built for client work.',
+    image: IMG.personaFreelancer,
   },
   {
     Icon: Users,
-    title: 'You run marketing for a team.',
-    headline: 'You want one place the whole operation runs from.',
-    body: 'Every account, every client, every channel, tracked by an agent that never takes a day off. Aggregate reporting, team seats, and a briefing for each brand you manage.',
-    features: ['Unlimited audits', 'White-label with your logo', 'Team seats and client dashboard'],
-    plan_suggestion: 'The Agency plan scales with you.',
+    title: 'Agencies and marketing teams',
+    headline: 'Run every brand and channel from one workspace.',
+    body: 'Track every account, client and platform with an AI agent that never takes a day off. Get aggregate reporting, team seats and a dedicated briefing for each brand you manage.',
+    features: ['Unlimited audits', 'White label reports with your logo', 'Team seats and client portals'],
+    plan_suggestion: 'The Agency plan grows with your roster.',
+    image: IMG.personaAgency,
   },
 ];
 
@@ -511,14 +538,14 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: 'free',
     tier: 'Free',
-    tagline: 'Start with the Day-1 agent audit.',
+    tagline: 'See what the agent finds on day one.',
     price: '$0',
     period: 'forever',
     features: [
-      'Free URL audit on any domain',
+      'Free website audit on any URL',
       'Readiness score across 6 dimensions',
-      'Top 3 critical gap findings',
-      'No card required to start',
+      'Top 3 critical gaps with fixes',
+      'No credit card required',
     ],
     cta: 'Start for free',
     highlight: false,
@@ -526,30 +553,30 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: 'starter',
     tier: 'Starter',
-    tagline: 'Your daily marketing agent briefing.',
+    tagline: 'Your daily AI marketing briefing.',
     price: '$29',
     period: '/month',
     features: [
-      'Daily agent briefing (1 account)',
-      '10 deep-dive audits per month',
+      'Daily agent briefing for 1 account',
+      '10 deep dive audits per month',
       'All 15 AI skill commands',
-      'Organic post scheduling',
+      'Social media post scheduling',
       'Unified notifications inbox',
     ],
-    cta: 'Start Starter',
+    cta: 'Choose Starter',
     highlight: false,
   },
   {
     id: 'pro',
     tier: 'Pro',
-    tagline: 'For active builders and multiple brands.',
+    tagline: 'For growing brands and client work.',
     price: '$79',
     period: '/month',
     features: [
-      'Daily agent briefings (3 accounts)',
-      '40 deep-dive audits per month',
-      'White-label client PDF reports',
-      'Unified inbox with sentiment checks',
+      'Daily agent briefings for 3 accounts',
+      '40 deep dive audits per month',
+      'White label client PDF reports',
+      'Unified inbox with sentiment sorting',
       'Competitor watch lists',
     ],
     cta: 'Go Pro',
@@ -558,17 +585,17 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: 'agency',
     tier: 'Agency',
-    tagline: 'For professional marketing operations.',
+    tagline: 'For agencies and marketing teams.',
     price: '$199',
     period: '/month',
     features: [
       'Unlimited agent briefings',
-      'Unlimited deep-dive audits',
-      'Agency-branded white-label PDFs',
-      '10 team seats & client portals',
-      'Client aggregate performance briefs',
+      'Unlimited deep dive audits',
+      'Agency branded white label PDFs',
+      '10 team seats and client portals',
+      'Aggregate performance briefs',
     ],
-    cta: 'Start Agency',
+    cta: 'Choose Agency',
     highlight: false,
   },
 ];

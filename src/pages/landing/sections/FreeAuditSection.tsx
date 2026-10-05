@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, ShieldCheck } from 'lucide-react';
 import { reportTabs } from '../data';
-import { TextRollButton } from './Hero';
+import { IMG } from '../images';
+import { AnimatedHeading, CountUp, ImageCard, Reveal, Section, TextRollButton } from '../ui';
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -50,59 +51,85 @@ export default function FreeAuditSection({ onScanComplete }: Props) {
   };
 
   return (
-    <section id="free-audit-try" className="axion-section axion-section-white">
-      {/* Numbered Badge */}
-      <div className="axion-badge-row">
-        <span className="axion-badge-number">01</span>
-        <span className="axion-badge-label">Free Audit</span>
-      </div>
+    <Section id="free-audit-try" number="01" label="Free Website Audit" tone="white">
+      <AnimatedHeading text="Get a free AI marketing audit of your website in under 3 minutes." />
 
-      <h2 className="section-title">Curious what the agent sees? Paste a URL.</h2>
-      <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px', textAlign: 'center' }}>
-        Before you connect anything, drop in any website and the agent reads it like a strategist would. Your offer,
-        your funnel, your tracking setup, your creative angles, and how you stack up, scored across six dimensions in
-        under three minutes. It is free, it needs no account, and it is the fastest way to understand what having an
-        agent actually feels like.
-      </p>
+      <div className="zx-split zx-split-media-right">
+        <div className="zx-split-copy">
+          <Reveal delay={80}>
+            <p className="zx-lead">
+              Paste any URL and the ZieAds AI agent reviews it the way a senior strategist would. It checks your offer,
+              landing page, tracking pixels, funnel and creative angles, then scores your paid ads readiness across six
+              dimensions.
+            </p>
+          </Reveal>
 
-      <div className="hero-input-wrapper" style={{ maxWidth: '640px', margin: '0 auto 48px' }}>
-        <div className="hero-input-container">
-          <Search className="input-icon" size={20} />
-          <input
-            type="text"
-            className="hero-input"
-            placeholder="Paste any website URL here..."
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleQuickScan()}
-            disabled={loading}
-          />
-          <button className="hero-cta" onClick={handleQuickScan} disabled={loading || !url.trim()}>
-            {loading ? <span className="spinner-inline"></span> : 'Get My Free Audit'}
-          </button>
+          <Reveal delay={160}>
+            <form
+              className="zx-url-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleQuickScan();
+              }}
+            >
+              <Search size={18} className="zx-url-icon" />
+              <input
+                type="text"
+                inputMode="url"
+                aria-label="Website URL"
+                placeholder="yourbrand.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                disabled={loading}
+              />
+              <TextRollButton
+                type="submit"
+                text={loading ? 'Scanning...' : 'Run free audit'}
+                disabled={loading || !url.trim()}
+              />
+            </form>
+            {error && <p className="zx-form-error">{error}</p>}
+            <p className="zx-form-note">
+              <ShieldCheck size={14} /> No signup. No credit card. No ad account access.
+            </p>
+          </Reveal>
+
+          <ImageCard src={IMG.auditSmall} alt="Marketer reviewing a website audit on a laptop" ratio="16 / 10" className="zx-card-small" delay={200} />
         </div>
-        {error && <p className="hero-error">{error}</p>}
-        <p className="hero-note" style={{ textAlign: 'center', marginTop: 12 }}>
-          No signup. No ad account access. Your score in under 3 minutes.
-        </p>
+
+        <ImageCard src={IMG.auditMain} alt="Analytics dashboard showing a paid ads readiness score" ratio="4 / 5" delay={120}>
+          <div className="zx-float-chip zx-float-bottom-left">
+            <span className="zx-chip-label">Readiness score</span>
+            <span className="zx-chip-value">
+              <CountUp to={61} />
+              <small>/100</small>
+            </span>
+          </div>
+          <div className="zx-float-chip zx-float-top-right zx-chip-dark">6 dimensions scored</div>
+        </ImageCard>
       </div>
 
-      <div className="report-preview-section" style={{ padding: '0', background: 'transparent' }}>
-        <div className="report-preview-container">
-          <div className="report-tabs">
+      <Reveal className="zx-report-card" delay={100}>
+        <div className="zx-report-head">
+          <span className="zx-eyebrow">Sample audit report</span>
+          <div className="zx-tabs" role="tablist">
             {reportTabs.map((tab, i) => (
               <button
                 key={i}
-                className={`report-tab ${activeReportTab === i ? 'active' : ''}`}
+                role="tab"
+                aria-selected={activeReportTab === i}
+                className={`zx-tab ${activeReportTab === i ? 'is-active' : ''}`}
                 onClick={() => setActiveReportTab(i)}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          <div className="report-tab-content">{reportTabs[activeReportTab].content}</div>
         </div>
-      </div>
-    </section>
+        <div className="zx-report-body" key={activeReportTab}>
+          <div className="zx-tab-panel">{reportTabs[activeReportTab].content}</div>
+        </div>
+      </Reveal>
+    </Section>
   );
 }

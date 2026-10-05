@@ -1,40 +1,35 @@
 import { Check } from 'lucide-react';
 import { personas } from '../data';
+import { AnimatedHeading, ImageCard, Reveal, Section } from '../ui';
 
 export default function WhoForSection() {
   return (
-    <section className="who-section">
-      {/* Numbered Badge */}
-      <div className="axion-badge-row">
-        <span className="axion-badge-number">09</span>
-        <span className="axion-badge-label">Who It's For</span>
-      </div>
+    <Section id="who-its-for" number="09" label="Who It's For" tone="white">
+      <AnimatedHeading text="Built for founders, freelancers and marketing teams." />
 
-      <h2 className="section-title" style={{ marginTop: 8 }}>
-        Whether it is your brand or your clients'.
-      </h2>
-      <div className="who-grid">
-        {personas.map((persona, i) => (
-          <div key={i} className="persona-card">
-            <div className="axion-icon-wrap">
-              <persona.Icon size={24} />
+      <div className="zx-grid-3">
+        {personas.map((p, i) => (
+          <Reveal key={p.title} delay={i * 110} className="zx-persona-card">
+            <ImageCard src={p.image} alt={p.title} ratio="4 / 3" parallax={false}>
+              <div className="zx-float-chip zx-float-top-left">
+                <p.Icon size={14} /> {p.title}
+              </div>
+            </ImageCard>
+            <div className="zx-persona-body">
+              <h3>{p.headline}</h3>
+              <p>{p.body}</p>
+              <ul className="zx-check-list zx-check-sm">
+                {p.features.map((f) => (
+                  <li key={f}>
+                    <Check size={14} /> {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="zx-persona-plan">{p.plan_suggestion}</div>
             </div>
-            <span className="persona-type">{persona.title}</span>
-            <h3>{persona.headline}</h3>
-            <p className="persona-body">{persona.body}</p>
-            <ul className="persona-features" style={{ marginBottom: '16px' }}>
-              {persona.features.map((f, j) => (
-                <li key={j}>
-                  <Check size={14} /> {f}
-                </li>
-              ))}
-            </ul>
-            <div className="persona-suggestion">
-              {persona.plan_suggestion}
-            </div>
-          </div>
+          </Reveal>
         ))}
       </div>
-    </section>
+    </Section>
   );
 }

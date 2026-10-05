@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, Clock, Shield } from 'lucide-react';
+import { Check, Clock, Shield } from 'lucide-react';
+import { TextRollButton } from '../ui';
 import { Shader, Swirl, ChromaFlow, FlutedGlass, FilmGrain } from 'shaders/react';
 import { rotatingPhrases, rotatingPlaceholders } from '../data';
 import { usePrefersReducedMotion, useRotatingIndex, useRotatingPhrase } from '../hooks';
@@ -82,44 +83,8 @@ function ShaderBackground() {
   );
 }
 
-/* ── Text Roll Hover Button ── */
-export function TextRollButton({
-  text,
-  onClick,
-  variant = 'orange',
-  className: extraClass = '',
-}: {
-  text: string;
-  onClick?: () => void;
-  variant?: 'orange' | 'white' | 'dark';
-  className?: string;
-}) {
-  const bgClass = variant === 'orange'
-    ? 'bg-[#F26522] hover:bg-[#e05a1a]'
-    : variant === 'white'
-    ? 'bg-white hover:bg-gray-50'
-    : 'bg-gray-900 hover:bg-gray-800';
-  const textColor = variant === 'white' ? 'text-gray-900' : 'text-white';
-  const arrowBg = variant === 'orange' ? 'bg-white' : variant === 'white' ? 'bg-gray-900' : 'bg-white';
-  const arrowColor = variant === 'orange' ? 'text-[#F26522]' : variant === 'white' ? 'text-white' : 'text-gray-900';
-
-  return (
-    <button
-      onClick={onClick}
-      className={`group inline-flex items-center gap-2 ${bgClass} ${textColor} text-[13px] sm:text-[14px] font-medium rounded-full pl-5 sm:pl-6 pr-2 py-2 transition-colors duration-300 cursor-pointer ${extraClass}`}
-    >
-      <span className="overflow-hidden h-[20px]">
-        <span className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:-translate-y-1/2">
-          <span className="h-[20px] flex items-center">{text}</span>
-          <span className="h-[20px] flex items-center">{text}</span>
-        </span>
-      </span>
-      <span className={`w-7 h-7 sm:w-8 sm:h-8 ${arrowBg} rounded-full flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:rotate-0 -rotate-45`}>
-        <ArrowRight size={14} className={arrowColor} />
-      </span>
-    </button>
-  );
-}
+/* TextRollButton now lives in ../ui and is re-exported for older imports */
+export { TextRollButton };
 
 /* ── Main Hero ── */
 export default function Hero() {
@@ -155,12 +120,9 @@ export default function Hero() {
       <section className="hero-section">
         <ShaderBackground />
 
-        {/* Spacer pushes content to bottom of viewport */}
-        <div className="flex-1" />
-
         <div className="hero-content" style={{ position: 'relative', zIndex: 20 }}>
           {/* Small label */}
-          <p className="text-[13px] sm:text-[14px] text-gray-900 tracking-wide mb-5 sm:mb-8 text-center" style={{ fontFamily: 'inherit' }}>
+          <p className="text-[13px] sm:text-[14px] text-gray-900 tracking-wide mb-4 sm:mb-6 text-center" style={{ fontFamily: 'inherit' }}>
             ZieAds AI Agent
           </p>
 
@@ -197,7 +159,7 @@ export default function Hero() {
           </h1>
 
           {/* CTA Row */}
-          <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5">
             <TextRollButton
               text="Start a project"
               onClick={() => navigate('/sign-up')}
@@ -213,7 +175,7 @@ export default function Hero() {
           </div>
 
           {/* Search / Chat Input Box */}
-          <div className="hero-search-box mt-12">
+          <div className="hero-search-box">
             <div className="hero-search-topbar">
               <div className="hero-search-credits">
                 <span style={{ color: 'rgba(0,0,0,0.4)' }}>60/450 credits</span>

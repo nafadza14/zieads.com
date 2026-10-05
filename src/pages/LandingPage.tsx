@@ -1,3 +1,4 @@
+import './landing/landing-v2.css';
 import Navbar from './landing/sections/Navbar';
 import Hero from './landing/sections/Hero';
 import FreeAuditSection from './landing/sections/FreeAuditSection';

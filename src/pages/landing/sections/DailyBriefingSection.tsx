@@ -1,41 +1,59 @@
+import { useNavigate } from 'react-router-dom';
 import { dailyBriefingCards } from '../data';
+import { IMG } from '../images';
+import { AnimatedHeading, ImageCard, Reveal, Section, TextRollButton } from '../ui';
 
 export default function DailyBriefingSection() {
+  const navigate = useNavigate();
+
   return (
-    <section className="axion-section axion-section-gray">
-      {/* Numbered Badge */}
-      <div className="axion-badge-row">
-        <span className="axion-badge-number">02</span>
-        <span className="axion-badge-label">The Daily Briefing</span>
-      </div>
+    <Section id="ai-analyst" number="02" label="AI Analyst" tone="gray">
+      <AnimatedHeading text="Your AI marketing analyst sends a daily briefing every morning." />
 
-      <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16, textAlign: 'center' }}>
-        A marketing analyst's report. Every single morning.
-      </h2>
-      <p className="section-subtitle" style={{ maxWidth: '640px', margin: '0 auto 40px', textAlign: 'center' }}>
-        Most tools hand you data and walk away. The agent reads that data in the context of your specific setup and
-        hands you decisions.
-      </p>
+      {/* Reference layout: small card, copy + CTA, large card */}
+      <div className="zx-trio">
+        <ImageCard src={IMG.briefingSmall} alt="Morning coffee next to a laptop with the daily briefing" ratio="4 / 3" className="zx-trio-small" delay={60} />
 
-      <div className="axion-explanation-card">
-        <p style={{ margin: 0 }}>
-          It knows your pixel was misfiring last week. It knows your best angle has been problem-first. It knows you
-          have been running cold audiences only. So when it says boost the Tuesday Reel and pause ad set three, it is
-          not guessing. It is reasoning from everything it already knows about you.
-        </p>
-      </div>
+        <div className="zx-trio-copy">
+          <Reveal delay={120}>
+            <p className="zx-body">
+              ZieAds reads your social media and ad performance overnight, then tells you what changed, why it matters
+              and what to do next.
+            </p>
+            <p className="zx-body">
+              It remembers your history, your best content angles and last week's issues, so every recommendation is
+              specific to your brand instead of generic advice.
+            </p>
+          </Reveal>
+          <Reveal delay={220}>
+            <TextRollButton text="Get your first briefing" onClick={() => navigate('/sign-up')} />
+          </Reveal>
+        </div>
 
-      <div className="pain-grid" style={{ marginBottom: 48 }}>
-        {dailyBriefingCards.map((mode, i) => (
-          <div key={i} className="pain-card">
-            <div className="axion-icon-wrap">
-              <mode.Icon size={24} />
-            </div>
-            <h3>{mode.name}</h3>
-            <p>{mode.desc}</p>
+        <ImageCard src={IMG.briefingMain} alt="Marketing team reviewing their AI briefing together" ratio="16 / 11" className="zx-trio-large" delay={140}>
+          <div className="zx-float-card zx-float-bottom-left">
+            <span className="zx-live-dot" /> Today's briefing
+            <strong>Boost the Tuesday Reel. Pause ad set 3.</strong>
           </div>
+        </ImageCard>
+      </div>
+
+      <div className="zx-grid-3">
+        {dailyBriefingCards.map((card, i) => (
+          <Reveal key={card.name} delay={(i % 3) * 90} className="zx-feature-card">
+            <ImageCard src={card.image} alt={card.name} ratio="16 / 10" parallax={false} />
+            <div className="zx-feature-body">
+              <div className="zx-feature-title">
+                <span className="zx-icon-dot">
+                  <card.Icon size={16} />
+                </span>
+                <h3>{card.name}</h3>
+              </div>
+              <p>{card.desc}</p>
+            </div>
+          </Reveal>
         ))}
       </div>
-    </section>
+    </Section>
   );
 }

@@ -1,38 +1,37 @@
 import { testimonials } from '../data';
+import { AnimatedHeading, ImageCard, Reveal, Section } from '../ui';
 
 export default function TestimonialsSection() {
   return (
-    <section className="testimonials-section">
-      {/* Numbered Badge */}
-      <div className="axion-badge-row">
-        <span className="axion-badge-number">08</span>
-        <span className="axion-badge-label">Testimonials</span>
-      </div>
+    <Section id="stories" number="08" label="Customer Stories" tone="gray">
+      <AnimatedHeading text="How founders and marketers use their AI marketing agent." />
 
-      <h2 className="section-title" style={{ marginTop: 8 }}>
-        What changed when the agent took over.
-      </h2>
-      <div className="testimonials-grid">
+      <div className="zx-grid-3">
         {testimonials.map((t, i) => (
-          <div key={i} className="testimonial-card">
-            <div className="testimonial-stars">
-              {[...Array(5)].map((_, si) => (
-                <svg key={si} className="lp-star" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                </svg>
-              ))}
-            </div>
-            <p className="testimonial-quote">"{t.quote}"</p>
-            <div className="testimonial-author">
-              <img src={t.avatar} alt={t.name} className="testimonial-avatar" />
-              <div>
-                <div className="testimonial-name">{t.name}</div>
-                <div className="testimonial-role">{t.role}</div>
+          <Reveal key={t.name} delay={i * 110} className="zx-story-card">
+            <ImageCard src={t.cover} alt={`${t.name}, ${t.role}`} ratio="4 / 3" parallax={false}>
+              <div className="zx-float-chip zx-float-bottom-left zx-chip-accent">{t.result}</div>
+            </ImageCard>
+            <div className="zx-story-body">
+              <div className="zx-stars" aria-label="5 out of 5 stars">
+                {[...Array(5)].map((_, si) => (
+                  <svg key={si} viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
+                ))}
+              </div>
+              <blockquote>"{t.quote}"</blockquote>
+              <div className="zx-author">
+                <img src={t.avatar} alt="" />
+                <div>
+                  <strong>{t.name}</strong>
+                  <span>{t.role}</span>
+                </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         ))}
       </div>
-    </section>
+    </Section>
   );
 }

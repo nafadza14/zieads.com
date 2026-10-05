@@ -56,7 +56,10 @@
   --radius-pill: 9999px;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* Kept inside a layer so Tailwind spacing utilities (mt-*, pl-* ...) can override it */
+@layer base {
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+}
 
 html { scroll-behavior: smooth; }
 
@@ -1345,7 +1348,8 @@ a:hover { color: var(--primary); }
    ═══════════════════════════════════════════════════════ */
 
 .landing-page .hero-section {
-  padding: 100px 24px 80px !important;
+  padding: 120px 24px 72px !important;
+  justify-content: center !important;
   position: relative !important;
   background-color: #EFEFEF !important;
   background-image: none !important;
@@ -1435,7 +1439,7 @@ a:hover { color: var(--primary); }
 .landing-page .hero-search-box {
   width: 100%;
   max-width: 640px;
-  margin: 0 auto 32px;
+  margin: 40px auto 28px;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -1577,7 +1581,7 @@ a:hover { color: var(--primary); }
 
 @media (max-width: 768px) {
   .landing-page .hero-section {
-    padding: 100px 20px 60px !important;
+    padding: 104px 20px 56px !important;
     min-height: auto;
   }
   .landing-page .hero-title {
