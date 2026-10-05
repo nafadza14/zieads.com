@@ -21,11 +21,6 @@ interface Props {
 export default function LandingPage({ onScanComplete }: Props) {
   return (
     <div className="landing-page">
-      {/* Grid line background */}
-      <div className="lp-grid-line lp-line-left"></div>
-      <div className="lp-grid-line lp-line-right"></div>
-      <div className="lp-line-top"></div>
-
       <Navbar />
       <Hero />
       <FreeAuditSection onScanComplete={onScanComplete} />

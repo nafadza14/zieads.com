@@ -4,16 +4,7 @@ import { personas } from '../data';
 export default function WhoForSection() {
   return (
     <section className="who-section">
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
-        }}
-      >
+      <span className="section-eyebrow">
         Built for people who take marketing seriously
       </span>
       <h2 className="section-title" style={{ marginTop: 8 }}>
@@ -40,7 +31,7 @@ export default function WhoForSection() {
               style={{
                 fontSize: '13px',
                 fontStyle: 'italic',
-                color: 'var(--lp-accent)',
+                color: 'var(--lp-text-secondary)',
                 borderTop: '1px solid var(--lp-border-subtle)',
                 paddingTop: '12px',
               }}

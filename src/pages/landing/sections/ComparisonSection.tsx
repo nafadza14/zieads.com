@@ -52,7 +52,7 @@ export default function ComparisonSection() {
         className="comparison-disclaimer"
         style={{
           background: 'var(--lp-bg-inset)',
-          borderLeft: '4px solid var(--lp-accent)',
+          borderLeft: '4px solid var(--lp-text-primary)',
           padding: '24px',
           borderRadius: '0 12px 12px 0',
           marginTop: '32px',

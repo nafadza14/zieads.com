@@ -4,21 +4,9 @@ export default function ConsolidationSection() {
   return (
     <section
       className="pain-section"
-      style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'white', textAlign: 'center' }}
+      style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'var(--lp-bg-card)', textAlign: 'center' }}
     >
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
-          display: 'block',
-          textAlign: 'center',
-          marginBottom: 8,
-        }}
-      >
+      <span className="section-eyebrow">
         One agent, not five tools
       </span>
       <h2 className="section-title">Stop paying for five tools that don't talk to each other.</h2>

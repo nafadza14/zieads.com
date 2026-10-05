@@ -54,19 +54,7 @@ export default function FreeAuditSection({ onScanComplete }: Props) {
       className="scoring-section"
       style={{ borderTop: '1px solid var(--lp-border-subtle)', paddingTop: '100px' }}
     >
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
-          display: 'block',
-          textAlign: 'center',
-          marginBottom: 8,
-        }}
-      >
+      <span className="section-eyebrow">
         Try it free, no signup
       </span>
       <h2 className="section-title">Curious what the agent sees? Paste a URL.</h2>

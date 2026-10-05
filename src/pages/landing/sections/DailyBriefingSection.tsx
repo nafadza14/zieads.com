@@ -10,18 +10,7 @@ export default function DailyBriefingSection() {
         borderTop: '1px solid var(--lp-border-subtle)',
       }}
     >
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
-          display: 'block',
-          textAlign: 'center',
-        }}
-      >
+      <span className="section-eyebrow">
         The daily briefing
       </span>
       <h2 className="section-title" style={{ marginTop: 8, marginBottom: 16, textAlign: 'center' }}>
@@ -43,7 +32,7 @@ export default function DailyBriefingSection() {
           color: 'var(--lp-text-secondary)',
           background: 'var(--lp-bg-card)',
           border: '1px solid var(--lp-border-subtle)',
-          borderRadius: '16px',
+          borderRadius: '20px',
           padding: '32px',
           boxShadow: 'var(--lp-shadow-card)',
         }}
@@ -68,7 +57,7 @@ export default function DailyBriefingSection() {
                 justifyContent: 'center',
                 borderRadius: '12px',
                 background: 'var(--lp-pill-bg)',
-                color: 'var(--lp-accent)',
+                color: 'var(--lp-text-primary)',
                 marginBottom: '20px',
               }}
             >

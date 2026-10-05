@@ -3,19 +3,7 @@ import { analyticsDimensions } from '../data';
 export default function AnalyticsSection() {
   return (
     <section className="scoring-section" style={{ borderTop: '1px solid var(--lp-border-subtle)' }}>
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
-          display: 'block',
-          textAlign: 'center',
-          marginBottom: 8,
-        }}
-      >
+      <span className="section-eyebrow">
         Analytics that decide, not just display
       </span>
       <h2 className="section-title">Your numbers, already interpreted.</h2>

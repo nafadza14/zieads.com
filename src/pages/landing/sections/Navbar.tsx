@@ -8,24 +8,34 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <div className="nav-inner relative w-full h-full flex items-center justify-between">
+      <div className="nav-inner">
+        {/* Logo */}
         <div className="nav-brand" onClick={() => navigate('/')}>
-          <ZieAdsLogo size={32} />
+          <ZieAdsLogo size={28} />
           <span className="brand-name">zieads</span>
         </div>
+
+        {/* Desktop Links */}
         <div className="nav-links hidden md:flex">
-          <a href="#free-audit-try">Try Free Scan</a>
+          <a href="#free-audit-try">Platform</a>
+          <a href="#features-overview" className="nav-link-dropdown">
+            Features
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </a>
           <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
-        </div>
-        <div className="nav-actions hidden md:flex">
-          <button className="btn-login" onClick={() => navigate('/sign-in')}>Log in</button>
-          <button className="btn-get-started" onClick={() => navigate('/sign-up')}>
-            Get Started Free
-          </button>
+          <a href="#faq">Community</a>
+          <a href="#contact">Contact</a>
         </div>
 
-        {/* Mobile Hamburger Button */}
+        {/* Desktop Actions */}
+        <div className="nav-actions hidden md:flex">
+          <button className="btn-signup-nav" onClick={() => navigate('/sign-up')}>Sign Up</button>
+          <button className="btn-login-nav" onClick={() => navigate('/sign-in')}>Log In</button>
+        </div>
+
+        {/* Mobile Hamburger */}
         <button
           className="flex md:hidden p-2 text-gray-700 hover:text-gray-950 focus:outline-none transition-colors ml-auto"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -43,29 +53,28 @@ export default function Navbar() {
           )}
         </button>
 
-        {/* Mobile Dropdown Panel */}
+        {/* Mobile Dropdown */}
         {isMobileMenuOpen && (
-          <div className="absolute top-[60px] left-0 right-0 w-full bg-white/95 border border-gray-100 rounded-3xl shadow-xl p-6 flex flex-col gap-4 text-left z-50 backdrop-blur-xl md:hidden">
-            <div className="flex flex-col gap-3 font-semibold text-gray-750 text-[15px] pl-2">
-              <a href="#free-audit-try" onClick={() => setIsMobileMenuOpen(false)}>Try Free Scan</a>
+          <div className="mobile-nav-dropdown">
+            <div className="mobile-nav-links">
+              <a href="#free-audit-try" onClick={() => setIsMobileMenuOpen(false)}>Platform</a>
+              <a href="#features-overview" onClick={() => setIsMobileMenuOpen(false)}>Features</a>
               <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</a>
-              <a href="#faq" onClick={() => setIsMobileMenuOpen(false)}>FAQ</a>
+              <a href="#faq" onClick={() => setIsMobileMenuOpen(false)}>Community</a>
             </div>
-            <hr className="border-gray-100 my-1" />
-            <div className="flex flex-col gap-3">
+            <hr style={{ border: 'none', borderTop: '1px solid #f0f0f0', margin: '8px 0' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
-                className="w-full py-3.5 border border-gray-200 hover:border-gray-300 rounded-xl font-bold text-[14px] text-gray-750 text-center bg-white hover:bg-gray-50 active:scale-[0.98] transition-all"
-                onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-in'); }}
-                style={{ cursor: 'pointer' }}
+                className="mobile-nav-btn-outline"
+                onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-up'); }}
               >
-                Log in
+                Sign Up
               </button>
               <button
-                className="w-full py-3.5 btn-lp-primary-gradient text-white rounded-xl font-bold text-[14px] text-center active:scale-[0.98] transition-all"
-                onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-up'); }}
-                style={{ cursor: 'pointer' }}
+                className="mobile-nav-btn-solid"
+                onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-in'); }}
               >
-                Start Free
+                Log In
               </button>
             </div>
           </div>

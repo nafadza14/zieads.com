@@ -2,7 +2,7 @@ export default function SchedulingSection() {
   return (
     <section
       className="pain-section"
-      style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'white' }}
+      style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'var(--lp-bg-card)' }}
     >
       <span
         className="section-eyebrow"
@@ -10,8 +10,8 @@ export default function SchedulingSection() {
           textTransform: 'uppercase',
           fontSize: '12px',
           fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
+          color: 'var(--lp-text-muted)',
+          letterSpacing: '0.08em',
           display: 'block',
           textAlign: 'center',
           marginBottom: 8,
@@ -38,7 +38,7 @@ export default function SchedulingSection() {
           margin: '0 auto',
           background: 'var(--lp-bg-card)',
           border: '1px solid var(--lp-border-subtle)',
-          borderRadius: '16px',
+          borderRadius: '20px',
           padding: '24px',
           boxShadow: 'var(--lp-shadow-card)',
           textAlign: 'left',
@@ -47,11 +47,11 @@ export default function SchedulingSection() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <span
             style={{
-              background: '#3B7FF5',
-              color: 'white',
+              background: '#000000',
+              color: '#ffffff',
               fontSize: '12px',
               fontWeight: 600,
-              padding: '4px 8px',
+              padding: '4px 10px',
               borderRadius: '6px',
             }}
           >
@@ -59,11 +59,11 @@ export default function SchedulingSection() {
           </span>
           <span
             style={{
-              background: '#E4E4E7',
-              color: '#3F3F46',
+              background: 'var(--lp-bg-canvas-alt)',
+              color: 'var(--lp-text-secondary)',
               fontSize: '12px',
               fontWeight: 600,
-              padding: '4px 8px',
+              padding: '4px 10px',
               borderRadius: '6px',
             }}
           >
@@ -71,11 +71,11 @@ export default function SchedulingSection() {
           </span>
           <span
             style={{
-              background: '#E4E4E7',
-              color: '#3F3F46',
+              background: 'var(--lp-bg-canvas-alt)',
+              color: 'var(--lp-text-secondary)',
               fontSize: '12px',
               fontWeight: 600,
-              padding: '4px 8px',
+              padding: '4px 10px',
               borderRadius: '6px',
             }}
           >
@@ -97,7 +97,7 @@ export default function SchedulingSection() {
           viewport safety, and move the call-to-action link to client bio.
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--lp-accent)', fontWeight: 600 }}>
+          <span style={{ fontSize: '12px', color: 'var(--lp-text-secondary)', fontWeight: 600 }}>
             Suggested Time: Tuesday, 5:45 PM (Local)
           </span>
           <button

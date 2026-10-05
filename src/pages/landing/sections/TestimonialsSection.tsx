@@ -3,16 +3,7 @@ import { testimonials } from '../data';
 export default function TestimonialsSection() {
   return (
     <section className="testimonials-section">
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
-        }}
-      >
+      <span className="section-eyebrow">
         From people using it
       </span>
       <h2 className="section-title" style={{ marginTop: 8 }}>

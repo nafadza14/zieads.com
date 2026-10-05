@@ -8,7 +8,7 @@ const iconWrapStyle = {
   justifyContent: 'center',
   borderRadius: '12px',
   background: 'var(--lp-pill-bg)',
-  color: 'var(--lp-accent)',
+  color: 'var(--lp-text-primary)',
   marginBottom: '20px',
 } as const;
 
@@ -18,19 +18,7 @@ export default function InboxWatchSection() {
       className="pain-section"
       style={{ borderTop: '1px solid var(--lp-border-subtle)', background: 'var(--lp-bg-canvas)' }}
     >
-      <span
-        className="section-eyebrow"
-        style={{
-          textTransform: 'uppercase',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: 'var(--lp-accent)',
-          letterSpacing: '0.05em',
-          display: 'block',
-          textAlign: 'center',
-          marginBottom: 8,
-        }}
-      >
+      <span className="section-eyebrow">
         Nothing slips past it
       </span>
       <h2 className="section-title">It watches the conversations and the competition.</h2>

@@ -5,8 +5,6 @@ export default function FinalCtaSection() {
 
   return (
     <section className="final-cta-section">
-      <div className="lp-grid-line lp-line-left"></div>
-      <div className="lp-grid-line lp-line-right"></div>
       <div className="final-cta-content">
         <h2 className="final-cta-title">
           Meet your agent. <br />
