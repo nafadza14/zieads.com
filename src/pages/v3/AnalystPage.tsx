@@ -4,24 +4,53 @@ import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections, sampleDailyBriefing } from '../../data/sample-data';
-import { 
-  Sparkles, 
-  TrendingUp, 
-  AlertTriangle, 
-  CheckCircle, 
-  ArrowRight, 
-  Flame, 
-  Compass, 
+import {
+  Card,
+  CardTitle,
+  CountUp,
+  EmptyState,
+  GhostButton,
+  GrowBar,
+  LoadingState,
+  Orb,
+  PageBody,
+  PageHeader,
+  Pill,
+  Skeleton,
+  TextRollButton,
+  WordReveal,
+} from '../../components/v3/ui';
+import SocialIcon from '../../components/v3/SocialIcon';
+import {
+  Sparkles,
+  TrendingUp,
+  AlertTriangle,
+  Check,
+  ArrowRight,
+  Flame,
+  Compass,
   Link2,
   X,
   MessageSquare,
-  Search 
+  Search,
+  Bell,
+  Radio,
 } from 'lucide-react';
+import './analyst.css';
 
-const P = 'var(--primary)';
-const G = 'var(--text-muted)';
-const D = 'var(--text)';
-const B = 'var(--border)';
+/** Animate the numeric part of a metric string like "6.3%", "+148", "$0.51", "2.8x". */
+function MetricValue({ value }: { value: any }) {
+  const str = value === null || value === undefined ? '' : String(value);
+  const m = str.match(/^([^\d-]*)(-?[\d,]*\.?\d+)(.*)$/);
+  if (!m) return <span className="zd-num">{str}</span>;
+  const num = parseFloat(m[2].replace(/,/g, ''));
+  if (!Number.isFinite(num)) return <span className="zd-num">{str}</span>;
+  const dot = m[2].indexOf('.');
+  const decimals = dot >= 0 ? m[2].length - dot - 1 : 0;
+  return <CountUp value={num} decimals={decimals} prefix={m[1]} suffix={m[3]} format={m[2].includes(',')} />;
+}
+
+const prettyKey = (s: string) => (s || '').replace(/_/g, ' ');
 
 export default function AnalystPage() {
   const navigate = useNavigate();
@@ -146,389 +175,325 @@ export default function AnalystPage() {
   // Handle Empty State
   const hasConnections = connections.length > 0;
 
+  const steps = [
+    {
+      key: 'connect',
+      icon: <Link2 size={17} />,
+      title: 'Connect your accounts',
+      body: 'Link Instagram, TikTok and LinkedIn so the agent can start watching.',
+      done: hasConnections,
+      primary: true,
+      action: <TextRollButton text="Connect" onClick={() => navigate('/connections')} />,
+    },
+    {
+      key: 'audit',
+      icon: <Search size={17} />,
+      title: 'Try a free audit',
+      body: "Paste any URL and see the agent's readiness score in under 3 minutes.",
+      done: false,
+      primary: false,
+      action: <GhostButton onClick={() => navigate('/clients', { state: { defaultTab: 'skills' } })}>Run audit</GhostButton>,
+    },
+    {
+      key: 'agent',
+      icon: <MessageSquare size={17} />,
+      title: 'Meet the agent',
+      body: 'Ask a question to see how it reasons from your setup.',
+      done: false,
+      primary: false,
+      action: <GhostButton onClick={() => navigate('/agent')}>Open agent</GhostButton>,
+    },
+  ];
+  const doneCount = steps.filter((st) => st.done).length;
+
+  const alertTone = (sev?: string): 'bad' | 'warn' | 'good' => {
+    const v = (sev || '').toLowerCase();
+    if (v === 'high' || v === 'critical') return 'bad';
+    if (v === 'low' || v === 'info' || v === 'positive') return 'good';
+    return 'warn';
+  };
+
   return (
     <V3Layout>
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '20px 40px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>AI Analyst Daily</h1>
-          <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>{todayStr}</p>
-        </div>
-        {hasConnections && (
-          <button 
-            onClick={triggerOnDemandBriefing}
-            disabled={loading}
-            style={{ background: 'var(--primary-bg)', color: P, border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <Sparkles size={14} /> Refresh Briefing
-          </button>
-        )}
-      </div>
+      <PageHeader
+        number="01"
+        label="AI Analyst"
+        title="Your daily marketing briefing."
+        subtitle={todayStr}
+        actions={
+          hasConnections ? (
+            <TextRollButton text={loading ? 'Compiling' : 'Refresh briefing'} onClick={triggerOnDemandBriefing} disabled={loading} />
+          ) : undefined
+        }
+      />
 
-      {/* Main Container */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 40 }}>
+      <PageBody>
         {/* First Steps Checklist */}
         {!firstStepsDismissed && (
-          <div style={{ 
-            background: '#fff', 
-            border: `1px dashed ${B}`, 
-            borderRadius: 12, 
-            padding: 24, 
-            marginBottom: 32,
-            position: 'relative'
-          }}>
-            <button 
-              onClick={handleDismissFirstSteps} 
-              style={{ 
-                position: 'absolute', 
-                top: 16, 
-                right: 16, 
-                background: 'none', 
-                border: 'none', 
-                color: G, 
-                cursor: 'pointer' 
-              }}
-              aria-label="Dismiss checklist"
-            >
-              <X size={16} />
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#F26522' }}>Get Started</span>
+          <Card className="zan-check" glass>
+            <div className="zan-check-head">
+              <div>
+                <span className="zd-eyebrow tone-accent">Get started</span>
+                <h2>First steps checklist</h2>
+              </div>
+              <button className="zd-icon-btn" onClick={handleDismissFirstSteps} aria-label="Dismiss checklist">
+                <X />
+              </button>
             </div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 20px', letterSpacing: '-0.01em' }}>First Steps Checklist</h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 20 }}>
-              {/* Card 1: Connect Accounts */}
-              <div style={{ 
-                background: 'rgba(30, 123, 255, 0.01)', 
-                border: '1px solid #F26522', 
-                borderRadius: 12, 
-                padding: 20, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 16,
-                position: 'relative'
-              }}>
-                <span style={{ 
-                  position: 'absolute', 
-                  top: 10, 
-                  right: 12, 
-                  fontSize: '9px', 
-                  fontWeight: 700, 
-                  color: '#F26522', 
-                  background: 'rgba(30, 123, 255, 0.1)', 
-                  padding: '2px 8px', 
-                  borderRadius: 100 
-                }}>Start here</span>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#F26522', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Link2 size={18} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>Connect your accounts</h3>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: G, lineHeight: 1.4 }}>Link Instagram, TikTok, and LinkedIn so the agent can start watching.</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => navigate('/connections')} 
-                  className="btn-lp-primary-gradient" 
-                  style={{ 
-                    border: 'none', 
-                    padding: '8px 16px', 
-                    fontSize: '0.82rem', 
-                    fontWeight: 600, 
-                    borderRadius: 8, 
-                    color: 'white', 
-                    cursor: 'pointer',
-                    marginTop: 'auto',
-                    alignSelf: 'flex-start'
-                  }}
-                >
-                  Connect
-                </button>
-              </div>
-
-              {/* Card 2: Try Free Audit */}
-              <div style={{ 
-                background: '#fff', 
-                border: `1px solid ${B}`, 
-                borderRadius: 12, 
-                padding: 20, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 16 
-              }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#F26522', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Search size={18} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>Try a free audit</h3>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: G, lineHeight: 1.4 }}>Paste any URL and see the agent's readiness score in under 3 minutes.</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => navigate('/clients', { state: { defaultTab: 'skills' } })} 
-                  style={{ 
-                    background: 'transparent', 
-                    border: `1px solid ${B}`, 
-                    padding: '8px 16px', 
-                    fontSize: '0.82rem', 
-                    fontWeight: 600, 
-                    borderRadius: 8, 
-                    color: D, 
-                    cursor: 'pointer',
-                    marginTop: 'auto',
-                    alignSelf: 'flex-start'
-                  }}
-                >
-                  Run audit
-                </button>
-              </div>
-
-              {/* Card 3: Meet the Agent */}
-              <div style={{ 
-                background: '#fff', 
-                border: `1px solid ${B}`, 
-                borderRadius: 12, 
-                padding: 20, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 16 
-              }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(30, 123, 255, 0.08)', color: '#F26522', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <MessageSquare size={18} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>Meet the agent</h3>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: G, lineHeight: 1.4 }}>Ask a question to see how it reasons from your setup.</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => navigate('/agent')} 
-                  style={{ 
-                    background: 'transparent', 
-                    border: `1px solid ${B}`, 
-                    padding: '8px 16px', 
-                    fontSize: '0.82rem', 
-                    fontWeight: 600, 
-                    borderRadius: 8, 
-                    color: D, 
-                    cursor: 'pointer',
-                    marginTop: 'auto',
-                    alignSelf: 'flex-start'
-                  }}
-                >
-                  Open agent
-                </button>
-              </div>
+            <div className="zan-progress">
+              <GrowBar value={(doneCount / steps.length) * 100} />
+              <span className="zan-progress-label">
+                <CountUp value={doneCount} /> of {steps.length} done
+              </span>
             </div>
-          </div>
+            <div className="zd-grid-3">
+              {steps.map((st) => (
+                <Card
+                  key={st.key}
+                  hover
+                  padding={18}
+                  className={`zan-step ${st.done ? 'is-done' : st.primary ? 'is-primary' : ''}`}
+                >
+                  {st.done ? (
+                    <span className="zan-step-badge zan-check-pop">
+                      <Pill tone="accent">
+                        <Check size={11} /> Done
+                      </Pill>
+                    </span>
+                  ) : st.primary ? (
+                    <span className="zan-step-badge">
+                      <Pill tone="accent">Start here</Pill>
+                    </span>
+                  ) : null}
+                  <div className="zan-step-top">
+                    <span className="zan-step-icon">{st.done ? <Check size={17} /> : st.icon}</span>
+                    <div>
+                      <h3>{st.title}</h3>
+                      <p>{st.body}</p>
+                    </div>
+                  </div>
+                  <div className="zan-step-actions">{st.action}</div>
+                </Card>
+              ))}
+            </div>
+          </Card>
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', color: G, marginTop: 40 }}>Analyzing your channels and compiling daily insights...</div>
+          <Card glass className="zan-hero">
+            <div className="zd-aura" aria-hidden="true">
+              <span />
+              <span />
+            </div>
+            <div className="zan-hero-inner zan-loading">
+              <div className="zan-hero-top">
+                <Orb size={40} active />
+                <LoadingState inline text="Analyzing your channels and compiling daily insights" />
+              </div>
+              <Skeleton height={26} width="85%" />
+              <Skeleton height={26} width="60%" />
+              <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                <Skeleton height={34} width={110} radius={999} />
+                <Skeleton height={34} width={110} radius={999} />
+                <Skeleton height={34} width={110} radius={999} />
+              </div>
+            </div>
+          </Card>
         ) : !hasConnections ? (
-          <div style={{ maxWidth: 540, margin: '60px auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Link2 size={28} style={{ color: P }} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 8px' }}>Connect Your Marketing Channels</h2>
-              <p style={{ fontSize: '0.85rem', color: G, margin: 0 }}>To generate your daily dashboard intelligence, you need to connect at least one organic social account or upload paid advertising performance spreadsheets.</p>
-            </div>
-            <button 
-              onClick={() => navigate('/connections')}
-              style={{ background: P, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 6, fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Go to Connections Manager
-            </button>
-          </div>
+          <EmptyState
+            icon={<Link2 size={22} />}
+            title="Connect your marketing channels"
+            body="To generate your daily intelligence, connect at least one organic social account or upload paid advertising performance spreadsheets."
+            action={<TextRollButton text="Go to Connections" onClick={() => navigate('/connections')} />}
+          />
         ) : !briefing ? (
-          <div style={{ maxWidth: 540, margin: '60px auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Sparkles size={28} style={{ color: P }} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 8px' }}>Your first briefing is ready to compile!</h2>
-              <p style={{ fontSize: '0.85rem', color: G, margin: 0 }}>We have connected your accounts and analyzed initial baselines. Click below to generate your daily marketing report.</p>
-            </div>
-            <button 
-              onClick={triggerOnDemandBriefing}
-              style={{ background: P, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 6, fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Compile Briefing
-            </button>
-          </div>
+          <EmptyState
+            icon={<Sparkles size={22} />}
+            title="Your first briefing is ready to compile"
+            body="Your accounts are connected and initial baselines are analyzed. Generate your daily marketing report below."
+            action={<TextRollButton text="Compile briefing" onClick={triggerOnDemandBriefing} />}
+          />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: 32, alignItems: 'start' }}>
-            
-            {/* Left Content Area */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-              
-              {/* Daily Headline */}
-              <div style={{ background: 'linear-gradient(135deg, var(--primary-bg) 0%, rgba(255,255,255,1) 100%)', border: `1px solid ${B}`, borderRadius: 10, padding: 24, boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', fontWeight: 700, color: P, textTransform: 'uppercase', marginBottom: 8 }}>
-                  <Sparkles size={14} /> Morning Briefing Summary
+          <div className="zan-layout" style={{ gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 300px' }}>
+            {/* Left content */}
+            <div className="zan-main">
+              {/* Daily headline hero */}
+              <Card glass className="zan-hero">
+                <div className="zd-aura" aria-hidden="true">
+                  <span />
+                  <span />
                 </div>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, lineHeight: 1.4 }}>
-                  "{briefing.headline}"
-                </h2>
-              </div>
-
-              {/* Wins & Concerns */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 24 }}>
-                
-                {/* Wins */}
-                <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <TrendingUp size={16} style={{ color: '#10B981' }} /> Key Wins (Yesterday)
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {(briefing.wins || []).length > 0 ? (
-                      briefing.wins.map((win: any, idx: number) => (
-                        <div key={idx} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 16 }}>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: 4 }}>{win.title}</div>
-                          <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10B981', fontFamily: 'monospace', marginBottom: 4 }}>{win.value}</div>
-                          <div style={{ fontSize: '0.73rem', color: G }}>{win.context}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, textAlign: 'center', color: G, fontSize: '0.8rem' }}>No significant wins detected yesterday.</div>
-                    )}
+                <div className="zan-hero-inner">
+                  <div className="zan-hero-top">
+                    <Orb size={40} active={loading} />
+                    <div>
+                      <div className="zd-eyebrow tone-accent">Morning briefing</div>
+                      <div className="zd-text-sm zd-muted">{userProfile?.business_name || 'Your business'}</div>
+                    </div>
+                  </div>
+                  <WordRevealQuote text={`"${briefing.headline}"`} />
+                  <div className="zan-hero-stats">
+                    <span className="zan-hero-stat">
+                      <strong><CountUp value={(briefing.wins || []).length} /></strong> wins
+                    </span>
+                    <span className="zan-hero-stat">
+                      <strong><CountUp value={(briefing.concerns || []).length} /></strong> concerns
+                    </span>
+                    <span className="zan-hero-stat">
+                      <strong><CountUp value={(briefing.today_actions || []).length} /></strong> actions today
+                    </span>
                   </div>
                 </div>
+              </Card>
 
-                {/* Concerns / Anomalies */}
-                <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <AlertTriangle size={16} style={{ color: '#F59E0B' }} /> Concerns & Anomalies
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {(briefing.concerns || []).length > 0 ? (
-                      briefing.concerns.map((con: any, idx: number) => {
-                        const isHigh = con.severity === 'high' || con.severity === 'critical';
-                        return (
-                          <div key={idx} style={{ background: '#fff', border: `1px solid ${isHigh ? '#FEE2E2' : B}`, borderRadius: 8, padding: 16 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{con.title}</span>
-                              <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: 4, background: isHigh ? '#EF4444' : '#F59E0B', color: '#fff' }}>
-                                {con.severity}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: isHigh ? '#EF4444' : '#F59E0B', fontFamily: 'monospace', marginBottom: 4 }}>{con.value}</div>
-                            <div style={{ fontSize: '0.73rem', color: G }}>{con.context || con.message}</div>
+              {/* Wins & concerns */}
+              <div className="zd-grid-2" style={{ alignItems: 'start' }}>
+                <Card>
+                  <CardTitle icon={<TrendingUp />} sub="Yesterday">
+                    Key wins
+                  </CardTitle>
+                  {(briefing.wins || []).length > 0 ? (
+                    briefing.wins.map((win: any, idx: number) => (
+                      <div key={idx} className="zan-metric zd-slide-in" style={{ animationDelay: `${idx * 70}ms` }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="zan-metric-title">{win.title}</div>
+                          <div className="zan-metric-value tone-good">
+                            <MetricValue value={win.value} />
                           </div>
-                        );
-                      })
-                    ) : (
-                      <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, textAlign: 'center', color: G, fontSize: '0.8rem' }}>All metrics are currently performing stable.</div>
-                    )}
-                  </div>
-                </div>
+                          <div className="zan-metric-ctx">{win.context}</div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="zd-text-sm zd-muted">No significant wins detected yesterday.</p>
+                  )}
+                </Card>
 
+                <Card>
+                  <CardTitle icon={<AlertTriangle />} sub="Things to watch">
+                    Concerns and anomalies
+                  </CardTitle>
+                  {(briefing.concerns || []).length > 0 ? (
+                    briefing.concerns.map((con: any, idx: number) => {
+                      const isHigh = con.severity === 'high' || con.severity === 'critical';
+                      return (
+                        <div
+                          key={idx}
+                          className={`zan-metric zd-slide-in ${isHigh ? 'is-bad' : ''}`}
+                          style={{ animationDelay: `${idx * 70}ms` }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                              <span className="zan-metric-title">{con.title}</span>
+                              <Pill tone={isHigh ? 'bad' : 'warn'}>{con.severity}</Pill>
+                            </div>
+                            <div className="zan-metric-value" style={{ color: isHigh ? 'var(--zd-bad)' : 'var(--zd-warn)' }}>
+                              <MetricValue value={con.value} />
+                            </div>
+                            <div className="zan-metric-ctx">{con.context || con.message}</div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="zd-text-sm zd-muted">All metrics are currently performing stable.</p>
+                  )}
+                </Card>
               </div>
 
-              {/* Today Actions */}
-              <div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <Flame size={16} style={{ color: '#F59E0B' }} /> Recommended Actions for Today
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Today actions */}
+              <Card>
+                <CardTitle icon={<Flame />} sub="Ranked by the analyst">
+                  Recommended actions for today
+                </CardTitle>
+                <div>
                   {(briefing.today_actions || []).map((act: any, idx: number) => {
                     const isHighImpact = act.estimated_impact === 'High';
                     return (
-                      <div key={idx} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-                          {act.rank || idx + 1}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: 4 }}>{act.action}</div>
-                          <div style={{ fontSize: '0.78rem', color: G, lineHeight: 1.4 }}>{act.reasoning}</div>
-                          
-                          <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
-                            <span style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                              Impact: <strong style={{ color: isHighImpact ? '#10B981' : '#6366F1' }}>{act.estimated_impact}</strong>
-                            </span>
-                            <span style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                              Effort: <strong style={{ color: '#71717A' }}>{act.effort}</strong>
-                            </span>
+                      <div key={idx} className="zd-row zan-action zd-slide-in" style={{ animationDelay: `${idx * 60}ms` }}>
+                        <span className="zd-rank">{act.rank || idx + 1}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>{act.action}</div>
+                          <div className="zd-muted" style={{ fontSize: 12.5, lineHeight: 1.5, marginTop: 3 }}>{act.reasoning}</div>
+                          <div className="zan-action-meta">
+                            <Pill tone={isHighImpact ? 'good' : 'accent'}>Impact: {act.estimated_impact}</Pill>
+                            <Pill tone="neutral">Effort: {act.effort}</Pill>
                           </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </Card>
 
-              {/* Suggested Deep Dives */}
+              {/* Suggested deep dives */}
               <div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <Compass size={16} style={{ color: '#8B5CF6' }} /> Suggested Deep Analysis Dives
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="zd-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                  <Compass size={13} /> Suggested deep analysis dives
+                </div>
+                <div className="zd-grid-2">
                   {(briefing.suggested_deep_dives || []).map((dive: any, idx: number) => (
-                    <div key={idx} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, display: 'flex', flexDirection: 'column', justifySelf: 'stretch', gap: 12 }}>
+                    <Card key={idx} hover padding={20} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: 4 }}>{dive.v02_mode_name}</div>
-                        <p style={{ fontSize: '0.78rem', color: G, margin: 0, lineHeight: 1.4 }}>{dive.reasoning_for_suggestion}</p>
+                        <div style={{ fontWeight: 650, fontSize: 14.5, marginBottom: 4 }}>{dive.v02_mode_name}</div>
+                        <p className="zd-muted" style={{ fontSize: 12.5, margin: 0, lineHeight: 1.5 }}>{dive.reasoning_for_suggestion}</p>
                       </div>
-                      
-                      <button 
-                        onClick={() => navigate('/clients', { state: { defaultTab: 'skills' } })}
-                        style={{ marginTop: 'auto', background: 'none', border: 'none', padding: 0, color: P, fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                      >
-                        Run Deep Dive <ArrowRight size={14} />
+                      <button className="zan-link" onClick={() => navigate('/clients', { state: { defaultTab: 'skills' } })}>
+                        Run deep dive <ArrowRight size={14} />
                       </button>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>
-
             </div>
 
-            {/* Right Sidebar Widgets */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              
-              {/* Account sync state */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20 }}>
-                <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G }}>Connected status</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {connections.map(conn => (
-                    <div key={conn.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 500 }}>{conn.platform.toUpperCase().replace('_', ' ')}</span>
-                      <span style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 4, color: '#10B981' }}>
-                        <CheckCircle size={10} /> Active
+            {/* Right sidebar */}
+            <div className="zan-side">
+              <Card glass padding={20}>
+                <CardTitle icon={<Radio />} sub={<><CountUp value={connections.length} /> connected</>}>
+                  Connection status
+                </CardTitle>
+                <div>
+                  {connections.map((conn, idx) => (
+                    <div key={conn.id} className="zan-conn zd-slide-in" style={{ animationDelay: `${idx * 60}ms` }}>
+                      <SocialIcon platform={conn.platform} size={20} />
+                      <span className="zan-conn-name">{prettyKey(conn.platform)}</span>
+                      <span className="zan-conn-state">
+                        <span className="zd-live" /> Active
                       </span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
 
-              {/* Active notifications */}
               {activeAlerts.length > 0 && (
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20 }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G }}>Active Alerts</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {activeAlerts.map(alert => (
-                      <div key={alert.id} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 10px', background: 'var(--bg-soft)', borderRadius: 6 }}>
-                        <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{alert.alert_type.toUpperCase().replace('_', ' ')}</span>
-                          <button onClick={() => handleAcknowledgeAlert(alert.id)} style={{ border: 'none', background: 'none', color: G, fontSize: '0.7rem', cursor: 'pointer' }}>Dismiss</button>
+                <Card padding={20}>
+                  <CardTitle icon={<Bell />} sub={<><CountUp value={activeAlerts.length} /> need attention</>}>
+                    Active alerts
+                  </CardTitle>
+                  <div>
+                    {activeAlerts.map((alert, idx) => (
+                      <div key={alert.id} className="zan-alert zd-slide-in" style={{ animationDelay: `${idx * 70}ms` }}>
+                        <div className="zan-alert-top">
+                          <Pill tone={alertTone(alert.severity)}>{prettyKey(alert.alert_type)}</Pill>
+                          <button className="zan-dismiss" onClick={() => handleAcknowledgeAlert(alert.id)}>
+                            Dismiss
+                          </button>
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{alert.message}</p>
+                        <p>{alert.message}</p>
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
               )}
-
             </div>
-
           </div>
         )}
-      </div>
+      </PageBody>
     </V3Layout>
   );
+}
+
+function WordRevealQuote({ text }: { text: string }) {
+  return <WordReveal key={text} as="h2" text={text} className="zan-hero-quote" />;
 }

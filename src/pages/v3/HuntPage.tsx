@@ -3,21 +3,50 @@ import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleCompetitor } from '../../data/sample-data';
-import { 
-  Target, 
-  Plus, 
-  RefreshCw, 
-  Trash2, 
-  ExternalLink, 
-  Shield, 
-  Zap, 
-  ChevronDown, 
-  ChevronUp 
+import {
+  Card,
+  CardTitle,
+  CountUp,
+  EmptyState,
+  GhostButton,
+  LoadingState,
+  Orb,
+  PageBody,
+  PageHeader,
+  Pill,
+  Skeleton,
+  StatCard,
+  TextRollButton,
+} from '../../components/v3/ui';
+import {
+  Target,
+  Plus,
+  RefreshCw,
+  Trash2,
+  ExternalLink,
+  Shield,
+  Zap,
+  ChevronDown,
+  Globe,
+  Building2,
+  Gauge,
+  Radar as RadarIcon,
 } from 'lucide-react';
+import './hunt.css';
 
-const P = 'var(--primary)';
-const G = 'var(--text-muted)';
-const B = 'var(--border)';
+type Tone = 'good' | 'warn' | 'bad';
+
+/** Small radar sweep with pinging blips (signature motion of this page). */
+function Radar({ large = false, fast = false }: { large?: boolean; fast?: boolean }) {
+  return (
+    <span className={`zhu-radar ${large ? 'is-lg' : ''} ${fast ? 'is-fast' : ''}`} aria-hidden="true">
+      <span className="zhu-radar-sweep" />
+      <span className="zhu-radar-ping" style={{ left: '68%', top: '30%' }} />
+      <span className="zhu-radar-ping" style={{ left: '30%', top: '62%' }} />
+      <span className="zhu-radar-ping" style={{ left: '58%', top: '74%' }} />
+    </span>
+  );
+}
 
 export default function HuntPage() {
   const demo = useDemoMode();
@@ -163,201 +192,267 @@ export default function HuntPage() {
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return '#10B981'; // Green
-    if (score >= 65) return '#F59E0B'; // Amber
-    return '#EF4444'; // Red
+  const getScoreTone = (score: number): Tone => {
+    if (score >= 80) return 'good';
+    if (score >= 65) return 'warn';
+    return 'bad';
   };
+
+  const scored = competitors.filter((c) => c.audit_score !== null && c.audit_score !== undefined);
+  const avgScore = scored.length ? scored.reduce((sum, c) => sum + Number(c.audit_score || 0), 0) / scored.length : 0;
+  const anyAuditing = auditingId !== null;
 
   return (
     <V3Layout>
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '20px 40px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Competitor Hunt</h1>
-          <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Monitor and audit your competitors' advertising performance autonomously.</p>
-        </div>
-      </div>
+      <PageHeader
+        number="07"
+        label="Competitor Hunt"
+        title="Know every move your rivals make."
+        subtitle="Monitor and audit your competitors' advertising performance autonomously."
+        actions={
+          <span className="zhu-header-meta">
+            <Pill tone={competitors.length ? 'accent' : 'neutral'}>
+              <span className={`zd-live ${competitors.length ? '' : 'is-off'}`} />
+              {competitors.length} tracked
+            </Pill>
+            <Radar fast={anyAuditing} />
+          </span>
+        }
+      />
 
-      {/* Main Body */}
-      <div style={{ padding: isMobile ? 20 : 40, overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '320px 1fr', gap: 32, alignItems: 'start' }}>
-        
-        {/* Left Form Panel */}
-        <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, boxShadow: 'var(--shadow-sm)' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '0.92rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Plus size={16} style={{ color: P }} /> Track New Competitor
-          </h3>
-
-          <form onSubmit={handleAddCompetitor} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Competitor Name</label>
-              <input 
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Competitor Brand"
-                required
-                style={{ width: '100%', padding: '10px 12px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
+      <PageBody>
+        {/* Add competitor */}
+        <Card glass className="zhu-form-card">
+          <CardTitle icon={<Plus />} sub="Name the brand and its website. We will start watching it right away.">
+            Track a new competitor
+          </CardTitle>
+          <form onSubmit={handleAddCompetitor}>
+            <div className="zhu-pill-form">
+              <label className="zhu-field">
+                <Building2 />
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Competitor brand"
+                  aria-label="Competitor name"
+                  required
+                />
+              </label>
+              <label className="zhu-field">
+                <Globe />
+                <input
+                  type="url"
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  placeholder="competitor.com"
+                  aria-label="Website URL"
+                  required
+                />
+              </label>
+              <span className="zhu-submit">
+                {addingCompetitor ? (
+                  <span className="zhu-adding">
+                    <LoadingState text="Adding" inline />
+                  </span>
+                ) : (
+                  <TextRollButton type="submit" text="Track site" disabled={addingCompetitor} />
+                )}
+              </span>
             </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 6 }}>Website URL</label>
-              <input 
-                type="url"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                placeholder="competitor.com"
-                required
-                style={{ width: '100%', padding: '10px 12px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={addingCompetitor}
-              style={{ background: P, color: '#fff', border: 'none', padding: '10px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', marginTop: 8 }}
-            >
-              {addingCompetitor ? 'Adding...' : 'Track Site'}
-            </button>
           </form>
-        </div>
+        </Card>
 
-        {/* Right List Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', color: G }}>Loading tracked competitors...</div>
-          ) : competitors.length === 0 ? (
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 40, textAlign: 'center', color: G }}>
-              <Target size={36} style={{ color: G, marginBottom: 12, margin: '0 auto' }} />
-              <p style={{ margin: 0, fontSize: '0.88rem' }}>No competitors tracked yet. Add one on the left to start monitoring!</p>
+        {loading ? (
+          <>
+            <div className="zhu-grid">
+              {[0, 1].map((i) => (
+                <Card key={i}>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                    <Skeleton height={44} width={44} radius={999} />
+                    <div style={{ flex: 1 }}>
+                      <Skeleton height={14} width="55%" />
+                      <Skeleton height={11} width="75%" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          ) : (
-            competitors.map(comp => {
-              const isExpanded = expandedId === comp.id;
-              const hasScore = comp.audit_score !== null && comp.audit_score !== undefined;
-              const isAuditing = auditingId === comp.id;
-              const auditReportObj = comp.audit_report;
+            <LoadingState text="Loading tracked competitors" />
+          </>
+        ) : competitors.length === 0 ? (
+          <EmptyState
+            icon={<Target size={20} />}
+            title="No competitors on the radar yet"
+            body="Add a competitor above to start monitoring their ads and readiness."
+            action={<Radar large={!isMobile} />}
+          />
+        ) : (
+          <>
+            <div className="zd-grid-3">
+              <StatCard label="Tracked" value={competitors.length} icon={<RadarIcon />} hint="Competitors on watch" />
+              <StatCard
+                label="Average score"
+                value={avgScore}
+                icon={<Gauge />}
+                hint={scored.length ? `Across ${scored.length} audited` : 'Run an audit to score'}
+                hintTone={scored.length ? 'accent' : 'muted'}
+              />
+              <StatCard
+                label="Audited"
+                value={scored.length}
+                icon={<Zap />}
+                hint={anyAuditing ? 'Audit in progress' : `${competitors.length - scored.length} awaiting audit`}
+                hintTone={anyAuditing ? 'accent' : 'muted'}
+              />
+            </div>
 
-              return (
-                <div key={comp.id} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-                  
-                  {/* Competitor Summary Header */}
-                  <div style={{ padding: '20px 24px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      
-                      {/* Circular Score Badge */}
-                      <div 
-                        style={{ 
-                          width: 48, 
-                          height: 48, 
-                          borderRadius: '50%', 
-                          background: hasScore ? `${getScoreColor(comp.audit_score)}1F` : 'var(--bg-soft)', 
-                          border: `2px solid ${hasScore ? getScoreColor(comp.audit_score) : B}`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: '1rem',
-                          fontFamily: 'monospace',
-                          color: hasScore ? getScoreColor(comp.audit_score) : G
-                        }}
-                      >
-                        {hasScore ? comp.audit_score : '--'}
-                      </div>
+            <div className="zhu-grid">
+              {competitors.map((comp, ci) => {
+                const isExpanded = expandedId === comp.id;
+                const hasScore = comp.audit_score !== null && comp.audit_score !== undefined;
+                const isAuditing = auditingId === comp.id;
+                const auditReportObj = comp.audit_report;
+                const tone = hasScore ? getScoreTone(comp.audit_score) : null;
+                const initial = (comp.name || '?').trim().charAt(0).toUpperCase() || '?';
+                const dims = Object.entries(auditReportObj?.dimensions || {});
+                const findings = (auditReportObj?.findings || []).slice(0, 3);
 
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{comp.name}</div>
-                        <a 
-                          href={comp.website_url} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          style={{ fontSize: '0.75rem', color: P, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none', marginTop: 2 }}
-                        >
-                          {comp.website_url} <ExternalLink size={10} />
+                return (
+                  <Card
+                    key={comp.id}
+                    hover
+                    padding={0}
+                    delay={ci * 60}
+                    className={`zhu-card ${isExpanded ? 'is-open' : ''}`}
+                  >
+                    {isAuditing && <div className="zhu-scanline" />}
+
+                    {/* Summary */}
+                    <div className="zhu-card-head">
+                      <span className="zhu-avatar">{initial}</span>
+                      <div className="zhu-id">
+                        <div className="zhu-name">{comp.name}</div>
+                        <a className="zhu-url" href={comp.website_url} target="_blank" rel="noreferrer">
+                          <span>{comp.website_url}</span> <ExternalLink size={11} />
                         </a>
                       </div>
-
+                      <span
+                        className={`zhu-ring ${tone ? `tone-${tone}` : 'is-empty'}`}
+                        style={{ ['--zhu-pct' as any]: hasScore ? Math.max(0, Math.min(100, Number(comp.audit_score))) : 0 }}
+                        title={hasScore ? 'Readiness score' : 'Not audited yet'}
+                      >
+                        <span>{hasScore ? <CountUp value={Number(comp.audit_score)} /> : '--'}</span>
+                      </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <button 
-                        onClick={() => handleAudit(comp.id)}
-                        disabled={isAuditing}
-                        style={{ border: `1px solid ${B}`, background: '#fff', padding: '8px 12px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-                      >
-                        <RefreshCw size={12} className={isAuditing ? 'spin' : ''} /> 
-                        {isAuditing ? 'Scanning...' : 'Audit Now'}
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(comp.id, comp.name)}
-                        style={{ border: 'none', background: 'none', color: '#EF4444', padding: 6, cursor: 'pointer' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                      <button 
-                        onClick={() => setExpandedId(isExpanded ? null : comp.id)}
-                        style={{ border: 'none', background: 'none', color: G, padding: 6, cursor: 'pointer' }}
-                      >
-                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </button>
+                    <div className="zhu-card-meta">
+                      <div className="zhu-pills">
+                        <Pill tone="neutral">
+                          <Globe /> Website
+                        </Pill>
+                        {hasScore ? (
+                          <Pill tone={tone!}>
+                            {tone === 'good' ? 'Strong' : tone === 'warn' ? 'Average' : 'Weak'}
+                          </Pill>
+                        ) : (
+                          <Pill tone="neutral">Not audited</Pill>
+                        )}
+                      </div>
+                      <div className="zhu-actions">
+                        <GhostButton className="zhu-audit-btn" onClick={() => handleAudit(comp.id)} disabled={isAuditing}>
+                          <RefreshCw className={isAuditing ? 'is-spin' : ''} />
+                          {isAuditing ? 'Scanning' : 'Audit now'}
+                        </GhostButton>
+                        <button
+                          type="button"
+                          className="zd-icon-btn zhu-del"
+                          onClick={() => handleDelete(comp.id, comp.name)}
+                          aria-label={`Stop tracking ${comp.name}`}
+                          title="Stop tracking"
+                        >
+                          <Trash2 />
+                        </button>
+                        <button
+                          type="button"
+                          className={`zd-icon-btn zhu-chev ${isExpanded ? 'is-open' : ''}`}
+                          onClick={() => setExpandedId(isExpanded ? null : comp.id)}
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? 'Hide details' : 'Show details'}
+                        >
+                          <ChevronDown />
+                        </button>
+                      </div>
                     </div>
 
-                  </div>
+                    {isAuditing && (
+                      <div className="zhu-auditing">
+                        <Orb size={28} active />
+                        <LoadingState text="Auditing competitor" />
+                      </div>
+                    )}
 
-                  {/* Expanded Report Details Panel */}
-                  {isExpanded && (
-                    <div style={{ borderTop: `1px solid ${B}`, background: 'var(--bg-soft)', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                      {!hasScore ? (
-                        <div style={{ textAlign: 'center', color: G, fontSize: '0.8rem' }}>No audit history available. Click "Audit Now" to scan this competitor's readiness.</div>
-                      ) : (
-                        <>
-                          <div>
-                            <h4 style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G }}>Readiness breakdown</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                              {Object.entries(auditReportObj?.dimensions || {}).map(([dim, val]: any) => (
-                                <div key={dim} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 6, padding: '10px 14px' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4 }}>
-                                    <span style={{ fontWeight: 600 }}>{dim}</span>
-                                    <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{val}</span>
-                                  </div>
-                                  <div style={{ width: '100%', height: 4, background: 'var(--bg-surface)', borderRadius: 2 }}>
-                                    <div style={{ width: `${val}%`, height: '100%', background: getScoreColor(val), borderRadius: 2 }}></div>
-                                  </div>
-                                </div>
-                              ))}
+                    {/* Expandable detail */}
+                    <div className={`zhu-collapse ${isExpanded ? 'is-open' : ''}`} aria-hidden={!isExpanded}>
+                      <div className="zhu-collapse-inner">
+                        <div className="zhu-detail">
+                          {!hasScore ? (
+                            <div className="zhu-no-audit">
+                              <span className="zhu-gap-icon"><Zap size={14} /></span>
+                              <span>No audit history yet. Run "Audit now" to scan this competitor's readiness.</span>
                             </div>
-                          </div>
-
-                          <div>
-                            <h4 style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G }}>Key Findings & Gaps</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                              {(auditReportObj?.findings || []).slice(0, 3).map((f: any, idx: number) => {
-                                const title = typeof f === 'string' ? f : (f.title || 'Finding');
-                                const detail = typeof f === 'string' ? '' : (f.impact || f.recommendation || '');
-                                return (
-                                  <div key={idx} style={{ display: 'flex', gap: 10, background: '#fff', border: `1px solid ${B}`, borderRadius: 6, padding: 12, fontSize: '0.78rem' }}>
-                                    <Shield size={14} style={{ color: '#EF4444', flexShrink: 0, marginTop: 2 }} />
-                                    <div>
-                                      <div style={{ fontWeight: 700, marginBottom: 2 }}>{title}</div>
-                                      {detail && <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{detail}</div>}
+                          ) : (
+                            <>
+                              {dims.length > 0 && <div>
+                                <div className="zd-eyebrow zhu-section-title">Readiness breakdown</div>
+                                <div className="zhu-dims">
+                                  {dims.map(([dim, val]: any, di) => (
+                                    <div key={dim} className="zhu-dim">
+                                      <div className="zhu-dim-top">
+                                        <span>{dim}</span>
+                                        <span className="zd-num">{val}</span>
+                                      </div>
+                                      <div className="zhu-bar">
+                                        <i
+                                          className={`tone-${getScoreTone(val)}`}
+                                          style={{ ['--zhu-w' as any]: `${Math.max(0, Math.min(100, Number(val) || 0))}%`, transitionDelay: `${150 + di * 70}ms` }}
+                                        />
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </>
-                      )}
+                                  ))}
+                                </div>
+                              </div>}
+
+                              {findings.length > 0 && <div>
+                                <div className="zd-eyebrow zhu-section-title">Key findings and gaps</div>
+                                <div className="zhu-gaps">
+                                  {findings.map((f: any, idx: number) => {
+                                    const title = typeof f === 'string' ? f : (f.title || 'Finding');
+                                    const detail = typeof f === 'string' ? '' : (f.impact || f.recommendation || '');
+                                    return (
+                                      <div key={idx} className="zd-row zhu-gap" style={{ animationDelay: `${200 + idx * 80}ms` }}>
+                                        <span className="zhu-gap-icon"><Shield size={14} /></span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div className="zhu-gap-title">{title}</div>
+                                          {detail && <div className="zhu-gap-detail">{detail}</div>}
+                                        </div>
+                                        <Pill tone="accent">Gap {idx + 1}</Pill>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>}
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  )}
-
-                </div>
-              );
-            })
-          )}
-        </div>
-
-      </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </PageBody>
     </V3Layout>
   );
 }

@@ -1,0 +1,80 @@
+/* AI Analyst page (01). Builds on dash.css tokens. */
+
+.zan-layout { display: grid; gap: 20px; align-items: start; }
+.zan-main, .zan-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.zan-side { position: sticky; top: 0; }
+@media (max-width: 860px) { .zan-side { position: static; } }
+
+/* Hero briefing card */
+.zan-hero { position: relative; overflow: hidden; padding: 28px !important; }
+.zan-hero .zd-aura span:nth-child(1) { width: 320px; height: 320px; top: -160px; left: auto; right: -60px; }
+.zan-hero .zd-aura span:nth-child(2) { width: 260px; height: 260px; bottom: -150px; left: -40px; right: auto; }
+.zan-hero-inner { position: relative; z-index: 1; }
+.zan-hero-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.zan-hero-quote { margin: 0; font-size: clamp(20px, 2.6vw, 28px); font-weight: 650; line-height: 1.3; letter-spacing: -0.02em; color: var(--zd-ink); }
+.zan-hero-quote .zd-word-inner { animation-duration: 0.7s; }
+.zan-hero-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.zan-hero-stat { display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.7); border: 1px solid var(--zd-line); font-size: 12.5px; color: var(--zd-ink-2); }
+.zan-hero-stat strong { font-size: 15px; color: var(--zd-ink); font-weight: 650; }
+
+/* Metric rows (wins / concerns) */
+.zan-metric { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border-radius: 14px; background: var(--zd-soft); border: 1px solid transparent; transition: border-color 0.25s, transform 0.3s var(--zd-ease), background 0.25s; }
+.zan-metric + .zan-metric { margin-top: 10px; }
+.zan-metric:hover { background: #fff; border-color: var(--zd-line); transform: translateX(3px); }
+.zan-metric.is-bad { background: var(--zd-bad-soft); }
+.zan-metric.is-bad:hover { border-color: rgba(220, 38, 38, 0.25); }
+.zan-metric-title { font-size: 13.5px; font-weight: 600; color: var(--zd-ink); }
+.zan-metric-value { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; margin: 4px 0 2px; }
+.zan-metric-ctx { font-size: 12.5px; line-height: 1.5; color: var(--zd-ink-3); }
+
+/* Action rows */
+.zan-action { align-items: flex-start !important; }
+.zan-action .zd-rank { width: 28px; height: 28px; font-size: 12px; margin-top: 1px; transition: background 0.25s, color 0.25s, transform 0.3s var(--zd-ease); }
+.zan-action:hover .zd-rank { background: var(--zd-accent); color: #fff; transform: scale(1.08); }
+.zan-action-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+/* Deep dive cta link */
+.zan-link { margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--zd-accent); }
+.zan-link svg { transition: transform 0.35s var(--zd-ease); }
+.zan-link:hover svg, .zd-card.is-hover:hover .zan-link svg { transform: translateX(3px) rotate(-45deg); }
+
+/* Checklist */
+.zan-check { position: relative; overflow: hidden; }
+.zan-check-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.zan-check-head h2 { margin: 4px 0 0; font-size: 18px; font-weight: 650; letter-spacing: -0.015em; }
+.zan-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.zan-progress .zd-bar { flex: 1; }
+.zan-progress-label { font-size: 12.5px; color: var(--zd-ink-3); white-space: nowrap; }
+.zan-step { position: relative; display: flex; flex-direction: column; gap: 14px; height: 100%; }
+.zan-step.is-primary { border-color: rgba(242, 101, 34, 0.4); }
+.zan-step.is-done { background: var(--zd-accent-soft); border-color: rgba(242, 101, 34, 0.3); }
+.zan-step-top { display: flex; gap: 12px; align-items: flex-start; }
+.zan-step-icon { width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--zd-gray); color: var(--zd-ink); transition: background 0.25s, color 0.25s, transform 0.3s var(--zd-ease); }
+.zan-step:hover .zan-step-icon { transform: rotate(-8deg); }
+.zan-step.is-primary .zan-step-icon, .zan-step.is-done .zan-step-icon { background: var(--zd-accent); color: #fff; }
+.zan-step h3 { margin: 0; font-size: 14.5px; font-weight: 650; }
+.zan-step p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--zd-ink-3); }
+.zan-step-badge { position: absolute; top: 12px; right: 12px; }
+.zan-step-actions { margin-top: auto; }
+.zan-check-pop { animation: zanPop 0.5s var(--zd-ease) both; }
+@keyframes zanPop { 0% { transform: scale(0.4); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: none; opacity: 1; } }
+
+/* Side cards */
+.zan-conn { display: flex; align-items: center; gap: 10px; padding: 10px 4px; }
+.zan-conn + .zan-conn { border-top: 1px solid var(--zd-line); }
+.zan-conn-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; text-transform: capitalize; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zan-conn-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--zd-good); }
+
+.zan-alert { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 14px; background: var(--zd-soft); border: 1px solid var(--zd-line); }
+.zan-alert + .zan-alert { margin-top: 10px; }
+.zan-alert-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.zan-alert p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--zd-ink-2); }
+.zan-dismiss { border: 0; background: none; padding: 2px 4px; font-size: 12px; font-weight: 600; color: var(--zd-ink-3); cursor: pointer; }
+.zan-dismiss:hover { color: var(--zd-ink); }
+
+.zan-loading { display: flex; flex-direction: column; gap: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .zan-check-pop { animation: none; }
+  .zan-metric:hover, .zan-action:hover .zd-rank { transform: none; }
+}

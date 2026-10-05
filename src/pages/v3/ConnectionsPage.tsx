@@ -1,25 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import V3Layout from '../../components/v3/V3Layout';
+import {
+  Card,
+  DarkButton,
+  GhostButton,
+  GrowBar,
+  LoadingState,
+  PageBody,
+  PageHeader,
+  Pill,
+  Skeleton,
+  TextRollButton,
+} from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections } from '../../data/sample-data';
 import SocialIcon from '../../components/v3/SocialIcon';
-import { 
-  Instagram, 
-  Link2, 
-  CheckCircle, 
-  Upload, 
-  Trash2, 
-  Linkedin, 
-  Facebook, 
-  TrendingUp, 
-  AlertTriangle 
-} from 'lucide-react';
+import { CheckCircle, Upload, Trash2, AlertTriangle, Link2 } from 'lucide-react';
+import './connections.css';
 
-const P = 'var(--primary)';
-const G = 'var(--text-muted)';
-const D = 'var(--text)';
-const B = 'var(--border)';
+const PLATFORMS: { id: string; name: string; type: 'organic' | 'ads'; icon: string }[] = [
+  { id: 'instagram', name: 'Instagram', type: 'organic', icon: 'instagram' },
+  { id: 'tiktok', name: 'TikTok', type: 'organic', icon: 'tiktok' },
+  { id: 'linkedin', name: 'LinkedIn', type: 'organic', icon: 'linkedin' },
+  { id: 'meta_ads', name: 'Meta Ads', type: 'ads', icon: 'facebook' },
+  { id: 'google_ads', name: 'Google Ads', type: 'ads', icon: 'google' },
+  { id: 'tiktok_ads', name: 'TikTok Ads', type: 'ads', icon: 'tiktok' },
+];
 
 export default function ConnectionsPage() {
   const demo = useDemoMode();
@@ -282,234 +289,291 @@ export default function ConnectionsPage() {
     }
   };
 
+  // Presentation only: briefly glow a card when its platform becomes connected.
+  const [flashIds, setFlashIds] = useState<string[]>([]);
+  const prevConnected = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    const now = new Set(connections.map(c => c.platform));
+    const prev = prevConnected.current;
+    prevConnected.current = now;
+    if (!prev) return;
+    const fresh = [...now].filter(id => !prev.has(id));
+    if (fresh.length === 0) return;
+    setFlashIds(fresh);
+    const t = setTimeout(() => setFlashIds([]), 1900);
+    return () => clearTimeout(t);
+  }, [connections, loading]);
+
+  // Presentation only: show a loading pill while the OAuth redirect is starting.
+  const [redirectingId, setRedirectingId] = useState<string | null>(null);
+
+  const connectedCount = PLATFORMS.filter(p => connections.some(c => c.platform === p.id)).length;
+
   const renderPlatformCard = (id: string, name: string, type: 'organic' | 'ads', icon: any) => {
     const activeConns = connections.filter(c => c.platform === id);
     const isConnected = activeConns.length > 0;
 
     return (
-      <div key={id} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: 'var(--shadow-sm)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {icon}
+      <Card
+        key={id}
+        hover
+        glass
+        className={`zcn-card ${isConnected ? 'is-on' : ''} ${flashIds.includes(id) ? 'is-flash' : ''}`}
+      >
+        <div className="zcn-head">
+          <span className="zcn-brand">{icon}</span>
+          <div style={{ minWidth: 0 }}>
+            <div className="zcn-name">{name}</div>
+            <div className="zcn-type">{type === 'organic' ? 'Organic posts and reach' : 'Paid campaigns'}</div>
           </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{name}</div>
-            <div style={{ fontSize: '0.75rem', color: G }}>{type === 'organic' ? 'Organic Posts & Reach' : 'Paid Campaigns'}</div>
-          </div>
+          <span className="zcn-status">
+            <span className={`zd-live ${isConnected ? '' : 'is-off'}`} />
+            {isConnected ? 'Live' : 'Off'}
+          </span>
         </div>
 
-        <div style={{ marginTop: 'auto' }}>
+        <div className="zcn-foot">
           {isConnected ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <>
+              <div>
+                <Pill tone="good">
+                  <CheckCircle /> Connected
+                </Pill>
+              </div>
               {activeConns.map(conn => (
-                <div key={conn.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifySelf: 'stretch', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-soft)', borderRadius: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                      {conn.avatar_url ? (
-                        <img 
-                          src={conn.avatar_url} 
-                          alt={conn.account_handle} 
-                          style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                          onError={(e) => {
-                            // Fallback to check icon on load error
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <CheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
-                      )}
-                      <span style={{ fontSize: '0.8rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {conn.account_handle}
-                      </span>
-                      {conn.account_type && (
-                        <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: 4, background: conn.account_type.toLowerCase() === 'personal' ? '#FEE2E2' : '#D1FAE5', color: conn.account_type.toLowerCase() === 'personal' ? '#EF4444' : '#10B981', marginLeft: 6, textTransform: 'uppercase', fontWeight: 700, flexShrink: 0 }}>
-                          {conn.account_type}
-                        </span>
-                      )}
-                    </div>
-                    <button 
+                <div key={conn.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="zcn-acct">
+                    {conn.avatar_url ? (
+                      <img
+                        src={conn.avatar_url}
+                        alt={conn.account_handle}
+                        className="zcn-avatar"
+                        onError={(e) => {
+                          // Fallback to check icon on load error
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <CheckCircle size={14} className="zcn-check" />
+                    )}
+                    <span className="zcn-acct-handle">{conn.account_handle}</span>
+                    {conn.account_type && (
+                      <Pill tone={conn.account_type.toLowerCase() === 'personal' ? 'bad' : 'good'}>
+                        {conn.account_type}
+                      </Pill>
+                    )}
+                    <button
+                      type="button"
+                      className="zd-icon-btn zcn-del"
                       onClick={() => handleDelete(conn)}
-                      style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
+                      title="Disconnect"
+                      aria-label={`Disconnect ${conn.account_handle}`}
                     >
                       <Trash2 size={14} />
                     </button>
                   </div>
                   {conn.platform === 'instagram' && conn.account_type?.toLowerCase() === 'personal' && (
-                    <div style={{ display: 'flex', alignItems: 'start', gap: 6, padding: '6px 10px', borderRadius: 6, background: '#FFF5F5', border: '1px solid #FEB2B2' }}>
-                      <AlertTriangle size={12} style={{ color: '#E53E3E', marginTop: 2, flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.68rem', color: '#C53030', lineHeight: 1.3 }}>
-                        Personal accounts do not support comment syncing. Please convert to a Business/Creator account in Instagram settings and reconnect.
+                    <div className="zcn-warn">
+                      <AlertTriangle size={13} />
+                      <span>
+                        Personal accounts do not support comment syncing. Convert to a Business or Creator account in Instagram settings, then reconnect.
                       </span>
                     </div>
                   )}
                 </div>
               ))}
               {type === 'ads' && (
-                <button 
-                  onClick={() => setUploadPlatform(id)}
-                  style={{ width: '100%', background: '#fff', border: `1px solid ${B}`, padding: '8px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}
-                >
-                  <Upload size={14} /> Upload Ads CSV
-                </button>
+                <GhostButton onClick={() => setUploadPlatform(id)}>
+                  <Upload /> Upload Ads CSV
+                </GhostButton>
               )}
-            </div>
+            </>
+          ) : redirectingId === id ? (
+            <DarkButton loading>Connecting</DarkButton>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button 
-                onClick={async () => {
-                  if (demo.isActive) {
-                    alert("Please exit Demo Mode to connect real accounts.");
+            <TextRollButton
+              text={`Connect ${name}`}
+              onClick={async () => {
+                if (demo.isActive) {
+                  alert("Please exit Demo Mode to connect real accounts.");
+                  return;
+                }
+                if (id === 'instagram' || id === 'tiktok' || id === 'linkedin') {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) {
+                    alert("Please sign in first.");
                     return;
                   }
-                  if (id === 'instagram' || id === 'tiktok' || id === 'linkedin') {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (!session) {
-                      alert("Please sign in first.");
-                      return;
-                    }
-                    window.location.href = `/api/auth/${id}/connect?token=${session.access_token}`;
-                  } else {
-                    setPlatformToConnect(id);
-                  }
-                }}
-                style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '10px 0', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Connect {name}
-              </button>
-            </div>
+                  setRedirectingId(id);
+                  window.location.href = `/api/auth/${id}/connect?token=${session.access_token}`;
+                } else {
+                  setPlatformToConnect(id);
+                }
+              }}
+            />
           )}
         </div>
-      </div>
+      </Card>
+    );
+  };
+
+  const renderGroup = (type: 'organic' | 'ads', title: string, sub: string) => {
+    const list = PLATFORMS.filter(p => p.type === type);
+    const on = list.filter(p => connections.some(c => c.platform === p.id)).length;
+    return (
+      <section>
+        <div className="zcn-group-head">
+          <h2>{title}</h2>
+          <span className="zd-eyebrow">{sub} · {on} of {list.length} live</span>
+        </div>
+        <div className="zd-grid-3">
+          {list.map(p => renderPlatformCard(p.id, p.name, p.type, <SocialIcon platform={p.icon} size={26} />))}
+        </div>
+      </section>
     );
   };
 
   return (
     <V3Layout>
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '20px 40px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Connections Manager</h1>
-          <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Link your marketing sources to enable daily AI analytics audits.</p>
-        </div>
-      </div>
+      <PageHeader
+        number="08"
+        label="Connections"
+        title="Plug in every channel you run."
+        subtitle="Link your marketing sources to enable daily AI analytics audits."
+      />
 
-      {/* Main Body */}
-      <div style={{ padding: 40, overflowY: 'auto', flex: 1 }}>
+      <PageBody>
         {loading ? (
-          <div style={{ textAlign: 'center', color: G, marginTop: 40 }}>Loading connections...</div>
+          <>
+            <Card>
+              <Skeleton height={12} width="30%" />
+              <div style={{ height: 12 }} />
+              <Skeleton height={28} width="45%" />
+            </Card>
+            <div className="zd-grid-3">
+              {[0, 1, 2].map(i => (
+                <Card key={i}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 18 }}>
+                    <Skeleton height={48} width={48} radius={24} />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <Skeleton height={12} width="60%" />
+                      <Skeleton height={10} width="40%" />
+                    </div>
+                  </div>
+                  <Skeleton height={40} radius={999} />
+                </Card>
+              ))}
+            </div>
+            <LoadingState text="Loading connections" />
+          </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            
-            {/* Social Networks Group */}
-            <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16 }}>Organic Social Media</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-                {renderPlatformCard('instagram', 'Instagram', 'organic', <SocialIcon platform="instagram" size={24} />)}
-                {renderPlatformCard('tiktok', 'TikTok', 'organic', <SocialIcon platform="tiktok" size={24} />)}
-                {renderPlatformCard('linkedin', 'LinkedIn', 'organic', <SocialIcon platform="linkedin" size={24} />)}
+          <>
+            {/* Summary strip */}
+            <Card glass className="zcn-summary">
+              <div className="zcn-summary-main">
+                <span className="zd-eyebrow">Sources connected</span>
+                <div className="zcn-summary-count">
+                  {connectedCount} of {PLATFORMS.length}
+                  <small>{connectedCount === PLATFORMS.length ? 'all channels live' : connectedCount === 0 ? 'nothing linked yet' : 'channels live'}</small>
+                </div>
+                <GrowBar value={(connectedCount / PLATFORMS.length) * 100} tone={connectedCount > 0 ? 'accent' : 'dark'} />
               </div>
-            </div>
-
-            {/* Advertising Platforms Group */}
-            <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16 }}>Paid Advertising Platforms</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-                {renderPlatformCard('meta_ads', 'Meta Ads', 'ads', <SocialIcon platform="facebook" size={24} />)}
-                {renderPlatformCard('google_ads', 'Google Ads', 'ads', <SocialIcon platform="google" size={24} />)}
-                {renderPlatformCard('tiktok_ads', 'TikTok Ads', 'ads', <SocialIcon platform="tiktok" size={24} />)}
+              <div className="zcn-summary-icons" aria-hidden="true">
+                {PLATFORMS.map(p => (
+                  <span key={p.id} className={connections.some(c => c.platform === p.id) ? '' : 'is-off'} title={p.name}>
+                    <SocialIcon platform={p.icon} size={16} />
+                  </span>
+                ))}
               </div>
-            </div>
+            </Card>
 
-          </div>
+            {renderGroup('organic', 'Organic social media', 'Posts and reach')}
+            {renderGroup('ads', 'Paid advertising platforms', 'Campaign data')}
+          </>
         )}
-      </div>
+      </PageBody>
 
-      {/* Modal - Connect Account */}
+      {/* Modal: Connect Account */}
       {platformToConnect && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 28, width: 400, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Connect {platformToConnect.toUpperCase()}</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: G }}>Enter your profile handle to instantly mock-connect this channel.</p>
-            </div>
-            
-            <form onSubmit={handleConnect} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="zcn-overlay">
+          <Card glass className="zcn-modal zd-fade-up" padding={26}>
+            <div className="zcn-modal-head">
+              <span className="zd-icon-dot"><Link2 /></span>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>Account Handle</label>
-                <input 
+                <h3>Connect {platformToConnect.toUpperCase()}</h3>
+                <p>Enter your profile handle to instantly mock-connect this channel.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleConnect} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div>
+                <label className="zd-label">Account handle</label>
+                <input
+                  className="zd-input"
                   value={accountHandle}
                   onChange={e => setAccountHandle(e.target.value)}
                   placeholder="@my_brand"
                   required
-                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button 
-                  type="button" 
-                  onClick={() => { setPlatformToConnect(null); setAccountHandle(''); }}
-                  style={{ background: 'none', border: `1px solid ${B}`, padding: '8px 16px', borderRadius: 6, fontSize: '0.85rem', cursor: 'pointer' }}
-                >
+              <div className="zcn-actions">
+                <GhostButton onClick={() => { setPlatformToConnect(null); setAccountHandle(''); }}>
                   Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={connecting}
-                  style={{ background: P, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  {connecting ? 'Connecting...' : 'Connect'}
-                </button>
+                </GhostButton>
+                <DarkButton type="submit" loading={connecting}>
+                  Connect
+                </DarkButton>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* Modal - CSV Upload */}
+      {/* Modal: CSV Upload */}
       {uploadPlatform && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 28, width: 640, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Upload Ads Data: {uploadPlatform.toUpperCase().replace('_', ' ')}</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: G }}>Upload a exported report CSV sheet from Ads Manager dashboard.</p>
+        <div className="zcn-overlay">
+          <Card glass className="zcn-modal is-wide zd-fade-up" padding={26}>
+            <div className="zcn-modal-head">
+              <span className="zd-icon-dot"><Upload /></span>
+              <div>
+                <h3>Upload ads data: {uploadPlatform.toUpperCase().replace('_', ' ')}</h3>
+                <p>Upload an exported report CSV from your Ads Manager dashboard.</p>
+              </div>
             </div>
 
             {uploadSuccess ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', gap: 12 }}>
-                <CheckCircle size={40} style={{ color: '#10B981' }} />
-                <span style={{ fontSize: '1rem', fontWeight: 600 }}>CSV Uploaded Successfully!</span>
-                <span style={{ fontSize: '0.8rem', color: G }}>Metrics are now synchronized and visible in briefs.</span>
+              <div className="zcn-success">
+                <span className="zcn-success-icon"><CheckCircle size={28} /></span>
+                <strong>CSV uploaded successfully</strong>
+                <span className="zd-muted" style={{ fontSize: 13 }}>Metrics are now synchronized and visible in briefs.</span>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ border: `2px dashed ${B}`, padding: 24, borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'relative' }}>
-                  <Upload size={24} style={{ color: G }} />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                    {csvFile ? csvFile.name : 'Select or drop CSV report file'}
-                  </span>
-                  <input 
-                    type="file" 
-                    accept=".csv"
-                    onChange={handleFileChange}
-                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0, cursor: 'pointer' }}
-                  />
+                <div className={`zcn-drop ${csvFile ? 'has-file' : ''}`}>
+                  <span className="zcn-drop-icon"><Upload size={20} /></span>
+                  <span>{csvFile ? csvFile.name : 'Select or drop CSV report file'}</span>
+                  <input type="file" accept=".csv" onChange={handleFileChange} />
                 </div>
 
                 {parsedRows.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 8 }}>Parsed File Preview ({parsedRows.length} rows detected)</div>
-                    <div style={{ overflowX: 'auto', border: `1px solid ${B}`, borderRadius: 6, maxHeight: 150 }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left' }}>
+                  <div className="zd-fade-up">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span className="zd-label" style={{ margin: 0 }}>Parsed file preview</span>
+                      <Pill tone="accent">{parsedRows.length} rows detected</Pill>
+                    </div>
+                    <div className="zcn-table-wrap">
+                      <table className="zcn-table">
                         <thead>
-                          <tr style={{ background: 'var(--bg-soft)', borderBottom: `1px solid ${B}` }}>
-                            {csvHeaders.slice(0, 5).map(h => <th key={h} style={{ padding: '6px 10px', fontWeight: 600 }}>{h}</th>)}
+                          <tr>
+                            {csvHeaders.slice(0, 5).map(h => <th key={h}>{h}</th>)}
                           </tr>
                         </thead>
                         <tbody>
                           {parsedRows.slice(0, 3).map((row, i) => (
-                            <tr key={i} style={{ borderBottom: `1px solid ${B}` }}>
-                              {csvHeaders.slice(0, 5).map(h => <td key={h} style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{row[h]}</td>)}
+                            <tr key={i}>
+                              {csvHeaders.slice(0, 5).map(h => <td key={h}>{row[h]}</td>)}
                             </tr>
                           ))}
                         </tbody>
@@ -518,24 +582,21 @@ export default function ConnectionsPage() {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <button 
-                    onClick={() => { setUploadPlatform(null); setCsvFile(null); setParsedRows([]); }}
-                    style={{ background: 'none', border: `1px solid ${B}`, padding: '8px 16px', borderRadius: 6, fontSize: '0.85rem', cursor: 'pointer' }}
-                  >
+                <div className="zcn-actions">
+                  <GhostButton onClick={() => { setUploadPlatform(null); setCsvFile(null); setParsedRows([]); }}>
                     Cancel
-                  </button>
-                  <button 
+                  </GhostButton>
+                  <DarkButton
                     onClick={handleUploadAds}
-                    disabled={parsedRows.length === 0 || uploadingAds}
-                    style={{ background: P, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: parsedRows.length === 0 ? 'not-allowed' : 'pointer' }}
+                    disabled={parsedRows.length === 0}
+                    loading={uploadingAds}
                   >
-                    {uploadingAds ? 'Uploading...' : 'Save Campaigns'}
-                  </button>
+                    Save campaigns
+                  </DarkButton>
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
     </V3Layout>

@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
+import {
+  Card,
+  CardTitle,
+  EmptyState,
+  GhostButton,
+  GrowBar,
+  LoadingState,
+  PageBody,
+  PageHeader,
+  Pill,
+  Skeleton,
+  StatCard,
+  TextRollButton,
+} from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleBestPostingTimes, sampleOrganicPosts } from '../../data/sample-data';
@@ -15,10 +29,6 @@ import {
   Calendar
 } from 'lucide-react';
 
-const P = 'var(--primary)';
-const G = 'var(--text-muted)';
-const B = 'var(--border)';
-const D = 'var(--text)';
 
 export default function AnalyticsPage() {
   const navigate = useNavigate();
@@ -94,174 +104,145 @@ export default function AnalyticsPage() {
     loadData();
   }, [demo.isActive]);
 
+  const engagementPct = (summary?.engagementRate || 0) * 100;
+  const maxScore = Math.max(1, ...posts.map((p) => (p.likes || 0) + (p.comments || 0)));
+
   return (
     <V3Layout>
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '20px 40px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Analytics</h1>
-          <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Monitor performance and growth metrics across all platforms.</p>
-        </div>
-      </div>
+      <PageHeader
+        number="05"
+        label="Analytics"
+        title="Performance across every channel."
+        subtitle="Follower growth, reach, engagement and best posting windows for all connected accounts."
+        actions={<GhostButton onClick={() => navigate('/agent')}>Ask the agent why</GhostButton>}
+      />
 
-      {/* Main Container */}
-      <div className="analytics-container" style={{ padding: '20px 40px', overflowY: 'auto', flex: 1 }}>
+      <PageBody>
         {loading ? (
-          <div style={{ textAlign: 'center', color: G, marginTop: 40 }}>Analyzing cross-platform performance metrics...</div>
+          <>
+            <div className="zd-grid-4">
+              {[0, 1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <Skeleton height={12} width="50%" />
+                  <Skeleton height={30} width="70%" />
+                </Card>
+              ))}
+            </div>
+            <LoadingState text="Analyzing cross-platform performance" />
+          </>
         ) : !summary ? (
-          <div style={{ textAlign: 'center', color: G, marginTop: 40 }}>No posts found. Connect a channel and post to start showing analytics.</div>
+          <EmptyState
+            title="No posts yet"
+            body="Connect a channel and publish a post to start seeing analytics."
+            action={<TextRollButton text="Connect an account" onClick={() => navigate('/connections')} />}
+          />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            
-            {/* Top Stat Cards Grid */}
-            <div className="analytics-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
-              
-              {/* Followers */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: G, textTransform: 'uppercase' }}>Audience Size</span>
-                  <Users size={16} style={{ color: P }} />
-                </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{summary.latestFollowers}</div>
-                <div style={{ fontSize: '0.73rem', color: '#10B981', marginTop: 4, fontWeight: 600 }}>
-                  +{summary.followerGrowth} this month
-                </div>
-              </div>
-
-              {/* Impressions */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: G, textTransform: 'uppercase' }}>Total Impressions</span>
-                  <TrendingUp size={16} style={{ color: '#10B981' }} />
-                </div>
-                 <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{summary.totalImpressions || 0}</div>
-                <div style={{ fontSize: '0.73rem', color: G, marginTop: 4 }}>
-                  Organic search + feed views
-                </div>
-              </div>
-
-              {/* Engagement Rate */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: G, textTransform: 'uppercase' }}>Engagement Rate</span>
-                  <Heart size={16} style={{ color: '#EF4444' }} />
-                </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{(summary.engagementRate * 100).toFixed(2)}%</div>
-                <div style={{ fontSize: '0.73rem', color: (summary.engagementRate * 100) >= 3.2 ? '#10B981' : G, marginTop: 4, fontWeight: 600 }}>
-                  {(summary.engagementRate * 100) >= 3.2 ? "Above industry average (3.2%)" : "Industry average is 3.2%"}
-                </div>
-              </div>
-
-              {/* Total Posts */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: G, textTransform: 'uppercase' }}>Posts Sync</span>
-                  <Layers size={16} style={{ color: '#2563EB' }} />
-                </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{summary.totalPosts}</div>
-                <div style={{ fontSize: '0.73rem', color: G, marginTop: 4 }}>
-                  Across all channels
-                </div>
-              </div>
-
+          <>
+            {/* KPI tiles */}
+            <div className="zd-grid-4">
+              <StatCard
+                label="Audience size"
+                value={summary.latestFollowers || 0}
+                icon={<Users />}
+                hint={`+${(summary.followerGrowth || 0).toLocaleString()} this month`}
+                hintTone="good"
+              />
+              <StatCard
+                label="Total impressions"
+                value={summary.totalImpressions || 0}
+                icon={<TrendingUp />}
+                hint="Organic search and feed views"
+              />
+              <StatCard
+                label="Engagement rate"
+                value={engagementPct}
+                decimals={2}
+                suffix="%"
+                icon={<Heart />}
+                hint={engagementPct >= 3.2 ? 'Above industry average (3.2%)' : 'Industry average is 3.2%'}
+                hintTone={engagementPct >= 3.2 ? 'good' : 'muted'}
+              />
+              <StatCard
+                label="Posts synced"
+                value={summary.totalPosts || 0}
+                icon={<Layers />}
+                hint="Across all channels"
+              />
             </div>
 
-            {/* Split layout: Best Time to Post and Post stats */}
-            <div className="analytics-split-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32, alignItems: 'start' }}>
-              
-              {/* Top Performing Posts */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, boxShadow: 'var(--shadow-sm)' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '0.95rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Award size={16} style={{ color: P }} /> Top Performing Content
-                </h3>
-                
+            <div className="zd-grid-2" style={{ alignItems: 'start' }}>
+              {/* Top performing posts */}
+              <Card>
+                <CardTitle icon={<Award />} sub="Ranked by likes plus comments">
+                  Top performing content
+                </CardTitle>
                 {posts.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: G, padding: '20px 0', fontSize: '0.82rem' }}>
-                    Publish posts to display performance ranks.
-                  </div>
+                  <p className="zd-text-sm zd-muted">Publish posts to see performance ranks.</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {posts.map((post, idx) => (
-                      <div key={post.id || idx} style={{ display: 'flex', gap: 16, borderBottom: `1px solid ${B}`, paddingBottom: 14, justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, background: 'var(--bg-soft)', color: G, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {idx + 1}
-                          </span>
-                          <div>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: D, lineHeight: 1.4 }}>
-                              {post.title}
+                  <div>
+                    {posts.map((post, idx) => {
+                      const score = (post.likes || 0) + (post.comments || 0);
+                      return (
+                        <div key={post.id || idx} className="zd-row zd-slide-in" style={{ animationDelay: `${idx * 50}ms`, alignItems: 'flex-start' }}>
+                          <span className="zd-rank">{idx + 1}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>{post.title}</div>
+                            <div className="zd-muted" style={{ fontSize: 12, margin: '3px 0 8px' }}>
+                              {post.platforms?.[0]?.platform ? `${post.platforms[0].platform.charAt(0).toUpperCase()}${post.platforms[0].platform.slice(1)}` : 'Post'} · {new Date(post.start).toLocaleDateString()}
                             </div>
-                            <span style={{ fontSize: '0.7rem', color: G, marginTop: 4, display: 'block' }}>
-                              Published on {post.platforms?.[0]?.platform?.toUpperCase()} • {new Date(post.start).toLocaleDateString()}
+                            <GrowBar value={(score / maxScore) * 100} delay={idx * 60} />
+                          </div>
+                          <div style={{ display: 'flex', gap: 10, flexShrink: 0, fontSize: 12.5 }}>
+                            <span className="tone-bad" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <Heart size={12} /> {post.likes || 0}
+                            </span>
+                            <span className="zd-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <MessageCircle size={12} /> {post.comments || 0}
                             </span>
                           </div>
                         </div>
-
-                        {/* Dummy metrics badges */}
-                        <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-                          <span style={{ fontSize: '0.72rem', color: '#EF4444', display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Heart size={10} /> {post.likes || 0}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', color: G, display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <MessageCircle size={10} /> {post.comments || 0}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
-              </div>
+              </Card>
 
-              {/* Best Time to Post Heatmap widget */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '0.88rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Clock size={16} style={{ color: P }} /> Best Posting Windows
-                </h3>
-
+              {/* Best posting windows */}
+              <Card>
+                <CardTitle icon={<Clock />} sub="Computed from your own engagement history">
+                  Best posting windows
+                </CardTitle>
                 {bestTimes.length === 0 ? (
-                  <div style={{ padding: '12px 4px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-                      Best posting windows require at least 30 days of post history to compute. Connect your accounts and start posting to unlock this insight.
-                    </p>
-                    <button 
-                      onClick={() => navigate('/connections')}
-                      style={{ 
-                        background: P, 
-                        color: '#fff', 
-                        border: 'none', 
-                        padding: '8px 14px', 
-                        borderRadius: 6, 
-                        fontSize: '0.78rem', 
-                        fontWeight: 600, 
-                        cursor: 'pointer',
-                        alignSelf: 'flex-start'
-                      }}
-                    >
-                      Connect an Account
-                    </button>
-                  </div>
+                  <EmptyState
+                    icon={<Calendar size={20} />}
+                    title="Not enough history yet"
+                    body="Best posting windows need at least 30 days of post history. Connect your accounts and keep posting to unlock this insight."
+                    action={<TextRollButton text="Connect an account" onClick={() => navigate('/connections')} />}
+                  />
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {bestTimes.map((bt, i) => (
-                      <div key={i} style={{ padding: '12px 14px', background: 'var(--bg-soft)', borderRadius: 6, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{bt.day}</div>
-                          <div style={{ fontSize: '0.73rem', color: G, marginTop: 2 }}>{bt.time}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {bestTimes.map((bt, i) => {
+                      const conf = Math.round((bt.confidence || 0) * 100);
+                      return (
+                        <div key={i} className="zd-card zd-card-soft zd-slide-in" style={{ padding: '12px 14px', animationDelay: `${i * 60}ms` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 600 }}>{bt.day}</div>
+                              <div className="zd-muted" style={{ fontSize: 12.5 }}>{bt.time}</div>
+                            </div>
+                            <Pill tone={conf >= 70 ? 'accent' : 'neutral'}>{conf}% confidence</Pill>
+                          </div>
+                          <GrowBar value={conf} delay={i * 80} tone={conf >= 70 ? 'accent' : 'dark'} />
                         </div>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: P }}>
-                          {Math.round(bt.confidence * 100)}% Confidence
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
-              </div>
-
+              </Card>
             </div>
-
-          </div>
+          </>
         )}
-      </div>
+      </PageBody>
     </V3Layout>
   );
 }

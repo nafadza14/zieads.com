@@ -1,14 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bot, Home, FileText, User, Share2, Settings as SettingsIcon, LayoutGrid, Sparkles, Calendar, Target, Link2, PenTool, BarChart3, Inbox, Search } from 'lucide-react';
+import { ArrowRight, Check, CreditCard, Copy, Gift, Calendar, Sparkles, Target, BarChart3, LineChart, History, Bell, Briefcase, MessageSquare, Code2, LayoutGrid } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import NounIcon from '../components/NounIcon';
-import ZieAdsLogo from '../components/ZieAdsLogo';
 import { useCreditStore } from '../lib/creditStore';
-import CreditBadge from '../components/CreditBadge';
 import FeatureGateModal from '../components/FeatureGateModal';
 import DepletionOverlay from '../components/DepletionOverlay';
 import V3Layout from '../components/v3/V3Layout';
+import {
+  Card,
+  CardTitle,
+  DarkButton,
+  EmptyState,
+  GhostButton,
+  GrowBar,
+  CountUp,
+  LoadingState,
+  PageBody,
+  PageHeader,
+  Pill,
+  SegTabs,
+  Skeleton,
+  TextRollButton,
+} from '../components/v3/ui';
+import './client-dashboard.css';
 
 const P = 'var(--primary)';
 const PL = 'var(--primary-bg)';
@@ -322,18 +337,9 @@ export default function ClientDashboard({ reportData }: Props) {
     navigate('/');
   };
 
-  const settingPillBtn = (active: boolean) => ({
-    padding: '8px 16px',
-    borderRadius: '12px',
-    border: `1px solid ${active ? '#F26522' : '#E5DFCF'}`,
-    background: active ? 'rgba(30, 123, 255, 0.08)' : '#fff',
-    color: active ? '#F26522' : '#3D4F62',
-    fontWeight: active ? 600 : 500,
-    cursor: 'pointer' as const,
-    fontSize: '0.85rem',
-    fontFamily: 'inherit',
-    transition: 'all 0.15s ease'
-  });
+
+  // Brief "Saved" confirmation after a successful save (presentation only)
+  const [savedFlash, setSavedFlash] = useState(false);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -360,6 +366,8 @@ export default function ClientDashboard({ reportData }: Props) {
           challenge: profileForm.challenge,
           weekly_digest: profileForm.weeklyDigest
         });
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 2600);
       } else {
         alert('Failed to save settings');
       }
@@ -372,62 +380,120 @@ export default function ClientDashboard({ reportData }: Props) {
   const hasReport = !!latestAudit;
   const report = latestAudit?.report || {};
   const overall = latestAudit?.overall_score || 0;
-  const grade = latestAudit?.grade || '—';
+  const grade = latestAudit?.grade || '-';
   const dims = latestAudit?.dimensions || {};
   const findings: any[] = latestAudit?.findings || [];
   const businessName = latestAudit?.business_name || '';
   const auditUrl = latestAudit?.url || '';
   const todayStr = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
-  const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : 'ZA';
-  const getScoreColor = (s: number) => s >= 70 ? '#00c9a7' : s >= 50 ? '#f59e0b' : s > 0 ? '#dc2626' : G;
+  const todayShort = todayStr.slice(0, 3).toUpperCase();
+  const scoreTone = (s: number): 'good' | 'warn' | 'bad' | 'neutral' => (s >= 70 ? 'good' : s >= 50 ? 'warn' : s > 0 ? 'bad' : 'neutral');
+  const getScoreColor = (s: number) => {
+    const t = scoreTone(s);
+    return t === 'good' ? 'var(--zd-good)' : t === 'warn' ? 'var(--zd-warn)' : t === 'bad' ? 'var(--zd-bad)' : 'var(--zd-ink-3)';
+  };
+  const focusCommand = () => document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
+  const handle = userEmail ? userEmail.split('@')[0] : 'user123';
+
+  const HEAD: Record<string, { label: string; title: string; subtitle: string }> = {
+    settings: {
+      label: 'Settings',
+      title: 'Your workspace settings.',
+      subtitle: 'Your business profile and campaign goals. These settings frame every AI Agent audit and daily briefing.',
+    },
+    reports: {
+      label: 'Reports',
+      title: 'Account and report history.',
+      subtitle: 'Score trends, every audit you have run, and how you compare to your industry.',
+    },
+    home: {
+      label: 'Home',
+      title: hasReport ? "Good morning. Let's make your ads win today." : 'Welcome to ZieAds. Run your first audit.',
+      subtitle: hasReport ? 'Your latest audit, quick actions and the weekly rhythm in one place.' : 'Paste any website URL below and the agents will score your paid ads readiness.',
+    },
+    skills: {
+      label: 'Skills',
+      title: 'Every AI skill, one click away.',
+      subtitle: 'Paste a URL in the command bar, then run any skill against it.',
+    },
+    referrals: {
+      label: 'Referrals',
+      title: 'Share ZieAds. Earn rewards.',
+      subtitle: 'Share ZieAds with your network. Earn free months or direct cash commissions.',
+    },
+  };
+  const head = HEAD[sidebarNav] || { label: 'Workspace', title: 'Your ZieAds workspace.', subtitle: '' };
+
+  const opt = (active: boolean, label: React.ReactNode, onClick: () => void, key: string) => (
+    <button key={key} type="button" className={`zcd-opt ${active ? 'is-active' : ''}`} onClick={onClick} aria-pressed={active}>
+      <span className="zcd-check" aria-hidden="true"><Check size={11} strokeWidth={3} /></span>
+      {label}
+    </button>
+  );
+  const optCard = (active: boolean, label: string, sub: string | undefined, onClick: () => void, key: string) => (
+    <button key={key} type="button" className={`zcd-opt-card ${active ? 'is-active' : ''}`} onClick={onClick} aria-pressed={active}>
+      <span className="zcd-check" aria-hidden="true"><Check size={11} strokeWidth={3} /></span>
+      {label}
+      {sub && <small>{sub}</small>}
+    </button>
+  );
+
+  const BIZ_SUB: Record<string, string> = {
+    'E-commerce': 'Online store',
+    SaaS: 'Software product',
+    'Local Business': 'Physical location',
+    'B2B Lead Gen': 'Pipeline and demos',
+    Creator: 'Audience first',
+    Other: 'Something else',
+  };
 
   return (
     <V3Layout>
-      {/* Feature Gate Modal */}
-      <FeatureGateModal
-        isOpen={gateModal.open}
-        onClose={() => setGateModal(m => ({ ...m, open: false }))}
-        featureName={gateModal.featureName}
-        featureDescription={gateModal.featureDesc}
-        requiredPlan={gateModal.requiredPlan || 'starter'}
-        featureType={gateModal.featureType || 'skill'}
+      <PageHeader
+        number="09"
+        label={head.label}
+        title={head.title}
+        subtitle={head.subtitle || undefined}
+        actions={
+          <>
+            {hasReport && sidebarNav === 'home' && (
+              <DarkButton onClick={handleGeneratePDF} loading={isGeneratingPDF}>
+                Download PDF report
+              </DarkButton>
+            )}
+            <span className="zcd-date">
+              <span className="zd-live" />
+              {todayStr}
+            </span>
+          </>
+        }
       />
 
-      {/* ─── MAIN ─── */}
-      <main style={{ flex: 1, padding: '40px', overflowY: 'auto', background: '#F7F5F0', fontFamily: 'inherit', height: '100%' }}>
-
-        {/* Top Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h1 style={{ fontSize: '1.4rem', color: D, fontWeight: 700, margin: 0 }}>
-            {sidebarNav === 'reports' ? 'Account & Report History' : (hasReport ? `Good morning. Let's make your ads win today.` : `Welcome to ZieAds. Run your first audit to get started.`)}
-          </h1>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            {hasReport && sidebarNav === 'home' && (
-              <button 
-                onClick={handleGeneratePDF} 
-                disabled={isGeneratingPDF} 
-                style={{ background: '#fff', border: `1px solid ${P}`, color: P, padding: '6px 16px', borderRadius: 16, fontSize: '0.85rem', fontWeight: 600, cursor: isGeneratingPDF ? 'not-allowed' : 'pointer' }}
-              >
-                {isGeneratingPDF ? 'Generating...' : 'Download PDF Report'}
-              </button>
-            )}
-            <div style={{ background: PL, color: P, padding: '6px 16px', borderRadius: 16, fontSize: '0.85rem', fontWeight: 600, border: `1px solid rgba(123,47,190,0.2)` }}>
-              {todayStr}
-            </div>
-          </div>
-        </div>
-
+      <PageBody>
         {/* Command Bar */}
         {sidebarNav !== 'reports' && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 4, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              <select value={selectedSkill} onChange={e => setSelectedSkill(e.target.value)} style={{ padding: '12px 16px', background: 'transparent', border: 'none', outline: 'none', borderRight: `1px solid ${B}`, fontFamily: 'monospace', fontSize: '0.95rem', color: D, cursor: 'pointer' }}>
-                {SKILLS.map(s => <option key={s.id} value={s.id}>{s.cmd}</option>)}
-              </select>
-              <input type="text" placeholder="Paste any website URL here..." value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleRunSkill(selectedSkill)} style={{ flex: 1, padding: '12px 16px', border: 'none', outline: 'none', fontSize: '1rem', color: D }} />
-              <button onClick={() => handleRunSkill(selectedSkill)} disabled={!!runningSkill} style={{ background: runningSkill ? '#e2e8f0' : P, color: runningSkill ? G : '#fff', border: 'none', padding: '10px 24px', borderRadius: 6, fontWeight: 600, cursor: runningSkill ? 'not-allowed' : 'pointer', margin: '0 4px' }}>
-                {runningSkill ? 'Running...' : 'Run agent'}
-              </button>
+          <div>
+            <Card glass padding={0}>
+              <div className="zcd-command">
+                <select className="zd-select" value={selectedSkill} onChange={e => setSelectedSkill(e.target.value)} aria-label="Skill">
+                  {SKILLS.map(s => <option key={s.id} value={s.id}>{s.cmd}</option>)}
+                </select>
+                <input
+                  type="text"
+                  className="zd-input"
+                  placeholder="Paste any website URL here..."
+                  value={urlInput}
+                  onChange={e => setUrlInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleRunSkill(selectedSkill)}
+                />
+                <DarkButton onClick={() => handleRunSkill(selectedSkill)} disabled={!!runningSkill} loading={!!runningSkill}>
+                  Run agent
+                </DarkButton>
+              </div>
+            </Card>
+            <div className="zcd-command-hint">
+              <Sparkles size={13} />
+              <span>{SKILLS.find(s => s.id === selectedSkill)?.name}: {SKILLS.find(s => s.id === selectedSkill)?.desc}</span>
             </div>
             {/* Skill credit depletion inline banner */}
             {(creditStore.skill_run.state === 'DEPLETED' || creditStore.skill_run.state === 'RESET_IMMINENT') && (
@@ -438,52 +504,39 @@ export default function ClientDashboard({ reportData }: Props) {
           </div>
         )}
 
-        {/* Skill Result Output — legacy, kept for type safety only, skills now navigate to /skill-report/:skillName */}
+        {/* Skill Result Output: legacy, kept for type safety only, skills now navigate to /skill-report/:skillName */}
         {false && skillResult && sidebarNav !== 'reports' && (
-          <div style={{ marginBottom: 24, padding: 24, background: '#1e293b', borderRadius: 12, color: '#fff', border: '1px solid #334155', boxShadow: '0 12px 30px rgba(0,0,0,0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: '1rem', color: '#a78bfa', fontWeight: 700 }}>Result: {SKILLS.find(s => s.id === skillResult.skillId)?.name}</h3>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <button 
-                  onClick={() => void 0} 
-                  style={{ background: 'rgba(167, 139, 250, 0.1)', border: '1px solid rgba(167, 139, 250, 0.3)', color: '#a78bfa', padding: '6px 16px', borderRadius: 100, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.background = 'rgba(167, 139, 250, 0.2)'}
-                  onMouseOut={e => e.currentTarget.style.background = 'rgba(167, 139, 250, 0.1)'}
-                >
-                  Back to Dashboard
-                </button>
-                <button onClick={() => void 0} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', padding: 4 }}>✕</button>
-              </div>
-            </div>
-
+          <Card>
+            <CardTitle
+              icon={<Sparkles />}
+              action={<GhostButton onClick={() => void 0}>Back to dashboard</GhostButton>}
+            >
+              Result: {SKILLS.find(s => s.id === skillResult.skillId)?.name}
+            </CardTitle>
             {skillResult.skillId === 'quick' ? (
-              <div style={{ padding: 20, background: '#0f172a', borderRadius: 10, border: '1px solid #1e293b' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24 }}>
-                  <div style={{ width: 80, height: 80, borderRadius: '50%', border: `4px solid ${getScoreColor(skillResult.data.score)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color: getScoreColor(skillResult.data.score), lineHeight: 1 }}>{skillResult.data.score}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>PTS</div>
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 4px 0' }}>Paid Ads Readiness Snapshot</h4>
-                    <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: 0 }}>{skillResult.data.businessName || skillResult.data.url}</p>
-                    <div style={{ marginTop: 8, display: 'inline-block', background: 'rgba(167, 139, 250, 0.1)', color: '#a78bfa', fontSize: '0.75rem', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{skillResult.data.businessType}</div>
+              <div className="zcd-stack">
+                <div className="zcd-score">
+                  <div className="zcd-score-num" style={{ color: getScoreColor(skillResult.data.score) }}>{skillResult.data.score}</div>
+                  <div className="zcd-score-meta">
+                    <strong>Paid ads readiness snapshot</strong>
+                    <span className="zd-muted zd-text-sm">{skillResult.data.businessName || skillResult.data.url}</span>
+                    <Pill tone="accent">{skillResult.data.businessType}</Pill>
                   </div>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                <div className="zd-grid-auto">
                   {Object.entries(skillResult.data.signals || {}).map(([name, sig]: [string, any]) => (
-                    <div key={name} style={{ background: '#1e293b', padding: 12, borderRadius: 8, border: '1px solid #334155' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{name}</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: sig.score >= 8 ? '#00c9a7' : sig.score >= 5 ? '#f59e0b' : '#dc2626' }}>{sig.score}/10</span>
+                    <Card key={name} padding={14}>
+                      <div className="zcd-skill-head" style={{ marginBottom: 6 }}>
+                        <span className="zd-eyebrow">{name}</span>
+                        <Pill tone={sig.score >= 8 ? 'good' : sig.score >= 5 ? 'warn' : 'bad'}>{sig.score}/10</Pill>
                       </div>
-                      <div style={{ fontSize: '0.9rem', color: '#e2e8f0', fontWeight: 500 }}>{sig.status}</div>
-                    </div>
+                      <div className="zd-text-sm">{sig.status}</div>
+                    </Card>
                   ))}
                 </div>
-
-                <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #1e293b' }}>
-                  <button 
+                <div>
+                  <TextRollButton
+                    text="Run full 6 dimension audit"
                     onClick={() => {
                       localStorage.setItem('zieads_businessContext', JSON.stringify({
                         url: skillResult.data.url,
@@ -491,221 +544,200 @@ export default function ClientDashboard({ reportData }: Props) {
                         auditType: 'full'
                       }));
                       window.location.href = '/audit/progress';
-                    }} 
-                    style={{ background: P, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Run Full 6-Dimension Audit
-                  </button>
+                    }}
+                  />
                 </div>
               </div>
             ) : skillResult.skillId === 'copy' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {/* Analysis Section */}
+              <div className="zcd-stack">
                 {skillResult.data.analysis && (
-                  <div style={{ padding: 20, background: 'rgba(167, 139, 250, 0.05)', borderRadius: 12, border: '1px solid rgba(167, 139, 250, 0.2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                      <span style={{ fontSize: '1.2rem' }}>🎯</span>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#a78bfa' }}>Strategic Analysis</h4>
-                    </div>
-                    <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#e2e8f0', lineHeight: 1.5 }}>
-                      <strong>Strategy:</strong> {skillResult.data.analysis.strategy}
-                    </p>
-                    <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: '#e2e8f0', lineHeight: 1.5 }}>
-                      <strong>Tone of Voice:</strong> {skillResult.data.analysis.toneOfVoice}
-                    </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <Card className="zd-card-accent">
+                    <CardTitle icon={<Target />}>Strategic analysis</CardTitle>
+                    <p className="zd-text-sm"><strong>Strategy:</strong> {skillResult.data.analysis.strategy}</p>
+                    <p className="zd-text-sm"><strong>Tone of voice:</strong> {skillResult.data.analysis.toneOfVoice}</p>
+                    <div className="zcd-opts">
                       {skillResult.data.analysis.keySellingPoints?.map((sp: string, i: number) => (
-                        <span key={i} style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: 100, color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}>
-                          ✓ {sp}
-                        </span>
+                        <Pill key={i} tone="neutral"><Check /> {sp}</Pill>
                       ))}
                     </div>
-                  </div>
+                  </Card>
                 )}
-
-                {/* Platform Tabs */}
-                <div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid #334155', paddingBottom: 1 }}>
-                    {['metaAds', 'googleAds', 'tiktokAds', 'linkedinAds'].map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setCopyActiveTab(tab)}
-                        style={{
-                          padding: '8px 16px',
-                          background: 'transparent',
-                          border: 'none',
-                          borderBottom: copyActiveTab === tab ? `2px solid ${P}` : '2px solid transparent',
-                          color: copyActiveTab === tab ? '#fff' : '#64748b',
-                          fontSize: '0.9rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          marginBottom: -1,
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {tab.replace('Ads', '').charAt(0).toUpperCase() + tab.replace('Ads', '').slice(1)}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ padding: 20, background: '#0f172a', borderRadius: 12, border: '1px solid #1e293b' }}>
-                    {copyActiveTab === 'metaAds' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <SegTabs
+                  size="sm"
+                  tabs={['metaAds', 'googleAds', 'tiktokAds', 'linkedinAds'].map(tab => ({
+                    id: tab,
+                    label: tab.replace('Ads', '').charAt(0).toUpperCase() + tab.replace('Ads', '').slice(1),
+                  }))}
+                  value={copyActiveTab}
+                  onChange={setCopyActiveTab}
+                />
+                <div key={copyActiveTab} className="zcd-stack">
+                  {copyActiveTab === 'metaAds' && (
+                    <>
+                      <div>
+                        <label className="zd-label">Primary text (long body)</label>
+                        <div className="zcd-result-block">{skillResult.data.deliverables.metaAds.longBody || skillResult.data.deliverables.metaAds.primaryTexts?.[0]}</div>
+                      </div>
+                      <div className="zd-grid-2">
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Primary Text (Long Body)</label>
-                          <div style={{ padding: 12, background: '#1e293b', borderRadius: 6, fontSize: '0.9rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', position: 'relative' }}>
-                            {skillResult.data.deliverables.metaAds.longBody || skillResult.data.deliverables.metaAds.primaryTexts?.[0]}
-                          </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Headlines</label>
+                          <label className="zd-label">Headlines</label>
+                          <div className="zcd-stack" style={{ gap: 8 }}>
                             {skillResult.data.deliverables.metaAds.headlines?.map((h: string, i: number) => (
-                              <div key={i} style={{ padding: '8px 12px', background: '#1e293b', borderRadius: 6, fontSize: '0.85rem', color: '#e2e8f0', marginBottom: 8 }}>{h}</div>
-                            ))}
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Short Body</label>
-                            <div style={{ padding: '8px 12px', background: '#1e293b', borderRadius: 6, fontSize: '0.85rem', color: '#e2e8f0' }}>{skillResult.data.deliverables.metaAds.shortBody}</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {copyActiveTab === 'googleAds' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Search Headlines (15)</label>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            {skillResult.data.deliverables.googleAds.headlines?.map((h: string, i: number) => (
-                              <div key={i} style={{ padding: '8px 12px', background: '#1e293b', borderRadius: 6, fontSize: '0.85rem', color: '#e2e8f0' }}>{h}</div>
+                              <div key={i} className="zcd-result-block">{h}</div>
                             ))}
                           </div>
                         </div>
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Search Descriptions (4)</label>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {skillResult.data.deliverables.googleAds.descriptions?.map((d: string, i: number) => (
-                              <div key={i} style={{ padding: '8px 12px', background: '#1e293b', borderRadius: 6, fontSize: '0.85rem', color: '#e2e8f0' }}>{d}</div>
-                            ))}
-                          </div>
+                          <label className="zd-label">Short body</label>
+                          <div className="zcd-result-block">{skillResult.data.deliverables.metaAds.shortBody}</div>
                         </div>
                       </div>
-                    )}
-
-                    {copyActiveTab === 'tiktokAds' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        {skillResult.data.deliverables.tiktokAds.scriptOutlines?.map((s: any, i: number) => (
-                          <div key={i} style={{ padding: 16, background: '#1e293b', borderRadius: 8, border: '1px solid #334155' }}>
-                            <div style={{ fontWeight: 700, marginBottom: 8, color: '#a78bfa', fontSize: '0.9rem' }}>Script Option {i + 1}</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                              <p style={{ margin: 0, fontSize: '0.85rem' }}><strong>Hook:</strong> {s.hook}</p>
-                              <p style={{ margin: 0, fontSize: '0.85rem' }}><strong>Body:</strong> {s.body}</p>
-                              <p style={{ margin: 0, fontSize: '0.85rem' }}><strong>CTA:</strong> {s.cta}</p>
-                            </div>
-                          </div>
-                        ))}
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Captions</label>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {skillResult.data.deliverables.tiktokAds.captions?.map((c: string, i: number) => (
-                              <div key={i} style={{ padding: '6px 12px', background: '#1e293b', borderRadius: 100, fontSize: '0.8rem', color: '#e2e8f0' }}>{c}</div>
-                            ))}
-                          </div>
+                    </>
+                  )}
+                  {copyActiveTab === 'googleAds' && (
+                    <>
+                      <div>
+                        <label className="zd-label">Search headlines (15)</label>
+                        <div className="zd-grid-2" style={{ gap: 8 }}>
+                          {skillResult.data.deliverables.googleAds.headlines?.map((h: string, i: number) => (
+                            <div key={i} className="zcd-result-block">{h}</div>
+                          ))}
                         </div>
                       </div>
-                    )}
-
-                    {copyActiveTab === 'linkedinAds' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                         {skillResult.data.deliverables.linkedinAds.sponsoredContent?.map((c: any, i: number) => (
-                           <div key={i} style={{ padding: 16, background: '#1e293b', borderRadius: 8, border: '1px solid #334155' }}>
-                             <div style={{ fontWeight: 700, marginBottom: 8, color: '#a78bfa', fontSize: '0.9rem' }}>Sponsored Content {i + 1}</div>
-                             <p style={{ margin: '0 0 8px 0', fontSize: '0.85rem' }}><strong>Intro:</strong> {c.intro}</p>
-                             <p style={{ margin: 0, fontSize: '0.85rem' }}><strong>Headline:</strong> {c.headline}</p>
-                           </div>
-                         ))}
-                         {skillResult.data.deliverables.linkedinAds.messageAds?.map((m: any, i: number) => (
-                           <div key={i} style={{ padding: 16, background: '#1e293b', borderRadius: 8, border: '1px solid #334155' }}>
-                             <div style={{ fontWeight: 700, marginBottom: 8, color: '#a78bfa', fontSize: '0.9rem' }}>Direct Message {i + 1}</div>
-                             <p style={{ margin: '0 0 8px 0', fontSize: '0.85rem' }}><strong>Subject:</strong> {m.subject}</p>
-                             <p style={{ margin: 0, fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>{m.body}</p>
-                           </div>
-                         ))}
+                      <div>
+                        <label className="zd-label">Search descriptions (4)</label>
+                        <div className="zcd-stack" style={{ gap: 8 }}>
+                          {skillResult.data.deliverables.googleAds.descriptions?.map((d: string, i: number) => (
+                            <div key={i} className="zcd-result-block">{d}</div>
+                          ))}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
+                  {copyActiveTab === 'tiktokAds' && (
+                    <>
+                      {skillResult.data.deliverables.tiktokAds.scriptOutlines?.map((s: any, i: number) => (
+                        <Card key={i} padding={16}>
+                          <div className="zd-eyebrow" style={{ marginBottom: 8 }}>Script option {i + 1}</div>
+                          <p className="zd-text-sm"><strong>Hook:</strong> {s.hook}</p>
+                          <p className="zd-text-sm"><strong>Body:</strong> {s.body}</p>
+                          <p className="zd-text-sm"><strong>CTA:</strong> {s.cta}</p>
+                        </Card>
+                      ))}
+                      <div>
+                        <label className="zd-label">Captions</label>
+                        <div className="zcd-opts">
+                          {skillResult.data.deliverables.tiktokAds.captions?.map((c: string, i: number) => (
+                            <Pill key={i}>{c}</Pill>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {copyActiveTab === 'linkedinAds' && (
+                    <>
+                      {skillResult.data.deliverables.linkedinAds.sponsoredContent?.map((c: any, i: number) => (
+                        <Card key={i} padding={16}>
+                          <div className="zd-eyebrow" style={{ marginBottom: 8 }}>Sponsored content {i + 1}</div>
+                          <p className="zd-text-sm"><strong>Intro:</strong> {c.intro}</p>
+                          <p className="zd-text-sm"><strong>Headline:</strong> {c.headline}</p>
+                        </Card>
+                      ))}
+                      {skillResult.data.deliverables.linkedinAds.messageAds?.map((m: any, i: number) => (
+                        <Card key={i} padding={16}>
+                          <div className="zd-eyebrow" style={{ marginBottom: 8 }}>Direct message {i + 1}</div>
+                          <p className="zd-text-sm"><strong>Subject:</strong> {m.subject}</p>
+                          <p className="zd-text-sm" style={{ whiteSpace: 'pre-wrap' }}>{m.body}</p>
+                        </Card>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
-              <pre style={{ margin: 0, padding: 16, background: '#0f172a', borderRadius: 8, fontSize: '0.85rem', overflow: 'auto', maxHeight: 400, whiteSpace: 'pre-wrap', border: '1px solid #1e293b' }}>
+              <pre className="zcd-result-block zcd-result-pre">
                 {JSON.stringify(skillResult.data?.deliverables || skillResult.data, null, 2)}
               </pre>
             )}
-          </div>
+          </Card>
         )}
 
         {/* ══════ REPORTS VIEW ══════ */}
         {sidebarNav === 'reports' && (
-          <div>
+          <div className="zcd-stack">
             <AdsIntegrationMock />
-            
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: D, marginBottom: 16 }}>Audit Score Trend</h2>
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 32, display: 'flex', gap: 12, alignItems: 'flex-end', height: 180 }}>
-              {recentAudits.slice().reverse().map((a, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: D }}>{a.overall_score}</div>
-                  <div style={{ width: '100%', maxWidth: 40, background: getScoreColor(a.overall_score), height: `${a.overall_score}%`, borderRadius: '4px 4px 0 0', opacity: i === recentAudits.length - 1 ? 1 : 0.6, transition: 'all 0.3s ease' }}></div>
-                  <div style={{ fontSize: '0.65rem', color: G, whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</div>
-                </div>
-              ))}
-              {recentAudits.length === 0 && <div style={{ color: G, fontSize: '0.9rem', width: '100%', textAlign: 'center', paddingBottom: 20 }}>No audits to display trend</div>}
-            </div>
 
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: D, marginBottom: 16 }}>Audit History</h2>
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-                <thead style={{ background: '#f8fafc', color: G, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <tr>
-                    <th style={{ padding: '12px 24px', fontWeight: 600, borderBottom: `1px solid ${B}` }}>Date</th>
-                    <th style={{ padding: '12px 24px', fontWeight: 600, borderBottom: `1px solid ${B}` }}>Property</th>
-                    <th style={{ padding: '12px 24px', fontWeight: 600, borderBottom: `1px solid ${B}` }}>Score</th>
-                    <th style={{ padding: '12px 24px', fontWeight: 600, borderBottom: `1px solid ${B}` }}>Grade</th>
-                    <th style={{ padding: '12px 24px', fontWeight: 600, borderBottom: `1px solid ${B}` }}>Type</th>
-                    <th style={{ padding: '12px 24px', fontWeight: 600, borderBottom: `1px solid ${B}` }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentAudits.map((a, i) => (
-                    <tr key={i} style={{ borderBottom: i === recentAudits.length - 1 ? 'none' : `1px solid ${B}` }}>
-                      <td style={{ padding: '16px 24px', color: G }}>{new Date(a.created_at).toLocaleDateString()}</td>
-                      <td style={{ padding: '16px 24px', fontWeight: 500, color: D }}>{a.business_name || a.url}</td>
-                      <td style={{ padding: '16px 24px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: getScoreColor(a.overall_score) }}></span>
-                          <span style={{ fontWeight: 600, color: D }}>{a.overall_score}/100</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px 24px', fontWeight: 600, color: D }}>{a.grade}</td>
-                      <td style={{ padding: '16px 24px', color: G, textTransform: 'capitalize' }}>{a.audit_type}</td>
-                      <td style={{ padding: '16px 24px' }}>
-                        <button onClick={() => {
-                          setLatestAudit(a);
-                          localStorage.setItem('zieads_latest_audit', JSON.stringify(a));
-                          navigate('/audit/report');
-                        }} style={{ background: P, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>View Report</button>
-                      </td>
-                    </tr>
+            <Card>
+              <CardTitle icon={<LineChart />} sub="Overall score of each audit, oldest to newest">
+                Audit score trend
+              </CardTitle>
+              {loading ? (
+                <Skeleton height={150} radius={14} />
+              ) : (
+                <div className="zcd-trend">
+                  {recentAudits.slice().reverse().map((a, i) => (
+                    <div key={i} className="zcd-trend-col" title={`${a.overall_score}/100`}>
+                      <div className="zcd-trend-val">{a.overall_score}</div>
+                      <div
+                        className={`zcd-trend-bar tone-${scoreTone(a.overall_score)} ${i === recentAudits.length - 1 ? 'is-last' : ''}`}
+                        style={{ height: `${a.overall_score}%`, animationDelay: `${i * 60}ms` }}
+                      />
+                      <div className="zcd-trend-date">{new Date(a.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+                    </div>
                   ))}
                   {recentAudits.length === 0 && (
-                    <tr>
-                      <td colSpan={6} style={{ padding: '32px 24px', textAlign: 'center', color: G }}>No audits found.</td>
-                    </tr>
+                    <div className="zd-muted zd-text-sm" style={{ width: '100%', textAlign: 'center', alignSelf: 'center' }}>No audits to display a trend yet.</div>
                   )}
-                </tbody>
-              </table>
-            </div>
-            
+                </div>
+              )}
+            </Card>
+
+            <Card padding={0}>
+              <div style={{ padding: '20px 20px 4px' }}>
+                <CardTitle icon={<History />} sub={`${recentAudits.length} audit${recentAudits.length === 1 ? '' : 's'}`}>
+                  Audit history
+                </CardTitle>
+              </div>
+              <div className="zcd-hist">
+                {loading ? (
+                  <div style={{ padding: 14 }}><Skeleton height={44} count={3} radius={12} /></div>
+                ) : recentAudits.length === 0 ? (
+                  <EmptyState
+                    icon={<History size={22} />}
+                    title="No audits found"
+                    body="Run an audit from Home and it will show up here."
+                    action={<GhostButton onClick={() => setSidebarNav('home')}>Go to Home</GhostButton>}
+                  />
+                ) : (
+                  recentAudits.map((a, i) => (
+                    <div key={i} className="zd-row" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
+                      <div className="zcd-hist-main">
+                        <strong>{a.business_name || a.url}</strong>
+                        <span>{new Date(a.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="zcd-hist-meta">
+                        <span className="zcd-hist-score">
+                          <span className={`zcd-dot tone-${scoreTone(a.overall_score)}`} />
+                          {a.overall_score}/100
+                        </span>
+                        <Pill tone="dark">{a.grade}</Pill>
+                        <Pill className="zcd-cap">{a.audit_type}</Pill>
+                        <DarkButton
+                          onClick={() => {
+                            setLatestAudit(a);
+                            localStorage.setItem('zieads_latest_audit', JSON.stringify(a));
+                            navigate('/audit/report');
+                          }}
+                        >
+                          View report
+                        </DarkButton>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
             {recentAudits.length > 0 && <IndustryInsights latestScore={recentAudits[0].overall_score} />}
             <CompareAuditView audits={recentAudits} />
           </div>
@@ -715,63 +747,70 @@ export default function ClientDashboard({ reportData }: Props) {
         {sidebarNav === 'home' && (
           <>
             {/* Empty State */}
-            {!hasReport && (
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: '64px 40px', textAlign: 'center', marginBottom: 32 }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: 'var(--text-secondary)', border: `1px solid ${B}` }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                </div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: D, marginBottom: 8 }}>No audits yet</h2>
-                <p style={{ fontSize: '1rem', color: G, marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
-                  Paste any website URL above and run your first AI audit. You'll get a full paid ads readiness score across 6 dimensions.
-                </p>
-                <button onClick={() => document.querySelector<HTMLInputElement>('input[type="text"]')?.focus()} style={{ background: P, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: 'pointer', fontSize: '0.875rem' }}>
-                  Run your first audit
-                </button>
-              </div>
-            )}
+            {!hasReport && (loading ? (
+              <Card>
+                <LoadingState text="Loading your latest audit" />
+              </Card>
+            ) : (
+              <EmptyState
+                icon={<Target size={22} />}
+                title="No audits yet"
+                body="Paste any website URL above and run your first AI audit. You will get a full paid ads readiness score across 6 dimensions."
+                action={<TextRollButton text="Run your first audit" onClick={focusCommand} />}
+              />
+            ))}
 
             {/* Daily Brief */}
             {hasReport && (
-              <div style={{ marginBottom: 32 }}>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: D, marginBottom: 16 }}>Latest audit insights</h2>
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 24 }}>
-                  <p style={{ fontSize: '0.95rem', color: D, lineHeight: '1.5', marginBottom: 20 }}>{report.executiveSummary || 'No executive summary available.'}</p>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                    <button onClick={() => navigate('/audit/report')} style={{ padding: '8px 16px', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>View full report</button>
-                  </div>
-                </div>
-              </div>
+              <Card glass>
+                <CardTitle
+                  icon={<Sparkles />}
+                  sub={businessName || auditUrl}
+                  action={<Pill tone="accent"><span className="zd-live" /> Latest</Pill>}
+                >
+                  Latest audit insights
+                </CardTitle>
+                <p className="zd-text-sm" style={{ fontSize: 14.5, margin: '0 0 16px' }}>{report.executiveSummary || 'No executive summary available.'}</p>
+                <GhostButton onClick={() => navigate('/audit/report')}>View full report <ArrowRight size={14} /></GhostButton>
+              </Card>
             )}
 
             {/* Quick Actions */}
-            <div style={{ marginBottom: 12, fontSize: '0.85rem', fontWeight: 600, color: G }}>Quick actions</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
+            <div className="zcd-section-h">
+              <h2>Quick actions</h2>
+              <span className="zd-eyebrow">Pick one, then paste a URL</span>
+            </div>
+            <div className="zd-grid-3">
               {SKILLS.slice(0, 6).map((s, i) => (
-                <div key={i} onClick={() => { setSelectedSkill(s.id); document.querySelector<HTMLInputElement>('input[type="text"]')?.focus(); }} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 16, cursor: 'pointer', transition: 'border-color 0.15s' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: `${s.color}12`, border: `1px solid ${s.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                    <NounIcon name={s.id} size={18} color={s.color} />
+                <Card key={i} className="zcd-skill-card" onClick={() => { setSelectedSkill(s.id); focusCommand(); }}>
+                  <div className="zcd-skill-head">
+                    <span className="zd-icon-dot"><NounIcon name={s.id} size={16} color="currentColor" /></span>
+                    {selectedSkill === s.id && <Pill tone="accent">Selected</Pill>}
                   </div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 600, color: D, marginBottom: 4 }}>{s.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: G, marginBottom: 8 }}>{s.desc}</div>
-                  <div style={{ fontSize: '0.75rem', color: G, fontFamily: 'monospace' }}>{s.cmd}</div>
-                </div>
+                  <h3 className="zcd-skill-name">{s.name}</h3>
+                  <p className="zcd-skill-desc">{s.desc}</p>
+                  <div className="zcd-skill-foot">
+                    <Pill className="zcd-cmd">{s.cmd}</Pill>
+                    <span className="zcd-go"><ArrowRight size={13} /></span>
+                  </div>
+                </Card>
               ))}
             </div>
 
-            {/* Score + Findings or empty */}
+            {/* Score + Findings */}
             {hasReport && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+              <div className="zd-grid-2">
                 {/* Score Card */}
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 24 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 16 }}>Paid ads readiness score</div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 24 }}>
-                    <div style={{ fontSize: '3rem', fontWeight: 600, color: D, lineHeight: 1, fontFamily: 'monospace' }}>{overall}</div>
-                    <div>
-                      <div style={{ color: getScoreColor(overall), fontWeight: 700 }}>Grade {grade}</div>
-                      <div style={{ color: G, fontSize: '0.8rem' }}>{businessName || auditUrl}</div>
+                <Card>
+                  <CardTitle icon={<BarChart3 />}>Paid ads readiness score</CardTitle>
+                  <div className="zcd-score">
+                    <div className="zcd-score-num"><CountUp value={overall} /></div>
+                    <div className="zcd-score-meta">
+                      <Pill tone={scoreTone(overall)}>Grade {grade}</Pill>
+                      <span className="zd-muted zd-text-sm">{businessName || auditUrl}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                  <div className="zcd-dims">
                     {[
                       { name: 'Creative & offer', score: dims.creative?.score || 0 },
                       { name: 'Audience clarity', score: dims.audience?.score || 0 },
@@ -780,358 +819,309 @@ export default function ClientDashboard({ reportData }: Props) {
                       { name: 'Funnel coverage', score: dims.funnel?.score || 0 },
                       { name: 'Competitive pos.', score: dims.competitive?.score || 0 },
                     ].map((d, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', fontSize: '0.85rem', color: D }}>
-                        <span style={{ width: 120 }}>{d.name}</span>
-                        <div style={{ flex: 1, background: 'var(--bg-surface)', height: 4, borderRadius: 2, margin: '0 12px' }}>
-                          <div style={{ width: `${d.score}%`, height: '100%', background: getScoreColor(d.score), borderRadius: 2 }}></div>
-                        </div>
-                        <span style={{ fontWeight: 600, width: 24, textAlign: 'right', fontFamily: 'monospace' }}>{d.score}</span>
+                      <div key={i} className="zcd-dim">
+                        <span>{d.name}</span>
+                        <GrowBar value={d.score} delay={i * 90} tone={d.score >= 70 ? 'good' : d.score >= 50 ? 'accent' : 'dark'} />
+                        <b>{d.score}</b>
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => navigate('/audit/report')} style={{ padding: '8px 16px', background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>View full report</button>
-                </div>
+                  <GhostButton onClick={() => navigate('/audit/report')}>View full report <ArrowRight size={14} /></GhostButton>
+                </Card>
 
                 {/* Critical Findings */}
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 'var(--radius)', padding: 24, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: D }}>Critical findings & Strategy</div>
-                  </div>
+                <Card style={{ display: 'flex', flexDirection: 'column' }}>
+                  <CardTitle icon={<Target />} action={findings.length > 0 ? <Pill tone="bad">{findings.length}</Pill> : undefined}>
+                    Critical findings and strategy
+                  </CardTitle>
                   {findings.length === 0 ? (
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: G }}>No findings</div>
+                    <div className="zd-muted zd-text-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>No findings</div>
                   ) : (
                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                      <CollaborativeReport 
+                      <CollaborativeReport
                         findings={findings.slice(0, 4).map((f: any) => ({
                           category: 'Performance Alert',
                           title: f.title,
                           description: f.impact,
                           impact: f.severity,
                           actionableStep: f.recommendation || 'Review inside Ads Manager and deploy immediately.'
-                        }))} 
+                        }))}
                       />
                     </div>
                   )}
-                </div>
+                </Card>
               </div>
             )}
 
             {/* Weekly Rhythm */}
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, marginBottom: 32 }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 20 }}>Weekly rhythm</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {RHYTHM.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 16 }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: G, width: 30 }}>{r.day}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: 4 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, marginTop: 4 }}></div>
-                      {i < RHYTHM.length - 1 && <div style={{ width: 2, flex: 1, background: B, margin: '4px 0' }}></div>}
+            <Card>
+              <CardTitle icon={<Calendar />} sub="A simple cadence that keeps every account sharp">
+                Weekly rhythm
+              </CardTitle>
+              <div className="zcd-rhythm">
+                {RHYTHM.map((r, i) => {
+                  const isToday = r.day === todayShort;
+                  return (
+                    <div key={i} className={`zcd-rhythm-row ${isToday ? 'is-today' : ''}`} style={{ animationDelay: `${i * 70}ms` }}>
+                      <div className="zcd-rhythm-day">
+                        <Pill tone={isToday ? 'accent' : 'neutral'}>{r.day}</Pill>
+                      </div>
+                      <div className="zcd-rhythm-rail">
+                        <span className="zcd-rhythm-dot" />
+                        {i < RHYTHM.length - 1 && <span className="zcd-rhythm-line" />}
+                      </div>
+                      <div className="zcd-rhythm-body">
+                        <strong>{r.label}</strong>
+                        <span>{r.cmds.replace(' · ', ', ')}</span>
+                      </div>
+                      <div className="zcd-rhythm-tag">{isToday && <Pill tone="dark">Today</Pill>}</div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: D }}>{r.label}</div>
-                      <div style={{ fontSize: '0.8rem', color: G, fontFamily: 'monospace' }}>{r.cmds}</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {/* ══════ ALL SKILLS VIEW ══════ */}
         {sidebarNav === 'skills' && (
-          <div>
-            <h2 style={{ fontSize: '1.2rem', color: D, marginBottom: 24 }}>All AI Skills</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          <>
+            <div className="zcd-section-h">
+              <h2>All AI skills</h2>
+              <Pill tone="accent"><LayoutGrid /> {SKILLS.length} skills</Pill>
+            </div>
+            <div className="zd-grid-auto">
               {SKILLS.map(s => (
-                <div key={s.id} style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 6, background: `${s.color}15`, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <NounIcon name={s.id} size={16} color={s.color} />
-                        </div>
-                        <strong style={{ color: D }}>{s.name}</strong>
-                      </div>
-                      <code style={{ fontSize: '0.75rem', color: P, background: '#f3e8ff', padding: '2px 6px', borderRadius: 4 }}>{s.cmd}</code>
-                    </div>
-                    <button onClick={() => { setSelectedSkill(s.id); handleRunSkill(s.id); }} disabled={runningSkill === s.id} style={{ padding: '6px 16px', background: runningSkill === s.id ? '#e2e8f0' : P, color: runningSkill === s.id ? G : '#fff', border: 'none', borderRadius: 20, fontSize: '0.85rem', fontWeight: 600, cursor: runningSkill === s.id ? 'not-allowed' : 'pointer' }}>
-                      {runningSkill === s.id ? 'Running...' : 'Run'}
-                    </button>
+                <Card key={s.id} hover className="zcd-skill-card">
+                  <div className="zcd-skill-head">
+                    <span className="zd-icon-dot"><NounIcon name={s.id} size={16} color="currentColor" /></span>
+                    <Pill className="zcd-cmd" tone="neutral">{s.cmd}</Pill>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: G, margin: 0 }}>{s.desc}</p>
-                </div>
+                  <h3 className="zcd-skill-name">{s.name}</h3>
+                  <p className="zcd-skill-desc">{s.desc}</p>
+                  <div className="zcd-skill-foot">
+                    <span />
+                    <DarkButton onClick={() => { setSelectedSkill(s.id); handleRunSkill(s.id); }} disabled={runningSkill === s.id} loading={runningSkill === s.id}>
+                      Run
+                    </DarkButton>
+                  </div>
+                </Card>
               ))}
             </div>
-          </div>
+          </>
         )}
 
         {/* ══════ SETTINGS VIEW ══════ */}
         {sidebarNav === 'settings' && (
-          <form style={{ maxWidth: 720 }} onSubmit={handleSaveSettings}>
-            <h2 style={{ fontSize: '1.4rem', color: D, marginBottom: 8, fontWeight: 700 }}>Workspace Settings</h2>
-            <p style={{ fontSize: '0.88rem', color: G, marginBottom: 24 }}>Customize your business profile and campaign objectives. These settings frame all AI Agent audit analysis and daily Briefing insights.</p>
-            
+          <form className="zcd-stack zcd-narrow" onSubmit={handleSaveSettings}>
             {/* Card 1: Business Basics */}
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 16 }}>Business Basics</h3>
-              
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Business Name</label>
-                <input 
-                  type="text" 
-                  value={profileForm.businessName} 
+            <Card>
+              <CardTitle icon={<Briefcase />} sub="Who you are and what you sell">Business basics</CardTitle>
+
+              <div className="zcd-field">
+                <label className="zd-label" htmlFor="zcd-bn">Business name</label>
+                <input
+                  id="zcd-bn"
+                  type="text"
+                  className="zd-input"
+                  value={profileForm.businessName}
                   onChange={e => setProfileForm(p => ({ ...p, businessName: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} 
-                  placeholder="E.g. Acme Corp" 
+                  placeholder="E.g. Acme Corp"
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Primary Website URL</label>
-                <input 
-                  type="url" 
-                  value={profileForm.primaryUrl} 
+              <div className="zcd-field">
+                <label className="zd-label" htmlFor="zcd-url">Primary website URL</label>
+                <input
+                  id="zcd-url"
+                  type="url"
+                  className="zd-input"
+                  value={profileForm.primaryUrl}
                   onChange={e => setProfileForm(p => ({ ...p, primaryUrl: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.95rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} 
-                  placeholder="https://example.com" 
+                  placeholder="https://example.com"
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Business Type</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {BUSINESS_TYPES.map(t => (
-                    <button 
-                      key={t} 
-                      type="button" 
-                      onClick={() => setProfileForm(p => ({ ...p, businessType: t }))} 
-                      style={settingPillBtn(profileForm.businessType === t)}
-                    >
-                      {t}
-                    </button>
-                  ))}
+              <div className="zcd-field">
+                <label className="zd-label">Business type</label>
+                <div className="zcd-opt-grid">
+                  {BUSINESS_TYPES.map(t =>
+                    optCard(profileForm.businessType === t, t, BIZ_SUB[t], () => setProfileForm(p => ({ ...p, businessType: t })), t)
+                  )}
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Monthly Ads Budget</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {BUDGETS.map(b => (
-                    <button 
-                      key={b} 
-                      type="button" 
-                      onClick={() => setProfileForm(p => ({ ...p, monthlyBudget: b }))} 
-                      style={settingPillBtn(profileForm.monthlyBudget === b)}
-                    >
-                      {b}
-                    </button>
-                  ))}
+              <div className="zcd-field">
+                <label className="zd-label">Monthly ads budget</label>
+                <div className="zcd-opt-grid">
+                  {BUDGETS.map(b =>
+                    optCard(profileForm.monthlyBudget === b, b, 'per month', () => setProfileForm(p => ({ ...p, monthlyBudget: b })), b)
+                  )}
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Card 2: AI Context & Onboarding Persona Profile */}
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, margin: 0 }}>AI Persona & Onboarding Profile</h3>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: '#F26522', background: 'rgba(30, 123, 255, 0.08)', padding: '3px 8px', borderRadius: '6px' }}>
-                  Used by AI Agent & Analytics
-                </span>
-              </div>
-              <p style={{ fontSize: '0.83rem', color: G, margin: '0 0 20px' }}>
-                Your responses from onboarding customize the AI Agent's tone, strategic depth, and recommendations across ZieAds.
-              </p>
+            <Card>
+              <CardTitle
+                icon={<Sparkles />}
+                sub="Your onboarding answers tune the AI Agent's tone, strategic depth and recommendations across ZieAds."
+                action={<Pill tone="accent">Used by AI Agent & Analytics</Pill>}
+              >
+                AI persona and onboarding profile
+              </CardTitle>
 
-              {/* Your Role / Persona */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Your Role & Persona</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {ROLES.map(r => (
-                    <button 
-                      key={r} 
-                      type="button" 
-                      onClick={() => setProfileForm(p => ({ ...p, role: r }))} 
-                      style={settingPillBtn(profileForm.role === r)}
-                    >
-                      {r}
-                    </button>
-                  ))}
+              <div className="zcd-field">
+                <label className="zd-label">Your role</label>
+                <div className="zcd-opts">
+                  {ROLES.map(r => opt(profileForm.role === r, r, () => setProfileForm(p => ({ ...p, role: r })), r))}
                 </div>
               </div>
 
-              {/* Scale / Accounts Volume */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Accounts / Scale Managed</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {ACCOUNT_VOLUMES.map(v => (
-                    <button 
-                      key={v} 
-                      type="button" 
-                      onClick={() => setProfileForm(p => ({ ...p, accountVolume: v }))} 
-                      style={settingPillBtn(profileForm.accountVolume === v)}
-                    >
-                      {v} {v === '50+' ? 'accounts' : 'accounts'}
-                    </button>
-                  ))}
+              <div className="zcd-field">
+                <label className="zd-label">Accounts managed</label>
+                <div className="zcd-opts">
+                  {ACCOUNT_VOLUMES.map(v => opt(profileForm.accountVolume === v, `${v} accounts`, () => setProfileForm(p => ({ ...p, accountVolume: v })), v))}
                 </div>
               </div>
 
-              {/* Strategic Marketing Goals */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Strategic Marketing Priorities (Multi-select)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {ONBOARDING_GOALS.map(g => (
-                    <button 
-                      key={g} 
-                      type="button" 
-                      onClick={() => toggleGoalSetting(g)} 
-                      style={settingPillBtn(profileForm.goals.includes(g))}
-                    >
-                      {g}
-                    </button>
-                  ))}
+              <div className="zcd-field">
+                <label className="zd-label">Strategic marketing priorities</label>
+                <p className="zcd-field-hint">Pick as many as you like</p>
+                <div className="zcd-opts">
+                  {ONBOARDING_GOALS.map(g => opt(profileForm.goals.includes(g), g, () => toggleGoalSetting(g), g))}
                 </div>
               </div>
 
-              {/* Active Stack Tools */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Active Marketing Tool Stack (Multi-select)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {ONBOARDING_TOOLS.map(t => (
-                    <button 
-                      key={t} 
-                      type="button" 
-                      onClick={() => toggleToolSetting(t)} 
-                      style={settingPillBtn(profileForm.currentTools.includes(t))}
-                    >
-                      {t}
-                    </button>
-                  ))}
+              <div className="zcd-field">
+                <label className="zd-label">Current marketing tool stack</label>
+                <p className="zcd-field-hint">Pick as many as you like</p>
+                <div className="zcd-opts">
+                  {ONBOARDING_TOOLS.map(t => opt(profileForm.currentTools.includes(t), t, () => toggleToolSetting(t), t))}
                 </div>
               </div>
 
-              {/* Channels in Focus */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: D, marginBottom: 8 }}>Marketing Channels in Focus (Multi-select)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {PLATFORMS.map(pl => (
-                    <button 
-                      key={pl} 
-                      type="button" 
-                      onClick={() => togglePlatformSetting(pl)} 
-                      style={settingPillBtn(profileForm.platformsInFocus.includes(pl))}
-                    >
-                      {pl}
-                    </button>
-                  ))}
+              <div className="zcd-field">
+                <label className="zd-label">Channels in focus</label>
+                <p className="zcd-field-hint">Pick as many as you like</p>
+                <div className="zcd-opts">
+                  {PLATFORMS.map(pl => opt(profileForm.platformsInFocus.includes(pl), pl, () => togglePlatformSetting(pl), pl))}
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Card 3: Biggest Challenge */}
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 6 }}>Your Biggest Challenge</h3>
-              <p style={{ fontSize: '0.83rem', color: G, margin: '0 0 12px' }}>The AI agent uses this to frame analysis around your specific pain point.</p>
+            <Card>
+              <CardTitle icon={<MessageSquare />} sub="The AI agent frames its analysis around your specific pain point.">
+                Your biggest challenge
+              </CardTitle>
               <textarea
+                className="zd-textarea"
                 value={profileForm.challenge}
                 onChange={e => setProfileForm(p => ({ ...p, challenge: e.target.value }))}
                 placeholder="e.g. My ROAS keeps dropping after 7 days of a new campaign..."
                 rows={3}
-                style={{ width: '100%', padding: '10px 14px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.9rem', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
               />
-            </div>
+            </Card>
 
             {/* Card 4: Notifications */}
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginBottom: 32 }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: D, marginBottom: 16 }}>Notifications</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input 
-                  type="checkbox" 
-                  checked={profileForm.weeklyDigest} 
+            <Card>
+              <CardTitle icon={<Bell />}>Notifications</CardTitle>
+              <label className="zcd-switch" htmlFor="wd">
+                <input
+                  type="checkbox"
+                  checked={profileForm.weeklyDigest}
                   onChange={e => setProfileForm(p => ({ ...p, weeklyDigest: e.target.checked }))}
-                  id="wd" 
-                  style={{ width: 18, height: 18, accentColor: '#F26522', cursor: 'pointer' }} 
+                  id="wd"
                 />
-                <label htmlFor="wd" style={{ fontSize: '0.9rem', color: D, cursor: 'pointer' }}>Receive Monday weekly score digest emails</label>
-              </div>
-            </div>
+                <span className="zcd-switch-track" aria-hidden="true" />
+                <span>Send me the Monday weekly score digest email</span>
+              </label>
+            </Card>
 
-            <button 
-              type="submit" 
-              style={{ background: '#F26522', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.15s ease', fontFamily: 'inherit' }}
-              onMouseOver={e => e.currentTarget.style.background = '#0062E3'}
-              onMouseOut={e => e.currentTarget.style.background = '#F26522'}
-            >
-              Save Settings
-            </button>
+            <div className="zcd-save">
+              <TextRollButton type="submit" text="Save settings" />
+              {savedFlash && (
+                <Pill tone="good" className="zcd-saved"><Check /> Saved</Pill>
+              )}
+            </div>
           </form>
         )}
 
         {/* ══════ REFERRALS VIEW ══════ */}
         {sidebarNav === 'referrals' && (
-          <div style={{ maxWidth: 800 }}>
-            <h2 style={{ fontSize: '1.4rem', color: D, marginBottom: 8, fontWeight: 700 }}>Partner Program</h2>
-            <p style={{ fontSize: '0.95rem', color: G, marginBottom: 32 }}>Share ZieAds with your network. Earn free months or direct cash commissions.</p>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          <>
+            <div className="zd-grid-2">
               {/* Give 1 get 1 */}
-              <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
-                </div>
-                <h3 style={{ fontSize: '1.1rem', color: D, marginBottom: 8 }}>Give a Month, Get a Month</h3>
-                <p style={{ fontSize: '0.9rem', color: G, marginBottom: 24, flex: 1 }}>Invite friends to ZieAds. When they run their first audit, you both get 1 free month of the Pro tier automatically applied to your accounts.</p>
-                
-                <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: `1px dashed ${B}`, marginBottom: 16 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: G, marginBottom: 4, textTransform: 'uppercase' }}>Your Invite Link</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <code style={{ flex: 1, fontSize: '0.85rem', color: D, wordBreak: 'break-all' }}>https://zieads.com/invite/{userEmail ? userEmail.split('@')[0] : 'user123'}</code>
-                    <button onClick={() => alert('Link copied!')} style={{ background: 'transparent', border: `1px solid ${B}`, borderRadius: 4, padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, color: D }}>Copy</button>
+              <Card hover>
+                <div className="zcd-ref">
+                  <CardTitle icon={<Gift />}>Give a month, get a month</CardTitle>
+                  <p className="zd-text-sm" style={{ margin: 0 }}>
+                    Invite friends to ZieAds. When they run their first audit, you both get 1 free month of the Pro tier, applied automatically.
+                  </p>
+                  <div className="zcd-codebox">
+                    <div className="zd-eyebrow">Your invite link</div>
+                    <div className="zcd-codebox-row">
+                      <code>https://zieads.com/invite/{handle}</code>
+                      <button type="button" className="zd-icon-btn" onClick={() => alert('Link copied!')} aria-label="Copy invite link" title="Copy">
+                        <Copy />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="zcd-ref-foot">
+                    <span>Referrals: 0</span>
+                    <span className="tone-accent">$0 earned</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: D }}>
-                  <span>Referrals: 0</span>
-                  <span style={{ color: P }}>$0 Earned</span>
-                </div>
-              </div>
+              </Card>
 
               {/* Affiliate Program */}
-              <div style={{ background: 'linear-gradient(135deg, rgba(123,47,190,0.05) 0%, rgba(123,47,190,0.15) 100%)', border: `1px solid rgba(123,47,190,0.2)`, borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, background: P, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+              <Card hover className="zd-card-accent">
+                <div className="zcd-ref">
+                  <CardTitle icon={<CreditCard />}>Affiliate program</CardTitle>
+                  <p className="zd-text-sm" style={{ margin: '0 0 20px' }}>
+                    Are you an agency or content creator? Earn a <strong>30% recurring commission</strong> on all paid plans for the first 12 months.
+                  </p>
+                  <div>
+                    <TextRollButton text="Register as affiliate" onClick={() => window.open('https://stripe.com/', '_blank')} />
+                  </div>
                 </div>
-                <h3 style={{ fontSize: '1.1rem', color: D, marginBottom: 8 }}>Affiliate Program</h3>
-                <p style={{ fontSize: '0.9rem', color: G, marginBottom: 24, flex: 1 }}>Are you an agency or content creator? Earn a <strong>30% recurring commission</strong> on all paid plans for the first 12 months.</p>
-                
-                <button onClick={() => window.open('https://stripe.com/', '_blank')} style={{ background: P, color: '#fff', border: 'none', padding: '12px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', alignSelf: 'flex-start' }}>
-                  Register as Affiliate
-                </button>
-              </div>
+              </Card>
             </div>
 
             {/* Social Proof Badge Embed */}
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 12, padding: 24, marginTop: 24 }}>
-              <h3 style={{ fontSize: '1.1rem', color: D, marginBottom: 8 }}>Embed your Score Badge</h3>
-              <p style={{ fontSize: '0.9rem', color: G, marginBottom: 16 }}>Showcase your paid ads readiness to your customers. Copy this HTML snippet and paste it into your website's footer.</p>
-              
-              <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <code style={{ display: 'block', padding: 12, background: '#f8fafc', border: `1px dashed ${B}`, borderRadius: 8, fontSize: '0.75rem', color: D, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                    {`<a href="https://zieads.com/reports/${userEmail ? userEmail.split('@')[0] : 'user123'}" target="_blank">\n  <img src="https://api.zieads.com/v1/badge/${userEmail ? userEmail.split('@')[0] : 'user123'}" alt="Verified by ZieAds" width="200" height="60" />\n</a>`}
-                  </code>
-                  <button onClick={() => alert('Code copied!')} style={{ marginTop: 12, background: '#f1f5f9', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, color: D, cursor: 'pointer' }}>Copy HTML</button>
+            <Card>
+              <CardTitle icon={<Code2 />} sub="Show customers your paid ads readiness. Paste this HTML into your website footer.">
+                Embed your score badge
+              </CardTitle>
+              <div className="zcd-badge-wrap">
+                <div>
+                  <div className="zcd-codebox">
+                    <code style={{ display: 'block' }}>
+                      {`<a href="https://zieads.com/reports/${handle}" target="_blank">\n  <img src="https://api.zieads.com/v1/badge/${handle}" alt="Verified by ZieAds" width="200" height="60" />\n</a>`}
+                    </code>
+                  </div>
+                  <GhostButton onClick={() => alert('Code copied!')}><Copy /> Copy HTML</GhostButton>
                 </div>
-                <div style={{ width: 200, height: 60, background: '#f8fafc', borderRadius: 8, border: `2px solid ${B}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: G, fontSize: '0.8rem', position: 'relative' }}>
-                  <img src={`/api/badge/${userEmail ? userEmail.split('@')[0] : 'user123'}`} alt="Badge Preview" style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 1 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                  <span style={{ position: 'relative', zIndex: 0 }}>Badge Preview</span>
+                <div className="zcd-badge-prev">
+                  <img src={`/api/badge/${handle}`} alt="Badge Preview" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  <span>Badge preview</span>
                 </div>
               </div>
-            </div>
-          </div>
+            </Card>
+          </>
         )}
+      </PageBody>
 
-      </main>
+      {/* Feature Gate Modal */}
+      <FeatureGateModal
+        isOpen={gateModal.open}
+        onClose={() => setGateModal(m => ({ ...m, open: false }))}
+        featureName={gateModal.featureName}
+        featureDescription={gateModal.featureDesc}
+        requiredPlan={gateModal.requiredPlan || 'starter'}
+        featureType={gateModal.featureType || 'skill'}
+      />
     </V3Layout>
   );
 }

@@ -5,24 +5,28 @@ import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleCommentsInbox, sampleConnections } from '../../data/sample-data';
 import SocialIcon from '../../components/v3/SocialIcon';
-import { 
-  Inbox, 
-  MessageSquare, 
-  Send, 
-  Archive, 
-  Check, 
+import {
+  EmptyState,
+  GhostButton,
+  LoadingState,
+  PageHeader,
+  Pill,
+  Skeleton,
+  TextRollButton,
+} from '../../components/v3/ui';
+import {
+  Inbox,
+  MessageSquare,
+  Send,
+  Archive,
+  Check,
   AlertCircle,
-  Smile,
-  Instagram,
-  Linkedin,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw,
+  CornerDownRight,
 } from 'lucide-react';
-
-const P = 'var(--primary)';
-const G = 'var(--text-muted)';
-const B = 'var(--border)';
-const D = 'var(--text)';
+import './inbox.css';
 
 export default function InboxPage() {
   const navigate = useNavigate();
@@ -370,27 +374,30 @@ export default function InboxPage() {
     }
   };
 
-  const getSentimentStyle = (sentiment: string) => {
+
+  const getSentimentTone = (sentiment: string): 'good' | 'bad' | 'neutral' => {
     const s = sentiment?.toLowerCase();
-    if (s === 'positive') return { background: '#D1FAE5', color: '#065F46' };
-    if (s === 'negative') return { background: '#FEE2E2', color: '#991B1B' };
-    return { background: 'var(--bg-soft)', color: 'var(--text-secondary)' };
+    if (s === 'positive') return 'good';
+    if (s === 'negative') return 'bad';
+    return 'neutral';
   };
 
-  const getPlatformIcon = (platform: string) => {
-    return <SocialIcon platform={platform} size={14} />;
+  const getPlatformIcon = (platform: string, size = 14) => {
+    return <SocialIcon platform={platform} size={size} />;
   };
+
+  const initialOf = (handle?: string) => (handle || '?').replace(/^@/, '').charAt(0) || '?';
 
   const formatLastSynced = (timestamp: string | null) => {
     if (!timestamp) return "Never synced";
     const date = new Date(timestamp);
     const diffMs = Date.now() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return "Synced just now";
     if (diffMins === 1) return "Synced 1 minute ago";
     if (diffMins < 60) return `Synced ${diffMins} minutes ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours === 1) return "Synced 1 hour ago";
     return `Synced ${diffHours} hours ago`;
@@ -406,79 +413,71 @@ export default function InboxPage() {
 
     if (isNoConnections) {
       return (
-        <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
-          <AlertCircle size={32} style={{ color: P }} />
-          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>No accounts connected yet</h3>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-            Connect an Instagram account to start receiving comments.
-          </p>
-          <button 
-            onClick={() => navigate('/connections')}
-            style={{ background: P, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Connect Accounts
-          </button>
-        </div>
+        <EmptyState
+          icon={<AlertCircle size={22} />}
+          title="No accounts connected yet"
+          body="Connect an Instagram account to start receiving comments."
+          action={<TextRollButton text="Connect accounts" onClick={() => navigate('/connections')} />}
+        />
       );
     }
 
     if (isNoCommentsYet) {
       if (!lastSyncedAt || syncInProgress) {
         return (
-          <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
-            <Clock size={32} style={{ color: P, animation: 'pulse 1.5s infinite' }} />
-            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>Syncing your comments...</h3>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-              We are fetching your Instagram activity. Check back in a few minutes or click the refresh button.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Clock size={22} className="zin-spin" />}
+            title="Syncing your comments"
+            body={
+              <>
+                We are fetching your Instagram activity. Check back in a few minutes or hit refresh.
+                <span style={{ display: 'block', marginTop: 14 }}>
+                  <LoadingState text="Pulling the latest comments" inline />
+                </span>
+              </>
+            }
+          />
         );
       }
 
       return (
-        <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
-          <MessageSquare size={32} style={{ color: G }} />
-          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>No comments yet</h3>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-            When people comment on your posts, they will appear here within 15 minutes.
-          </p>
-        </div>
+        <EmptyState
+          icon={<MessageSquare size={22} />}
+          title="No comments yet"
+          body="When people comment on your posts, they will appear here within 15 minutes."
+        />
       );
     }
 
     return (
-      <div style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, margin: 'auto', maxWidth: 360 }}>
-        <Inbox size={32} style={{ color: G }} />
-        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>No comments match this filter</h3>
-        <p style={{ margin: 0, fontSize: '0.78rem', color: G, lineHeight: 1.5 }}>
-          Try adjusting the sentiment filter or unchecking Show Archived.
-        </p>
-        <button 
-          onClick={() => {
-            setSentimentFilter('');
-            setArchivedFilter(false);
-          }}
-          style={{ background: 'none', border: `1px solid ${B}`, color: 'var(--text)', padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-        >
-          Reset Filters
-        </button>
-      </div>
+      <EmptyState
+        icon={<Inbox size={22} />}
+        title="No comments match this filter"
+        body="Try another sentiment or turn off Archived."
+        action={
+          <GhostButton
+            onClick={() => {
+              setSentimentFilter('');
+              setArchivedFilter(false);
+            }}
+          >
+            Reset filters
+          </GhostButton>
+        }
+      />
     );
   };
 
   const SkeletonLoader = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 20, width: '100%', boxSizing: 'border-box' }}>
+    <div className="zin-list-skel">
       {[1, 2, 3, 4, 5].map(i => (
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16, border: `1px solid ${B}`, borderRadius: 8, background: '#fff', opacity: 0.6 }}>
-          <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--bg-soft)' }} />
-              <div style={{ width: 80, height: 12, borderRadius: 4, background: 'var(--bg-soft)' }} />
-            </div>
-            <div style={{ width: 50, height: 12, borderRadius: 4, background: 'var(--bg-soft)' }} />
+        <div key={i} className="zin-skel-item" style={{ opacity: 1 - i * 0.12 }}>
+          <Skeleton height={36} width={36} radius={18} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Skeleton height={12} width="45%" />
+            <Skeleton height={12} width="100%" />
+            <Skeleton height={12} width="70%" />
           </div>
-          <div style={{ width: '100%', height: 14, borderRadius: 4, background: 'var(--bg-soft)' }} />
-          <div style={{ width: '70%', height: 14, borderRadius: 4, background: 'var(--bg-soft)' }} />
         </div>
       ))}
     </div>
@@ -486,282 +485,264 @@ export default function InboxPage() {
 
   // Detect Personal-tier Instagram accounts either from the authoritative backend
   // response (instagramAccountType) or, as a fallback, from the /connections listing.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const isPersonalInstagramConnected =
     !demo.isActive && (
       instagramAccountType?.toLowerCase() === 'personal' ||
       connections.some(c => c.platform === 'instagram' && c.account_type?.toLowerCase() === 'personal')
     );
 
+  const refreshBusy = refreshing || syncInProgress || cooldownSeconds > 0;
+  const showRefresh = (hasInstagramConnection === true || connections.some(c => c.platform === 'instagram')) && !demo.isActive;
+
+  const sentimentOptions = [
+    { k: '', l: 'All', count: null as number | null, tone: 'neutral' },
+    { k: 'positive', l: 'Positive', count: summary.total_positive as number, tone: 'good' },
+    { k: 'neutral', l: 'Neutral', count: summary.total_neutral as number, tone: 'neutral' },
+    { k: 'negative', l: 'Negative', count: summary.total_negative as number, tone: 'bad' },
+  ];
+
+  const unreadCount = comments.filter(c => c.status === 'unread').length;
+
   return (
     <V3Layout>
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '20px 40px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Unified Inbox</h1>
-          <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Manage and reply to all social comments in one dashboard.</p>
-        </div>
-        {/* Show refresh whenever the user has an IG connection (either the backend
-            flag OR the /connections list, whichever is authoritative). Previously
-            this was gated on connections.length > 0 which race-conditioned with the
-            initial /api/auth/connections fetch. */}
-        {(hasInstagramConnection === true || connections.some(c => c.platform === 'instagram')) && !demo.isActive && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {lastSyncedAt && (
-              <span style={{ fontSize: '0.75rem', color: G }}>
-                {formatLastSynced(lastSyncedAt)}
-              </span>
-            )}
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing || syncInProgress || cooldownSeconds > 0}
-              style={{
-                background: P,
-                color: '#fff',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: 6,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: (refreshing || syncInProgress || cooldownSeconds > 0) ? 'not-allowed' : 'pointer',
-                opacity: (refreshing || syncInProgress || cooldownSeconds > 0) ? 0.7 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6
-              }}
-            >
-              <Clock size={12} />
-              {syncInProgress ? 'Syncing comments...' : refreshing ? 'Refreshing...' : cooldownSeconds > 0 ? `Refresh (${cooldownSeconds}s)` : 'Refresh Now'}
-            </button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        number="06"
+        label="Inbox"
+        title="Every comment, one calm inbox."
+        subtitle="Read, sort and reply to social comments from all your connected channels in one place."
+        actions={
+          /* Show refresh whenever the user has an IG connection (either the backend
+             flag OR the /connections list, whichever is authoritative). */
+          showRefresh ? (
+            <>
+              {lastSyncedAt && (
+                <span className="zin-sync">
+                  <span className={`zd-live ${syncInProgress ? '' : 'is-off'}`} />
+                  {formatLastSynced(lastSyncedAt)}
+                </span>
+              )}
+              <GhostButton onClick={handleRefresh} disabled={refreshBusy}>
+                <RefreshCw className={refreshing || syncInProgress ? 'zin-spin' : ''} />
+                {syncInProgress ? 'Syncing comments' : refreshing ? 'Refreshing' : cooldownSeconds > 0 ? `Refresh (${cooldownSeconds}s)` : 'Refresh now'}
+              </GhostButton>
+            </>
+          ) : undefined
+        }
+      />
 
-      {/* Grid Split Panel (Responsive) */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
-        
-        {/* Left Filters Sidebar (hidden on Mobile, replaced by select inputs) */}
-        {!isMobile && (
-          <div style={{ width: '240px', background: '#fff', borderRight: `1px solid ${B}`, padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <h3 style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 10 }}>Filter Sentiment</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[
-                  { k: '', l: 'All Sentiments', count: null },
-                  { k: 'positive', l: 'Positive', count: summary.total_positive },
-                  { k: 'neutral', l: 'Neutral', count: summary.total_neutral },
-                  { k: 'negative', l: 'Negative', count: summary.total_negative }
-                ].map(opt => (
+      <div className={`zin-split ${isMobile ? 'is-mobile' : ''}`}>
+        {/* Conversation list */}
+        {(!isMobile || mobileView === 'list') && (
+          <aside className="zin-list-pane">
+            <div className="zin-filters">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span className="zd-eyebrow">Sentiment</span>
+                {unreadCount > 0 && <Pill tone="accent">{unreadCount} unread</Pill>}
+              </div>
+              <div className="zin-chip-row">
+                {sentimentOptions.map(opt => (
                   <button
                     key={opt.k}
+                    type="button"
+                    className={`zd-chip ${sentimentFilter === opt.k ? 'is-active' : ''}`}
                     onClick={() => setSentimentFilter(opt.k)}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      textAlign: 'left',
-                      background: sentimentFilter === opt.k ? 'var(--primary-bg)' : 'transparent',
-                      border: 'none',
-                      borderRadius: 6,
-                      padding: '8px 12px',
-                      fontSize: '0.8rem',
-                      fontWeight: sentimentFilter === opt.k ? 600 : 400,
-                      color: sentimentFilter === opt.k ? 'var(--text)' : 'var(--text-secondary)',
-                      cursor: 'pointer'
-                    }}
                   >
-                    <span>{opt.l}</span>
+                    {opt.l}
                     {opt.count !== null && opt.count > 0 && (
-                      <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 10, background: opt.k === 'positive' ? '#D1FAE5' : opt.k === 'negative' ? '#FEE2E2' : 'var(--bg-soft)', color: opt.k === 'positive' ? '#065F46' : opt.k === 'negative' ? '#991B1B' : 'var(--text-secondary)' }}>
-                        {opt.count}
-                      </span>
+                      <span className={`zin-chip-count tone-${opt.tone}`}>{opt.count}</span>
                     )}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            <div style={{ borderTop: `1px solid ${B}`, paddingTop: 16 }}>
-              <h3 style={{ fontSize: '0.68rem', color: G, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 10 }}>Status</h3>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
-                  checked={archivedFilter} 
-                  onChange={e => setArchivedFilter(e.target.checked)} 
-                  style={{ accentColor: P }}
-                />
-                Show Archived
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* List of comments column */}
-        {(!isMobile || mobileView === 'list') && (
-          <div style={{ flex: 1, background: '#fff', borderRight: isMobile ? 'none' : `1px solid ${B}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-            {/* Mobile Filter select row */}
-            {isMobile && (
-              <div style={{ padding: '12px 20px', borderBottom: `1px solid ${B}`, display: 'flex', gap: 10 }}>
-                <select 
-                  value={sentimentFilter} 
-                  onChange={e => setSentimentFilter(e.target.value)}
-                  style={{ flex: 1, padding: 8, border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.8rem' }}
+                <button
+                  type="button"
+                  className={`zd-chip is-accent ${archivedFilter ? 'is-active' : ''}`}
+                  onClick={() => setArchivedFilter(!archivedFilter)}
+                  aria-pressed={archivedFilter}
                 >
-                  <option value="">All Sentiments</option>
-                  <option value="positive">Positive</option>
-                  <option value="neutral">Neutral</option>
-                  <option value="negative">Negative</option>
-                </select>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={archivedFilter} 
-                    onChange={e => setArchivedFilter(e.target.checked)} 
-                    style={{ accentColor: P }}
-                  />
-                  Archived
-                </label>
+                  <Archive size={13} /> Archived
+                </button>
               </div>
-            )}
+            </div>
 
-            {loading ? (
-              <SkeletonLoader />
-            ) : comments.length === 0 ? (
-              renderEmptyState()
-            ) : (
-              comments.map(c => {
-                const isSelected = selectedComment?.id === c.id;
-                const sentStyle = getSentimentStyle(c.sentiment);
-                const userHasReplied = c.status === 'replied';
-                const textVal = c.text || c.comment_text;
-                const commenter = c.author_username || c.commenter_handle;
-                const postedDate = c.posted_at || c.commented_at;
-                return (
-                  <div 
-                    key={c.id} 
-                    onClick={() => {
-                      setSelectedComment(c);
-                      if (isMobile) setMobileView('detail');
-                    }}
-                    style={{ 
-                      cursor: 'pointer', 
-                      padding: '16px 20px', 
-                      borderBottom: `1px solid ${B}`, 
-                      background: isSelected && !isMobile ? 'var(--bg-soft)' : 'transparent',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 8,
-                      transition: 'background 0.1s'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {getPlatformIcon(c.platform)}
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{commenter}</span>
-                      </div>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, ...sentStyle }}>
-                        {c.sentiment || 'neutral'}
+            <div className="zin-list">
+              {loading ? (
+                <SkeletonLoader />
+              ) : comments.length === 0 ? (
+                <div className="zin-list-empty">{renderEmptyState()}</div>
+              ) : (
+                comments.map((c, idx) => {
+                  const isSelected = selectedComment?.id === c.id;
+                  const userHasReplied = c.status === 'replied';
+                  const isUnread = c.status === 'unread';
+                  const textVal = c.text || c.comment_text;
+                  const commenter = c.author_username || c.commenter_handle;
+                  const postedDate = c.posted_at || c.commented_at;
+                  return (
+                    <div
+                      key={c.id}
+                      className={`zin-item ${isSelected && !isMobile ? 'is-active' : ''}`}
+                      style={{ animationDelay: `${Math.min(idx, 12) * 45}ms` }}
+                      onClick={() => {
+                        setSelectedComment(c);
+                        if (isMobile) setMobileView('detail');
+                      }}
+                    >
+                      <span className="zin-avatar">
+                        {initialOf(commenter)}
+                        <span className="zin-avatar-plat">{getPlatformIcon(c.platform, 11)}</span>
                       </span>
+                      <div className="zin-item-main">
+                        <div className="zin-item-top">
+                          <span className="zin-author">{commenter}</span>
+                          <span className="zin-time">{new Date(postedDate).toLocaleDateString()}</span>
+                        </div>
+                        <p className="zin-snippet">{textVal}</p>
+                        <div className="zin-item-meta">
+                          {isUnread && <span className="zin-unread" title="Unread" />}
+                          <Pill tone={getSentimentTone(c.sentiment)}>{c.sentiment || 'neutral'}</Pill>
+                          {userHasReplied && (
+                            <span className="zin-replied">
+                              <Check size={12} /> Replied
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>
-                      {textVal}
-                    </p>
-
-                    <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: G }}>
-                      <span>{new Date(postedDate).toLocaleDateString()}</span>
-                      {userHasReplied && <span style={{ color: '#10B981', fontWeight: 600 }}>Replied</span>}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
+          </aside>
         )}
 
-        {/* Active Comment Reply column */}
+        {/* Thread */}
         {(!isMobile || mobileView === 'detail') && (
-          <div style={{ flex: 1, background: 'var(--bg-soft)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          <section className="zin-thread-pane">
             {selectedComment ? (
-              <div style={{ padding: isMobile ? '20px' : '32px', display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
-                
-                {/* Mobile Back Header */}
-                {isMobile && (
-                  <button 
-                    onClick={() => setMobileView('list')}
-                    style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', fontWeight: 600, color: P }}
-                  >
-                    <ArrowLeft size={16} /> Back to Inbox
-                  </button>
-                )}
-
-                {/* Comment Box */}
-                <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20 }}>
-                  <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 800 }}>{selectedComment.author_username || selectedComment.commenter_handle}</span>
-                      {getPlatformIcon(selectedComment.platform)}
-                    </div>
-                    <button 
-                      onClick={() => handleArchive(selectedComment.id)}
-                      style={{ border: 'none', background: 'none', color: G, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem' }}
-                    >
-                      <Archive size={14} /> Archive
-                    </button>
-                  </div>
-
-                  <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    "{selectedComment.text || selectedComment.comment_text}"
-                  </p>
-
-                  {selectedComment.social_posts?.content_text && (
-                    <div style={{ fontSize: '0.72rem', color: G, borderTop: `1px solid ${B}`, paddingTop: 10 }}>
-                      On Post: <span style={{ fontStyle: 'italic' }}>"{selectedComment.social_posts.content_text.slice(0, 50)}..."</span>
+              <div className="zin-thread" key={selectedComment.id}>
+                <div className="zin-thread-head">
+                  {isMobile && (
+                    <div className="zin-back-row">
+                      <button type="button" className="zin-back" onClick={() => setMobileView('list')}>
+                        <ArrowLeft size={15} /> Back to inbox
+                      </button>
                     </div>
                   )}
+                  <span className="zin-avatar is-lg">
+                    {initialOf(selectedComment.author_username || selectedComment.commenter_handle)}
+                    <span className="zin-avatar-plat">{getPlatformIcon(selectedComment.platform, 12)}</span>
+                  </span>
+                  <div className="zin-thread-who">
+                    <div className="zin-thread-name">{selectedComment.author_username || selectedComment.commenter_handle}</div>
+                    <div className="zin-thread-sub">
+                      <Pill tone={getSentimentTone(selectedComment.sentiment)}>{selectedComment.sentiment || 'neutral'}</Pill>
+                      {selectedComment.platform && (
+                        <span style={{ textTransform: 'capitalize' }}>{selectedComment.platform}</span>
+                      )}
+                    </div>
+                  </div>
+                  <GhostButton className="zin-archive" onClick={() => handleArchive(selectedComment.id)}>
+                    <Archive /> Archive
+                  </GhostButton>
                 </div>
 
-                {/* Thread replies */}
-                {selectedComment.status === 'replied' ? (
-                  <div style={{ background: '#E1F5FE', border: '1px solid #B3E5FC', borderRadius: 8, padding: 20, alignSelf: 'flex-end', width: '90%', opacity: selectedComment.isOptimistic ? 0.7 : 1 }}>
-                    <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#01579B' }}>
-                        You (via ZieAds) {selectedComment.isOptimistic && <span style={{ fontWeight: 400, fontStyle: 'italic', color: G }}> (Sending...)</span>}
-                      </span>
-                      <span style={{ fontSize: '0.65rem', color: G }}>{selectedComment.replied_at ? new Date(selectedComment.replied_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#0288D1' }}>
-                      {selectedComment.reply_text || selectedComment.comment_replies?.[0]?.reply_text || "Reply sent successfully."}
-                    </p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleReplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20 }}>
-                    <h4 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700 }}>Reply to Comment</h4>
-                    <textarea 
-                      value={replyText}
-                      onChange={e => setReplyText(e.target.value)}
-                      placeholder="Type your response..."
-                      required
-                      style={{ width: '100%', height: 80, border: `1px solid ${B}`, borderRadius: 6, padding: '10px 12px', fontSize: '0.82rem', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
-                    />
-                    <button 
-                      type="submit" 
-                      disabled={submittingReply}
-                      style={{ alignSelf: 'flex-end', background: P, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <Send size={12} /> {submittingReply ? 'Sending...' : 'Send Reply'}
-                    </button>
-                  </form>
-                )}
+                <div className="zin-messages">
+                  <div className="zin-messages-inner">
+                    {selectedComment.social_posts?.content_text && (
+                      <div className="zin-post-ctx">
+                        <CornerDownRight size={14} />
+                        <span>
+                          On post: <em>"{selectedComment.social_posts.content_text.slice(0, 50)}..."</em>
+                        </span>
+                      </div>
+                    )}
 
+                    {/* Incoming comment */}
+                    <div className="zin-msg is-theirs">
+                      <div className="zin-bubble-wrap">
+                        <div className="zin-bubble">{selectedComment.text || selectedComment.comment_text}</div>
+                        <div className="zin-msg-meta">
+                          {getPlatformIcon(selectedComment.platform, 12)}
+                          {(selectedComment.posted_at || selectedComment.commented_at) &&
+                            new Date(selectedComment.posted_at || selectedComment.commented_at).toLocaleString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Our reply */}
+                    {selectedComment.status === 'replied' && (
+                      <div className={`zin-msg is-ours ${selectedComment.isOptimistic ? 'is-sending' : ''}`}>
+                        <div className="zin-bubble-wrap">
+                          <div className="zin-bubble">
+                            {selectedComment.reply_text || selectedComment.comment_replies?.[0]?.reply_text || "Reply sent successfully."}
+                          </div>
+                          <div className="zin-msg-meta">
+                            {selectedComment.isOptimistic ? (
+                              <span className="zd-shimmer">Sending via ZieAds</span>
+                            ) : (
+                              <>
+                                <Check size={12} style={{ color: 'var(--zd-good)' }} />
+                                You via ZieAds
+                                {selectedComment.replied_at
+                                  ? ` · ${new Date(selectedComment.replied_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                  : ''}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {selectedComment.status !== 'replied' && (
+                  <div className="zin-composer-wrap">
+                    <form onSubmit={handleReplySubmit} className={`zin-composer ${submittingReply ? 'is-loading' : ''}`}>
+                      <div className="zin-composer-top">
+                        <span>
+                          Replying to <strong>{selectedComment.author_username || selectedComment.commenter_handle}</strong>
+                        </span>
+                        {submittingReply && <LoadingState text="Sending" inline />}
+                      </div>
+                      <div className="zin-input-row">
+                        <textarea
+                          value={replyText}
+                          onChange={e => setReplyText(e.target.value)}
+                          placeholder="Type your response..."
+                          required
+                          rows={2}
+                        />
+                        <button
+                          type="submit"
+                          className={`zin-send ${submittingReply ? 'is-sending' : ''}`}
+                          disabled={submittingReply}
+                          aria-label={submittingReply ? 'Sending' : 'Send reply'}
+                          title={submittingReply ? 'Sending' : 'Send reply'}
+                        >
+                          <Send size={17} />
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
               </div>
             ) : (
-              <div style={{ padding: 40, textAlign: 'center', color: G, fontSize: '0.82rem', margin: 'auto' }}>
-                Select a comment from the list to reply.
+              <div className="zin-thread-empty">
+                <EmptyState
+                  icon={<MessageSquare size={22} />}
+                  title="Pick a conversation"
+                  body="Select a comment from the list to read it in full and reply."
+                />
               </div>
             )}
-          </div>
+          </section>
         )}
-
       </div>
     </V3Layout>
   );

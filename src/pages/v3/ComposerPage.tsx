@@ -1,25 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
+import {
+  Card,
+  CardTitle,
+  DarkButton,
+  GhostButton,
+  LoadingState,
+  PageBody,
+  PageHeader,
+  Pill,
+  Skeleton,
+  TextRollButton,
+} from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections } from '../../data/sample-data';
-import { 
-  Send, 
-  Calendar as CalendarIcon, 
-  Clock, 
-  Image as ImageIcon, 
-  Layers, 
-  Smile, 
-  Trash2, 
+import {
+  Send,
+  Calendar as CalendarIcon,
+  Clock,
+  Image as ImageIcon,
+  Layers,
+  Trash2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Check,
+  X,
+  Upload,
+  Instagram,
+  Linkedin,
+  Facebook,
+  Youtube,
+  Twitter,
+  Music2,
+  Globe,
+  Eye,
+  MessageCircle,
+  Sparkles,
+  PenLine,
+  Zap,
 } from 'lucide-react';
+import './composer.css';
 
-const P = 'var(--primary)';
-const G = 'var(--text-muted)';
-const B = 'var(--border)';
-const D = 'var(--text)';
+/* Platform brand marks (brand colors are allowed). */
+const PLATFORM_META: Record<string, { icon: ReactNode; color: string; name: string }> = {
+  instagram: { icon: <Instagram />, color: '#E1306C', name: 'Instagram' },
+  tiktok: { icon: <Music2 />, color: '#111111', name: 'TikTok' },
+  linkedin: { icon: <Linkedin />, color: '#0A66C2', name: 'LinkedIn' },
+  x: { icon: <Twitter />, color: '#111111', name: 'X' },
+  facebook: { icon: <Facebook />, color: '#1877F2', name: 'Facebook' },
+  youtube: { icon: <Youtube />, color: '#FF0000', name: 'YouTube' },
+};
+const platformMeta = (p?: string) =>
+  (p && PLATFORM_META[p]) || { icon: <Globe />, color: '#505050', name: p ? p.charAt(0).toUpperCase() + p.slice(1) : 'Post' };
+
+/* Echo text with hashtags highlighted in the preview. */
+const renderWithTags = (text: string) =>
+  text.split(/(#\w+)/g).map((part, i) =>
+    /^#\w+$/.test(part) ? (
+      <span key={i} className="zco-tag">
+        {part}
+      </span>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
 
 export default function ComposerPage() {
   const navigate = useNavigate();
@@ -181,11 +227,11 @@ export default function ComposerPage() {
   const currentLength = getActiveText().length;
   const currentLimit = getActiveLimit();
   const percentage = (currentLength / currentLimit) * 100;
-  let counterColor = G;
+  let counterTone = 'muted';
   if (percentage >= 100) {
-    counterColor = '#EF4444';
+    counterTone = 'bad';
   } else if (percentage >= 80) {
-    counterColor = '#F59E0B';
+    counterTone = 'warn';
   }
 
   const handleTextChange = (val: string) => {
@@ -198,10 +244,10 @@ export default function ComposerPage() {
 
   const isInheriting = activeTab !== 'universal' && customOverrides[activeTab] === undefined;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (demo.isActive) {
-      setComposerError("Demo Mode — Cannot Publish");
+      setComposerError("Demo mode: publishing is disabled.");
       return;
     }
 
@@ -283,322 +329,417 @@ export default function ComposerPage() {
     }
   };
 
+  const selectedConns = selectedAccounts
+    .map(id => connections.find(c => c.id === id))
+    .filter(Boolean) as any[];
+  const previewConn = activeTab !== 'universal'
+    ? connections.find(c => c.id === activeTab)
+    : selectedConns[0];
+  const previewMeta = platformMeta(previewConn?.platform);
+  const previewText = getActiveText();
+  const hasInstagram = selectedAccounts.some(id => connections.find(c => c.id === id)?.platform === 'instagram');
+  const ringR = 9;
+  const ringC = 2 * Math.PI * ringR;
+  const ringOffset = ringC * (1 - Math.min(100, percentage) / 100);
+  const ctaLabel = demo.isActive
+    ? 'Demo mode: cannot publish'
+    : scheduleType === 'now' ? 'Publish now' : 'Queue post';
+
+  const scheduleOptions: { id: 'now' | 'queue' | 'schedule'; label: string; icon: ReactNode }[] = [
+    { id: 'now', label: 'Publish now', icon: <Zap /> },
+    { id: 'queue', label: 'Add to queue (Autopilot)', icon: <Layers /> },
+    { id: 'schedule', label: 'Schedule a custom time', icon: <CalendarIcon /> },
+  ];
+
   return (
     <V3Layout>
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '20px 40px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Composer</h1>
-          <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Write once, customize, and queue your social media updates.</p>
-        </div>
-      </div>
+      <PageHeader
+        number="03"
+        label="Composer"
+        title="Write once, post everywhere."
+        subtitle="Draft a post, tailor it per platform, attach media and publish now or on your schedule."
+        actions={<GhostButton onClick={() => navigate('/calendar')}>Open calendar</GhostButton>}
+      />
 
-      {/* Responsive Main Layout */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflowY: 'auto' }}>
-        
-        {/* Editor Area */}
-        <div style={{ flex: 1, padding: isMobile ? '20px' : '40px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {composerSuccess && (
-            <div style={{ background: '#D1FAE5', color: '#065F46', padding: 16, borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CheckCircle size={16} /> Post successfully scheduled! Redirecting to Content Calendar...
+      <PageBody>
+        {composerSuccess && (
+          <div className="zco-toast tone-good" role="status">
+            <CheckCircle size={16} />
+            <div style={{ flex: 1 }}>
+              Post successfully scheduled. Redirecting to the content calendar.
+              <div className="zco-toast-bar" />
             </div>
-          )}
-
-          {composerError && (
-            <div style={{ background: '#FEE2E2', color: '#991B1B', padding: 16, borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertCircle size={16} /> {composerError}
-            </div>
-          )}
-
-          {/* Platform Account Selectors */}
-          <div>
-            <h3 style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G, marginBottom: 12 }}>Publish to</h3>
-            {connections.length === 0 ? (
-              <div style={{ padding: '12px 16px', background: '#FEF3C7', color: '#92400E', borderRadius: 8, fontSize: '0.8rem', display: 'flex', gap: 8 }}>
-                <AlertCircle size={16} style={{ flexShrink: 0 }} /> No accounts connected. Please go to <span onClick={() => navigate('/connections')} style={{ textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}>Connections</span> first.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {connections.map(c => {
-                  const isSelected = selectedAccounts.includes(c.id);
-                  return (
-                    <div 
-                      key={c.id} 
-                      onClick={() => handleAccountToggle(c.id)}
-                      style={{ 
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 8, 
-                        padding: '8px 14px', 
-                        borderRadius: 20, 
-                        border: `1px solid ${isSelected ? P : B}`,
-                        background: isSelected ? 'var(--primary-bg)' : '#fff',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isSelected ? 'var(--text)' : 'var(--text-secondary)' }}>
-                        {c.platform.toUpperCase()}: {c.account_handle}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
+        )}
 
-          {/* Platform Customization Tabs */}
-          {selectedAccounts.length > 0 && (
-            <div style={{ display: 'flex', borderBottom: `1px solid ${B}`, gap: 16, overflowX: 'auto', paddingBottom: 2 }}>
-              <button 
-                onClick={() => setActiveTab('universal')} 
-                style={{ padding: '8px 4px', border: 'none', background: 'none', borderBottom: activeTab === 'universal' ? `2px solid ${P}` : 'none', fontWeight: activeTab === 'universal' ? 700 : 400, color: activeTab === 'universal' ? D : G, cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}
+        {composerError && (
+          <div key={composerError} className="zco-toast tone-bad" role="alert">
+            <AlertCircle size={16} />
+            <span>{composerError}</span>
+          </div>
+        )}
+
+        <div className={`zco-layout ${isMobile ? 'is-mobile' : ''}`}>
+          {/* ── Editor column ── */}
+          <div className="zco-col">
+            {/* Platform account selectors */}
+            <Card glass>
+              <CardTitle
+                icon={<Send />}
+                sub="Pick the connected accounts this post goes to"
+                action={selectedAccounts.length > 0 ? <Pill tone="accent">{selectedAccounts.length} selected</Pill> : undefined}
               >
-                Default
-              </button>
-              {selectedAccounts.map(id => {
-                const conn = connections.find(c => c.id === id);
-                const hasOverride = customOverrides[id] !== undefined;
-                return (
-                  <button 
-                    key={id}
-                    onClick={() => setActiveTab(id)} 
-                    style={{ padding: '8px 4px', border: 'none', background: 'none', borderBottom: activeTab === id ? `2px solid ${P}` : 'none', fontWeight: activeTab === id ? 700 : 400, color: activeTab === id ? D : G, cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}
-                  >
-                    {conn?.platform.toUpperCase()}
-                    {hasOverride && <span style={{ width: 6, height: 6, borderRadius: '50%', background: P }} />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Editor Body */}
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
-              {isInheriting && (
-                <div style={{ padding: '8px 20px', background: '#EFF6FF', borderBottom: `1px solid ${B}`, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#1E40AF', fontWeight: 600 }}>
-                    ✨ Inheriting from Default. Start typing below to customize for this platform.
+                Publish to
+              </CardTitle>
+              {loading ? (
+                <div className="zco-platforms">
+                  {[0, 1, 2].map(i => (
+                    <Skeleton key={i} height={36} width={150} radius={999} />
+                  ))}
+                </div>
+              ) : connections.length === 0 ? (
+                <div className="zco-toast tone-warn">
+                  <AlertCircle size={16} />
+                  <span>
+                    No accounts connected. Go to{' '}
+                    <span className="zco-link" onClick={() => navigate('/connections')}>Connections</span> first.
                   </span>
+                </div>
+              ) : (
+                <div className="zco-platforms">
+                  {connections.map((c, idx) => {
+                    const isSelected = selectedAccounts.includes(c.id);
+                    const meta = platformMeta(c.platform);
+                    return (
+                      <button
+                        type="button"
+                        key={c.id}
+                        onClick={() => handleAccountToggle(c.id)}
+                        aria-pressed={isSelected}
+                        className={`zd-chip is-accent zco-pchip ${isSelected ? 'is-active' : ''}`}
+                        style={{ animationDelay: `${idx * 50}ms` }}
+                      >
+                        <span className="zco-picon" style={{ background: meta.color }}>{meta.icon}</span>
+                        <span className="zco-handle">{c.account_handle}</span>
+                        <span className="zco-check"><Check size={14} /></span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            {/* Glass composer */}
+            <div className={`zco-composer ${submitting ? 'is-loading' : ''}`}>
+              <div className="zco-top">
+                {selectedAccounts.length > 0 ? (
+                  <div className="zco-tabs" role="tablist">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === 'universal'}
+                      onClick={() => setActiveTab('universal')}
+                      className={`zd-chip ${activeTab === 'universal' ? 'is-active' : ''}`}
+                    >
+                      Default
+                    </button>
+                    {selectedAccounts.map(id => {
+                      const conn = connections.find(c => c.id === id);
+                      const hasOverride = customOverrides[id] !== undefined;
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          key={id}
+                          aria-selected={activeTab === id}
+                          onClick={() => setActiveTab(id)}
+                          className={`zd-chip ${activeTab === id ? 'is-active' : ''}`}
+                        >
+                          {conn?.platform.toUpperCase()}
+                          {hasOverride && <span className="zco-dot" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <PenLine size={13} color="var(--zd-accent)" /> Default caption
+                  </span>
+                )}
+              </div>
+
+              {isInheriting && (
+                <div className="zco-banner is-inherit">
+                  <span><Sparkles size={13} /> Inheriting from Default. Start typing to customize for this platform.</span>
                 </div>
               )}
               {activeTab !== 'universal' && !isInheriting && (
-                <div style={{ padding: '8px 20px', background: '#FEF3C7', borderBottom: `1px solid ${B}`, display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#92400E', fontWeight: 600 }}>
-                    ⚠️ Custom override active for this platform.
-                  </span>
-                  <button 
+                <div className="zco-banner is-custom">
+                  <span><PenLine size={13} /> Custom override active for this platform.</span>
+                  <button
+                    type="button"
                     onClick={() => {
                       const updated = { ...customOverrides };
                       delete updated[activeTab];
                       setCustomOverrides(updated);
                     }}
-                    style={{ border: 'none', background: 'none', color: '#B45309', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'underline' }}
                   >
                     Reset to Default
                   </button>
                 </div>
               )}
-              <textarea 
+
+              <textarea
+                className="zco-textarea"
                 value={getActiveText()}
                 onChange={e => handleTextChange(e.target.value)}
                 placeholder="What would you like to share today?"
-                style={{ minHeight: 180, border: 'none', outline: 'none', padding: 20, fontSize: '0.9rem', lineHeight: 1.5, resize: 'vertical', borderRadius: '8px 8px 0 0' }}
               />
+
+              {mediaAttachments.length > 0 && (
+                <div className="zco-attach">
+                  {mediaAttachments.map((item, idx) => (
+                    <div key={item.id} className="zco-thumb" style={{ animationDelay: `${idx * 40}ms` }}>
+                      <img src={item.file_url} alt={item.file_name || ''} />
+                      <button
+                        type="button"
+                        aria-label="Remove attachment"
+                        onClick={() => setMediaAttachments(prev => prev.filter(x => x.id !== item.id))}
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="zco-bottom">
+                <div className="zco-chips">
+                  <button type="button" className="zd-chip" onClick={() => setShowMediaModal(true)}>
+                    <ImageIcon /> Add media
+                  </button>
+                  {mediaAttachments.length > 0 && (
+                    <Pill tone="accent">{mediaAttachments.length} attached</Pill>
+                  )}
+                </div>
+                <span className={`zco-counter tone-${counterTone}`}>
+                  <svg className="zco-ring" viewBox="0 0 22 22" key={counterTone}>
+                    <circle className="zco-ring-bg" cx="11" cy="11" r={ringR} />
+                    <circle
+                      className="zco-ring-fg"
+                      cx="11"
+                      cy="11"
+                      r={ringR}
+                      strokeDasharray={ringC}
+                      strokeDashoffset={ringOffset}
+                    />
+                  </svg>
+                  <span className="zd-num">{currentLength} / {currentLimit}</span>
+                </span>
+              </div>
             </div>
 
-            {/* Editor Footer Tools */}
-            <div style={{ padding: '12px 20px', borderTop: `1px solid ${B}`, background: 'var(--bg-soft)', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', borderRadius: '0 0 8px 8px' }}>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button 
-                  onClick={() => setShowMediaModal(true)} 
-                  style={{ border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                >
-                  <ImageIcon size={14} /> Add Media
-                </button>
-              </div>
-              <span style={{ fontSize: '0.75rem', color: counterColor, fontWeight: 600 }}>
-                {currentLength} / {currentLimit} characters
-              </span>
-            </div>
+            {/* First comment panel for IG */}
+            {hasInstagram && (
+              <Card className="zd-fade-up">
+                <CardTitle icon={<MessageCircle />} sub="Ideal for campaign hashtags so the caption stays clean.">
+                  Instagram first comment
+                </CardTitle>
+                <textarea
+                  className="zd-textarea zco-first"
+                  value={firstComment}
+                  onChange={e => setFirstComment(e.target.value)}
+                  placeholder="e.g. #marketing #strategy #saas"
+                />
+              </Card>
+            )}
           </div>
 
-          {/* Attached Media Previews */}
-          {mediaAttachments.length > 0 && (
-            <div>
-              <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: G, marginBottom: 8 }}>Media Attachments</h4>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {mediaAttachments.map(item => (
-                  <div key={item.id} style={{ position: 'relative', width: 80, height: 80, border: `1px solid ${B}`, borderRadius: 6, overflow: 'hidden' }}>
-                    <img src={item.file_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <button 
-                      onClick={() => setMediaAttachments(prev => prev.filter(x => x.id !== item.id))}
-                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239, 68, 68, 0.9)', border: 'none', color: '#fff', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
-                    >
-                      <Trash2 size={10} />
-                    </button>
+          {/* ── Side column ── */}
+          <div className="zco-col zco-side">
+            {/* Live preview */}
+            <Card className="zco-preview">
+              <CardTitle
+                icon={<Eye />}
+                sub="Updates as you type"
+                action={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--zd-ink-3)' }}><span className="zd-live" /> Live</span>}
+              >
+                Preview
+              </CardTitle>
+              <div className="zco-pv-head">
+                <span className="zco-pv-avatar" style={{ background: previewConn ? previewMeta.color : 'var(--zd-ink)' }}>
+                  {previewConn ? previewMeta.icon : <Send />}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="zco-pv-name">{previewConn?.account_handle || 'Your account'}</div>
+                  <div className="zco-pv-meta">
+                    {previewConn ? previewMeta.name : 'No account selected'}
+                    {selectedConns.length > 1 && activeTab === 'universal' && <span>+{selectedConns.length - 1} more</span>}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* First Comment panel for IG */}
-          {selectedAccounts.some(id => connections.find(c => c.id === id)?.platform === 'instagram') && (
-            <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 20 }}>
-              <h4 style={{ margin: '0 0 10px', fontSize: '0.82rem', fontWeight: 700 }}>Instagram First Comment</h4>
-              <p style={{ margin: '0 0 12px', fontSize: '0.75rem', color: G }}>Ideal for placing campaign hashtags to keep the caption clean.</p>
-              <textarea 
-                value={firstComment}
-                onChange={e => setFirstComment(e.target.value)}
-                placeholder="e.g. #marketing #strategy #saas"
-                style={{ width: '100%', height: 60, border: `1px solid ${B}`, borderRadius: 6, padding: '10px 12px', fontSize: '0.82rem', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar Controls Area */}
-        <div style={{ width: isMobile ? '100%' : '360px', background: '#fff', borderLeft: isMobile ? 'none' : `1px solid ${B}`, borderTop: isMobile ? `1px solid ${B}` : 'none', padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-          
-          {/* Scheduling Configuration */}
-          <div>
-            <h3 style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G, marginBottom: 12 }}>Schedule settings</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', cursor: 'pointer' }}>
-                <input 
-                  type="radio" 
-                  name="scheduleType" 
-                  value="now" 
-                  checked={scheduleType === 'now'} 
-                  onChange={() => setScheduleType('now')}
-                  style={{ accentColor: P }}
-                />
-                Publish Now
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', cursor: 'pointer' }}>
-                <input 
-                  type="radio" 
-                  name="scheduleType" 
-                  value="queue" 
-                  checked={scheduleType === 'queue'} 
-                  onChange={() => setScheduleType('queue')}
-                  style={{ accentColor: P }}
-                />
-                Add to Queue (Autopilot)
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', cursor: 'pointer' }}>
-                <input 
-                  type="radio" 
-                  name="scheduleType" 
-                  value="schedule" 
-                  checked={scheduleType === 'schedule'} 
-                  onChange={() => setScheduleType('schedule')}
-                  style={{ accentColor: P }}
-                />
-                Schedule Custom Time
-              </label>
-
-              {scheduleType === 'schedule' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4, paddingLeft: 20 }}>
-                  <input 
-                    type="date" 
-                    value={scheduleDate} 
-                    onChange={e => setScheduleDate(e.target.value)}
-                    style={{ padding: '8px 10px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.8rem' }}
-                  />
-                  <input 
-                    type="time" 
-                    value={scheduleTime} 
-                    onChange={e => setScheduleTime(e.target.value)}
-                    style={{ padding: '8px 10px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.8rem' }}
-                  />
                 </div>
+              </div>
+              {mediaAttachments.length > 0 && (
+                <div className={`zco-pv-media n-${Math.min(4, mediaAttachments.length)}`}>
+                  {mediaAttachments.slice(0, 4).map(item => (
+                    <img key={item.id} src={item.file_url} alt={item.file_name || ''} />
+                  ))}
+                </div>
+              )}
+              <div className={`zco-pv-text ${previewText ? '' : 'is-empty'}`}>
+                {previewText ? renderWithTags(previewText) : 'Your caption will appear here.'}
+                <span className="zco-caret" aria-hidden="true" />
+              </div>
+              {hasInstagram && firstComment && (
+                <div className="zco-pv-comment">
+                  <strong>First comment</strong>
+                  {renderWithTags(firstComment)}
+                </div>
+              )}
+            </Card>
+
+            {/* Scheduling */}
+            <Card>
+              <CardTitle icon={<Clock />} sub="When should this go out?">
+                Schedule
+              </CardTitle>
+              <div className="zco-options" role="radiogroup">
+                {scheduleOptions.map(opt => (
+                  <label key={opt.id} className={`zco-option ${scheduleType === opt.id ? 'is-active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="scheduleType"
+                      value={opt.id}
+                      checked={scheduleType === opt.id}
+                      onChange={() => setScheduleType(opt.id)}
+                    />
+                    <span className="zco-option-icon">{opt.icon}</span>
+                    {opt.label}
+                    <span className="zco-radio" />
+                  </label>
+                ))}
+                {scheduleType === 'schedule' && (
+                  <div className="zco-when zd-slide-in">
+                    <input
+                      type="date"
+                      className="zd-input"
+                      aria-label="Date"
+                      value={scheduleDate}
+                      onChange={e => setScheduleDate(e.target.value)}
+                    />
+                    <input
+                      type="time"
+                      className="zd-input"
+                      aria-label="Time"
+                      value={scheduleTime}
+                      onChange={e => setScheduleTime(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 18 }}>
+                <label className="zd-label" htmlFor="zco-pipeline">Publishing pipeline</label>
+                <select
+                  id="zco-pipeline"
+                  className="zd-select zco-field"
+                  value={publishMethod}
+                  onChange={e => setPublishMethod(e.target.value as any)}
+                >
+                  <option value="direct_api">Direct API auto-publish</option>
+                  <option value="manual_reminder">Mobile push notification reminder</option>
+                </select>
+              </div>
+            </Card>
+
+            {/* Primary action */}
+            <div className="zco-cta">
+              {submitting ? (
+                <DarkButton loading>Scheduling</DarkButton>
+              ) : (
+                <TextRollButton
+                  text={ctaLabel}
+                  variant={demo.isActive ? 'dark' : 'orange'}
+                  onClick={() => handleSubmit()}
+                  disabled={submitting}
+                />
+              )}
+              {submitting ? (
+                <LoadingState text="Sending to your channels" inline />
+              ) : (
+                <span className="zco-cta-note">
+                  <span className={`zd-live ${selectedAccounts.length ? '' : 'is-off'}`} />
+                  {selectedAccounts.length
+                    ? `${selectedAccounts.length} account${selectedAccounts.length > 1 ? 's' : ''} ready`
+                    : 'Select an account to publish'}
+                </span>
               )}
             </div>
           </div>
-
-          {/* Publishing Pipeline Method */}
-          <div>
-            <h3 style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: G, marginBottom: 12 }}>Publishing Pipeline</h3>
-            <select 
-              value={publishMethod} 
-              onChange={e => setPublishMethod(e.target.value as any)}
-              style={{ width: '100%', padding: '10px 12px', border: `1px solid ${B}`, borderRadius: 6, fontSize: '0.85rem', outline: 'none' }}
-            >
-              <option value="direct_api">Direct API Auto-publish</option>
-              <option value="manual_reminder">Mobile push notification reminder</option>
-            </select>
-          </div>
-
-          <button 
-            onClick={handleSubmit}
-            disabled={submitting}
-            style={{ width: '100%', background: P, color: '#fff', border: 'none', padding: '12px 0', borderRadius: 6, fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 'auto' }}
-          >
-            <Send size={14} /> {submitting ? 'Scheduling...' : demo.isActive ? 'Demo Mode — Cannot Publish' : scheduleType === 'now' ? 'Publish Now' : 'Queue Post'}
-          </button>
         </div>
+      </PageBody>
 
-      </div>
-
-      {/* Media Library Picker Modal */}
+      {/* Media library picker modal */}
       {showMediaModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, width: '90%', maxWidth: 500, maxHeight: 500, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Choose from Media Library</h3>
-              <span onClick={() => setShowMediaModal(false)} style={{ cursor: 'pointer', color: G, fontSize: '0.9rem' }}>✕</span>
+        <div className="zco-overlay" onClick={e => { if (e.target === e.currentTarget) setShowMediaModal(false); }}>
+          <div className="zco-modal" role="dialog" aria-modal="true" aria-label="Choose from media library">
+            <div className="zco-modal-head">
+              <div>
+                <h3>Media library</h3>
+                <p>Tap to attach or detach. {mediaAttachments.length} selected.</p>
+              </div>
+              <button type="button" className="zd-icon-btn" aria-label="Close" onClick={() => setShowMediaModal(false)}>
+                <X />
+              </button>
             </div>
 
-            {/* Library Grid list */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, minHeight: 200 }}>
-              {mediaLibrary.map(item => {
-                const isSelected = mediaAttachments.some(x => x.id === item.id);
-                return (
-                  <div 
-                    key={item.id} 
-                    onClick={() => handleSelectFromLibrary(item)}
-                    style={{ 
-                      position: 'relative', 
-                      aspectRatio: '1/1', 
-                      borderRadius: 6, 
-                      overflow: 'hidden', 
-                      border: `2px solid ${isSelected ? P : 'transparent'}`,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <img src={item.file_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                );
-              })}
+            <div className="zco-lib">
+              {mediaLibrary.length === 0 ? (
+                <div className="zco-lib-empty">
+                  <ImageIcon size={20} />
+                  Your library is empty. Upload a file to attach it.
+                </div>
+              ) : (
+                mediaLibrary.map((item, idx) => {
+                  const isSelected = mediaAttachments.some(x => x.id === item.id);
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => handleSelectFromLibrary(item)}
+                      aria-pressed={isSelected}
+                      className={`zco-lib-item ${isSelected ? 'is-selected' : ''}`}
+                      style={{ animationDelay: `${Math.min(idx, 12) * 35}ms` }}
+                    >
+                      <img src={item.file_url} alt={item.file_name || ''} />
+                      {isSelected && (
+                        <span className="zco-lib-check"><Check size={13} /></span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
 
-            {/* Upload New file directly */}
-            <div style={{ display: 'flex', gap: 12, borderTop: `1px solid ${B}`, paddingTop: 16 }}>
-              <input 
-                type="file" 
-                id="modalFileUpload" 
+            <div className="zco-modal-foot">
+              <input
+                type="file"
+                id="modalFileUpload"
                 onChange={handleMediaUpload}
                 style={{ display: 'none' }}
               />
-              <button 
+              <GhostButton
                 onClick={() => document.getElementById('modalFileUpload')?.click()}
                 disabled={uploadingMedia}
-                style={{ background: 'none', border: `1px solid ${B}`, padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', flex: 1 }}
               >
-                {uploadingMedia ? 'Uploading...' : 'Upload New'}
-              </button>
-              <button 
-                onClick={() => setShowMediaModal(false)}
-                style={{ background: P, color: '#fff', border: 'none', padding: '8px 24px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Done
-              </button>
+                {uploadingMedia ? (
+                  <LoadingState text="Uploading" inline />
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Upload size={14} /> Upload new
+                  </span>
+                )}
+              </GhostButton>
+              <DarkButton onClick={() => setShowMediaModal(false)}>Done</DarkButton>
             </div>
           </div>
         </div>

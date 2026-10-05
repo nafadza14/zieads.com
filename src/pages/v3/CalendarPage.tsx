@@ -1,26 +1,56 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
+import {
+  Card,
+  CardTitle,
+  EmptyState,
+  GhostButton,
+  PageBody,
+  PageHeader,
+  Pill,
+  SegTabs,
+  Skeleton,
+  TextRollButton,
+} from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleOrganicPosts, sampleScheduledPosts } from '../../data/sample-data';
 import SocialIcon from '../../components/v3/SocialIcon';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Instagram, 
-  Linkedin, 
-  MessageSquare,
-  Calendar as CalendarIcon, 
-  Eye, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  LayoutGrid,
+  List as ListIcon,
+  Eye,
+  Heart,
+  MessageCircle,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  X,
+  Plus,
 } from 'lucide-react';
+import './calendar.css';
 
-const B = 'var(--border)';
-const P = 'var(--primary)';
-const G = 'var(--text-muted)';
-const D = 'var(--text)';
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+const formatTime = (iso?: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
+
+const statusTone = (status?: string): 'accent' | 'good' | 'bad' | 'warn' | 'neutral' => {
+  if (status === 'failed') return 'bad';
+  if (status === 'published') return 'good';
+  if (status === 'publishing') return 'warn';
+  if (status === 'scheduled') return 'accent';
+  return 'neutral';
+};
 
 export default function CalendarPage() {
   const navigate = useNavigate();
@@ -34,6 +64,10 @@ export default function CalendarPage() {
   // Modal / Detail state
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Presentation only: month grid vs agenda list, and slide direction for month changes
+  const [view, setView] = useState<'month' | 'list'>(window.innerWidth < 768 ? 'list' : 'month');
+  const [navDir, setNavDir] = useState<1 | -1>(1);
 
   const getAuthHeaders = async () => {
     const { data } = await supabase.auth.getSession();
@@ -197,10 +231,12 @@ export default function CalendarPage() {
   };
 
   const handlePrevMonth = () => {
+    setNavDir(-1);
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
   const handleNextMonth = () => {
+    setNavDir(1);
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
@@ -213,7 +249,7 @@ export default function CalendarPage() {
     if (p.includes('instagram')) return '#ec4899';
     if (p.includes('linkedin')) return '#0077b5';
     if (p.includes('tiktok')) return '#000000';
-    return P;
+    return 'var(--zd-ink-3)';
   };
 
   const getPlatformIcon = (platform: string) => {
@@ -232,266 +268,340 @@ export default function CalendarPage() {
       url: e.media?.[0] || '',
       isScheduled: true,
       event: e,
-      permalink: null
+      permalink: null,
+      likes: undefined,
+      comments: undefined
     })),
     ...visualFeed.slice(0, 6).map((item, idx) => ({
       id: `pub_${idx}`,
       url: item.media_url,
       isScheduled: false,
       event: null,
-      permalink: item.permalink
+      permalink: item.permalink,
+      likes: item.like_count,
+      comments: item.comments_count
     }))
   ];
 
+  // Presentation helpers
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  const monthKey = `${year}-${pad2(month + 1)}`;
+  const monthEvents = events.filter(e => e.start && e.start.startsWith(monthKey));
+  const scheduledCount = monthEvents.filter(e => e.type === 'scheduled' && e.status !== 'failed').length;
+  const publishedCount = monthEvents.filter(e => e.type === 'published').length;
+  const failedCount = monthEvents.filter(e => e.status === 'failed').length;
+  const agendaDays = daysGrid
+    .filter(c => c.isCurrentMonth)
+    .map(c => ({ ...c, items: getEventsForDate(c.dateKey) }))
+    .filter(c => c.items.length > 0);
+
+  const renderChip = (e: any, delayMs: number, compact = false) => {
+    const platform = e.platforms?.[0]?.platform || 'instagram';
+    const failed = e.status === 'failed';
+    return (
+      <button
+        type="button"
+        key={e.id}
+        className={`zca-chip ${failed ? 'is-failed' : ''} ${compact ? '' : 'is-wide'} ${selectedEvent?.id === e.id ? 'is-selected' : ''}`}
+        style={{ animationDelay: `${delayMs}ms` }}
+        onClick={(evt) => {
+          evt.stopPropagation();
+          setSelectedEvent(e);
+        }}
+        title={e.error_message ? `Publish failed: ${e.error_message}` : e.title}
+      >
+        <span className="zca-chip-dot" style={{ background: failed ? 'var(--zd-bad)' : getPlatformColor(platform) }} />
+        <span className="zca-chip-icon">{getPlatformIcon(platform)}</span>
+        {failed && <AlertCircle size={11} className="zca-chip-warn" />}
+        {formatTime(e.start) && <span className="zca-chip-time">{formatTime(e.start)}</span>}
+        <span className="zca-chip-title">{e.title}</span>
+        <span className={`zca-chip-status tone-${e.type === 'published' ? 'good' : failed ? 'bad' : 'accent'}`} />
+      </button>
+    );
+  };
+
   return (
     <V3Layout>
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${B}`, padding: '20px 40px', display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>Content Calendar</h1>
-          <p style={{ fontSize: '0.78rem', color: G, margin: '2px 0 0' }}>Manage and coordinate scheduled updates visually.</p>
-        </div>
-      </div>
+      <PageHeader
+        number="04"
+        label="Calendar"
+        title="Content calendar"
+        subtitle="Plan, review and coordinate every scheduled and published post in one view."
+        actions={
+          <TextRollButton text="Create post" onClick={() => navigate('/composer')} />
+        }
+      />
 
-      {/* Main Grid split with Instagram Feed Preview */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflowY: 'auto' }}>
-        
-        {/* Calendar Grid Area */}
-        <div style={{ flex: 1, padding: isMobile ? 16 : 32, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          
-          {/* Calendar Controller Header */}
-          <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
-              {monthNames[month]} {year}
-            </h2>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button 
-                onClick={handlePrevMonth}
-                style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 6, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button 
-                onClick={handleNextMonth}
-                style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 6, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+      <PageBody wide>
+        <div className="zca-layout">
+          {/* Calendar */}
+          <Card className="zca-cal-card" padding={0}>
+            <div className="zca-toolbar">
+              <div className="zca-month-nav">
+                <button type="button" className="zd-icon-btn" onClick={handlePrevMonth} aria-label="Previous month">
+                  <ChevronLeft />
+                </button>
+                <h2 key={monthKey} className={`zca-month-title ${navDir === 1 ? 'from-right' : 'from-left'}`}>
+                  {monthNames[month]} <span className="zd-muted">{year}</span>
+                </h2>
+                <button type="button" className="zd-icon-btn" onClick={handleNextMonth} aria-label="Next month">
+                  <ChevronRight />
+                </button>
+              </div>
 
-          {/* Day Names Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10, textAlign: 'center' }}>
-            {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(day => (
-              <span key={day} style={{ fontSize: '0.72rem', fontWeight: 700, color: G, letterSpacing: '0.02em' }}>{day}</span>
-            ))}
-          </div>
-
-          {/* Calendar Months Cells Grid */}
-          {loading ? (
-            <div style={{ textAlign: 'center', color: G, padding: 40 }}>Loading calendar...</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10, gridAutoRows: 'minmax(90px, auto)' }}>
-              {daysGrid.map((cell, idx) => {
-                const dayEvents = getEventsForDate(cell.dateKey);
-                return (
-                  <div 
-                    key={idx} 
-                    onClick={(e) => {
-                      if (e.target === e.currentTarget) {
-                        navigate(`/composer?schedule=${cell.dateKey}T12:00`);
-                      }
-                    }}
-                    style={{ 
-                      background: cell.isCurrentMonth ? '#fff' : 'var(--bg-soft)', 
-                      border: `1px solid ${B}`, 
-                      borderRadius: 8, 
-                      padding: 10,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
-                      boxShadow: 'var(--shadow-sm)',
-                      minHeight: 90,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: cell.isCurrentMonth ? 'var(--text)' : G }}>
-                      {cell.dayNum}
-                    </span>
-
-                    {/* Events List for cell */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {dayEvents.map(e => (
-                        <div 
-                          key={e.id}
-                          onClick={(evt) => {
-                            evt.stopPropagation();
-                            setSelectedEvent(e);
-                          }}
-                          style={{ 
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            background: e.status === 'failed' ? '#EF4444' : getPlatformColor(e.platforms?.[0]?.platform || 'instagram'),
-                            color: '#fff',
-                            fontSize: '0.68rem',
-                            fontWeight: 600,
-                            padding: '4px 6px',
-                            borderRadius: 4,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                          title={e.error_message ? `Publish Failed: ${e.error_message}` : e.title}
-                        >
-                          {getPlatformIcon(e.platforms?.[0]?.platform || 'instagram')}
-                          {e.status === 'failed' && <span style={{ marginRight: 2 }}>⚠️</span>}
-                          {e.title}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Right Preview Side Panel: Visual Feed Mockup */}
-        <div style={{ width: isMobile ? '100%' : '340px', background: '#fff', borderLeft: isMobile ? 'none' : `1px solid ${B}`, borderTop: isMobile ? `1px solid ${B}` : 'none', padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${B}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', fontWeight: 700 }}>
-              Visual Feed Preview
-            </div>
-            <p style={{ margin: 0, fontSize: '0.73rem', color: G }}>Visualize how scheduled images and posts arrange on your active channels.</p>
-          </div>
-
-          {mergedFeedItems.length === 0 ? (
-            <div style={{ border: `2px dashed ${B}`, padding: 40, borderRadius: 8, textAlign: 'center', color: G, fontSize: '0.78rem' }}>
-              Your feed will preview here once you schedule or publish a post.
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
-              {mergedFeedItems.map((item, idx) => (
-                <div 
-                  key={idx} 
-                  style={{ 
-                    width: '100%', 
-                    aspectRatio: '1/1', 
-                    background: 'var(--bg-soft)', 
-                    overflow: 'hidden', 
-                    cursor: 'pointer',
-                    position: 'relative',
-                    border: item.isScheduled ? '2px solid #E1306C' : 'none'
-                  }} 
-                  onClick={() => {
-                    if (item.isScheduled) {
-                      setSelectedEvent(item.event);
-                    } else if (item.permalink) {
-                      window.open(item.permalink, '_blank');
-                    }
-                  }}
-                >
-                  {item.url ? (
-                    <img src={item.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: G, fontSize: '0.6rem' }}>Text</div>
-                  )}
-                  {item.isScheduled && (
-                    <span style={{ position: 'absolute', bottom: 2, right: 2, background: '#E1306C', color: '#fff', fontSize: '0.55rem', padding: '1px 3px', borderRadius: 2, fontWeight: 700 }}>
-                      PLAN
-                    </span>
-                  )}
+              <div className="zca-toolbar-right">
+                <div className="zca-legend">
+                  <Pill tone="accent"><span className="zca-legend-dot is-accent" />Scheduled {scheduledCount}</Pill>
+                  <Pill tone="good"><span className="zca-legend-dot is-good" />Published {publishedCount}</Pill>
+                  {failedCount > 0 && <Pill tone="bad"><AlertCircle size={11} />Failed {failedCount}</Pill>}
                 </div>
-              ))}
+                <SegTabs
+                  size="sm"
+                  value={view}
+                  onChange={setView}
+                  tabs={[
+                    { id: 'month', label: 'Month', icon: <LayoutGrid size={13} /> },
+                    { id: 'list', label: 'Agenda', icon: <ListIcon size={13} /> },
+                  ]}
+                />
+              </div>
             </div>
-          )}
+
+            {view === 'month' ? (
+              <div className="zca-month">
+                <div className="zca-weekdays">
+                  {WEEKDAYS.map(day => (
+                    <span key={day}>{day}</span>
+                  ))}
+                </div>
+
+                {loading ? (
+                  <div className="zca-grid is-loading">
+                    {daysGrid.map((_, idx) => (
+                      <div key={idx} className="zca-cell is-skeleton">
+                        <Skeleton height={10} width={18} radius={6} />
+                        {idx % 3 === 0 && <Skeleton height={16} radius={6} />}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div key={monthKey} className={`zca-grid ${isMobile ? 'is-compact' : ''} ${navDir === 1 ? 'from-right' : 'from-left'}`}>
+                    {daysGrid.map((cell, idx) => {
+                      const dayEvents = getEventsForDate(cell.dateKey);
+                      const isToday = cell.dateKey === todayKey;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                              navigate(`/composer?schedule=${cell.dateKey}T12:00`);
+                            }
+                          }}
+                          className={`zca-cell ${cell.isCurrentMonth ? '' : 'is-out'} ${isToday ? 'is-today' : ''} ${dayEvents.length ? 'has-events' : ''}`}
+                          title="Click empty space to schedule a post"
+                        >
+                          <span className="zca-daynum">{cell.dayNum}</span>
+
+                          {/* Events list for cell */}
+                          <div className="zca-cell-events">
+                            {dayEvents.map((e, j) => renderChip(e, Math.min(idx * 10, 300) + j * 50, true))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div key={`list-${monthKey}`} className={`zca-agenda ${navDir === 1 ? 'from-right' : 'from-left'}`}>
+                {loading ? (
+                  <div style={{ padding: 20 }}>
+                    <Skeleton height={56} count={4} radius={14} />
+                  </div>
+                ) : agendaDays.length === 0 ? (
+                  <div style={{ padding: 16 }}>
+                    <EmptyState
+                      icon={<CalendarIcon size={22} />}
+                      title="Nothing planned this month"
+                      body="Schedule a post and it will show up here."
+                      action={<TextRollButton text="Create post" onClick={() => navigate('/composer')} />}
+                    />
+                  </div>
+                ) : (
+                  agendaDays.map((day, i) => {
+                    const d = new Date(year, month, day.dayNum);
+                    const isToday = day.dateKey === todayKey;
+                    return (
+                      <div key={day.dateKey} className={`zca-agenda-row ${isToday ? 'is-today' : ''}`} style={{ animationDelay: `${i * 50}ms` }}>
+                        <div className="zca-agenda-date">
+                          <span className="zca-agenda-wd">{WEEKDAYS[d.getDay()]}</span>
+                          <span className="zca-agenda-num">{day.dayNum}</span>
+                        </div>
+                        <div className="zca-agenda-events">
+                          {day.items.map((e: any, j: number) => renderChip(e, i * 50 + j * 40))}
+                        </div>
+                        <button
+                          type="button"
+                          className="zd-icon-btn zca-agenda-add"
+                          aria-label="Schedule a post on this day"
+                          onClick={() => navigate(`/composer?schedule=${day.dateKey}T12:00`)}
+                        >
+                          <Plus />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </Card>
+
+          {/* Visual feed preview */}
+          <Card className="zca-feed-card">
+            <CardTitle
+              icon={<LayoutGrid />}
+              sub="See how scheduled and published posts line up on your feed."
+            >
+              Visual feed preview
+            </CardTitle>
+
+            {mergedFeedItems.length === 0 ? (
+              <EmptyState
+                icon={<LayoutGrid size={22} />}
+                title="Your feed is empty"
+                body="It will preview here once you schedule or publish a post."
+              />
+            ) : (
+              <>
+                <div className="zca-feed">
+                  {mergedFeedItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`zca-tile ${item.isScheduled ? 'is-planned' : ''}`}
+                      style={{ animationDelay: `${120 + idx * 55}ms` }}
+                      onClick={() => {
+                        if (item.isScheduled) {
+                          setSelectedEvent(item.event);
+                        } else if (item.permalink) {
+                          window.open(item.permalink, '_blank');
+                        }
+                      }}
+                    >
+                      {item.url ? (
+                        <img src={item.url} alt="" loading="lazy" />
+                      ) : (
+                        <div className="zca-tile-text">Text</div>
+                      )}
+                      <div className="zca-tile-overlay">
+                        {item.isScheduled ? (
+                          <span className="zca-tile-stat">{formatTime(item.event?.start) || 'Planned'}</span>
+                        ) : (
+                          <>
+                            {item.likes !== undefined && (
+                              <span className="zca-tile-stat"><Heart size={12} /> {Number(item.likes).toLocaleString()}</span>
+                            )}
+                            {item.comments !== undefined && (
+                              <span className="zca-tile-stat"><MessageCircle size={12} /> {Number(item.comments).toLocaleString()}</span>
+                            )}
+                            {item.likes === undefined && item.comments === undefined && (
+                              <span className="zca-tile-stat"><Eye size={12} /> Open</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {item.isScheduled && <span className="zca-tile-badge">Plan</span>}
+                    </div>
+                  ))}
+                </div>
+                <div className="zca-feed-legend">
+                  <span><i className="zca-legend-dot is-accent" /> Planned</span>
+                  <span><i className="zca-legend-dot is-ink" /> Live on feed</span>
+                </div>
+              </>
+            )}
+          </Card>
         </div>
+      </PageBody>
 
-      </div>
-
-      {/* Modal - Post Details */}
+      {/* Modal: post details */}
       {selectedEvent && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', border: `1px solid ${B}`, borderRadius: 8, padding: 24, width: 440, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                {selectedEvent.status === 'failed' ? 'Failed Publish Details' : selectedEvent.type === 'scheduled' ? 'Scheduled Post Details' : 'Published Post History'}
-              </h3>
-              <span onClick={() => setSelectedEvent(null)} style={{ cursor: 'pointer', color: G, fontSize: '0.9rem' }}>✕</span>
+        <div className="zca-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setSelectedEvent(null); }}>
+          <div className="zca-modal" role="dialog" aria-modal="true">
+            <div className="zca-modal-head">
+              <div>
+                <span className="zd-eyebrow">
+                  {selectedEvent.status === 'failed' ? 'Failed publish' : selectedEvent.type === 'scheduled' ? 'Scheduled post' : 'Published post'}
+                </span>
+                <h3>
+                  {selectedEvent.status === 'failed' ? 'Failed publish details' : selectedEvent.type === 'scheduled' ? 'Scheduled post details' : 'Published post history'}
+                </h3>
+              </div>
+              <button type="button" className="zd-icon-btn" onClick={() => setSelectedEvent(null)} aria-label="Close">
+                <X />
+              </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              
-              {/* Timing Metadata */}
-              <div style={{ display: 'flex', gap: 8, fontSize: '0.75rem', color: G }}>
-                <span>Status: <strong style={{ color: selectedEvent.status === 'failed' ? '#EF4444' : P }}>{selectedEvent.status.toUpperCase()}</strong></span>
-                <span>•</span>
-                <span>Time: {new Date(selectedEvent.start).toLocaleString()}</span>
+            <div className="zca-modal-body">
+              {/* Timing metadata */}
+              <div className="zca-meta">
+                <Pill tone={statusTone(selectedEvent.status)}>
+                  {selectedEvent.status === 'scheduled' && <span className="zca-legend-dot is-accent zca-pulse" />}
+                  {selectedEvent.status.toUpperCase()}
+                </Pill>
+                <span className="zd-muted">{new Date(selectedEvent.start).toLocaleString()}</span>
               </div>
 
               {selectedEvent.error_message && (
-                <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: 12, borderRadius: 6, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="zca-error">
                   <AlertCircle size={14} style={{ flexShrink: 0 }} />
                   <div><strong>Error:</strong> {selectedEvent.error_message}</div>
                 </div>
               )}
 
               {/* Platforms */}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div className="zca-platforms">
                 {selectedEvent.platforms?.map((p: any, i: number) => (
-                  <span key={i} style={{ fontSize: '0.72rem', background: 'var(--bg-soft)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                  <span key={i} className="zca-platform">
+                    {p.platform && <SocialIcon platform={p.platform} size={14} />}
                     {p.platform?.toUpperCase()} {p.account_handle ? `(${p.account_handle})` : ''}
                   </span>
                 ))}
               </div>
 
-              {/* Text Body */}
-              <div style={{ background: 'var(--bg-soft)', padding: 16, borderRadius: 6, fontSize: '0.85rem', lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>
-                {selectedEvent.title}
-              </div>
+              {/* Text body */}
+              <div className="zca-caption">{selectedEvent.title}</div>
 
-              {/* Media Previews */}
+              {/* Media previews */}
               {selectedEvent.media?.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className="zca-media">
                   {selectedEvent.media.map((m: any, i: number) => {
                     const url = typeof m === 'string' ? m : (m.file_url || '');
-                    return (
-                      <img key={i} src={url} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }} />
-                    );
+                    return <img key={i} src={url} alt="" style={{ animationDelay: `${i * 60}ms` }} />;
                   })}
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: 10, justifySelf: 'stretch', justifyContent: 'space-between', borderTop: `1px solid ${B}`, paddingTop: 16, marginTop: 8 }}>
+            <div className="zca-modal-foot">
               {selectedEvent.status === 'published' && selectedEvent.permalink ? (
-                <button 
-                  onClick={() => window.open(selectedEvent.permalink, '_blank')}
-                  style={{ border: `1px solid ${B}`, background: '#fff', color: D, padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                >
-                  <Eye size={12} /> View on Instagram
-                </button>
+                <GhostButton onClick={() => window.open(selectedEvent.permalink, '_blank')}>
+                  <Eye /> View on Instagram
+                </GhostButton>
               ) : selectedEvent.status !== 'publishing' ? (
-                <button 
+                <button
+                  type="button"
+                  className="zca-btn-danger"
                   onClick={() => handleDeletePost(selectedEvent.id)}
                   disabled={deletingId === selectedEvent.id}
-                  style={{ border: 'none', background: 'rgba(239,68,68,0.1)', color: '#EF4444', padding: '8px 16px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                 >
-                  <Trash2 size={12} /> {deletingId === selectedEvent.id ? 'Deleting...' : 'Cancel & Delete'}
+                  <Trash2 size={13} /> {deletingId === selectedEvent.id ? 'Deleting...' : 'Cancel and delete'}
                 </button>
               ) : (
                 <div />
               )}
-              <button 
-                onClick={() => setSelectedEvent(null)}
-                style={{ background: P, color: '#fff', border: 'none', padding: '8px 24px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Close
-              </button>
+              <GhostButton onClick={() => setSelectedEvent(null)}>Close</GhostButton>
             </div>
-
           </div>
         </div>
       )}
