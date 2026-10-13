@@ -16,6 +16,7 @@ import {
   deductCredits,
   isTestUser,
 } from "../supabaseServer.js";
+import { runAgent, AGENT_INSTRUCTIONS, type AgentEvent } from "../agent/runtime.js";
 
 export const agentRouter = express.Router();
 
@@ -297,6 +298,156 @@ async function getV3DataContext(userId: string): Promise<string> {
 
   return context || "No active channel data available yet.";
 }
+
+// ─── Steps are stored inside the saved reply as a hidden marker ───────────
+const STEPS_RE = /\n?<!--zieads-steps:([A-Za-z0-9+/=]+)-->\s*$/;
+const stripSteps = (s: string) => (s || "").replace(STEPS_RE, "");
+
+/** Turn an "[User attached file: ...]" marker into model content (image or text) */
+async function resolveAttachment(message: string): Promise<string | any[]> {
+  const m = message.match(/\[User attached file: (.*?) \(URL: (https?:\/\/[^\)]+)\)\]/);
+  if (!m) return message;
+  const [, fileName, fileUrl] = m;
+  try {
+    const supa = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const allowed = supa && new URL(fileUrl).host === new URL(supa).host;
+    if (!allowed && !/\.blob\.vercel-storage\.com$/.test(new URL(fileUrl).host)) return message;
+    const fileRes = await fetch(fileUrl);
+    if (!fileRes.ok) return message;
+    const type = fileRes.headers.get("content-type") || "";
+    let out: string | any[] = message;
+    if (type.startsWith("image/")) {
+      const b64 = Buffer.from(await fileRes.arrayBuffer()).toString("base64");
+      out = [
+        { type: "text", text: message },
+        { type: "image", source: { type: "base64", media_type: type === "image/jpg" ? "image/jpeg" : type, data: b64 } },
+      ];
+    } else if (type.startsWith("text/") || type === "application/csv" || type === "application/json") {
+      out = `${message}\n\n[Content of attached file ${fileName}]:\n${(await fileRes.text()).slice(0, 15000)}`;
+    }
+    const parts = new URL(fileUrl).pathname.split("/object/public/media/");
+    if (parts.length > 1) await supabaseAdmin.storage.from("media").remove([parts[1]]);
+    return out;
+  } catch (e) {
+    console.error("[Agent] Attachment failed:", e);
+    return message;
+  }
+}
+
+const MODE_TASKS: Record<string, { label: string; task: string }> = {
+  daily: { label: "Daily Diagnosis", task: "Run MODE 1: DAILY DIAGNOSIS on my real account data. Pull metrics, posts, inbox and calendar in parallel first." },
+  fatigue: { label: "Creative Fatigue Analysis", task: "Run MODE 2: CREATIVE FATIGUE ANALYSIS on my recent posts. Compare each post with my averages." },
+  roas: { label: "ROAS Drop Analysis", task: "Run MODE 3: ROAS DROP ROOT CAUSE using my account trends, post performance and website scan." },
+  budget: { label: "Budget Optimization", task: "Run MODE 4: BUDGET OPTIMIZATION using my profile, channel performance and best formats." },
+  competitive: { label: "Competitive Intelligence", task: "Run MODE 5: COMPETITIVE INTELLIGENCE. Load my competitors, then scan their websites in parallel and compare with mine." },
+  health: { label: "Campaign Health Check", task: "Run MODE 6: CAMPAIGN HEALTH SCORECARD using all my connected data." },
+  abtest: { label: "A/B Test Design", task: "Run MODE 7: A/B TEST DESIGN based on what my best and weakest posts tell us." },
+  executive: { label: "Executive Summary", task: "Run MODE 8: EXECUTIVE SUMMARY of my last 30 days across every connected channel." },
+  audience: { label: "Audience Quality Audit", task: "Run MODE 9: AUDIENCE QUALITY AUDIT using reach, engagement and inbox sentiment." },
+  launch: { label: "Launch Readiness Check", task: "Run MODE 10: LAUNCH READINESS CHECK. Scan my website for pixels and offer clarity and check my calendar." },
+};
+
+// ─── POST /api/agent/run ─────────────────────────────────────────────────
+// Tool-using agent. Streams newline-delimited JSON events:
+// meta, status, thought, step_start, step_end, final, done, error
+agentRouter.post("/run", async (req, res) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const { message = "", conversationId, mode, data } = req.body as { message?: string; conversationId?: string; mode?: string; data?: string };
+  const modeInfo = mode ? MODE_TASKS[mode] : undefined;
+  if (!message.trim() && !modeInfo) return res.status(400).json({ error: "message is required" });
+  if (message.length > 20000) return res.status(400).json({ error: "Message is too long" });
+
+  const { limit } = await getUserPlanAndLimit(userId, req);
+  const used = await getAgentMessageCount(userId);
+  if (used >= limit) {
+    return res.status(429).json({ error: "RATE_LIMIT", message: `You have used all ${limit} messages this month. Upgrade your plan to continue.`, used, limit });
+  }
+
+  const userText = modeInfo ? `${modeInfo.task}${data?.trim() ? `\n\nExtra data from me:\n${data.trim().slice(0, 4000)}` : ""}` : message;
+  const savedUserText = modeInfo ? `[Running ${mode} analysis]${data?.trim() ? `\n\n${data.trim().slice(0, 2000)}` : ""}` : message;
+
+  let convId = conversationId;
+  if (convId) {
+    const { data: own } = await supabaseAdmin.from("agent_conversations").select("id").eq("id", convId).eq("user_id", userId).maybeSingle();
+    if (!own) convId = undefined;
+  }
+  if (!convId) {
+    const title = modeInfo ? modeInfo.label : message.slice(0, 60) + (message.length > 60 ? "..." : "");
+    const conv = await createConversation(userId, title);
+    if (!conv) return res.status(500).json({ error: "Failed to create conversation" });
+    convId = conv.id;
+  }
+  await saveMessage({ conversationId: convId!, userId, role: "user", content: savedUserText });
+
+  // Stream setup
+  res.status(200);
+  res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("X-Accel-Buffering", "no");
+  (res as any).flushHeaders?.();
+  let closed = false;
+  const controller = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) {
+      closed = true;
+      controller.abort();
+    }
+  });
+  const send = (obj: any) => {
+    if (closed) return;
+    res.write(JSON.stringify(obj) + "\n");
+  };
+  send({ type: "meta", conversationId: convId, usage: { used, limit } });
+  const heartbeat = setInterval(() => send({ type: "ping" }), 10000);
+
+  try {
+    const [history, profile] = await Promise.all([getConversationMessages(convId!, userId), getProfile(userId)]);
+    const prior = history
+      .slice(0, -1)
+      .slice(-16)
+      .map((m: any) => ({ role: m.role as "user" | "assistant", content: stripSteps(m.content).slice(0, 6000) }))
+      .filter((m) => m.content.trim());
+    // Providers need alternating turns that start with the user
+    while (prior.length && prior[0].role !== "user") prior.shift();
+
+    const userContent = await resolveAttachment(userText);
+    const today = new Date().toISOString().slice(0, 10);
+    const system = `${buildSystemPrompt(profile)}\n${AGENT_INSTRUCTIONS}\n\nToday's date: ${today}.`;
+
+    const { text, steps } = await runAgent({
+      userId,
+      system,
+      history: prior,
+      userContent,
+      emit: (e: AgentEvent) => send(e),
+      signal: controller.signal,
+      budgetMs: Number(process.env.AGENT_BUDGET_MS) || 48000,
+    });
+
+    const marker = steps.length
+      ? `\n<!--zieads-steps:${Buffer.from(JSON.stringify(steps.map((s) => ({ tool: s.tool, label: s.label, ok: s.ok, summary: s.summary, ms: s.ms, round: s.round })))).toString("base64")}-->`
+      : "";
+    await saveMessage({ conversationId: convId!, userId, role: "assistant", content: text + marker });
+    await incrementAgentUsage(userId);
+    await deductCredits(userId, "ai_chat_daily", 1, modeInfo ? `agent_analyze_${mode}` : "agent_run");
+    send({ type: "done", conversationId: convId, usage: { used: used + 1, limit }, steps: steps.length });
+  } catch (err: any) {
+    if (controller.signal.aborted) {
+      console.log("[Agent/run] Client stopped the run");
+    } else {
+      console.error("[Agent/run] Error:", err?.message);
+      const msg = /API_KEY not set/.test(err?.message || "")
+        ? "The AI Agent is not configured yet. Add ANTHROPIC_API_KEY or SUMOPOD_API_KEY to the server environment."
+        : err?.message || "The agent failed. Please try again.";
+      send({ type: "error", message: msg });
+    }
+  } finally {
+    clearInterval(heartbeat);
+    if (!res.writableEnded) res.end();
+  }
+});
 
 // ─── POST /api/agent/message ─────────────────────────────────────────────
 agentRouter.post("/message", async (req, res) => {

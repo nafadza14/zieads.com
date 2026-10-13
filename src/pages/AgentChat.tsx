@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, PlayCircle, Send, Sparkles, ArrowRight, Zap, Link2, Mic, MicOff, Square } from 'lucide-react';
+import { Bot, PlayCircle, Send, Sparkles, ArrowRight, Zap, Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
   UilSearchAlt, UilBedDouble, UilChartDown, UilMoneyBill, UilEye, UilMedicalSquare, 
@@ -21,6 +21,16 @@ const B = '#E5DFCF'; // Vintage construction grid/cream border
 const PL = '#FAF8F3'; // Soft sand inset
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+interface AgentStepUI {
+  id: string;
+  tool: string;
+  label: string;
+  status: 'running' | 'done' | 'error';
+  summary?: string;
+  ms?: number;
+  round: number;
+}
+
 interface Message {
   id?: string;
   role: 'user' | 'assistant';
@@ -28,7 +38,35 @@ interface Message {
   created_at?: string;
   isAnalysis?: boolean;
   analysisMode?: string;
+  /** Agent run details */
+  steps?: AgentStepUI[];
+  thoughts?: string[];
+  working?: boolean;
+  phase?: string;
 }
+
+// Saved replies carry their steps in a hidden trailing marker
+const STEPS_MARKER = /\n?<!--zieads-steps:([A-Za-z0-9+/=]+)-->\s*$/;
+function parseStoredMessage(m: Message): Message {
+  if (m.role !== 'assistant' || !m.content) return m;
+  const hit = m.content.match(STEPS_MARKER);
+  if (!hit) return m;
+  let steps: AgentStepUI[] | undefined;
+  try {
+    const raw = JSON.parse(decodeURIComponent(escape(atob(hit[1]))));
+    steps = raw.map((s: any, i: number) => ({ id: `s${i}`, tool: s.tool, label: s.label, status: s.ok ? 'done' : 'error', summary: s.summary, ms: s.ms, round: s.round || 1 }));
+  } catch {
+    steps = undefined;
+  }
+  return { ...m, content: m.content.replace(STEPS_MARKER, ''), steps };
+}
+
+const AGENT_SUGGESTIONS = [
+  { tag: 'Performance', q: 'How did my accounts perform in the last 30 days, and what should I change?' },
+  { tag: 'Content plan', q: 'Plan my posts for next week based on my best formats and save them as drafts' },
+  { tag: 'Inbox', q: 'Which comments need a reply today? Draft the replies for me' },
+  { tag: 'Competitors', q: 'Compare my website and content with my competitors' },
+];
 
 interface Conversation {
   id: string;
@@ -287,6 +325,117 @@ export default function AgentChat() {
     typewriterIntervalRef.current = interval;
   };
 
+  /** Reveal text into the last (placeholder) assistant message */
+  const typeIntoLast = (text: string, onFinish?: () => void) => {
+    const step = Math.max(4, Math.ceil(text.length / 90));
+    let n = 0;
+    const interval = setInterval(() => {
+      n = Math.min(text.length, n + step);
+      const partial = text.slice(0, n);
+      setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last && last.role === 'assistant') copy[copy.length - 1] = { ...last, content: partial, working: false };
+        return copy;
+      });
+      if (n >= text.length) {
+        clearInterval(interval);
+        typewriterIntervalRef.current = null;
+        setLoading(false);
+        onFinish?.();
+      }
+    }, 16);
+    typewriterIntervalRef.current = interval;
+  };
+
+  const patchLast = (fn: (m: Message) => Message) =>
+    setMessages((prev) => {
+      const copy = [...prev];
+      const last = copy[copy.length - 1];
+      if (last && last.role === 'assistant') copy[copy.length - 1] = fn(last);
+      return copy;
+    });
+
+  /** Run the tool-using agent and stream its steps into the thread */
+  const runAgentStream = async (body: Record<string, any>, onFinish?: () => void) => {
+    setMessages((prev) => [...prev, { role: 'assistant', content: '', steps: [], thoughts: [], working: true, phase: 'Planning' }]);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const headers = await getAuthHeaders();
+    let finalText = '';
+    let failed = '';
+    try {
+      const res = await fetch('/api/agent/run', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...body, conversationId: activeConvId }),
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) {
+        const j = await res.json().catch(() => ({}));
+        failed = res.status === 429 ? `**Monthly limit reached.** ${j.message || ''}` : j.error || j.message || 'Something went wrong. Please try again.';
+      } else {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let nl: number;
+          while ((nl = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, nl).trim();
+            buf = buf.slice(nl + 1);
+            if (!line) continue;
+            let ev: any;
+            try {
+              ev = JSON.parse(line);
+            } catch {
+              continue;
+            }
+            if (ev.type === 'meta') {
+              if (!activeConvId && ev.conversationId) setActiveConvId(ev.conversationId);
+            } else if (ev.type === 'status') {
+              patchLast((m) => ({ ...m, phase: ev.text }));
+            } else if (ev.type === 'thought') {
+              patchLast((m) => ({ ...m, thoughts: [...(m.thoughts || []), ev.text] }));
+            } else if (ev.type === 'step_start') {
+              patchLast((m) => ({
+                ...m,
+                phase: 'Working',
+                steps: [...(m.steps || []), { id: ev.id, tool: ev.tool, label: ev.label, status: 'running', round: ev.round }],
+              }));
+            } else if (ev.type === 'step_end') {
+              patchLast((m) => ({
+                ...m,
+                steps: (m.steps || []).map((st) => (st.id === ev.id ? { ...st, status: ev.ok ? 'done' : 'error', summary: ev.summary, ms: ev.ms } : st)),
+              }));
+            } else if (ev.type === 'final') {
+              finalText = ev.text;
+              patchLast((m) => ({ ...m, phase: 'Writing' }));
+            } else if (ev.type === 'done') {
+              if (ev.usage) setUsage((prev) => ({ ...prev, used: ev.usage.used, limit: ev.usage.limit }));
+            } else if (ev.type === 'error') {
+              failed = ev.message;
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      failed = err.name === 'AbortError' ? '_Stopped._' : 'Network error. Please check your connection.';
+    }
+    abortControllerRef.current = null;
+    refreshConversations();
+    if (finalText) {
+      typeIntoLast(finalText, onFinish);
+    } else {
+      patchLast((m) => ({ ...m, working: false, content: failed || 'No answer was returned. Please try again.' }));
+      setLoading(false);
+      onFinish?.();
+    }
+    inputRef.current?.focus();
+  };
+
   const [attachedFile, setAttachedFile] = useState<{ name: string; url: string; mimeType: string } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
 
@@ -438,7 +587,8 @@ export default function AgentChat() {
       }
     }
 
-    return rawList;
+    // Agent tasks that use the user's own data come first
+    return [...AGENT_SUGGESTIONS.slice(0, 2), ...rawList.filter((r) => !AGENT_SUGGESTIONS.some((a) => a.q === r.q))].slice(0, 2).concat(AGENT_SUGGESTIONS.slice(2));
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -511,7 +661,7 @@ export default function AgentChat() {
     setActiveTab('chat');
     const headers = await getAuthHeaders();
     const res = await fetch(`/api/agent/conversations/${convId}`, { headers });
-    if (res.ok) { const j = await res.json(); setMessages(j.data || []); }
+    if (res.ok) { const j = await res.json(); setMessages((j.data || []).map(parseStoredMessage)); }
   };
 
   const startNew = () => {
@@ -552,48 +702,7 @@ export default function AgentChat() {
     setLoading(true);
     setMessages(prev => [...prev, { role: 'user', content: originalMsg }]);
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    const headers = await getAuthHeaders();
-    try {
-      const res = await fetch('/api/agent/message', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ message: msg, conversationId: activeConvId }),
-        signal: controller.signal
-      });
-      const j = await res.json();
-
-      if (res.status === 429) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `**Rate limit reached.** ${j.message || 'Limit reached.'}` }]);
-        setLoading(false);
-        return;
-      }
-      if (!j.success) {
-        const errorContent = j.error || j.message || 'Something went wrong. Please try again.';
-        setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${errorContent}` }]);
-        setLoading(false);
-        return;
-      }
-      if (!activeConvId && j.conversationId) {
-        setActiveConvId(j.conversationId);
-        await refreshConversations();
-      }
-
-      abortControllerRef.current = null;
-      simulateTypewriter(j.reply || '');
-      if (j.usage) setUsage(prev => ({ ...prev, used: j.usage.used, limit: j.usage.limit }));
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        setMessages(prev => [...prev, { role: 'assistant', content: '_Generation stopped._' }]);
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Network error. Please check your connection.' }]);
-      }
-      setLoading(false);
-    } finally {
-      inputRef.current?.focus();
-    }
+    await runAgentStream({ message: msg });
   };
 
   // ─── Run structured analysis mode ────────────────────────────────────────
@@ -615,39 +724,7 @@ export default function AgentChat() {
       analysisMode: modeId,
     }]);
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    const headers = await getAuthHeaders();
-    try {
-      const res = await fetch('/api/agent/analyze', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ mode: modeId, data: analysisContext, conversationId: activeConvId }),
-        signal: controller.signal
-      });
-      const j = await res.json();
-
-      if (!activeConvId && j.conversationId) {
-        setActiveConvId(j.conversationId);
-        await refreshConversations();
-      }
-
-      abortControllerRef.current = null;
-
-      simulateTypewriter(j.result || 'Analysis complete.', () => {
-        setRunningMode(null);
-      });
-      if (j.usage) setUsage(prev => ({ ...prev, used: j.usage.used, limit: j.usage.limit }));
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        setMessages(prev => [...prev, { role: 'assistant', content: '_Analysis stopped._' }]);
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Analysis failed. Please try again.' }]);
-      }
-      setLoading(false);
-      setRunningMode(null);
-    }
+    await runAgentStream({ mode: modeId, data: analysisContext }, () => setRunningMode(null));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -777,7 +854,7 @@ export default function AgentChat() {
                 <div className="za-title">ZieAds AI Agent</div>
                 <div className="za-status">
                   <span className={`za-live ${loading ? 'is-busy' : ''}`} />
-                  {loading ? (runningMode ? 'Running analysis...' : 'Thinking...') : 'Online. Knows your brand context'}
+                  {loading ? (runningMode ? 'Running analysis on your data...' : 'Working on it...') : 'Online. Reads your connected accounts'}
                 </div>
               </div>
             </div>
@@ -854,7 +931,7 @@ export default function AgentChat() {
                       </div>
                       <WordReveal key={randomGreeting} text={randomGreeting} className="za-greeting" />
                       <p className="za-sub za-fade-in" style={{ animationDelay: '350ms' }}>
-                        Type your question below or pick a suggestion to get insights tailored to your brand.
+                        Ask a question or give it a task. The agent pulls your connected account data, runs several checks at once and can save drafts to your calendar.
                       </p>
 
                       <div className="za-suggest-grid">
@@ -924,7 +1001,7 @@ export default function AgentChat() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={isListening ? 'Listening... speak now' : 'Ask anything: ad strategy, hooks, budget split, target audience...'}
+                        placeholder={isListening ? 'Listening... speak now' : 'Ask or give a task: review my last 30 days, plan next week, reply to comments...'}
                         rows={1}
                         onInput={(e) => {
                           const el = e.currentTarget;
@@ -1092,15 +1169,98 @@ function MessageBubble({ message, streaming = false }: { message: Message; strea
     <div className={`za-msg ${isUser ? 'za-msg-user' : 'za-msg-agent'} ${isAnalysisResult ? 'is-wide' : ''} ${streaming ? 'is-streaming' : ''}`}>
       {!isUser && <AgentOrb size={30} />}
       <div className="za-bubble-wrap">
-        <div className="za-bubble">
-          <MarkdownContent content={stripEmojis(message.content)} isUser={isUser} />
-        </div>
-        {!isUser && message.content && !streaming && (
+        {!isUser && (message.working || (message.steps && message.steps.length > 0)) && <AgentWorkPanel message={message} />}
+        {(isUser || message.content) && (
+          <div className="za-bubble">
+            <MarkdownContent content={stripEmojis(message.content)} isUser={isUser} />
+          </div>
+        )}
+        {!isUser && message.content && !streaming && !message.working && (
           <button className="za-copy" onClick={copy}>
             {copied ? 'Copied' : 'Copy'}
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Agent activity panel: live parallel steps ───────────────────────────────
+const TOOL_ICONS: Record<string, React.ReactNode> = {
+  list_connected_accounts: <Link2 size={14} />,
+  get_account_metrics: <TrendingUp size={14} />,
+  get_post_performance: <BarChart3 size={14} />,
+  get_live_instagram: <Radio size={14} />,
+  get_inbox_summary: <MessageCircle size={14} />,
+  get_content_calendar: <CalendarDays size={14} />,
+  get_competitors: <Crosshair size={14} />,
+  get_latest_briefing: <Sunrise size={14} />,
+  get_audit_and_profile: <FileText size={14} />,
+  scan_website: <Globe size={14} />,
+  create_draft_post: <PenLine size={14} />,
+};
+
+function AgentWorkPanel({ message }: { message: Message }) {
+  const steps = message.steps || [];
+  const running = steps.filter((s) => s.status === 'running').length;
+  const done = steps.filter((s) => s.status !== 'running').length;
+  const live = !!message.working;
+  const [open, setOpen] = useState(live);
+  useEffect(() => {
+    if (live) setOpen(true);
+    else if (message.content) setOpen(false);
+  }, [live, !!message.content]);
+  const totalMs = steps.reduce((m, s) => Math.max(m, s.ms || 0), 0);
+  const rounds = new Set(steps.map((s) => s.round)).size;
+
+  const title = live
+    ? running > 1
+      ? `Working on ${running} tasks in parallel`
+      : running === 1
+        ? steps.find((s) => s.status === 'running')?.label || 'Working'
+        : steps.length
+          ? message.phase === 'Writing' ? 'Writing your answer' : 'Reviewing results'
+          : 'Planning the work'
+    : `Used ${steps.length} ${steps.length === 1 ? 'data source' : 'data sources'}${rounds > 1 ? ` in ${rounds} rounds` : ''}`;
+
+  return (
+    <div className={`za-work ${live ? 'is-live' : ''}`}>
+      <button type="button" className="za-work-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="za-work-ico">{live ? <span className="za-work-spin" /> : <Check size={13} />}</span>
+        <span className="za-work-title">{title}</span>
+        {steps.length > 0 && (
+          <span className="za-work-count za-mono">
+            {done}/{steps.length}
+            {!live && totalMs ? ` · ${(totalMs / 1000).toFixed(1)}s` : ''}
+          </span>
+        )}
+        <ChevronDown size={14} className={`za-work-chev ${open ? 'is-open' : ''}`} />
+      </button>
+      {open && (
+        <div className="za-work-body">
+          {(message.thoughts || []).slice(-2).map((t, i) => (
+            <p key={i} className="za-work-thought">{stripEmojis(t)}</p>
+          ))}
+          {steps.length === 0 && live && (
+            <div className="za-work-row is-running">
+              <span className="za-work-row-ico"><Sparkles size={14} /></span>
+              <span className="za-work-row-text"><strong className="za-shimmer">Reading your request and choosing the data to pull</strong></span>
+            </div>
+          )}
+          {steps.map((st, i) => (
+            <div key={st.id} className={`za-work-row is-${st.status}`} style={{ animationDelay: `${i * 50}ms` }}>
+              <span className="za-work-row-ico">{TOOL_ICONS[st.tool] || <Zap size={14} />}</span>
+              <span className="za-work-row-text">
+                <strong className={st.status === 'running' ? 'za-shimmer' : ''}>{st.label}</strong>
+                {st.summary && <small>{st.summary}</small>}
+              </span>
+              <span className="za-work-row-state">
+                {st.status === 'running' ? <span className="za-work-spin is-sm" /> : st.status === 'done' ? <Check size={13} /> : <X size={13} />}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
