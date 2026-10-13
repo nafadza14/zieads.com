@@ -1,11 +1,56 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ShieldCheck } from 'lucide-react';
+import { Check, Loader2, Search, ShieldCheck } from 'lucide-react';
+import '../../audit-flow.css';
 import { reportTabs } from '../data';
 import { AnimatedHeading, CountUp, Reveal, Section, TextRollButton } from '../ui';
 import { AuditScanVisual, AuditFindingsVisual } from '../visuals';
 import { Collage } from '../collage';
 import { PHOTOS } from '../images';
+
+const SCAN_STEPS = [
+  'Opening your website',
+  'Reading your offer and headline',
+  'Checking tracking pixels',
+  'Reviewing landing page speed and trust',
+  'Scoring your ads readiness',
+];
+
+/** Live checklist shown while the quick scan runs */
+function ScanSteps({ url }: { url: string }) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setStep((s) => Math.min(s + 1, SCAN_STEPS.length - 1)), 1600);
+    return () => window.clearInterval(t);
+  }, []);
+  const pct = Math.round(((step + 1) / SCAN_STEPS.length) * 92);
+  return (
+    <div className="zf-scan" role="status" aria-live="polite">
+      <div className="zf-scan-head">
+        <span className="zf-orb is-active">
+          <span className="zf-orb-core">
+            <Search size={13} />
+          </span>
+        </span>
+        <span>
+          <strong>Scanning {url.replace(/^https?:\/\//, '')}</strong>
+          <small>{pct}% done</small>
+        </span>
+      </div>
+      <div className="zf-bar">
+        <div className="zf-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <ul>
+        {SCAN_STEPS.map((label, i) => (
+          <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}>
+            <span className="zf-scan-dot">{i < step ? <Check size={11} /> : i === step ? <Loader2 size={11} className="zf-spin" /> : null}</span>
+            {label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -90,6 +135,7 @@ export default function FreeAuditSection({ onScanComplete }: Props) {
                 disabled={loading || !url.trim()}
               />
             </form>
+            {loading && <ScanSteps url={url} />}
             {error && <p className="zx-form-error">{error}</p>}
             <p className="zx-form-note">
               <ShieldCheck size={14} /> No signup. No credit card. No ad account access.

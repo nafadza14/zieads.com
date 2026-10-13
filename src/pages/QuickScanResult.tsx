@@ -1,60 +1,86 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Globe, Lightbulb, Lock, Mail, Sparkles, XCircle } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
+import { TextRollButton } from './landing/ui';
+import './audit-flow.css';
 
 interface Props {
   scanData: any;
   onStartFullAudit: (ctx: any) => void;
 }
 
-// SVG signal icons
-const IconPass = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#00c9a7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-    <circle cx="12" cy="12" r="10" /><path d="M9 12l2 2 4-4" />
-  </svg>
-);
-const IconWarn = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
-const IconFail = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#e8457a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-    <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
-  </svg>
-);
-const IconTip = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#00c9a7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
-    <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-  </svg>
-);
+const getTone = (s: number) => (s >= 80 ? 'good' : s >= 65 ? 'ok' : s >= 50 ? 'warn' : 'bad');
+const TONE_COLOR: Record<string, string> = { good: '#16a34a', ok: '#f26522', warn: '#d97706', bad: '#dc2626' };
+
+const getGrade = (s: number) => {
+  if (s >= 80) return 'A';
+  if (s >= 65) return 'B';
+  if (s >= 50) return 'C';
+  if (s >= 35) return 'D';
+  return 'F';
+};
+
+const signalTone = (score: number) => (score >= 8 ? 'good' : score >= 5 ? 'warn' : 'bad');
+const SignalIcon = ({ tone }: { tone: string }) =>
+  tone === 'good' ? <CheckCircle2 size={18} /> : tone === 'warn' ? <AlertTriangle size={18} /> : <XCircle size={18} />;
+
+/** Animated score ring */
+function ScoreRing({ score }: { score: number }) {
+  const [drawn, setDrawn] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now() + 150;
+    const tick = (now: number) => {
+      const t = Math.max(0, Math.min(1, (now - start) / 1400));
+      setDrawn(score * (1 - Math.pow(1 - t, 3)));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+  const r = 70;
+  const c = 2 * Math.PI * r;
+  const color = TONE_COLOR[getTone(score)];
+  return (
+    <div className="zf-ring">
+      <svg viewBox="0 0 160 160" width="168" height="168" aria-hidden="true">
+        <circle cx="80" cy="80" r={r} fill="none" stroke="#f1ece8" strokeWidth="10" />
+        <circle
+          cx="80"
+          cy="80"
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c - (c * drawn) / 100}
+          transform="rotate(-90 80 80)"
+        />
+      </svg>
+      <div className="zf-ring-label">
+        <strong>{Math.round(drawn)}</strong>
+        <span>out of 100</span>
+      </div>
+    </div>
+  );
+}
 
 export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
   const navigate = useNavigate();
   const [email, setEmail] = React.useState('');
 
-  if (!scanData) {
-    navigate('/');
-    return null;
-  }
+  useEffect(() => {
+    if (!scanData) navigate('/');
+  }, [scanData, navigate]);
 
-  const { url, businessName, businessType, score, findings, signals } = scanData;
+  if (!scanData) return null;
 
-  const getScoreColor = (s: number) => {
-    if (s >= 80) return '#00c9a7';
-    if (s >= 65) return '#5c8aff';
-    if (s >= 50) return '#f59e0b';
-    if (s >= 35) return '#e8457a';
-    return '#e03131';
-  };
-
-  const getGrade = (s: number) => {
-    if (s >= 80) return 'A';
-    if (s >= 65) return 'B';
-    if (s >= 50) return 'C';
-    if (s >= 35) return 'D';
-    return 'F';
-  };
+  const { url, businessName, businessType, score, findings = [], signals = {} } = scanData;
+  const tone = getTone(score);
+  const signalList = Object.entries(signals) as [string, any][];
+  const hidden = Math.max(0, findings.length - 3) || 5;
 
   const handleRunFullAudit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,105 +88,136 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
     navigate('/sign-up', { state: { email, from: '/onboarding' } });
   };
 
+  const headline =
+    score >= 65 ? 'Your ads setup is in good shape.' : score >= 50 ? 'Your ads setup has a few gaps.' : 'Your ads setup has gaps worth fixing first.';
+
   return (
-    <div className="scan-result-page">
-      <nav className="navbar">
-        <div className="nav-inner">
-          <div className="nav-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <ZieAdsLogo size={36} />
-            <span className="brand-name">zieads</span>
-          </div>
-        </div>
-      </nav>
+    <div className="zf-page">
+      <div className="zf-bg" aria-hidden="true">
+        <span />
+        <span />
+      </div>
 
-      <div className="scan-result-container">
-        {/* Score Header */}
-        <div className="score-hero">
-          <div className="score-circle" style={{ borderColor: getScoreColor(score) }}>
-            <span className="score-value" style={{ color: getScoreColor(score) }}>{score}</span>
-            <span className="score-max">/100</span>
-          </div>
-          <div className="score-grade" style={{ backgroundColor: getScoreColor(score) }}>
-            Grade {getGrade(score)}
-          </div>
-          <h1 className="score-headline">
-            {score >= 65 ? 'Your ads setup is looking good' :
-             score >= 50 ? 'Your ads setup has some gaps' :
-             'Your ads setup has significant gaps'}
-          </h1>
-          <p className="score-url">{businessName || url}</p>
-          <span className="score-type-badge">{businessType}</span>
-        </div>
+      <header className="zf-top">
+        <button className="zf-brand" onClick={() => navigate('/')} aria-label="ZieAds home">
+          <ZieAdsLogo size={28} />
+          <span>zieads</span>
+        </button>
+        <button className="zf-back" onClick={() => navigate('/')}>
+          <ArrowLeft size={15} /> Scan another site
+        </button>
+      </header>
 
-        {/* Signals Grid */}
-        <div className="signals-grid">
-          {Object.entries(signals).map(([name, signal]: [string, any]) => (
-            <div key={name} className={`signal-card ${signal.score >= 8 ? 'signal-pass' : signal.score >= 5 ? 'signal-warn' : 'signal-fail'}`}>
-              <div className="signal-indicator">
-                {signal.score >= 8 ? <IconPass /> : signal.score >= 5 ? <IconWarn /> : <IconFail />}
-              </div>
-              <div className="signal-info">
-                <h4>{name}</h4>
-                <p>{signal.status}</p>
-              </div>
+      <main className="zf-wrap">
+        {/* Score hero */}
+        <section className="zf-card zf-hero zf-rise">
+          <ScoreRing score={score} />
+          <div className="zf-hero-copy">
+            <div className="zf-badge-row">
+              <span className="zf-badge-num">01</span>
+              <span className="zf-badge-label">Quick scan result</span>
             </div>
-          ))}
-        </div>
-
-        {/* Findings */}
-        <div className="scan-findings">
-          <h2>Critical Findings</h2>
-          {findings.slice(0, 3).map((f: any, i: number) => (
-            <div key={i} className={`finding-card finding-${f.severity}`}>
-              <div className="finding-header">
-                <div className="finding-title-group">
-                  <span className="finding-badge">{f.severity.toUpperCase()}</span>
-                  <div className="finding-content">
-                    <h4>{f.title}</h4>
-                  </div>
-                </div>
-              </div>
-              <p className="finding-impact">{f.impact}</p>
-              <div className="finding-rec">
-                <IconTip />
-                <span>{f.recommendation}</span>
-              </div>
+            <h1>{headline}</h1>
+            <div className="zf-hero-meta">
+              <span className={`zf-pill is-${tone}`}>Grade {getGrade(score)}</span>
+              <span className="zf-pill">
+                <Globe size={13} /> {businessName || url}
+              </span>
+              {businessType && <span className="zf-pill">{businessType}</span>}
             </div>
-          ))}
-        </div>
-
-        {/* Blurred Teaser */}
-        <div className="blurred-teaser">
-          <div className="blurred-content">
-            <div className="blur-finding"></div>
-            <div className="blur-finding"></div>
-            <div className="blur-finding"></div>
-          </div>
-          <div className="blur-overlay">
-            <h3>5 more critical findings found. Unlock to see</h3>
-            <p>Enter your email to save your results and run your first full audit free.</p>
-            <form onSubmit={handleRunFullAudit} className="email-capture-form">
-              <input 
-                type="email" 
-                placeholder="you@agency.com" 
-                required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="email-input"
-              />
-              <button type="submit" className="unlock-cta">
-                Unlock Full Strategy
-                <span className="btn-arrow-circle">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                </span>
-              </button>
-            </form>
-            <p style={{ marginTop: 16, fontSize: '0.85rem', color: '#64748b' }}>
-              Want to scale operations? <a href="/pricing" style={{ color: '#7B2FBE', fontWeight: 600, textDecoration: 'none' }}>View Paid Plans</a>
+            <p>
+              We checked {signalList.length || 'the key'} ads readiness signals on your site. Below are the ones to fix first, ranked by how much they
+              cost you in wasted ad spend.
             </p>
           </div>
-        </div>
-      </div>
+        </section>
+
+        {/* Signals */}
+        {signalList.length > 0 && (
+          <section className="zf-block">
+            <div className="zf-badge-row">
+              <span className="zf-badge-num">02</span>
+              <span className="zf-badge-label">Readiness signals</span>
+            </div>
+            <div className="zf-signals">
+              {signalList.map(([name, signal], i) => {
+                const t = signalTone(signal.score);
+                return (
+                  <div key={name} className={`zf-card zf-signal is-${t} zf-rise`} style={{ animationDelay: `${0.1 + i * 0.06}s` }}>
+                    <span className="zf-signal-ico">
+                      <SignalIcon tone={t} />
+                    </span>
+                    <div>
+                      <h4>{name}</h4>
+                      <p>{signal.status}</p>
+                    </div>
+                    <span className="zf-signal-score">{signal.score}/10</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Findings */}
+        <section className="zf-block">
+          <div className="zf-badge-row">
+            <span className="zf-badge-num">03</span>
+            <span className="zf-badge-label">Critical findings</span>
+          </div>
+          <div className="zf-findings">
+            {findings.slice(0, 3).map((f: any, i: number) => (
+              <article key={i} className="zf-card zf-finding zf-rise" style={{ animationDelay: `${0.15 + i * 0.08}s` }}>
+                <div className="zf-finding-head">
+                  <span className={`zf-sev is-${String(f.severity).toLowerCase()}`}>{f.severity}</span>
+                  <h4>{f.title}</h4>
+                </div>
+                <p className="zf-finding-impact">{f.impact}</p>
+                <div className="zf-fix">
+                  <Lightbulb size={16} />
+                  <span>
+                    <strong>How to fix it</strong>
+                    {f.recommendation}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* Locked teaser */}
+        <section className="zf-card zf-unlock zf-rise">
+          <div className="zf-unlock-ghosts" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="zf-ghost">
+                <i />
+                <b />
+                <b />
+              </div>
+            ))}
+          </div>
+          <div className="zf-unlock-body">
+            <span className="zf-lock">
+              <Lock size={18} />
+            </span>
+            <h3>{hidden} more findings are waiting in your full audit.</h3>
+            <p>Save these results and run your first full AI audit free. Five specialist agents check creative, audience, competitors, budget and funnel.</p>
+            <form onSubmit={handleRunFullAudit} className="zf-email">
+              <label className="zf-email-field">
+                <Mail size={16} />
+                <input type="email" placeholder="you@company.com" required value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+              </label>
+              <TextRollButton type="submit" text="Unlock full audit" />
+            </form>
+            <p className="zf-unlock-note">
+              <Sparkles size={13} /> Free plan, no credit card. Need more?{' '}
+              <a href="/#pricing" onClick={(e) => { e.preventDefault(); navigate('/#pricing'); }}>
+                See paid plans
+              </a>
+            </p>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
