@@ -13,6 +13,7 @@ import FeatureGateModal from '../components/FeatureGateModal';
 import V3Layout from '../components/v3/V3Layout';
 import { TextRollButton } from './landing/ui';
 import './agent-chat.css';
+import ZieAvatar from '../components/ZieAvatar';
 import ArtifactDeck, { type AgentArtifact } from './agent/ArtifactCards';
 
 const P = '#F26522'; // Orange accent (matches landing page)
@@ -946,7 +947,7 @@ export default function AgentChat() {
               </button>
               <AgentOrb size={38} active={loading} />
               <div>
-                <div className="za-title">ZieAds AI Agent</div>
+                <div className="za-title">Zie AI Agent</div>
                 <div className="za-status">
                   <span className={`za-live ${loading ? 'is-busy' : ''}`} />
                   {loading ? (runningMode ? 'Running analysis on your data...' : 'Working on it...') : 'Online. Reads your connected accounts'}
@@ -1022,7 +1023,7 @@ export default function AgentChat() {
                   <div className="za-empty">
                     <div className="za-empty-inner">
                       <div className="za-eyebrow-pill za-fade-in">
-                        <Sparkles size={13} /> Your AI marketing agent
+                        <ZieAvatar size={22} ring={false} /> <strong className="za-zie-name">Zie</strong> Your AI marketing agent
                       </div>
                       <WordReveal key={randomGreeting} text={randomGreeting} className="za-greeting" />
                       <p className="za-sub za-fade-in" style={{ animationDelay: '350ms' }}>
@@ -1076,7 +1077,7 @@ export default function AgentChat() {
                         {usage.used}/{usage.limit} messages
                       </span>
                       <span className="za-powered">
-                        <Sparkles size={12} /> Powered by AI Agent
+                        <ZieAvatar size={16} ring={false} /> Powered by Zie AI Agent
                       </span>
                     </div>
 
@@ -1165,14 +1166,9 @@ export default function AgentChat() {
 
 // ─── Animated agent avatar ────────────────────────────────────────────────────
 function AgentOrb({ size = 32, active = false }: { size?: number; active?: boolean }) {
-  return (
-    <span className={`za-orb ${active ? 'is-active' : ''}`} style={{ width: size, height: size }}>
-      <span className="za-orb-core">
-        <Bot size={Math.round(size * 0.45)} />
-      </span>
-    </span>
-  );
+  return <ZieAvatar size={size} active={active} />;
 }
+
 
 // ─── Word-by-word reveal heading (same motion as the landing page) ────────────
 function WordReveal({ text, className = '' }: { text: string; className?: string }) {

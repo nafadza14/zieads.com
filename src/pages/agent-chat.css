@@ -913,7 +913,7 @@
   .za-suggest-grid { grid-template-columns: 1fr; }
   .za-bubble-wrap,
   .za-msg-user .za-bubble-wrap { max-width: 88%; }
-  .za-msg-agent > .za-orb { display: none; }
+  .za-msg-agent > .za-orb, .za-msg-agent > .zie-avatar { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1149,3 +1149,9 @@
   .za-deck-note { display: none; }
   .za-art-btn.is-ghost { padding: 0 8px; }
 }
+
+/* Zie, the agent character */
+.za-msg-agent > .zie-avatar { margin-top: 2px; }
+.za-eyebrow-pill .zie-avatar { margin: -4px 0 -4px -6px; }
+.za-zie-name { font-weight: 700; color: var(--za-accent); margin-right: 2px; }
+.za-powered .zie-avatar { margin-right: 2px; }

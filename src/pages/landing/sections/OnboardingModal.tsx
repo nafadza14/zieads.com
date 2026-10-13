@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Link2, Sparkles, UserPlus, X } from 'lucide-react';
-import ZieAdsLogo from '../../../components/ZieAdsLogo';
+import ZieAvatar from '../../../components/ZieAvatar';
 import { TextRollButton } from '../ui';
 import SocialIcon from '../../../components/v3/SocialIcon';
 import '../../audit-flow.css';
@@ -38,13 +38,9 @@ export default function OnboardingModal({ pendingPrompt, onConfirm, onClose }: P
 
         <div className="zf-modal-head">
           <span className="zf-agent">
-            <span className="zf-orb is-active">
-              <span className="zf-orb-core">
-                <ZieAdsLogo size={18} />
-              </span>
-            </span>
+            <ZieAvatar size={40} active />
             <span>
-              <strong>ZieAds AI Agent</strong>
+              <strong>Zie, your AI Agent</strong>
               <small>
                 <i className="zf-live" /> Ready for your request
               </small>
