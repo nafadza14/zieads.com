@@ -4,6 +4,8 @@ import { Search, ShieldCheck } from 'lucide-react';
 import { reportTabs } from '../data';
 import { AnimatedHeading, CountUp, Reveal, Section, TextRollButton } from '../ui';
 import { AuditScanVisual, AuditFindingsVisual } from '../visuals';
+import { Collage } from '../collage';
+import { PHOTOS } from '../images';
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -99,7 +101,13 @@ export default function FreeAuditSection({ onScanComplete }: Props) {
           </div>
         </div>
 
-        <AuditScanVisual />
+        <Collage
+          photo={PHOTOS.audit}
+          photoAlt="Marketer reviewing website analytics on a laptop"
+          layout="right"
+          ratio="4 / 5"
+          front={<AuditScanVisual />}
+        />
       </div>
 
       <Reveal className="zx-report-card" delay={100}>

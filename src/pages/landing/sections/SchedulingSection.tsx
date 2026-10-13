@@ -2,6 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { AnimatedHeading, Reveal, Section, TextRollButton } from '../ui';
 import { ComposerVisual } from '../visuals';
+import { CalendarClock } from 'lucide-react';
+import SocialIcon from '../../../components/v3/SocialIcon';
+import { Chip, Collage, Shot } from '../collage';
+import { PHOTOS, SHOTS } from '../images';
 
 
 export default function SchedulingSection() {
@@ -35,7 +39,34 @@ export default function SchedulingSection() {
           </Reveal>
         </div>
 
-        <ComposerVisual />
+        <Collage
+          photo={PHOTOS.composer}
+          photoAlt="Social media apps on a smartphone"
+          layout="right"
+          ratio="5 / 4"
+          shot={<Shot src={SHOTS.composer} alt="ZieAds Composer with live post preview" url="app.zieads.com/composer" focus={[62, 42]} zoom={1.45} ratio="16 / 10" />}
+          front={
+            <div className="zc-chip-stack">
+              <Chip>
+                <span className="zc-icons">
+                  <SocialIcon platform="instagram" size={22} />
+                  <SocialIcon platform="tiktok" size={22} />
+                  <SocialIcon platform="linkedin" size={22} />
+                  <SocialIcon platform="facebook" size={22} />
+                </span>
+              </Chip>
+              <Chip>
+                <span className="zc-chip-ico">
+                  <CalendarClock size={15} />
+                </span>
+                <span>
+                  <small>Best time for your audience</small>
+                  <strong>Tue, 5:45 PM</strong>
+                </span>
+              </Chip>
+            </div>
+          }
+        />
       </div>
     </Section>
   );

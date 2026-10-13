@@ -1,6 +1,8 @@
 import { MessageCircle, Radar } from 'lucide-react';
 import { AnimatedHeading, Reveal, Section } from '../ui';
 import { InboxVisual, RadarVisual } from '../visuals';
+import { Collage, Shot } from '../collage';
+import { PHOTOS, SHOTS } from '../images';
 
 const inboxItems = [
   { who: '@maya.studio', text: 'Do you ship to Jakarta?', tag: 'Buying signal', tone: 'hot' },
@@ -15,7 +17,14 @@ export default function InboxWatchSection() {
 
       <div className="zx-grid-2 zx-grid-offset">
         <Reveal className="zx-project">
-          <InboxVisual />
+          <Collage
+            photo={PHOTOS.inbox}
+            photoAlt="Replying to customer comments on a phone"
+            layout="right"
+            ratio="4 / 3"
+            shot={<Shot src={SHOTS.inbox} alt="ZieAds unified inbox" url="app.zieads.com/inbox" focus={[40, 42]} zoom={1.5} ratio="16 / 10" />}
+            front={<InboxVisual />}
+          />
           <div className="zx-project-meta">
             <div className="zx-feature-title">
               <span className="zx-icon-dot">
@@ -31,7 +40,14 @@ export default function InboxWatchSection() {
         </Reveal>
 
         <Reveal className="zx-project" delay={160}>
-          <RadarVisual />
+          <Collage
+            photo={PHOTOS.hunt}
+            photoAlt="Marketing team reviewing competitor strategy"
+            layout="left"
+            ratio="4 / 3"
+            shot={<Shot src={SHOTS.hunt} alt="ZieAds Competitor Hunt" url="app.zieads.com/hunt" focus={[46, 48]} zoom={1.5} ratio="16 / 10" />}
+            front={<RadarVisual />}
+          />
           <div className="zx-project-meta">
             <div className="zx-feature-title">
               <span className="zx-icon-dot">

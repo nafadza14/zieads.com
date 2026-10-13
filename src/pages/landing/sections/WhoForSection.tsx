@@ -2,6 +2,8 @@ import { Check } from 'lucide-react';
 import { personas } from '../data';
 import { AnimatedHeading, Reveal, Section } from '../ui';
 import { PersonaVisual } from '../visuals';
+import { Collage } from '../collage';
+import { PHOTOS } from '../images';
 
 export default function WhoForSection() {
   return (
@@ -11,7 +13,7 @@ export default function WhoForSection() {
       <div className="zx-grid-3">
         {personas.map((p, i) => (
           <Reveal key={p.title} delay={i * 110} className="zx-persona-card">
-            <PersonaVisual kind={p.visual} />
+            <Collage photo={PHOTOS[p.visual]} photoAlt={p.title} layout="left" ratio="4 / 3" className="zc-persona" front={<PersonaVisual kind={p.visual} />} />
             <div className="zx-persona-body">
               <h3>{p.headline}</h3>
               <p>{p.body}</p>

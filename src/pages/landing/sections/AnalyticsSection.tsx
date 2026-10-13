@@ -1,6 +1,8 @@
 import { analyticsDimensions } from '../data';
 import { AnimatedHeading, CountUp, GrowBar, Reveal, Section } from '../ui';
 import { ChartVisual, ScoreVisual } from '../visuals';
+import { Collage, Shot } from '../collage';
+import { PHOTOS, SHOTS } from '../images';
 
 export default function AnalyticsSection() {
   return (
@@ -18,7 +20,14 @@ export default function AnalyticsSection() {
 
       <div className="zx-grid-2">
         <Reveal className="zx-project">
-          <ChartVisual />
+          <Collage
+            photo={PHOTOS.analytics}
+            photoAlt="Analytics dashboard on a laptop screen"
+            layout="right"
+            ratio="4 / 3"
+            shot={<Shot src={SHOTS.analytics} alt="ZieAds Analytics dashboard" url="app.zieads.com/analytics" focus={[52, 40]} zoom={1.3} ratio="16 / 10" />}
+            front={<ChartVisual />}
+          />
           <div className="zx-project-meta">
             <h3>Organic and paid performance in one dashboard</h3>
             <p>Instagram, TikTok, LinkedIn and Facebook, read together with your Meta, Google and TikTok Ads data.</p>

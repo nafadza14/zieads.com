@@ -50,6 +50,14 @@ const TERMS = {
   draft: 'pencil',
   approve: 'approve',
   publish: 'paper plane',
+  // Social platform icons. These replace the official brand marks in SocialIcon when present.
+  // Delete these lines if you prefer the official logos.
+  'social-instagram': 'instagram',
+  'social-tiktok': 'tiktok',
+  'social-linkedin': 'linkedin',
+  'social-facebook': 'facebook',
+  'social-meta': 'meta logo',
+  'social-googleads': 'google ads',
 };
 
 const enc = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());

@@ -2,6 +2,8 @@ import { ShieldCheck } from 'lucide-react';
 import { comparisonRows } from '../data';
 import { AnimatedHeading, Reveal, Section } from '../ui';
 import { ApprovalVisual } from '../visuals';
+import { Collage } from '../collage';
+import { PHOTOS } from '../images';
 
 export default function ComparisonSection() {
   return (
@@ -45,7 +47,13 @@ export default function ComparisonSection() {
       </Reveal>
 
       <div className="zx-split zx-split-media-left zx-split-tight">
-        <ApprovalVisual />
+        <Collage
+          photo={PHOTOS.approval}
+          photoAlt="Marketer approving a recommendation on her laptop"
+          layout="left"
+          ratio="16 / 11"
+          front={<ApprovalVisual />}
+        />
         <Reveal className="zx-note-card" delay={140}>
           <span className="zx-icon-dot zx-icon-dot-lg">
             <ShieldCheck size={20} />

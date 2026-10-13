@@ -1,6 +1,7 @@
 import { testimonials } from '../data';
 import { AnimatedHeading, Reveal, Section } from '../ui';
 import { ResultVisual } from '../visuals';
+import { Collage } from '../collage';
 
 export default function TestimonialsSection() {
   return (
@@ -10,7 +11,7 @@ export default function TestimonialsSection() {
       <div className="zx-grid-3">
         {testimonials.map((t, i) => (
           <Reveal key={t.name} delay={i * 110} className="zx-story-card">
-            <ResultVisual kind={t.visual} result={t.result} />
+            <Collage photo={t.avatar} photoAlt={t.name} layout="right" ratio="4 / 3" className="zc-story" front={<ResultVisual kind={t.visual} result={t.result} />} />
             <div className="zx-story-body">
               <div className="zx-stars" aria-label="5 out of 5 stars">
                 {[...Array(5)].map((_, si) => (

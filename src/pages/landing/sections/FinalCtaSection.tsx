@@ -1,5 +1,7 @@
 import { Check, Clock, Shield } from 'lucide-react';
 import SocialIcon from '../../../components/v3/SocialIcon';
+import { Photo } from '../collage';
+import { PHOTOS } from '../images';
 import { AnimatedHeading, Reveal, TextRollButton, scrollToId, useInView } from '../ui';
 
 const FLOATERS = [
@@ -17,6 +19,9 @@ export default function FinalCtaSection() {
     <section className="zx-section zx-tone-white zx-final">
       <div className="zx-container">
         <div ref={ref} className={`zx-final-card zx-final-live ${inView ? 'is-in' : ''}`}>
+          <div className="zx-final-photo" aria-hidden="true">
+            <Photo src={PHOTOS.final} alt="" />
+          </div>
           <div className="zx-final-aura" aria-hidden="true">
             <span />
             <span />

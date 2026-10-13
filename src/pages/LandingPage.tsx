@@ -1,7 +1,9 @@
 import './landing/landing-v2.css';
 import './landing/visuals.css';
+import './landing/collage.css';
 import Navbar from './landing/sections/Navbar';
 import Hero from './landing/sections/Hero';
+import ProductTourSection from './landing/sections/ProductTourSection';
 import FreeAuditSection from './landing/sections/FreeAuditSection';
 import DailyBriefingSection from './landing/sections/DailyBriefingSection';
 import SchedulingSection from './landing/sections/SchedulingSection';
@@ -25,6 +27,7 @@ export default function LandingPage({ onScanComplete }: Props) {
     <div className="landing-page">
       <Navbar />
       <Hero />
+      <ProductTourSection />
       <FreeAuditSection onScanComplete={onScanComplete} />
       <DailyBriefingSection />
       <SchedulingSection />

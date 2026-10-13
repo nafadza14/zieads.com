@@ -3,6 +3,8 @@ import { Plus } from 'lucide-react';
 import { faqItems } from '../data';
 import { AnimatedHeading, Reveal, Section } from '../ui';
 import { AskVisual } from '../visuals';
+import { Collage } from '../collage';
+import { PHOTOS } from '../images';
 
 // FAQPage structured data for rich results in Google Search
 const faqSchema = {
@@ -31,7 +33,7 @@ export default function FaqSection() {
             </p>
           </Reveal>
           <div className="zx-faq-image">
-            <AskVisual />
+            <Collage photo={PHOTOS.faq} photoAlt="People working with ZieAds" layout="right" ratio="4 / 3" front={<AskVisual />} />
           </div>
         </div>
 

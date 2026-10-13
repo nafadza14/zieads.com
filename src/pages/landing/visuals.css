@@ -500,3 +500,4 @@
 @media (max-width: 560px) {
   .landing-page .zx-final-floaters { display: none; }
 }
+.landing-page .zv-switcher span { white-space: nowrap; }
