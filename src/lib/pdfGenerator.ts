@@ -20,7 +20,7 @@ function rgb(doc: jsPDF, c: RGB) { doc.setTextColor(c[0], c[1], c[2]); }
 function fill(doc: jsPDF, c: RGB) { doc.setFillColor(c[0], c[1], c[2]); }
 function stroke(doc: jsPDF, c: RGB) { doc.setDrawColor(c[0], c[1], c[2]); }
 
-// ─── generateSkillPDF — universal skill report PDF ──────────────────────────
+// ─── generateSkillPDF - universal skill report PDF ──────────────────────────
 export async function generateSkillPDF(
   skillTitle: string,
   skillName: string,
@@ -194,7 +194,7 @@ export async function generateSkillPDF(
   doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), M, PH - 60);
   doc.setGState(doc.GState({ opacity: 1 }));
 
-  // ─── PAGE 2 — EXECUTIVE SUMMARY + SCORE ───────────────────────────
+  // ─── PAGE 2 - EXECUTIVE SUMMARY + SCORE ───────────────────────────
   doc.addPage();
   fill(doc, PAGE_BG);
   doc.rect(0, 0, PW, PH, 'F');
@@ -415,7 +415,7 @@ export async function generateSkillPDF(
   doc.save(`ZieAds-${skillName}-report.pdf`);
 }
 
-// ─── generatePDF — legacy ClientDashboard PDF ──────────────────────────────
+// ─── generatePDF - legacy ClientDashboard PDF ──────────────────────────────
 export async function generatePDF(reportData: any, options: PDFGenerationOptions = { isAgency: false }) {
   const d = reportData?.deliverables;
   const businessName = reportData?.coverPage?.preparedFor || reportData?.preparedFor || 'Your Business';

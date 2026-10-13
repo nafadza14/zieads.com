@@ -1,5 +1,5 @@
 /**
- * DepletionOverlay — shown when credits reach DEPLETED state.
+ * DepletionOverlay - shown when credits reach DEPLETED state.
  * Blocks input area and shows plan-appropriate message + countdown + upgrade CTA.
  */
 import { useState, useEffect } from 'react';
@@ -11,17 +11,17 @@ const PLAN_MESSAGES: Record<string, Record<string, { headline: string; body: str
     free: {
       headline: "You've used today's free credits.",
       body: "You get 5 AI messages per day on the Free plan. Come back tomorrow, or upgrade to Starter for 20 credits a day.",
-      cta: "Upgrade to Starter — $29/mo",
+      cta: "Upgrade to Starter: $29/mo",
     },
     starter: {
       headline: "Daily chat limit reached.",
       body: "You've used all 20 of today's AI credits. Pro gives you 80 credits a day.",
-      cta: "Upgrade to Pro — $79/mo",
+      cta: "Upgrade to Pro: $79/mo",
     },
     pro: {
       headline: "You've used all 80 daily credits.",
       body: "Heavy day of analysis! Agency plan gives you 300 daily credits.",
-      cta: "Upgrade to Agency — $199/mo",
+      cta: "Upgrade to Agency: $199/mo",
     },
     agency: {
       headline: "Daily credit limit reached.",
@@ -33,17 +33,17 @@ const PLAN_MESSAGES: Record<string, Record<string, { headline: string; body: str
     free: {
       headline: "Monthly scan limit reached.",
       body: "You've used all 10 free scan credits this month. Starter gives you 50 credits per month.",
-      cta: "Upgrade to Starter — $29/mo",
+      cta: "Upgrade to Starter: $29/mo",
     },
     starter: {
       headline: "Monthly skill credits used.",
-      body: "You've run through all 50 credits this month. Pro gives you 160 credits — 3× more.",
-      cta: "Upgrade to Pro — $79/mo",
+      body: "You've run through all 50 credits this month. Pro gives you 160 credits, 3× more.",
+      cta: "Upgrade to Pro: $79/mo",
     },
     pro: {
       headline: "Monthly skill credits used.",
       body: "You've used 160 skill credits this month. Agency gives you unlimited skill runs.",
-      cta: "Upgrade to Agency — $199/mo",
+      cta: "Upgrade to Agency: $199/mo",
     },
     agency: {
       headline: "Soft cap reached.",

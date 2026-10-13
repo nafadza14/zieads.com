@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────
--- ZieAds Superadmin Dashboard — Schema Migration
+-- ZieAds Superadmin Dashboard - Schema Migration
 -- Created: 2026-06-10
 -- ─────────────────────────────────────────────────────────────
 

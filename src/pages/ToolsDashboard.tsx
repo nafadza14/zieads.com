@@ -39,8 +39,8 @@ const SKILL_CATEGORIES = [
   {
     category: 'Export & Reporting',
     skills: [
-      { id: 'report', name: 'Markdown Strategy', desc: 'Standard text export', command: '/ads report', fixes: '—' },
-      { id: 'report-pdf', name: 'White-Label PDF', desc: 'Professional agency deck', command: '/ads report-pdf', fixes: '—' },
+      { id: 'report', name: 'Markdown Strategy', desc: 'Standard text export', command: '/ads report', fixes: '-' },
+      { id: 'report-pdf', name: 'White-Label PDF', desc: 'Professional agency deck', command: '/ads report-pdf', fixes: '-' },
     ]
   }
 ];

@@ -1,3 +1,4 @@
+import { NO_EM_DASH_RULE, stripDashes } from "./noEmDash.js";
 export class MockAnthropic {
   messages = {
     create: async (params: {
@@ -32,7 +33,7 @@ export class MockAnthropic {
           }
         }
         if (systemPrompt) {
-          openAiMessages.push({ role: "system", content: systemPrompt });
+          openAiMessages.push({ role: "system", content: `${systemPrompt}\n\n${NO_EM_DASH_RULE}` });
         }
       }
       for (const msg of params.messages) {
@@ -64,7 +65,7 @@ export class MockAnthropic {
       }
 
       const data: any = await response.json();
-      const contentText = data.choices?.[0]?.message?.content || "";
+      const contentText = stripDashes(data.choices?.[0]?.message?.content || "");
 
       return {
         id: `sumopod_msg_${Date.now()}`,
@@ -95,7 +96,7 @@ export async function callSumopodAI(systemPrompt: string, userPrompt: string): P
   const endpoint = "https://ai.sumopod.com/v1/chat/completions";
   
   const openAiMessages = [
-    { role: "system", content: systemPrompt },
+    { role: "system", content: `${systemPrompt}\n\n${NO_EM_DASH_RULE}` },
     { role: "user", content: userPrompt }
   ];
 
@@ -121,5 +122,5 @@ export async function callSumopodAI(systemPrompt: string, userPrompt: string): P
   }
 
   const data: any = await response.json();
-  return data.choices?.[0]?.message?.content || "";
+  return stripDashes(data.choices?.[0]?.message?.content || "");
 }

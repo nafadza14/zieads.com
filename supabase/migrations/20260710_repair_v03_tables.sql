@@ -1,5 +1,5 @@
 -- ============================================================
--- ZieAds v0.3 — Repair Database Schema
+-- ZieAds v0.3 - Repair Database Schema
 -- Run this in: Supabase Dashboard > SQL Editor
 -- This drops the old conflicting tables and recreates them
 -- with the correct schemas required for ZieAds v0.3

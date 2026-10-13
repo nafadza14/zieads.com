@@ -428,7 +428,7 @@ authRouter.get("/instagram/callback", async (req, res) => {
 
     // Capture the permissions Instagram ACTUALLY granted (returned as an array or a
     // comma-separated string on the Business Login token response). Storing the real
-    // grant — instead of a hard-coded string — makes silently-missing scopes (e.g. a
+    // grant - instead of a hard-coded string - makes silently-missing scopes (e.g. a
     // user unchecking "manage comments" on the consent screen) visible in the DB.
     const grantedPermissions: string = Array.isArray(shortLivedData.permissions)
       ? shortLivedData.permissions.join(",")
@@ -517,7 +517,7 @@ authRouter.get("/instagram/callback", async (req, res) => {
     // Dashboard only configures the APP. Instagram will not actually send events for a
     // specific IG account until that account is explicitly subscribed via the
     // `{ig-user-id}/subscribed_apps` edge, using THAT account's own access token. Without
-    // this call, the dashboard webhook config looks "done" but zero events ever arrive —
+    // this call, the dashboard webhook config looks "done" but zero events ever arrive - 
     // which is exactly the symptom reported (comments never reach the inbox). Best-effort:
     // never block the OAuth redirect on this.
     try {

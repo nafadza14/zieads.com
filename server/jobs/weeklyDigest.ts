@@ -4,7 +4,7 @@ import { scrapeUrl } from "../scraper.js";
 
 /**
  * Alert email payload builder.
- * Drop in your Mailgun / Sendgrid client here — the payload is pre-structured.
+ * Drop in your Mailgun / Sendgrid client here - the payload is pre-structured.
  */
 async function sendScoreDropAlert(params: {
   toEmail: string;
@@ -28,7 +28,7 @@ This may indicate a recent change to your landing page, a missing tracking pixel
 or a new CRO issue. Run a full audit to get the detailed breakdown:
 https://zieads.com/audit
 
-— The ZieAds Team
+ - The ZieAds Team
 `.trim();
 
   // ── Mailgun example (uncomment + install mailgun-js to enable) ──────────

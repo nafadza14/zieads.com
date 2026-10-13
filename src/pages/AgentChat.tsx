@@ -13,6 +13,7 @@ import FeatureGateModal from '../components/FeatureGateModal';
 import V3Layout from '../components/v3/V3Layout';
 import { TextRollButton } from './landing/ui';
 import './agent-chat.css';
+import ArtifactDeck, { type AgentArtifact } from './agent/ArtifactCards';
 
 const P = '#F26522'; // Orange accent (matches landing page)
 const G = '#6B7A89'; // Muted editorial text
@@ -54,6 +55,7 @@ interface Message {
   /** Agent run details */
   process?: AgentProcess;
   working?: boolean;
+  artifacts?: AgentArtifact[];
 }
 
 // Saved replies carry their steps in a hidden trailing marker
@@ -64,7 +66,9 @@ function parseStoredMessage(m: Message): Message {
   if (!hit) return m;
   const content = m.content.replace(STEPS_MARKER, '');
   try {
-    const raw: any[] = JSON.parse(decodeURIComponent(escape(atob(hit[1]))));
+    const parsed: any = JSON.parse(decodeURIComponent(escape(atob(hit[1]))));
+    const raw: any[] = Array.isArray(parsed) ? parsed : parsed.steps || [];
+    const artifacts: AgentArtifact[] = Array.isArray(parsed?.artifacts) ? parsed.artifacts : [];
     const byRound = new Map<number, AgentStepUI[]>();
     raw.forEach((st, i) => {
       const r = st.round || 1;
@@ -72,17 +76,17 @@ function parseStoredMessage(m: Message): Message {
       byRound.get(r)!.push({ id: `s${i}`, tool: st.tool, label: st.label, status: st.ok ? 'done' : 'error', summary: st.summary, ms: st.ms, round: r });
     });
     const items: ProcessItem[] = [...byRound.entries()].sort((x, y) => x[0] - y[0]).map(([round, steps]) => ({ kind: 'steps', round, steps }));
-    return { ...m, content, process: { status: 'done', items } };
+    return { ...m, content, process: { status: 'done', items }, artifacts };
   } catch {
     return { ...m, content };
   }
 }
 
 const AGENT_SUGGESTIONS = [
+  { tag: 'Comments', q: 'Analyze my comments from the last 30 days and draft replies for the ones that need an answer' },
+  { tag: 'Schedule', q: 'Create 5 posts for next week from my best formats and put them on my schedule as drafts' },
   { tag: 'Performance', q: 'How did my accounts perform in the last 30 days, and what should I change?' },
-  { tag: 'Content plan', q: 'Plan my posts for next week based on my best formats and save them as drafts' },
-  { tag: 'Inbox', q: 'Which comments need a reply today? Draft the replies for me' },
-  { tag: 'Competitors', q: 'Compare my website and content with my competitors' },
+  { tag: 'Competitors', q: 'Scan my website and my competitors, then add the 2 strongest rivals to Competitor Hunt' },
 ];
 
 interface Conversation {
@@ -407,7 +411,7 @@ export default function AgentChat() {
       const res = await fetch('/api/agent/run', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ ...body, conversationId: activeConvId }),
+        body: JSON.stringify({ ...body, conversationId: activeConvId, tzOffsetMin: -new Date().getTimezoneOffset() }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
@@ -485,6 +489,9 @@ export default function AgentChat() {
                       : it,
                   ),
                 }));
+                break;
+              case 'artifact':
+                patchLast((m) => ({ ...m, artifacts: [...(m.artifacts || []), ev.artifact] }));
                 break;
               case 'final':
                 finalText = ev.text;
@@ -1089,7 +1096,7 @@ export default function AgentChat() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={isListening ? 'Listening... speak now' : 'Ask or give a task: review my last 30 days, plan next week, reply to comments...'}
+                        placeholder={isListening ? 'Listening... speak now' : 'Give the agent a task: draft next week\'s posts, reply to comments, track a competitor...'}
                         rows={1}
                         onInput={(e) => {
                           const el = e.currentTarget;
@@ -1263,6 +1270,7 @@ function MessageBubble({ message, streaming = false }: { message: Message; strea
             <MarkdownContent content={stripEmojis(message.content)} isUser={isUser} caret={!isUser && !!message.working} />
           </div>
         )}
+        {!isUser && message.artifacts && message.artifacts.length > 0 && <ArtifactDeck artifacts={message.artifacts} />}
         {!isUser && message.content && !streaming && !message.working && (
           <button className="za-copy" onClick={copy}>
             {copied ? 'Copied' : 'Copy'}
@@ -1286,6 +1294,12 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   get_audit_and_profile: <FileText size={14} />,
   scan_website: <Globe size={14} />,
   create_draft_post: <PenLine size={14} />,
+  create_draft_posts: <CalendarDays size={14} />,
+  update_draft_post: <PenLine size={14} />,
+  list_comments: <MessageCircle size={14} />,
+  draft_comment_replies: <MessageCircle size={14} />,
+  list_media_library: <FileText size={14} />,
+  add_competitor: <Crosshair size={14} />,
 };
 
 function useTicker(active: boolean) {

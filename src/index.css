@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   ZieAds — Neo-Minimalist / Quiet UI Theme & Cream Editorial AI
+   ZieAds - Neo-Minimalist / Quiet UI Theme & Cream Editorial AI
    ═══════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
@@ -228,7 +228,7 @@ a:hover { color: var(--primary); }
 @keyframes spin { to { transform: rotate(360deg); } }
 /* WCAG AA: error red #e8457a is 3.6:1 on white; use darker accessible red */
 .hero-error { color: var(--red-text); font-size: 14px; margin-top: 12px; }
-/* WCAG AA: hero-note at 13px needs 4.5:1 — using updated --text-muted */
+/* WCAG AA: hero-note at 13px needs 4.5:1 - using updated --text-muted */
 .hero-note { color: var(--text-muted); font-size: 13px; margin-top: 16px; }
 
 /* ─── SOCIAL PROOF ─── */
@@ -245,7 +245,7 @@ a:hover { color: var(--primary); }
 }
 .stat { text-align: center; }
 .stat-number { display: block; font-size: 28px; font-weight: 800; color: var(--text); }
-/* WCAG AA: stat-label at 13px needs 4.5:1 — using --text-muted (#5e5e7a, ~4.7:1) */
+/* WCAG AA: stat-label at 13px needs 4.5:1 - using --text-muted (#5e5e7a, ~4.7:1) */
 .stat-label { font-size: 13px; color: var(--text-muted); }
 .stat-divider { width: 1px; height: 40px; background: var(--border); }
 
@@ -1053,7 +1053,7 @@ a:hover { color: var(--primary); }
 }
 
 /* ═══════════════════════════════════════════════════════
-   ZieAds Landing Page — Axion Studio Pattern
+   ZieAds Landing Page - Axion Studio Pattern
    System font · Orange #F26522 accent · Shader hero
    ═══════════════════════════════════════════════════════ */
 
@@ -1106,7 +1106,7 @@ a:hover { color: var(--primary); }
   line-height: 1.6;
 }
 
-/* ── Scoped Typography — System Font ── */
+/* ── Scoped Typography - System Font ── */
 .landing-page h1,
 .landing-page h2,
 .landing-page .hero-title,
@@ -1182,7 +1182,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   NAVBAR — transparent over hero, floating pill
+   NAVBAR - transparent over hero, floating pill
    ═══════════════════════════════════════════════════════ */
 
 .landing-page .navbar {
@@ -1255,7 +1255,7 @@ a:hover { color: var(--primary); }
   font-family: var(--font-system) !important;
 }
 
-/* Mobile nav — bottom sheet */
+/* Mobile nav - bottom sheet */
 .landing-page .mobile-nav-sheet {
   position: fixed;
   bottom: 0;
@@ -1344,7 +1344,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   HERO — Video background, dark cinematic
+   HERO - Video background, dark cinematic
    ═══════════════════════════════════════════════════════ */
 
 .landing-page .hero-section {
@@ -1372,7 +1372,7 @@ a:hover { color: var(--primary); }
   align-items: center;
 }
 
-/* Badge — dark + light pill */
+/* Badge - dark + light pill */
 .landing-page .hero-badge-new {
   display: inline-flex;
   align-items: center;
@@ -1406,7 +1406,7 @@ a:hover { color: var(--primary); }
   border-radius: 0 var(--lp-radius-pill) var(--lp-radius-pill) 0;
 }
 
-/* Hero headline — Axion large system font */
+/* Hero headline - Axion large system font */
 .landing-page .hero-title {
   font-family: var(--font-system) !important;
   font-size: 72px !important;
@@ -1606,7 +1606,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   SECTION EYEBROW — unified pattern
+   SECTION EYEBROW - unified pattern
    ═══════════════════════════════════════════════════════ */
 .landing-page .section-eyebrow {
   text-transform: uppercase !important;
@@ -1628,7 +1628,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   AXION — Numbered Badge Row
+   AXION - Numbered Badge Row
    ═══════════════════════════════════════════════════════ */
 .landing-page .axion-badge-row {
   display: flex;
@@ -1781,7 +1781,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   PAIN SECTION — general purpose feature sections
+   PAIN SECTION - general purpose feature sections
    ═══════════════════════════════════════════════════════ */
 .landing-page .pain-section {
   padding: 100px 24px;
@@ -2110,7 +2110,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   PRICING — clean & minimal
+   PRICING - clean & minimal
    ═══════════════════════════════════════════════════════ */
 .landing-page .pricing-section {
   padding: 100px 24px;
@@ -2257,7 +2257,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   FAQ — accordion
+   FAQ - accordion
    ═══════════════════════════════════════════════════════ */
 .landing-page .faq-section {
   padding: 100px 24px;
@@ -2489,7 +2489,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   GENERAL BUTTON — gradient primary (for sections)
+   GENERAL BUTTON - gradient primary (for sections)
    ═══════════════════════════════════════════════════════ */
 .landing-page .btn-lp-primary-gradient {
   background: #F26522 !important;
@@ -2515,7 +2515,7 @@ a:hover { color: var(--primary); }
 
 
 /* ═══════════════════════════════════════════════════════
-   HERO INPUT (legacy — used in FreeAuditSection)
+   HERO INPUT (legacy - used in FreeAuditSection)
    ═══════════════════════════════════════════════════════ */
 .landing-page .hero-input-wrapper {
   max-width: 640px !important;

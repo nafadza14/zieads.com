@@ -9,7 +9,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
   );
 }
 
-// Service role client bypasses RLS — only use on the server
+// Service role client bypasses RLS - only use on the server
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });

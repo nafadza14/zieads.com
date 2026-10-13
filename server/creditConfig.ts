@@ -1,5 +1,5 @@
 /**
- * ZieAds Credit System — Shared Configuration
+ * ZieAds Credit System - Shared Configuration
  * Single source of truth for plan limits, operation costs, and feature flags.
  * Used by both backend API routes and (via import) the frontend credit store.
  */

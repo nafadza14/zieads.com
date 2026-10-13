@@ -104,7 +104,7 @@ export async function syncRecentPosts(userId: string): Promise<void> {
     console.log(`[Sync] Fetched ${mediaPosts.length} recent Instagram posts for user ${userId}`);
 
     for (const post of mediaPosts) {
-      // Upsert into social_posts — unique on user_id + platform_post_id
+      // Upsert into social_posts - unique on user_id + platform_post_id
       const { error } = await supabaseAdmin
         .from('social_posts')
         .upsert({
@@ -292,7 +292,7 @@ export async function syncComments(userId: string): Promise<void> {
             .single();
 
           if (!error && upserted && !upserted.sentiment) {
-            // New comment — run sentiment analysis asynchronously
+            // New comment - run sentiment analysis asynchronously
             newCommentsCount++;
             analyzeCommentSentiment(comment.text).then(sentiment => {
               supabaseAdmin
@@ -335,7 +335,7 @@ export async function syncComments(userId: string): Promise<void> {
 }
 
 /**
- * Master sync function — runs all syncs in order.
+ * Master sync function - runs all syncs in order.
  * Called after OAuth connection and by nightly cron.
  */
 export async function syncAll(userId: string): Promise<void> {

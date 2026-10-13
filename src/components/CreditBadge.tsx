@@ -1,5 +1,5 @@
 /**
- * CreditBadge — compact pill shown in sidebar/navbar
+ * CreditBadge - compact pill shown in sidebar/navbar
  * Displays remaining credits with colour-coded state and countdown on hover.
  */
 import { useState, useEffect } from 'react';

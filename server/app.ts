@@ -30,6 +30,7 @@ import { apiV3Router } from "./routes/api-v3.js";
 import { authRouter } from "./routes/api-auth.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
+import { deepStripDashes } from "./utils/noEmDash.js";
 
 const app = express();
 app.use(
@@ -39,6 +40,15 @@ app.use(
     },
   })
 );
+
+// ─── Writing rule: no em dash anywhere in ZieAds ────────
+// Every JSON response is cleaned on the way out, so AI text, stored data and
+// copy can never show an em dash or en dash to a user.
+app.use((_req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = ((body: any) => json(deepStripDashes(body))) as any;
+  next();
+});
 
 // ─── Enrich BusinessContext from saved profile ─────────────
 async function enrichContextFromProfile(

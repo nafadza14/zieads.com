@@ -2,9 +2,16 @@ import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin, deductCredits } from "./supabaseServer.js";
 import { callSumopodAI } from "./utils/sumopodClient.js";
+import { NO_EM_DASH_RULE, stripDashes } from "./utils/noEmDash.js";
+
+// Every v0.3 AI call follows the ZieAds writing rule (no em dash)
+async function callAI(systemPrompt: string, userPrompt: string, usePro = false): Promise<string> {
+  const out = await callAIRaw(`${systemPrompt}\n\n${NO_EM_DASH_RULE}`, userPrompt, usePro);
+  return typeof out === "string" ? stripDashes(out) : out;
+}
 
 // Helper to resolve the correct AI API
-async function callAI(systemPrompt: string, userPrompt: string, usePro = false): Promise<string> {
+async function callAIRaw(systemPrompt: string, userPrompt: string, usePro = false): Promise<string> {
   const sumopodApiKey = process.env.SUMOPOD_API_KEY;
   if (sumopodApiKey) {
     try {

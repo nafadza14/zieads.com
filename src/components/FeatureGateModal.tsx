@@ -1,5 +1,5 @@
 /**
- * FeatureGateModal — shown when a user clicks a locked skill or AI mode.
+ * FeatureGateModal - shown when a user clicks a locked skill or AI mode.
  * Displays what the feature does, which plan unlocks it, and upgrade CTA.
  */
 import { useEffect } from 'react';
@@ -172,7 +172,7 @@ export default function FeatureGateModal({
               onMouseOver={e => (e.currentTarget.style.opacity = '0.88')}
               onMouseOut={e => (e.currentTarget.style.opacity = '1')}
             >
-              Upgrade to {planName} — {planPrice}
+              Upgrade to {planName}: {planPrice}
             </button>
             <button
               id="feature-gate-close-btn"

@@ -1,5 +1,5 @@
 -- ============================================================
--- ZieAds — Add Onboarding Profile Columns Migration
+-- ZieAds - Add Onboarding Profile Columns Migration
 -- Run this in: Supabase Dashboard > SQL Editor
 -- ============================================================
 

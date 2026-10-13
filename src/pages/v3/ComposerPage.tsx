@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
 import {
   Card,
@@ -69,6 +69,12 @@ const renderWithTags = (text: string) =>
 
 export default function ComposerPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const draftId = searchParams.get('draft');
+  // A draft made by the AI Agent (or saved earlier) that the user is reviewing here
+  const [editingDraft, setEditingDraft] = useState<{ id: string; platform: string } | null>(null);
+  const [draftBusy, setDraftBusy] = useState<'' | 'save' | 'delete'>('');
+  const [draftNote, setDraftNote] = useState('');
   const demo = useDemoMode();
   const [connections, setConnections] = useState<any[]>([]);
   const [mediaLibrary, setMediaLibrary] = useState<any[]>([]);
@@ -148,6 +154,72 @@ export default function ComposerPage() {
   useEffect(() => {
     loadData();
   }, [demo.isActive]);
+
+  // Load the draft once accounts and media are in
+  useEffect(() => {
+    if (!draftId || loading || demo.isActive || editingDraft?.id === draftId) return;
+    (async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`/api/v3/posts/${draftId}`, { headers });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error || 'Draft not found');
+        const p = j.data;
+        const tags = (p.hashtags || []).map((h: string) => `#${h}`).join(' ');
+        setContentText(tags ? `${p.caption || ''}\n\n${tags}` : p.caption || '');
+        const acct = connections.find((c: any) => c.platform === p.platform);
+        if (acct) setSelectedAccounts([acct.id]);
+        const urls: string[] = p.media_urls || [];
+        if (urls.length) setMediaAttachments(mediaLibrary.filter((m: any) => urls.includes(m.file_url)));
+        if (p.scheduled_for) {
+          const d = new Date(p.scheduled_for);
+          const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+          setScheduleType('schedule');
+          setScheduleDate(local.slice(0, 10));
+          setScheduleTime(local.slice(11, 16));
+        }
+        setEditingDraft({ id: p.id, platform: p.platform });
+      } catch (err: any) {
+        setComposerError(err.message || 'Could not load the draft.');
+      }
+    })();
+  }, [draftId, loading, demo.isActive]);
+
+  const saveDraftEdits = async () => {
+    if (!editingDraft) return;
+    setDraftBusy('save');
+    setDraftNote('');
+    try {
+      const headers = await getAuthHeaders();
+      const hashtags = contentText.match(/#\w+/g)?.map((h) => h.slice(1)) || [];
+      const caption = contentText.replace(/(^|\s)#\w+/g, '').trim();
+      const scheduled_for = scheduleDate && scheduleTime ? new Date(`${scheduleDate}T${scheduleTime}`).toISOString() : undefined;
+      const res = await fetch(`/api/v3/posts/${editingDraft.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ caption, hashtags, scheduled_for, media_ids: mediaAttachments.map((m) => m.id), keep_draft: true }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.message || j.error || 'Could not save the draft.');
+      setDraftNote('Draft saved. It stays on your calendar until you schedule it.');
+    } catch (err: any) {
+      setComposerError(err.message);
+    } finally {
+      setDraftBusy('');
+    }
+  };
+
+  const deleteDraft = async () => {
+    if (!editingDraft) return;
+    setDraftBusy('delete');
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(`/api/v3/posts/${editingDraft.id}`, { method: 'DELETE', headers });
+      navigate('/calendar');
+    } finally {
+      setDraftBusy('');
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -315,6 +387,10 @@ export default function ComposerPage() {
       }
 
       if (j.success) {
+        if (editingDraft) {
+          // The scheduled or published post replaces the draft it came from
+          await fetch(`/api/v3/posts/${editingDraft.id}`, { method: 'DELETE', headers }).catch(() => null);
+        }
         setComposerSuccess(true);
         setTimeout(() => {
           navigate('/calendar');
@@ -362,6 +438,25 @@ export default function ComposerPage() {
       />
 
       <PageBody>
+        {editingDraft && (
+          <div className="zco-draft-banner" role="status">
+            <span className="zco-draft-ico">
+              <Sparkles size={15} />
+            </span>
+            <div className="zco-draft-text">
+              <strong>Reviewing a draft from your AI Agent</strong>
+              <span>{draftNote || 'Edit the copy, add media, then schedule or publish. Nothing goes live until you do.'}</span>
+            </div>
+            <div className="zco-draft-actions">
+              <GhostButton onClick={saveDraftEdits} disabled={!!draftBusy}>
+                {draftBusy === 'save' ? 'Saving...' : 'Save draft'}
+              </GhostButton>
+              <button type="button" className="zco-draft-delete" onClick={deleteDraft} disabled={!!draftBusy}>
+                <Trash2 size={14} /> {draftBusy === 'delete' ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        )}
         {composerSuccess && (
           <div className="zco-toast tone-good" role="status">
             <CheckCircle size={16} />

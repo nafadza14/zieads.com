@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { NO_EM_DASH_RULE } from "../utils/noEmDash.js";
 import { createHmac } from "crypto";
 import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import {
@@ -957,8 +958,16 @@ apiV3Router.get("/posts/scheduled", requireAuth, async (req: any, res) => {
   }
 });
 
+apiV3Router.get("/posts/:id", requireAuth, async (req: any, res) => {
+  const { data, error } = await supabaseAdmin.from("scheduled_posts").select("*").eq("id", req.params.id).eq("user_id", req.userId).maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: "Post not found." });
+  res.json({ success: true, data });
+});
+
 apiV3Router.patch("/posts/:id", requireAuth, async (req: any, res) => {
-  const { caption, media_ids, hashtags, scheduled_for } = req.body;
+  // keep_draft: save edits on a draft without scheduling it. approve: turn a draft into a scheduled post.
+  const { caption, media_ids, hashtags, scheduled_for, keep_draft, approve } = req.body;
 
   try {
     const { data: post, error: fetchErr } = await supabaseAdmin
@@ -988,12 +997,29 @@ apiV3Router.patch("/posts/:id", requireAuth, async (req: any, res) => {
       updates.hashtags = hashtags;
     }
 
+    const editingDraft = post.status === "draft" && keep_draft && !approve;
     if (scheduled_for !== undefined) {
       const scheduledTime = new Date(scheduled_for);
-      if (scheduledTime.getTime() < Date.now() + 5 * 60 * 1000) {
+      if (Number.isNaN(scheduledTime.getTime())) {
+        return res.status(400).json({ error: "Invalid date." });
+      }
+      if (!editingDraft && scheduledTime.getTime() < Date.now() + 5 * 60 * 1000) {
         return res.status(400).json({ error: "Scheduled time must be at least 5 minutes in the future." });
       }
       updates.scheduled_for = scheduledTime.toISOString();
+      if (!editingDraft) updates.status = "scheduled";
+    }
+
+    if (approve) {
+      const when = new Date(updates.scheduled_for || post.scheduled_for || 0);
+      if (when.getTime() < Date.now() + 5 * 60 * 1000) {
+        return res.status(400).json({ error: "Pick a time at least 5 minutes in the future before approving." });
+      }
+      const mediaCount = media_ids !== undefined ? (media_ids || []).length : (post.media_urls || []).length;
+      if ((post.platform === "instagram" || post.platform === "tiktok") && mediaCount === 0) {
+        return res.status(400).json({ error: "needs_media", message: "Add an image or video in Composer before approving this post." });
+      }
+      updates.scheduled_for = when.toISOString();
       updates.status = "scheduled";
     }
 
@@ -2464,7 +2490,7 @@ interface InboxSyncResult {
 // EMPTY `data: []` array instead of an explicit error. That silent-empty is exactly the
 // symptom we hit ("comments_count=5 but edge returned none, no error"). So we omit
 // `like_count` from the primary variants and, crucially, keep trying simpler field sets
-// whenever a variant comes back empty — not only when it throws.
+// whenever a variant comes back empty - not only when it throws.
 const IG_COMMENT_FIELD_VARIANTS = [
   'id,text,username,timestamp,replies{id,text,username,timestamp}',
   'id,text,username,timestamp',
@@ -2501,7 +2527,7 @@ async function fetchCommentsForPost(
       const top = (resp && resp.data) || [];
 
       if (top.length === 0) {
-        // 200 OK but empty — could be a silently permission-gated subfield. Remember this
+        // 200 OK but empty - could be a silently permission-gated subfield. Remember this
         // and keep trying a simpler field set before concluding there are no comments.
         sawSuccessfulEmpty = true;
         console.warn(
@@ -2510,7 +2536,7 @@ async function fetchCommentsForPost(
         continue;
       }
 
-      // Got real data — flatten one level of replies so nested replies land in the inbox too.
+      // Got real data - flatten one level of replies so nested replies land in the inbox too.
       const flattened: any[] = [];
       for (const c of top) {
         flattened.push(c);
@@ -2525,7 +2551,7 @@ async function fetchCommentsForPost(
       console.warn(
         `[V3 Inbox Sync] Comments fetch for post ${postId} failed with fields "${fields}": ${lastError}. Trying simpler set.`
       );
-      // Always fall through to a simpler field set — even permission-style errors sometimes
+      // Always fall through to a simpler field set - even permission-style errors sometimes
       // clear once the gated subfield (like_count / replies) is dropped.
     }
   }
@@ -2543,7 +2569,7 @@ async function syncUserInbox(
 ): Promise<InboxSyncResult> {
   const userStartTime = Date.now();
 
-  // Create sync log row (best effort — do not fail sync if logging fails)
+  // Create sync log row (best effort - do not fail sync if logging fails)
   let logId: string | null = null;
   try {
     const { data: logData } = await supabaseAdmin
@@ -2606,12 +2632,12 @@ async function syncUserInbox(
     );
 
     // SELF-HEALING SUBSCRIPTION: registering a webhook URL in the Meta App Dashboard only
-    // configures the APP — it does NOT make Instagram send events for any specific account.
+    // configures the APP - it does NOT make Instagram send events for any specific account.
     // Each IG account must separately call `{ig-user-id}/subscribed_apps` with its own token.
     // Accounts connected before this fix was deployed never made that call, so their
     // webhooks are silently inert even though the dashboard shows "configured". Re-issuing
     // this call on every sync is idempotent and cheap, so existing connections heal without
-    // requiring the user to disconnect/reconnect. Best-effort — never fails the sync.
+    // requiring the user to disconnect/reconnect. Best-effort - never fails the sync.
     try {
       const subRes = await fetch(
         `https://graph.instagram.com/v21.0/${conn.platformUserId}/subscribed_apps?subscribed_fields=comments&access_token=${encodeURIComponent(conn.accessToken)}`,
@@ -2643,7 +2669,7 @@ async function syncUserInbox(
     // on an OLDER post (e.g. post #20 of 36) was never seen, so the inbox stayed empty even
     // though Instagram clearly had a new comment.
     //
-    // New strategy — scan ALL posts cheaply, deep-fetch only where needed:
+    // New strategy - scan ALL posts cheaply, deep-fetch only where needed:
     //   1. Page through `me/media` requesting `comments_count` (metadata only, very cheap).
     //   2. Sum comments_count across every post → total_comments_on_ig (authoritative signal).
     //   3. Only call the expensive `{post}/comments` edge for posts where comments_count > 0,
@@ -2715,7 +2741,7 @@ async function syncUserInbox(
         .slice(0, MAX_POSTS_TO_DEEP_FETCH);
     } else {
       console.warn(
-        `[V3 Inbox Sync] comments_count not returned by API — falling back to deep-fetch of newest ${MAX_POSTS_TO_DEEP_FETCH} posts.`
+        `[V3 Inbox Sync] comments_count not returned by API - falling back to deep-fetch of newest ${MAX_POSTS_TO_DEEP_FETCH} posts.`
       );
       postsToFetch = scannedPosts.slice(0, MAX_POSTS_TO_DEEP_FETCH);
     }
@@ -3138,7 +3164,7 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
       }
     }
 
-    // Sync must be awaited — Vercel kills fire-and-forget async calls after response
+    // Sync must be awaited - Vercel kills fire-and-forget async calls after response
     console.log(`[V3 Inbox Manual Refresh] Starting sync for user ${userId}...`);
     const syncResult = await syncUserInbox(userId, 'manual_refresh');
     console.log(
@@ -3176,10 +3202,10 @@ apiV3Router.post("/inbox/refresh", requireAuth, async (req: any, res) => {
 });
 
 /**
- * DIAGNOSTIC ENDPOINT — inspects exactly what Instagram returns for this user's token.
+ * DIAGNOSTIC ENDPOINT - inspects exactly what Instagram returns for this user's token.
  * Returns the raw HTTP status + body for: the profile, the media list (with comments_count),
  * and the comments edge of each post that has comments, tried across every field variant.
- * This makes the "comments_count > 0 but edge empty" situation unambiguous — you can see
+ * This makes the "comments_count > 0 but edge empty" situation unambiguous - you can see
  * whether Instagram returns 200+[] (permission gate) or a specific error, per field set.
  *
  * Usage (must be authenticated as the connected user):
@@ -3213,8 +3239,8 @@ apiV3Router.get("/inbox/webhook-status", requireAuth, async (req: any, res) => {
       username: conn.platformUsername,
       raw: body,
       interpretation: r.ok && Array.isArray(body?.data) && body.data.length > 0
-        ? "Subscribed — this account IS registered to receive webhook events."
-        : "NOT subscribed — this account will never receive webhook events until subscribed. Call POST to this same endpoint to fix.",
+        ? "Subscribed - this account IS registered to receive webhook events."
+        : "NOT subscribed. This account will never receive webhook events until subscribed. Call POST to this same endpoint to fix.",
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -3333,7 +3359,7 @@ apiV3Router.get("/inbox/diagnose", requireAuth, async (req: any, res) => {
   const userId = req.userId;
   const IG_API_BASE = 'https://graph.instagram.com/v21.0';
 
-  // Local raw fetch that never throws — captures status + parsed body for diagnosis.
+  // Local raw fetch that never throws - captures status + parsed body for diagnosis.
   async function rawIg(endpoint: string, token: string) {
     const sep = endpoint.includes('?') ? '&' : '?';
     const url = `${IG_API_BASE}/${endpoint}${sep}access_token=${encodeURIComponent(token)}`;
@@ -3438,8 +3464,8 @@ apiV3Router.get("/inbox/diagnose", requireAuth, async (req: any, res) => {
           : commentProbes.every(p => p.attempts.every((a: any) => a.returned_count === 0 && !a.error))
           ? "Every comment request returned HTTP 200 with 0 comments and NO error across all field variants. This is a Meta app access-level gate: 'instagram_business_manage_comments' is still Standard Access. Request Advanced Access (App Review) or, for testing, ensure the app is in Development mode AND this exact IG account holds an app role, then reconnect."
           : commentProbes.some(p => p.attempts.some((a: any) => a.returned_count && a.returned_count > 0))
-          ? "At least one field variant returned comments — the sync will now ingest them. If a specific variant errored while a simpler one worked, the gated field (likely like_count) was the culprit; the sync already avoids it."
-          : "Comment requests returned errors — see the 'error' field in each attempt for the exact Instagram message.",
+          ? "At least one field variant returned comments, so the sync will now ingest them. If a specific variant errored while a simpler one worked, the gated field (likely like_count) was the culprit; the sync already avoids it."
+          : "Comment requests returned errors - see the 'error' field in each attempt for the exact Instagram message.",
     });
   } catch (err: any) {
     console.error("[V3 Inbox Diagnose Error]", err.message);
@@ -3525,6 +3551,17 @@ async function commentReplyHandler(req: any, res: any) {
   }
 }
 
+// Save or clear a suggested reply (used by the AI Agent drafts) without sending it
+apiV3Router.post("/inbox/comments/:id/draft", requireAuth, async (req: any, res) => {
+  const text = typeof req.body?.reply_text === "string" ? req.body.reply_text.slice(0, 2200) : "";
+  const { data: comment } = await supabaseAdmin.from("comments_inbox").select("id, status").eq("id", req.params.id).eq("user_id", req.userId).maybeSingle();
+  if (!comment) return res.status(404).json({ error: "Comment not found." });
+  if (comment.status === "replied") return res.status(400).json({ error: "Already replied to this comment." });
+  const { error } = await supabaseAdmin.from("comments_inbox").update({ reply_text: text || null }).eq("id", comment.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
 apiV3Router.post("/inbox/reply", requireAuth, commentReplyHandler);
 apiV3Router.post("/inbox/comments/:id/reply", requireAuth, commentReplyHandler);
 
@@ -3593,7 +3630,7 @@ apiV3Router.post("/webhooks/instagram/comments", async (req: any, res) => {
       for (const change of changes) {
         // FIX: Real Instagram comment webhooks (Instagram Login flavor) arrive as
         //   { field: "comments", value: { id, text, from: {id, username}, media: {id}, parent_id? } }
-        // — there is NO `value.item` property. The old check (`value.item === "comment"`) only
+        // - there is NO `value.item` property. The old check (`value.item === "comment"`) only
         // matched Facebook Page `feed` payloads, so genuine Instagram webhooks were silently
         // dropped. Accept BOTH shapes.
         const isIgCommentsField = change.field === "comments" && change.value && change.value.id;
@@ -3629,7 +3666,7 @@ apiV3Router.post("/webhooks/instagram/comments", async (req: any, res) => {
           continue;
         }
 
-        // FIX: insert must be AWAITED before responding — on Vercel serverless,
+        // FIX: insert must be AWAITED before responding - on Vercel serverless,
         // fire-and-forget promises are killed as soon as the response is sent.
         // `created_time` is unix seconds when present; absent in some payloads.
         const postedAt = commentVal.created_time
@@ -3647,7 +3684,7 @@ apiV3Router.post("/webhooks/instagram/comments", async (req: any, res) => {
         if (inserted && inserted.id) {
           console.log(`[V3 Webhook] Ingested comment ${commentId} for user ${conn.user_id}`);
           // Sentiment: await with a short timeout so it completes before the function exits;
-          // on timeout/failure the comment simply stays neutral — never blocks ingestion.
+          // on timeout/failure the comment simply stays neutral - never blocks ingestion.
           try {
             const sentimentResult: any = await Promise.race([
               classifyCommentSentiment(text),
@@ -4057,7 +4094,7 @@ Produce the JSON briefing.`;
       system: [
         {
           type: "text",
-          text: BRIEFING_SYSTEM_PROMPT,
+          text: `${BRIEFING_SYSTEM_PROMPT}\n\n${NO_EM_DASH_RULE}`,
           // @ts-ignore
           cache_control: { type: "ephemeral" }
         }

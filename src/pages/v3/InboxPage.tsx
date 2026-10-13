@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
@@ -25,6 +25,7 @@ import {
   ArrowLeft,
   RefreshCw,
   CornerDownRight,
+  Sparkles,
 } from 'lucide-react';
 import './inbox.css';
 
@@ -41,6 +42,15 @@ export default function InboxPage() {
 
   // Reply Form State
   const [replyText, setReplyText] = useState('');
+  // Deep link from the AI Agent: /inbox?comment=<id>
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get('comment');
+  const hasAiDraft = (c: any) => !!c && c.status !== 'replied' && !!c.reply_text;
+
+  // Pre-fill the reply box with the AI Agent's suggested reply, ready to edit and send
+  useEffect(() => {
+    setReplyText(hasAiDraft(selectedComment) ? selectedComment.reply_text : '');
+  }, [selectedComment?.id]);
   const [submittingReply, setSubmittingReply] = useState(false);
 
   // Metadata for context-aware empty states
@@ -146,8 +156,9 @@ export default function InboxPage() {
         }
 
         if (j.data.length > 0) {
+          const focused = focusId ? j.data.find((c: any) => c.id === focusId) : null;
           const stillMatches = j.data.find((c: any) => c.id === selectedComment?.id);
-          setSelectedComment(stillMatches || j.data[0]);
+          setSelectedComment(stillMatches || focused || j.data[0]);
         } else {
           setSelectedComment(null);
         }
@@ -163,7 +174,7 @@ export default function InboxPage() {
     if (refreshing || cooldownSeconds > 0) return;
     setRefreshing(true);
     setSyncInProgress(true);
-    // Silent refresh — no banners or notifications shown in the inbox per product decision.
+    // Silent refresh - no banners or notifications shown in the inbox per product decision.
     // Outcomes are logged to the console only; the comment list simply updates if anything
     // new arrives. Any Instagram-side gating is handled quietly (list stays as-is).
     try {
@@ -601,6 +612,11 @@ export default function InboxPage() {
                         <div className="zin-item-meta">
                           {isUnread && <span className="zin-unread" title="Unread" />}
                           <Pill tone={getSentimentTone(c.sentiment)}>{c.sentiment || 'neutral'}</Pill>
+                          {hasAiDraft(c) && (
+                            <span className="zin-ai-draft">
+                              <Sparkles size={11} /> AI draft
+                            </span>
+                          )}
                           {userHasReplied && (
                             <span className="zin-replied">
                               <Check size={12} /> Replied
@@ -707,6 +723,11 @@ export default function InboxPage() {
                       <div className="zin-composer-top">
                         <span>
                           Replying to <strong>{selectedComment.author_username || selectedComment.commenter_handle}</strong>
+                          {hasAiDraft(selectedComment) && replyText === selectedComment.reply_text && (
+                            <span className="zin-ai-draft is-inline">
+                              <Sparkles size={11} /> Drafted by AI Agent, edit and send
+                            </span>
+                          )}
                         </span>
                         {submittingReply && <LoadingState text="Sending" inline />}
                       </div>

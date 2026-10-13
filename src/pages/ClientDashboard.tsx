@@ -242,7 +242,7 @@ export default function ClientDashboard({ reportData }: Props) {
       const localHistory: any[] = JSON.parse(localStorage.getItem('zieads_audit_history') || '[]');
 
       if (dbAll.length > 0) {
-        // DB has data — use it, but also merge any local-only audits not yet in DB
+        // DB has data - use it, but also merge any local-only audits not yet in DB
         const dbIds = new Set(dbAll.map((a: any) => a.id));
         const localOnly = localHistory.filter(a => !dbIds.has(a.id));
         const merged = [...localOnly, ...dbAll].sort(
@@ -251,7 +251,7 @@ export default function ClientDashboard({ reportData }: Props) {
         setRecentAudits(merged);
         setLatestAudit(dbLatest || merged[0] || null);
       } else if (localHistory.length > 0) {
-        // No DB data — use localStorage history entirely
+        // No DB data - use localStorage history entirely
         setRecentAudits(localHistory);
         setLatestAudit(localHistory[0]);
       } else if (dbLatest) {

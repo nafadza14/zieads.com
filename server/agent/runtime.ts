@@ -12,7 +12,8 @@
     - Sumopod / any OpenAI-compatible endpoint (SUMOPOD_API_KEY) using function calling
 */
 import Anthropic from "@anthropic-ai/sdk";
-import { AGENT_TOOLS, TOOL_MAP, type ToolContext } from "./tools.js";
+import { AGENT_TOOLS, TOOL_MAP, type ToolContext, type AgentArtifact } from "./tools.js";
+import { NO_EM_DASH_RULE, stripDashes, stripDashesChunk } from "../utils/noEmDash.js";
 
 export type AgentEvent =
   | { type: "status"; text: string }
@@ -23,6 +24,7 @@ export type AgentEvent =
   | { type: "round_end"; round: number; tools: number }
   | { type: "step_start"; id: string; tool: string; label: string; args: any; round: number }
   | { type: "step_end"; id: string; tool: string; ok: boolean; summary: string; ms: number }
+  | { type: "artifact"; artifact: AgentArtifact; stepId: string }
   | { type: "final"; text: string };
 
 export interface AgentStep {
@@ -46,13 +48,17 @@ export interface RunAgentOptions {
   /** Wall-clock budget in ms; the agent wraps up before this */
   budgetMs?: number;
   maxRounds?: number;
+  /** Viewer's UTC offset in minutes, for default posting slots */
+  tzOffsetMin?: number;
+  /** Filled with everything the agent created during the run */
+  artifacts?: AgentArtifact[];
 }
 
 const MAX_RESULT_CHARS = 9000;
 const TOOL_TIMEOUT_MS = 20000;
 
 const stripThink = (s: string) => s.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^\s*<think>[\s\S]*$/i, "").trim();
-const noEmDash = (s: string) => s.replace(/\s*\u2014\s*/g, " - ").replace(/\u2013/g, "-");
+const noEmDash = stripDashes;
 
 async function executeTool(name: string, args: any, ctx: ToolContext): Promise<{ ok: boolean; result: any; summary: string; ms: number }> {
   const tool = TOOL_MAP.get(name);
@@ -86,7 +92,7 @@ async function runBatch(
   opts: RunAgentOptions,
   steps: AgentStep[],
 ) {
-  const ctx = { userId: opts.userId };
+  const ctx = { userId: opts.userId, tzOffsetMin: opts.tzOffsetMin };
   for (const c of calls) {
     const t = TOOL_MAP.get(c.name);
     opts.emit({ type: "step_start", id: c.id, tool: c.name, label: t?.label || c.name, args: c.args, round });
@@ -97,7 +103,17 @@ async function runBatch(
       const label = TOOL_MAP.get(c.name)?.label || c.name;
       steps.push({ id: c.id, tool: c.name, label, ok: r.ok, summary: r.summary, ms: r.ms, round });
       opts.emit({ type: "step_end", id: c.id, tool: c.name, ok: r.ok, summary: r.summary, ms: r.ms });
-      return { ...c, ...r, content: serialize(r.result) };
+      // Things the agent made go to the UI as reviewable cards, not to the model
+      let forModel = r.result;
+      if (r.ok && r.result && Array.isArray(r.result._artifacts)) {
+        const { _artifacts, ...rest } = r.result;
+        forModel = rest;
+        for (const a of _artifacts as AgentArtifact[]) {
+          opts.artifacts?.push(a);
+          opts.emit({ type: "artifact", artifact: a, stepId: c.id });
+        }
+      }
+      return { ...c, ...r, content: serialize(forModel) };
     }),
   );
 }
@@ -143,7 +159,7 @@ class ThinkFilter {
   }
 }
 
-const cleanDelta = (s: string) => s.replace(/ ?\u2014 ?/g, " - ").replace(/\u2013/g, "-");
+const cleanDelta = stripDashesChunk;
 
 /** Emits streamed text for one round; leading whitespace is dropped */
 function makeRoundWriter(opts: RunAgentOptions, round: number) {
@@ -343,25 +359,36 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
 }
 
 /** Run the agent and return the final answer plus every step it took */
-export async function runAgent(opts: RunAgentOptions): Promise<{ text: string; steps: AgentStep[] }> {
+export async function runAgent(opts: RunAgentOptions): Promise<{ text: string; steps: AgentStep[]; artifacts: AgentArtifact[] }> {
   const steps: AgentStep[] = [];
+  opts.artifacts = opts.artifacts || [];
   opts.emit({ type: "status", text: "Planning" });
   const useAnthropic = !process.env.SUMOPOD_API_KEY && !!process.env.ANTHROPIC_API_KEY;
   const raw = useAnthropic ? await runAnthropic(opts, steps) : await runOpenAICompatible(opts, steps);
   const text = noEmDash(stripThink(raw)) || "I gathered the data but could not write an answer. Please try again.";
   opts.emit({ type: "final", text });
-  return { text, steps };
+  return { text, steps, artifacts: opts.artifacts };
 }
 
 /** Agent behaviour rules appended to the strategist system prompt */
 export const AGENT_INSTRUCTIONS = `
-## How you work: you are an agent, not a chatbot
-You have tools that read the user's REAL ZieAds data: connected accounts, daily account metrics, post performance, live Instagram data, inbox comments, the content calendar, competitors, the AI Analyst briefing, their business profile and audit, and a website scanner. You can also save draft posts to their calendar.
+## How you work: you are an agent that DOES the work, not a chatbot
+You can read the user's real ZieAds data and act inside every ZieAds feature. Everything you create is a draft the user reviews and edits, so act confidently.
 
-1. Before answering any question about their accounts, content, audience, results, competitors or plans, CALL TOOLS to get the facts. Never invent numbers. If data is missing, say so and tell them how to fix it (connect an account, wait for sync).
-2. Work in parallel. When a task needs several kinds of data, request ALL the tools you need in the SAME turn so they run at once. Example: "how did last month go?" needs get_account_metrics, get_post_performance and get_inbox_summary together.
-3. Go deeper when needed: after the first results, call more tools if they would change your answer (for example scan_website on a competitor that appeared).
-4. When the user asks you to create, plan or schedule content, write the posts AND save each one with create_draft_post (several calls in parallel are fine). Tell them the drafts are in Composer for review. Never claim something was published.
-5. For general strategy questions that do not need their data, answer directly without tools.
-6. Final answer: lead with the key finding using their real numbers, then a short ranked action list. Use markdown tables when comparing. Mention which data you used (for example "Based on your last 30 days on Instagram"). Reply in the user's language.
-7. Never use the em dash character. Use commas, periods or a hyphen instead.`;
+Read tools: list_connected_accounts, get_account_metrics, get_post_performance, get_live_instagram, get_inbox_summary, list_comments, get_content_calendar, list_media_library, get_competitors, get_latest_briefing, get_audit_and_profile, scan_website.
+Action tools (all reviewable, nothing goes live on its own):
+- create_draft_posts: write posts and place them on the calendar as drafts on concrete dates and times (Calendar and Composer).
+- update_draft_post: change a draft's caption, hashtags or time.
+- draft_comment_replies: save suggested replies on Inbox comments (the user sends them).
+- add_competitor: start tracking a competitor in Competitor Hunt.
+
+Rules
+1. Facts first: before answering anything about their accounts, content, audience, comments, results, competitors or plans, CALL TOOLS. Never invent numbers. If data is missing, say so and how to fix it (connect an account, wait for sync).
+2. Parallel by default: request every independent tool in the SAME turn so they run at once.
+3. Do the task, do not describe it. "Make posts" means call create_draft_posts. "Reply to comments" means list_comments then draft_comment_replies. "Track X" means add_competitor. For a content plan, base formats, topics and posting times on get_post_performance, and fill empty calendar days from get_content_calendar.
+4. Scheduling: use the user's local timezone offset given below, real future dates, and spread posts across days. Write complete, ready-to-post captions in the brand voice and the user's language, with relevant hashtags in the hashtags field.
+5. Comment analysis: group comments into themes (questions, complaints, praise, purchase intent), quantify each, quote 1 or 2 short examples, then draft replies for the ones that need one.
+6. After acting, tell the user what you made and that the cards below the answer let them edit, approve or send each item, or open it in Calendar, Composer, Inbox or Competitor Hunt. Never claim something was published or sent.
+7. For general strategy questions that need no data, answer directly without tools.
+8. Final answer: lead with the key finding using real numbers, then a short ranked action list. Use markdown tables when comparing. Reply in the user's language.
+9. ${NO_EM_DASH_RULE}`;

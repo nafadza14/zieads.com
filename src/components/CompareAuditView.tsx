@@ -37,7 +37,7 @@ export default function CompareAuditView({ audits }: { audits: any[] }) {
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: G, marginBottom: 8 }}>Older Audit (Before)</label>
             <select value={audit1Idx} onChange={(e) => setAudit1Idx(Number(e.target.value))} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${B}`, borderRadius: 6 }}>
               {audits.map((a, i) => (
-                <option key={i} value={i}>{formatDate(a.created_at)} — Score: {a.overall_score}</option>
+                <option key={i} value={i}>{formatDate(a.created_at)} · Score: {a.overall_score}</option>
               ))}
             </select>
           </div>
@@ -45,7 +45,7 @@ export default function CompareAuditView({ audits }: { audits: any[] }) {
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: G, marginBottom: 8 }}>Newer Audit (After)</label>
             <select value={audit2Idx} onChange={(e) => setAudit2Idx(Number(e.target.value))} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${B}`, borderRadius: 6 }}>
               {audits.map((a, i) => (
-                <option key={i} value={i}>{formatDate(a.created_at)} — Score: {a.overall_score}</option>
+                <option key={i} value={i}>{formatDate(a.created_at)} · Score: {a.overall_score}</option>
               ))}
             </select>
           </div>

@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────
--- ZieAds Credit System — Supabase Migration
+-- ZieAds Credit System - Supabase Migration
 -- Created: 2026-06-09
 -- ─────────────────────────────────────────────────────────────
 

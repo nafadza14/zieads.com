@@ -207,3 +207,13 @@
 .zca-btn-danger { display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; background: var(--zd-bad-soft); color: var(--zd-bad); border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .zca-btn-danger:hover:not(:disabled) { border-color: rgba(220, 38, 38, 0.35); transform: translateY(-1px); }
 .zca-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Drafts from the AI Agent: dashed chip, review note, approve action */
+.zca-chip.is-draft { border-style: dashed !important; border-color: #f5b48a !important; background: #fffaf6 !important; }
+.zca-chip.is-draft .zca-chip-status { background: #f59e0b !important; }
+.zca-draft-note { display: flex; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #fff7f1; border: 1px solid #ffd9c2; font-size: 13px; line-height: 1.5; color: #3d2a1f; }
+.zca-draft-note svg { color: #f26522; flex-shrink: 0; margin-top: 2px; }
+.zca-draft-actions { display: flex; align-items: center; gap: 8px; }
+.zca-btn-approve { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border: none; border-radius: 999px; background: #f26522; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.3s; }
+.zca-btn-approve:hover:not(:disabled) { background: #e05a1a; transform: translateY(-1px); }
+.zca-btn-approve:disabled { opacity: 0.6; cursor: not-allowed; }

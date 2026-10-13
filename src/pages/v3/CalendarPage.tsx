@@ -30,6 +30,9 @@ import {
   AlertCircle,
   X,
   Plus,
+  Sparkles,
+  PenLine,
+  CheckCircle2,
 } from 'lucide-react';
 import './calendar.css';
 
@@ -49,6 +52,7 @@ const statusTone = (status?: string): 'accent' | 'good' | 'bad' | 'warn' | 'neut
   if (status === 'published') return 'good';
   if (status === 'publishing') return 'warn';
   if (status === 'scheduled') return 'accent';
+  if (status === 'draft') return 'warn';
   return 'neutral';
 };
 
@@ -230,6 +234,26 @@ export default function CalendarPage() {
     }
   };
 
+  // Drafts come from the AI Agent: approve them here or open them in Composer
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState('');
+  const handleApproveDraft = async (ev: any) => {
+    setApprovingId(ev.id);
+    setDraftError('');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/v3/posts/${ev.id}`, { method: 'PATCH', headers, body: JSON.stringify({ approve: true }) });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.message || j.error || 'Could not approve this draft.');
+      setEvents((prev) => prev.map((e) => (e.id === ev.id ? { ...e, status: 'scheduled' } : e)));
+      setSelectedEvent((cur: any) => (cur && cur.id === ev.id ? { ...cur, status: 'scheduled' } : cur));
+    } catch (err: any) {
+      setDraftError(err.message);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
   const handlePrevMonth = () => {
     setNavDir(-1);
     setCurrentDate(new Date(year, month - 1, 1));
@@ -303,7 +327,7 @@ export default function CalendarPage() {
       <button
         type="button"
         key={e.id}
-        className={`zca-chip ${failed ? 'is-failed' : ''} ${compact ? '' : 'is-wide'} ${selectedEvent?.id === e.id ? 'is-selected' : ''}`}
+        className={`zca-chip ${failed ? 'is-failed' : ''} ${e.status === 'draft' ? 'is-draft' : ''} ${compact ? '' : 'is-wide'} ${selectedEvent?.id === e.id ? 'is-selected' : ''}`}
         style={{ animationDelay: `${delayMs}ms` }}
         onClick={(evt) => {
           evt.stopPropagation();
@@ -526,15 +550,15 @@ export default function CalendarPage() {
 
       {/* Modal: post details */}
       {selectedEvent && (
-        <div className="zca-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setSelectedEvent(null); }}>
+        <div className="zca-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setSelectedEvent(null); setDraftError(''); } }}>
           <div className="zca-modal" role="dialog" aria-modal="true">
             <div className="zca-modal-head">
               <div>
                 <span className="zd-eyebrow">
-                  {selectedEvent.status === 'failed' ? 'Failed publish' : selectedEvent.type === 'scheduled' ? 'Scheduled post' : 'Published post'}
+                  {selectedEvent.status === 'failed' ? 'Failed publish' : selectedEvent.status === 'draft' ? 'Draft from AI Agent' : selectedEvent.type === 'scheduled' ? 'Scheduled post' : 'Published post'}
                 </span>
                 <h3>
-                  {selectedEvent.status === 'failed' ? 'Failed publish details' : selectedEvent.type === 'scheduled' ? 'Scheduled post details' : 'Published post history'}
+                  {selectedEvent.status === 'failed' ? 'Failed publish details' : selectedEvent.status === 'draft' ? 'Waiting for your review' : selectedEvent.type === 'scheduled' ? 'Scheduled post details' : 'Published post history'}
                 </h3>
               </div>
               <button type="button" className="zd-icon-btn" onClick={() => setSelectedEvent(null)} aria-label="Close">
@@ -556,6 +580,21 @@ export default function CalendarPage() {
                 <div className="zca-error">
                   <AlertCircle size={14} style={{ flexShrink: 0 }} />
                   <div><strong>Error:</strong> {selectedEvent.error_message}</div>
+                </div>
+              )}
+
+              {selectedEvent.status === 'draft' && (
+                <div className="zca-draft-note">
+                  <Sparkles size={14} />
+                  <div>
+                    <strong>Your AI Agent drafted this post.</strong> It will not publish until you approve it. Open it in Composer to edit the copy or add media.
+                  </div>
+                </div>
+              )}
+              {draftError && (
+                <div className="zca-error">
+                  <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                  <div>{draftError}</div>
                 </div>
               )}
 
@@ -600,7 +639,18 @@ export default function CalendarPage() {
               ) : (
                 <div />
               )}
-              <GhostButton onClick={() => setSelectedEvent(null)}>Close</GhostButton>
+              {selectedEvent.status === 'draft' ? (
+                <div className="zca-draft-actions">
+                  <GhostButton onClick={() => navigate(`/composer?draft=${selectedEvent.id}`)}>
+                    <PenLine /> Edit in Composer
+                  </GhostButton>
+                  <button type="button" className="zca-btn-approve" onClick={() => handleApproveDraft(selectedEvent)} disabled={approvingId === selectedEvent.id}>
+                    <CheckCircle2 size={14} /> {approvingId === selectedEvent.id ? 'Approving...' : 'Approve'}
+                  </button>
+                </div>
+              ) : (
+                <GhostButton onClick={() => setSelectedEvent(null)}>Close</GhostButton>
+              )}
             </div>
           </div>
         </div>

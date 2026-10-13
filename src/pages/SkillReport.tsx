@@ -935,10 +935,10 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                     {s.creatorPersona && <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', marginBottom: 12 }}>Creator: {s.creatorPersona} · Audio: {s.audioDirection}</p>}
                     {[
                       { label: 'HOOK (3 sec)', value: s.hook },
-                      { label: 'PROBLEM (3–5 sec)', value: s.problemSetup },
-                      { label: 'SOLUTION (5–8 sec)', value: s.solutionReveal },
-                      { label: 'PROOF (3–5 sec)', value: s.socialProof },
-                      { label: 'CTA (2–3 sec)', value: s.cta },
+                      { label: 'PROBLEM (3-5 sec)', value: s.problemSetup },
+                      { label: 'SOLUTION (5-8 sec)', value: s.solutionReveal },
+                      { label: 'PROOF (3-5 sec)', value: s.socialProof },
+                      { label: 'CTA (2-3 sec)', value: s.cta },
                     ].filter(item => item.value).map(({ label, value }) => (
                       <div key={label} style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 0, borderBottom: '1px solid #e2e8f0', marginBottom: 0 }}>
                         <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</p>
@@ -2268,7 +2268,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 </div>
               )}
 
-              {/* LinkedIn — only if B2B */}
+              {/* LinkedIn - only if B2B */}
               {pm.linkedin?.applicableIfB2B && (
                 <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
                   <div style={{ background: '#0077B5', padding: '10px 16px' }}>
@@ -2356,7 +2356,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
 
     return (
       <>
-        {/* Tier 1 — Direct */}
+        {/* Tier 1 - Direct */}
         {t1.length > 0 && (
           <>
             <SectionTitle sub="Same product, same ICP, your direct ad competitors">Tier 1: Direct Competitors</SectionTitle>
@@ -2392,7 +2392,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           </>
         )}
 
-        {/* Tier 2 — Indirect */}
+        {/* Tier 2 - Indirect */}
         {t2.length > 0 && (
           <>
             <SectionTitle sub="Different product, same problem, alternative solutions your ICP might choose">Tier 2: Indirect Competitors</SectionTitle>
@@ -2413,7 +2413,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           </>
         )}
 
-        {/* Tier 3 — Aspirational */}
+        {/* Tier 3 - Aspirational */}
         {t3.length > 0 && (
           <>
             <SectionTitle sub="Category leaders to benchmark and borrow tactics from">Tier 3: Aspirational Benchmarks</SectionTitle>
@@ -2630,7 +2630,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
           </>
         )}
 
-        {/* Funnel Map — 3 stages */}
+        {/* Funnel Map - 3 stages */}
         {(fm.tofu || fm.mofu || fm.bofu) && (
           <>
             <SectionTitle sub="Current funnel state (green = present, yellow = partial, red = missing)">Funnel Architecture Map</SectionTitle>
@@ -3472,7 +3472,7 @@ export default function SkillReport() {
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', letterSpacing: '-0.02em', margin: '0 0 6px' }}>
               {meta.title}
             </h1>
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>This usually takes 30–60 seconds</p>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>This usually takes 30-60 seconds</p>
           </div>
 
           {/* Progress bar */}
@@ -3609,7 +3609,7 @@ export default function SkillReport() {
 
             {/* Meta */}
             <div style={{ fontSize: '0.78rem', color: RG, marginBottom: 4 }}>
-              <span style={{ fontWeight: 600 }}>Site: </span>{businessName || url || '—'}
+              <span style={{ fontWeight: 600 }}>Site: </span>{businessName || url || '-'}
             </div>
             <div style={{ fontSize: '0.78rem', color: RG, marginBottom: 20 }}>
               <span style={{ fontWeight: 600 }}>Date: </span>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

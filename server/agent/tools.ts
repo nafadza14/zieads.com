@@ -9,10 +9,19 @@ import { supabaseAdmin, getRecentAuditContext, getProfile } from "../supabaseSer
 import { getDecryptedToken } from "../utils/tokenHelper.js";
 import * as igApi from "../utils/instagramApi.js";
 import { scrapeUrl } from "../scraper.js";
+import { stripDashes } from "../utils/noEmDash.js";
 
 export interface ToolContext {
   userId: string;
+  /** Viewer's UTC offset in minutes (Date.getTimezoneOffset sign flipped), used for default slots */
+  tzOffsetMin?: number;
 }
+
+/** Something the agent made that the user can review and edit in the chat and in the feature */
+export type AgentArtifact =
+  | { kind: "post"; id: string; platform: string; caption: string; hashtags: string[]; scheduled_for: string | null; media_type: string; media_urls: string[]; status: string }
+  | { kind: "reply"; id: string; platform: string; author: string; comment: string; reply: string; sentiment?: string }
+  | { kind: "competitor"; id: string; name: string; website_url: string; instagram_username?: string | null };
 
 export interface AgentTool {
   name: string;
@@ -356,7 +365,7 @@ const getContentCalendar: AgentTool = {
     const back = clampInt(input?.days_back, 7, 0, 30);
     const { data, error } = await supabaseAdmin
       .from("scheduled_posts")
-      .select("platform, caption, media_type, scheduled_for, status, published_at, error_message")
+      .select("id, platform, caption, media_type, scheduled_for, status, published_at, error_message")
       .eq("user_id", userId)
       .or(`scheduled_for.gte."${isoDaysAgo(back)}",scheduled_for.is.null`)
       .order("scheduled_for", { ascending: true, nullsFirst: false })
@@ -376,7 +385,7 @@ const getContentCalendar: AgentTool = {
       window: { days_back: back, days_ahead: ahead },
       by_status: byStatus,
       empty_days_next_2_weeks: gaps,
-      items: rows.slice(0, 30).map((r) => ({ platform: r.platform, status: r.status, when: r.scheduled_for, format: r.media_type, caption: trim(r.caption, 120), error: r.error_message || undefined })),
+      items: rows.slice(0, 30).map((r: any) => ({ id: r.id, platform: r.platform, status: r.status, when: r.scheduled_for, format: r.media_type, caption: trim(r.caption, 120), error: r.error_message || undefined })),
     };
   },
   summarize: (r) => `${Object.entries(r.by_status || {}).map(([k, v]) => `${v} ${k}`).join(", ") || "Calendar empty"}; ${r.empty_days_next_2_weeks?.length || 0} empty days ahead`,
@@ -492,57 +501,294 @@ const scanWebsite: AgentTool = {
   summarize: (r) => `${r.url}: ${r.pixels_detected?.length || 0} pixels, loads in ${(r.load_time_ms / 1000).toFixed(1)}s`,
 };
 
-// ─── 11. Action: save a draft post ─────────────────────────────────────────
-const createDraftPost: AgentTool = {
-  name: "create_draft_post",
-  label: "Saving a draft to your calendar",
+// ─── Shared helpers for action tools ───────────────────────────────────────
+const cleanText = (v: any, max: number) => stripDashes(String(v ?? "").trim()).slice(0, max);
+const cleanTags = (v: any) =>
+  Array.isArray(v) ? v.slice(0, 30).map((h: any) => String(h).replace(/^#/, "").replace(/\s+/g, "").trim()).filter(Boolean) : [];
+
+/** Next free 9:00 local slot from tomorrow, used when the model gives no time */
+function defaultSlot(offsetMin: number, dayIndex: number) {
+  const now = new Date(Date.now() + offsetMin * 60000);
+  const local = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1 + dayIndex, 9, 0, 0));
+  return new Date(local.getTime() - offsetMin * 60000).toISOString();
+}
+
+const postArtifact = (row: any): AgentArtifact => ({
+  kind: "post",
+  id: row.id,
+  platform: row.platform,
+  caption: row.caption || "",
+  hashtags: row.hashtags || [],
+  scheduled_for: row.scheduled_for,
+  media_type: row.media_type || "image",
+  media_urls: row.media_urls || [],
+  status: row.status,
+});
+
+// ─── 11. Action: draft posts straight into the schedule ────────────────────
+const createDraftPosts: AgentTool = {
+  name: "create_draft_posts",
+  label: "Adding drafts to your schedule",
   description:
-    "Save a post as a DRAFT in the user's ZieAds content calendar so they can review it in Composer. Never publishes. Only call when the user asked you to write, plan or schedule content. Call once per post; you may call it several times in parallel for a content plan.",
+    "Write one or more posts and place them in the user's content calendar as DRAFTS on specific dates and times. Drafts never publish on their own: the user reviews, edits, adds media and approves them in the chat, the Calendar or Composer. Use for any request to create, plan, write or schedule content. Put a whole content plan in ONE call.",
   parameters: {
     type: "object",
     properties: {
-      platform: { type: "string", description: "instagram, tiktok, linkedin, facebook or x" },
-      caption: { type: "string", description: "The full ready-to-post caption, without hashtags" },
-      hashtags: { type: "array", items: { type: "string" }, description: "Hashtags without the # sign" },
-      media_type: { type: "string", enum: ["image", "video", "carousel", "reel", "text"], description: "Planned format" },
-      scheduled_for: { type: "string", description: "Optional ISO date-time for the planned slot, for example 2026-10-20T09:00:00+07:00" },
+      posts: {
+        type: "array",
+        description: "The posts to add, 1 to 14",
+        items: {
+          type: "object",
+          properties: {
+            platform: { type: "string", description: "instagram, tiktok, linkedin, facebook or x" },
+            caption: { type: "string", description: "Full ready-to-post caption without hashtags" },
+            hashtags: { type: "array", items: { type: "string" }, description: "Hashtags without #" },
+            media_type: { type: "string", enum: ["image", "video", "carousel", "reel", "text"] },
+            scheduled_for: { type: "string", description: "ISO date-time with timezone offset for the slot, for example 2026-10-20T09:00:00+07:00" },
+            media_ids: { type: "array", items: { type: "string" }, description: "Optional media library ids from list_media_library" },
+          },
+          required: ["platform", "caption"],
+        },
+      },
     },
-    required: ["platform", "caption"],
+    required: ["posts"],
     additionalProperties: false,
   },
-  async run(input, { userId }) {
-    const platform = String(input?.platform || "").toLowerCase().trim();
-    const caption = String(input?.caption || "").trim();
-    if (!platform || !caption) throw new Error("platform and caption are required");
-    if (caption.length > 5000) throw new Error("Caption is too long");
-    let when: string | null = null;
-    if (input?.scheduled_for) {
-      const t = new Date(input.scheduled_for);
-      if (!Number.isNaN(t.getTime())) when = t.toISOString();
-    }
-    const { data: conn } = await supabaseAdmin.from("social_connections").select("platform_user_id").eq("user_id", userId).eq("platform", platform).eq("is_active", true).maybeSingle();
-    const hashtags = Array.isArray(input?.hashtags) ? input.hashtags.slice(0, 30).map((h: any) => String(h).replace(/^#/, "").trim()).filter(Boolean) : [];
-    const { data, error } = await supabaseAdmin
-      .from("scheduled_posts")
-      .insert({
+  async run(input, { userId, tzOffsetMin = 0 }) {
+    const list = Array.isArray(input?.posts) ? input.posts.slice(0, 14) : input?.caption ? [input] : [];
+    if (!list.length) throw new Error("posts is required");
+
+    const { data: conns } = await supabaseAdmin.from("social_connections").select("platform, platform_user_id").eq("user_id", userId).eq("is_active", true);
+    const accountFor = new Map((conns || []).map((c: any) => [c.platform, c.platform_user_id]));
+
+    // Resolve media ids once
+    const allIds = [...new Set(list.flatMap((p: any) => (Array.isArray(p.media_ids) ? p.media_ids : [])))].slice(0, 50);
+    const { data: media } = allIds.length
+      ? await supabaseAdmin.from("media_library").select("id, blob_url, mime_type").eq("user_id", userId).in("id", allIds)
+      : { data: [] as any[] };
+    const mediaMap = new Map((media || []).map((m: any) => [m.id, m]));
+
+    const rows = list.map((p: any, i: number) => {
+      const platform = String(p.platform || "instagram").toLowerCase().trim();
+      let when: string | null = null;
+      if (p.scheduled_for) {
+        const t = new Date(p.scheduled_for);
+        if (!Number.isNaN(t.getTime()) && t.getTime() > Date.now()) when = t.toISOString();
+      }
+      const picked = (Array.isArray(p.media_ids) ? p.media_ids : []).map((id: string) => mediaMap.get(id)).filter(Boolean);
+      return {
         user_id: userId,
         platform,
-        platform_account_id: conn?.platform_user_id || "",
-        caption,
-        media_urls: [],
-        media_type: input?.media_type || "image",
-        hashtags,
-        scheduled_for: when,
+        platform_account_id: accountFor.get(platform) || "",
+        caption: cleanText(p.caption, 5000),
+        media_urls: picked.map((m: any) => m.blob_url),
+        media_type: picked.length ? (String(picked[0].mime_type || "").startsWith("video/") ? "video" : picked.length > 1 ? "carousel" : "image") : p.media_type || "image",
+        hashtags: cleanTags(p.hashtags),
+        scheduled_for: when || defaultSlot(tzOffsetMin, i),
         status: "draft",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
-      .select("id, platform, scheduled_for, status")
-      .single();
+      };
+    });
+    if (rows.some((r: any) => !r.caption)) throw new Error("Every post needs a caption");
+
+    const { data, error } = await supabaseAdmin.from("scheduled_posts").insert(rows).select("*");
     if (error) throw new Error(error.message);
-    return { saved: true, draft: data, account_connected: !!conn, note: "Saved as a draft. The user reviews and adds media in Composer before it can publish." };
+    const artifacts = (data || []).map(postArtifact);
+    return {
+      saved: artifacts.length,
+      drafts: artifacts.map((a: any) => ({ id: a.id, platform: a.platform, scheduled_for: a.scheduled_for })),
+      platforms_not_connected: [...new Set(rows.filter((r: any) => !r.platform_account_id).map((r: any) => r.platform))],
+      note: "Saved as drafts on the calendar. The user reviews, adds media and approves them. Nothing is published automatically.",
+      _artifacts: artifacts,
+    };
   },
-  summarize: (r) => `Draft saved for ${r.draft?.platform}${r.draft?.scheduled_for ? ` on ${r.draft.scheduled_for.slice(0, 10)}` : ""}`,
+  summarize: (r) => `${r.saved} ${r.saved === 1 ? "draft" : "drafts"} added to the calendar`,
+};
+
+// ─── 12. Action: edit drafts the agent (or user) made ──────────────────────
+const updateDraftPost: AgentTool = {
+  name: "update_draft_post",
+  label: "Updating a draft",
+  description: "Edit a DRAFT post in the calendar: caption, hashtags or planned time. Use the id from get_content_calendar or from drafts you created. Only drafts can be edited this way.",
+  parameters: {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      caption: { type: "string" },
+      hashtags: { type: "array", items: { type: "string" } },
+      scheduled_for: { type: "string", description: "New ISO date-time with offset" },
+    },
+    required: ["id"],
+    additionalProperties: false,
+  },
+  async run(input, { userId }) {
+    const { data: post } = await supabaseAdmin.from("scheduled_posts").select("*").eq("id", String(input?.id || "")).eq("user_id", userId).maybeSingle();
+    if (!post) throw new Error("Draft not found");
+    if (post.status !== "draft") throw new Error(`This post is ${post.status}; only drafts can be edited by the agent`);
+    const updates: any = { updated_at: new Date().toISOString() };
+    if (input.caption !== undefined) updates.caption = cleanText(input.caption, 5000);
+    if (input.hashtags !== undefined) updates.hashtags = cleanTags(input.hashtags);
+    if (input.scheduled_for) {
+      const t = new Date(input.scheduled_for);
+      if (!Number.isNaN(t.getTime())) updates.scheduled_for = t.toISOString();
+    }
+    const { data, error } = await supabaseAdmin.from("scheduled_posts").update(updates).eq("id", post.id).select("*").single();
+    if (error) throw new Error(error.message);
+    return { updated: true, id: data.id, _artifacts: [postArtifact(data)] };
+  },
+  summarize: () => "Draft updated",
+};
+
+// ─── 13. Media library ─────────────────────────────────────────────────────
+const listMediaLibrary: AgentTool = {
+  name: "list_media_library",
+  label: "Browsing your media library",
+  description: "Recent images and videos in the user's ZieAds media library, with ids you can attach to drafts.",
+  parameters: { type: "object", properties: { limit: { type: "integer", description: "1 to 30, default 12" } }, additionalProperties: false },
+  async run(input, { userId }) {
+    const { data, error } = await supabaseAdmin
+      .from("media_library")
+      .select("id, file_name, mime_type, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(clampInt(input?.limit, 12, 1, 30));
+    if (error) throw new Error(error.message);
+    return { count: (data || []).length, media: (data || []).map((m: any) => ({ id: m.id, name: m.file_name, type: String(m.mime_type || "").split("/")[0], added: m.created_at })) };
+  },
+  summarize: (r) => `${r.count} media files`,
+};
+
+// ─── 14. Comments with ids (for analysis and replies) ──────────────────────
+const listComments: AgentTool = {
+  name: "list_comments",
+  label: "Reading your comments",
+  description:
+    "Individual comments from the Inbox with their id, author, text, sentiment, status and any saved draft reply. Use for comment analysis and before drafting replies.",
+  parameters: {
+    type: "object",
+    properties: {
+      filter: { type: "string", enum: ["unanswered", "negative", "questions", "positive", "all"], description: "Default unanswered" },
+      platform: platformArg,
+      days: { type: "integer", description: "Look-back window 1 to 60 days, default 30" },
+      limit: { type: "integer", description: "1 to 40, default 20" },
+    },
+    additionalProperties: false,
+  },
+  async run(input, { userId }) {
+    const filter = input?.filter || "unanswered";
+    let q = supabaseAdmin
+      .from("comments_inbox")
+      .select("id, platform, author_username, text, sentiment, status, reply_text, replied_at, posted_at, created_at")
+      .eq("user_id", userId)
+      .neq("status", "archived")
+      .gte("created_at", isoDaysAgo(clampInt(input?.days, 30, 1, 60)))
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (input?.platform) q = q.eq("platform", String(input.platform).toLowerCase());
+    if (filter === "negative" || filter === "positive") q = q.eq("sentiment", filter);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    let rows = data || [];
+    if (filter === "unanswered" || filter === "questions") rows = rows.filter((r: any) => r.status !== "replied" && !r.replied_at);
+    if (filter === "questions") rows = rows.filter((r: any) => /\?|how|price|harga|berapa|where|dimana|kapan|when|ship|order|stock|ready/i.test(r.text || ""));
+    const limit = clampInt(input?.limit, 20, 1, 40);
+    return {
+      filter,
+      matched: rows.length,
+      comments: rows.slice(0, limit).map((r: any) => ({
+        id: r.id,
+        platform: r.platform,
+        from: r.author_username,
+        text: trim(r.text, 300),
+        sentiment: r.sentiment,
+        status: r.status,
+        draft_reply: r.status !== "replied" && r.reply_text ? r.reply_text : undefined,
+        at: r.posted_at || r.created_at,
+      })),
+    };
+  },
+  summarize: (r) => `${r.matched} ${r.filter} comments`,
+};
+
+// ─── 15. Action: draft replies into the Inbox ──────────────────────────────
+const draftCommentReplies: AgentTool = {
+  name: "draft_comment_replies",
+  label: "Drafting replies in your Inbox",
+  description:
+    "Save suggested replies on Inbox comments. Replies are NOT sent: they appear pre-filled in the Inbox and in the chat so the user can edit and send each one. Use ids from list_comments. Write replies in the commenter's language and the brand's voice.",
+  parameters: {
+    type: "object",
+    properties: {
+      replies: {
+        type: "array",
+        items: { type: "object", properties: { comment_id: { type: "string" }, reply: { type: "string" } }, required: ["comment_id", "reply"] },
+        description: "1 to 25 replies",
+      },
+    },
+    required: ["replies"],
+    additionalProperties: false,
+  },
+  async run(input, { userId }) {
+    const list = (Array.isArray(input?.replies) ? input.replies : []).slice(0, 25).filter((r: any) => r?.comment_id && r?.reply);
+    if (!list.length) throw new Error("replies is required");
+    const ids = list.map((r: any) => String(r.comment_id));
+    const { data: comments } = await supabaseAdmin.from("comments_inbox").select("id, platform, author_username, text, sentiment, status").eq("user_id", userId).in("id", ids);
+    const byId = new Map((comments || []).map((c: any) => [c.id, c]));
+    const artifacts: AgentArtifact[] = [];
+    const skipped: string[] = [];
+    await Promise.all(
+      list.map(async (r: any) => {
+        const c: any = byId.get(String(r.comment_id));
+        if (!c || c.status === "replied") {
+          skipped.push(String(r.comment_id));
+          return;
+        }
+        const reply = cleanText(r.reply, 2200);
+        const { error } = await supabaseAdmin.from("comments_inbox").update({ reply_text: reply }).eq("id", c.id).eq("user_id", userId);
+        if (error) {
+          skipped.push(c.id);
+          return;
+        }
+        artifacts.push({ kind: "reply", id: c.id, platform: c.platform, author: c.author_username, comment: c.text, reply, sentiment: c.sentiment });
+      }),
+    );
+    return { drafted: artifacts.length, skipped, note: "Replies are saved as drafts in the Inbox. The user sends them.", _artifacts: artifacts };
+  },
+  summarize: (r) => `${r.drafted} ${r.drafted === 1 ? "reply" : "replies"} drafted${r.skipped?.length ? `, ${r.skipped.length} skipped` : ""}`,
+};
+
+// ─── 16. Action: track a competitor in Competitor Hunt ─────────────────────
+const addCompetitor: AgentTool = {
+  name: "add_competitor",
+  label: "Adding a competitor to Hunt",
+  description: "Start tracking a competitor in Competitor Hunt. Only add competitors the user named or clearly asked you to find. Max 25 tracked.",
+  parameters: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      website_url: { type: "string", description: "Homepage URL" },
+      instagram_username: { type: "string", description: "Optional handle without @" },
+    },
+    required: ["name", "website_url"],
+    additionalProperties: false,
+  },
+  async run(input, { userId }) {
+    const name = cleanText(input?.name, 100);
+    let url = String(input?.website_url || "").trim();
+    if (!name || !url) throw new Error("name and website_url are required");
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    url = url.replace(/^http:\/\//i, "https://");
+    const handle = input?.instagram_username ? String(input.instagram_username).replace(/^@/, "").trim() : null;
+    const { count } = await supabaseAdmin.from("competitors").select("*", { count: "exact", head: true }).eq("user_id", userId);
+    if ((count || 0) >= 25) throw new Error("Competitor limit of 25 reached");
+    const { data: dup } = await supabaseAdmin.from("competitors").select("id, name, website_url, instagram_username").eq("user_id", userId).eq("website_url", url).maybeSingle();
+    if (dup) return { added: false, already_tracked: true, _artifacts: [{ kind: "competitor", ...dup }] };
+    const { data, error } = await supabaseAdmin.from("competitors").insert({ user_id: userId, name, website_url: url, instagram_username: handle }).select("id, name, website_url, instagram_username").single();
+    if (error) throw new Error(error.message);
+    return { added: true, competitor: data, _artifacts: [{ kind: "competitor", ...data }] };
+  },
+  summarize: (r) => (r.added ? `Now tracking ${r.competitor?.name}` : "Already tracked"),
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
@@ -556,7 +802,12 @@ export const AGENT_TOOLS: AgentTool[] = [
   getLatestBriefing,
   getAuditAndProfile,
   scanWebsite,
-  createDraftPost,
+  listComments,
+  listMediaLibrary,
+  createDraftPosts,
+  updateDraftPost,
+  draftCommentReplies,
+  addCompetitor,
 ];
 
 export const TOOL_MAP = new Map(AGENT_TOOLS.map((t) => [t.name, t]));

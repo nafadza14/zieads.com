@@ -12,15 +12,15 @@ import ZieAdsLogo from '../../components/ZieAdsLogo';
 // Predefined list of predefined keys to manage
 const PREDEFINED_KEYS = [
   { service_name: 'anthropic', display_name: 'Anthropic Claude API', warning: false, notes: 'Used for AI Chat & Strategic Report dimensions' },
-  { service_name: 'stripe_secret', display_name: 'Stripe — Secret Key', warning: false, notes: 'Stripe backend billing transactions' },
-  { service_name: 'stripe_webhook', display_name: 'Stripe — Webhook Secret', warning: false, notes: 'Stripe webhook notifications' },
-  { service_name: 'resend', display_name: 'Resend — Email API', warning: false, notes: 'For onboarding and notification emails' },
-  { service_name: 'supabase_service_role', display_name: 'Supabase — Service Role Key', warning: true, notes: '⚠️ Handle with extreme care. Full DB access.' },
-  { service_name: 'twitter', display_name: 'Twitter/X API — Hermes', warning: false, notes: 'Used by HERMES marketing agent' },
-  { service_name: 'linkedin', display_name: 'LinkedIn API — Hermes', warning: false, notes: 'Used by HERMES marketing agent' },
-  { service_name: 'reddit', display_name: 'Reddit API — Hermes (read-only)', warning: false, notes: 'Used by HERMES marketing agent' },
+  { service_name: 'stripe_secret', display_name: 'Stripe - Secret Key', warning: false, notes: 'Stripe backend billing transactions' },
+  { service_name: 'stripe_webhook', display_name: 'Stripe - Webhook Secret', warning: false, notes: 'Stripe webhook notifications' },
+  { service_name: 'resend', display_name: 'Resend - Email API', warning: false, notes: 'For onboarding and notification emails' },
+  { service_name: 'supabase_service_role', display_name: 'Supabase - Service Role Key', warning: true, notes: '⚠️ Handle with extreme care. Full DB access.' },
+  { service_name: 'twitter', display_name: 'Twitter/X API - Hermes', warning: false, notes: 'Used by HERMES marketing agent' },
+  { service_name: 'linkedin', display_name: 'LinkedIn API - Hermes', warning: false, notes: 'Used by HERMES marketing agent' },
+  { service_name: 'reddit', display_name: 'Reddit API - Hermes (read-only)', warning: false, notes: 'Used by HERMES marketing agent' },
   { service_name: 'google_search_console', display_name: 'Google Search Console API', warning: false, notes: 'Used for SEO dimensions auditing' },
-  { service_name: 'browserbase', display_name: 'Browserbase — Browser Automation', warning: false, notes: 'Used for web rendering/screenshot scanning' }
+  { service_name: 'browserbase', display_name: 'Browserbase - Browser Automation', warning: false, notes: 'Used for web rendering/screenshot scanning' }
 ];
 
 export default function SuperadminDashboard() {
@@ -914,7 +914,7 @@ export default function SuperadminDashboard() {
               <div className="grid grid-cols-2 gap-8">
                 
                 <div className="bg-white border border-[#E4E4E7] rounded-lg p-6 shadow-sm">
-                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">New Signups — Last 30 Days</h3>
+                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">New Signups - Last 30 Days</h3>
                   <div className="h-[200px] flex items-end justify-between gap-1.5 border-b border-[#E4E4E7] pb-1">
                     {overviewData.signupsChart.map((s: any, idx: number) => (
                       <div key={idx} className="flex-1 flex flex-col justify-end h-full group relative">
@@ -934,7 +934,7 @@ export default function SuperadminDashboard() {
                 </div>
 
                 <div className="bg-white border border-[#E4E4E7] rounded-lg p-6 shadow-sm">
-                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">API Cost — Last 30 Days ($)</h3>
+                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">API Cost - Last 30 Days ($)</h3>
                   <div className="h-[200px] flex items-end justify-between gap-1 border-b border-[#E4E4E7] pb-1">
                     {overviewData.apiCostChart.map((c: any, idx: number) => (
                       <div key={idx} className="flex-1 flex flex-col justify-end h-full group relative">
@@ -1479,7 +1479,7 @@ export default function SuperadminDashboard() {
                             {tx.credits_delta >= 0 ? '+' : ''}{tx.credits_delta}
                           </td>
                           <td className="p-4 text-right font-mono">{tx.credits_after}</td>
-                          <td className="p-4 text-zinc-500 font-mono text-[10px]">{tx.operation_id || '—'}</td>
+                          <td className="p-4 text-zinc-500 font-mono text-[10px]">{tx.operation_id || '-'}</td>
                           <td className="p-4 text-right font-mono text-zinc-400">{new Date(tx.created_at).toLocaleString()}</td>
                         </tr>
                       ))}
@@ -1764,7 +1764,7 @@ export default function SuperadminDashboard() {
 
               {/* Economics table */}
               <div>
-                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">Gross Margin by Plan — This Month</h3>
+                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">Gross Margin by Plan - This Month</h3>
                 <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
@@ -1889,7 +1889,7 @@ export default function SuperadminDashboard() {
                           </span>
                         </td>
                         <td className="p-4 text-zinc-500 capitalize">{log.entity_type}</td>
-                        <td className="p-4 font-mono text-zinc-500 text-[10px]">{log.entity_id || '—'}</td>
+                        <td className="p-4 font-mono text-zinc-500 text-[10px]">{log.entity_id || '-'}</td>
                         <td className="p-4 font-mono text-[#52525B]">{log.ip_address}</td>
                         <td className="p-4 text-right font-mono text-zinc-400">{new Date(log.created_at).toLocaleString()}</td>
                       </tr>
@@ -1979,7 +1979,7 @@ export default function SuperadminDashboard() {
                         <td className="p-4 font-mono text-zinc-400">
                           {adm.last_login_at ? new Date(adm.last_login_at).toLocaleString() : 'Never'}
                         </td>
-                        <td className="p-4 font-mono text-zinc-400">{adm.last_login_ip || '—'}</td>
+                        <td className="p-4 font-mono text-zinc-400">{adm.last_login_ip || '-'}</td>
                         <td className="p-4">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${adm.is_active ? 'bg-[#F0FDF4] text-[#15803D]' : 'bg-red-50 text-red-700'}`}>
                             {adm.is_active ? 'Active' : 'Disabled'}
@@ -2073,15 +2073,15 @@ export default function SuperadminDashboard() {
                   className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
                 >
                   <option value="anthropic">Anthropic Claude API</option>
-                  <option value="stripe_secret">Stripe — Secret Key</option>
-                  <option value="stripe_webhook">Stripe — Webhook Secret</option>
-                  <option value="resend">Resend — Email API</option>
-                  <option value="supabase_service_role">Supabase — Service Role Key</option>
-                  <option value="twitter">Twitter/X API — Hermes</option>
-                  <option value="linkedin">LinkedIn API — Hermes</option>
-                  <option value="reddit">Reddit API — Hermes (read-only)</option>
+                  <option value="stripe_secret">Stripe - Secret Key</option>
+                  <option value="stripe_webhook">Stripe - Webhook Secret</option>
+                  <option value="resend">Resend - Email API</option>
+                  <option value="supabase_service_role">Supabase - Service Role Key</option>
+                  <option value="twitter">Twitter/X API - Hermes</option>
+                  <option value="linkedin">LinkedIn API - Hermes</option>
+                  <option value="reddit">Reddit API - Hermes (read-only)</option>
                   <option value="google_search_console">Google Search Console API</option>
-                  <option value="browserbase">Browserbase — Browser Automation</option>
+                  <option value="browserbase">Browserbase - Browser Automation</option>
                 </select>
               </div>
 
@@ -2291,29 +2291,29 @@ export default function SuperadminDashboard() {
                   <div className="space-y-2 text-[#52525B]">
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Business Name:</span>
-                      <span className="font-semibold text-[#09090B]">{selectedUser.profile.business_name || '—'}</span>
+                      <span className="font-semibold text-[#09090B]">{selectedUser.profile.business_name || '-'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Website URL:</span>
                       <a href={selectedUser.profile.website_url} target="_blank" rel="noreferrer" className="text-[#2563EB] hover:underline flex items-center gap-1 font-mono">
-                        {selectedUser.profile.website_url ? 'Link' : '—'} <ExternalLink size={11} />
+                        {selectedUser.profile.website_url ? 'Link' : '-'} <ExternalLink size={11} />
                       </a>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Business Type:</span>
-                      <span className="text-[#09090B]">{selectedUser.profile.business_type || '—'}</span>
+                      <span className="text-[#09090B]">{selectedUser.profile.business_type || '-'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Advertising Goal:</span>
-                      <span className="text-[#09090B]">{selectedUser.profile.primary_advertising_goal || '—'}</span>
+                      <span className="text-[#09090B]">{selectedUser.profile.primary_advertising_goal || '-'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Monthly Budget:</span>
-                      <span className="text-[#09090B] font-mono">{selectedUser.profile.monthly_ads_budget || '—'}</span>
+                      <span className="text-[#09090B] font-mono">{selectedUser.profile.monthly_ads_budget || '-'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Platforms:</span>
-                      <span className="text-[#09090B]">{selectedUser.profile.platforms.join(', ') || '—'}</span>
+                      <span className="text-[#09090B]">{selectedUser.profile.platforms.join(', ') || '-'}</span>
                     </div>
                   </div>
                 ) : (

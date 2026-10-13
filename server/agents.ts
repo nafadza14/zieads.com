@@ -91,7 +91,7 @@ BUSINESS CONTEXT:
 
 DELIVERABLES REQUIRED:
 
-1. ICP (Ideal Customer Profile) — be specific, not generic:
+1. ICP (Ideal Customer Profile) - be specific, not generic:
    - primaryICP: name, age range, income, job title or life stage, key pain points (3), trigger events that make them search for this
    - secondaryICP: the secondary buyer persona
    - jobToBeDone: the functional + emotional job this product fulfills
@@ -101,13 +101,13 @@ DELIVERABLES REQUIRED:
    - WARM (Mid funnel): engagement/lookalike/in-market audiences
    - HOT (Bottom funnel): retargeting pools, customer lists, abandoned visitors
 
-3. Platform Matrices — give specific targeting parameters for each:
+3. Platform Matrices - give specific targeting parameters for each:
    - Meta: cold interest stacks, warm lookalike seeds, hot retargeting windows
    - Google: search intent keywords, in-market segments, customer match strategy
    - TikTok: interest categories, behavioral signals, creator audience types
    - LinkedIn (only if B2B signals present): job titles, seniority, company size, industries
 
-4. Audience Sizing Estimates: for each tier estimate reach (e.g. "500K–2M on Meta")
+4. Audience Sizing Estimates: for each tier estimate reach (e.g. "500K - 2M on Meta")
 
 5. Exclusion Strategy: exactly who to exclude and why (budget protection)
 
@@ -190,11 +190,11 @@ BUSINESS CONTEXT:
 DELIVERABLES REQUIRED:
 
 1. THREE-TIER COMPETITOR MAP:
-   - Tier 1 — Direct competitors (same product, same ICP, similar price point): 3–4 companies
+   - Tier 1 - Direct competitors (same product, same ICP, similar price point): 3-4 companies
      * For each: name, estimated URL, ad spend tier (Low/Medium/High/Heavy), active platforms, hero offer, creative approach, key messaging angle, estimated monthly ad spend range
-   - Tier 2 — Indirect competitors (different product, same problem): 2–3 companies
+   - Tier 2 - Indirect competitors (different product, same problem): 2-3 companies
      * For each: name, what they offer, why customers might choose them instead
-   - Tier 3 — Aspirational benchmarks (category leaders): 2 companies
+   - Tier 3 - Aspirational benchmarks (category leaders): 2 companies
      * For each: name, what to study in their strategy, specific tactics to borrow
 
 2. AD INTELLIGENCE ASSESSMENT (based on industry knowledge):
@@ -297,17 +297,17 @@ BUSINESS CONTEXT:
 
 DELIVERABLES REQUIRED:
 
-1. PLATFORM FIT SCORING — rate each platform 0-100 for this specific business:
+1. PLATFORM FIT SCORING - rate each platform 0-100 for this specific business:
    Platforms: Meta Ads, Google Search, Google Shopping (if e-comm), Google Display, TikTok Ads, LinkedIn Ads, YouTube Ads
    For each: fit score, why it fits or doesn't, recommended or skip
 
-2. BUDGET ALLOCATION MODEL — based on the monthly budget given:
+2. BUDGET ALLOCATION MODEL - based on the monthly budget given:
    - Exact dollar amount AND % per platform
    - Funnel stage split: TOFU / MOFU / BOFU ratios with dollar amounts
    - Testing budget (new creatives, new audiences) vs. scaling budget
    - Month 1 vs Month 3 allocation (how to shift as data comes in)
 
-3. KPI BENCHMARKS — industry-specific targets per platform:
+3. KPI BENCHMARKS - industry-specific targets per platform:
    - Meta: Expected CPM, CPC, CTR, CPA, ROAS
    - Google Search: Expected CPC, CTR, conversion rate, CPA
    - TikTok: Expected CPM, CPC, CTR
@@ -392,7 +392,7 @@ BUSINESS CONTEXT:
 
 DELIVERABLES REQUIRED:
 
-1. LANDING PAGE AUDIT — score each 0-100:
+1. LANDING PAGE AUDIT - score each 0-100:
    - loadSpeed: based on ${ctx.scrapedData.pageLoadTime}ms (under 2s=95, 2-3s=70, 3-4s=45, over 4s=20)
    - aboveFoldClarity: does the H1 immediately communicate value to a cold visitor?
    - headlineStrength: specificity, benefit orientation, urgency, differentiation
@@ -403,20 +403,20 @@ DELIVERABLES REQUIRED:
    - messageMatch: would this page match paid ad copy promises?
    Overall landing page score = weighted average
 
-2. FUNNEL ARCHITECTURE — map current state and prescribe missing stages:
-   - TOFU (Top of Funnel — Awareness):
+2. FUNNEL ARCHITECTURE - map current state and prescribe missing stages:
+   - TOFU (Top of Funnel - Awareness):
      * What awareness content/channels exist?
      * Recommended TOFU ad types and content formats
      * Recommended TOFU audience (cold targeting approach)
      * Gap: what's missing?
-   - MOFU (Middle of Funnel — Consideration):
+   - MOFU (Middle of Funnel - Consideration):
      * Is there a lead magnet, trial, free demo, or nurture mechanism?
      * Recommended MOFU offer (what to create if missing)
      * Retargeting window and trigger
      * Gap: what's missing?
-   - BOFU (Bottom of Funnel — Conversion):
+   - BOFU (Bottom of Funnel - Conversion):
      * Is the conversion offer clear and compelling?
-     * Steps to convert — how many clicks from ad to confirmation?
+     * Steps to convert - how many clicks from ad to confirmation?
      * Friction points in the conversion path
      * Gap: what's missing?
 
@@ -425,10 +425,10 @@ DELIVERABLES REQUIRED:
    - How to route new visitors vs. warm visitors vs. hot visitors differently
    - Recommended pixel event triggers at each stage
 
-4. FUNNEL BUILD SEQUENCE — prioritized 8-step roadmap:
+4. FUNNEL BUILD SEQUENCE - prioritized 8-step roadmap:
    - Order them by revenue impact (fix highest-ROI gaps first)
 
-5. CONVERSION BLOCKERS — top 5 things killing conversions right now
+5. CONVERSION BLOCKERS - top 5 things killing conversions right now
 
 Score the overall funnel 0-100 (penalize heavily for missing MOFU and poor message match).
 
@@ -485,7 +485,7 @@ RESPOND WITH VALID JSON ONLY:
   }
 }`,
 
-  "ads-copy": (ctx) => `You are the ZieAds Expert Copywriter Agent. Generate platform-native ad copy that is ready to be pasted directly into Ads Manager — no templates, no placeholders, real finished copy.
+  "ads-copy": (ctx) => `You are the ZieAds Expert Copywriter Agent. Generate platform-native ad copy that is ready to be pasted directly into Ads Manager - no templates, no placeholders, real finished copy.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
@@ -499,7 +499,7 @@ BUSINESS CONTEXT:
 - Key Headings: ${ctx.scrapedData.headings.slice(0, 6).map(h => h.text).join('; ')}
 
 INSTRUCTIONS:
-- Write copy that is specific to THIS business — no generic filler
+- Write copy that is specific to THIS business - no generic filler
 - Use psychological triggers: urgency, social proof, specificity, loss aversion, aspiration
 - Each platform must feel native to that platform's audience and format
 - Google headlines must be ≤30 chars, descriptions ≤90 chars
@@ -562,14 +562,14 @@ BUSINESS CONTEXT:
 - Key Headings: ${ctx.scrapedData.headings.slice(0, 8).map(h => `${h.tag}: ${h.text}`).join('; ')}
 
 AUDIT THESE 8 DIMENSIONS (score each 0-100):
-1. Above-the-fold clarity — does the headline immediately communicate the offer to a cold visitor?
-2. Headline strength — specificity, benefit orientation, curiosity or urgency
-3. CTA effectiveness — button copy, placement, contrast, number of CTAs
-4. Message match — does the page match what paid ad copy would promise? (score lower if generic)
-5. Social proof — testimonials, reviews, logos, numbers visible on page
-6. Friction level — form fields, steps, unnecessary friction before conversion (100 = zero friction)
-7. Page speed — based on load time (under 2000ms = 100, 2000-3000ms = 70, over 3000ms = 40)
-8. Mobile readiness — infer from layout signals and CTA placement
+1. Above-the-fold clarity - does the headline immediately communicate the offer to a cold visitor?
+2. Headline strength - specificity, benefit orientation, curiosity or urgency
+3. CTA effectiveness - button copy, placement, contrast, number of CTAs
+4. Message match - does the page match what paid ad copy would promise? (score lower if generic)
+5. Social proof - testimonials, reviews, logos, numbers visible on page
+6. Friction level - form fields, steps, unnecessary friction before conversion (100 = zero friction)
+7. Page speed - based on load time (under 2000ms = 100, 2000-3000ms = 70, over 3000ms = 40)
+8. Mobile readiness - infer from layout signals and CTA placement
 
 Overall score = weighted average (clarity 20%, headline 15%, CTA 15%, message match 20%, social proof 10%, friction 10%, speed 5%, mobile 5%).
 
@@ -589,7 +589,7 @@ RESPOND WITH VALID JSON ONLY:
       "pageSpeed": number,
       "mobileReadiness": number
     },
-    "headlineRewrites": ["Rewritten headline option 1 — specific and benefit-driven", "Rewritten headline option 2 — urgency angle", "Rewritten headline option 3 — social proof angle"],
+    "headlineRewrites": ["Rewritten headline option 1 - specific and benefit-driven", "Rewritten headline option 2 - urgency angle", "Rewritten headline option 3 - social proof angle"],
     "ctaOptimizations": ["Specific CTA copy suggestion 1 with placement note", "CTA suggestion 2", "CTA suggestion 3"],
     "trustSignalGaps": ["Missing trust element 1 (e.g. no testimonials visible)", "Missing trust element 2", "Missing trust element 3"],
     "quickWins": ["30-minute fix #1", "30-minute fix #2", "30-minute fix #3"],
@@ -597,7 +597,7 @@ RESPOND WITH VALID JSON ONLY:
   }
 }`,
 
-  "ads-google": (ctx) => `You are the ZieAds Google Ads Strategist Agent. Build a full Google Ads strategy across Search, Shopping (if applicable), and Display — with campaign structure, keywords, ad copy, bidding, and audience layers.
+  "ads-google": (ctx) => `You are the ZieAds Google Ads Strategist Agent. Build a full Google Ads strategy across Search, Shopping (if applicable), and Display - with campaign structure, keywords, ad copy, bidding, and audience layers.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
@@ -616,10 +616,10 @@ BUSINESS CONTEXT:
 DELIVERABLES REQUIRED:
 
 1. SEARCH CAMPAIGN STRATEGY:
-   - Campaign structure (3–4 campaigns with ad groups)
+   - Campaign structure (3-4 campaigns with ad groups)
    - For each campaign: name, match type approach, budget allocation, key ad groups
-   - Keyword strategy: 3–4 intent buckets (branded, competitor, category, problem-aware)
-   - 5–8 keywords per bucket with estimated search volumes where possible
+   - Keyword strategy: 3-4 intent buckets (branded, competitor, category, problem-aware)
+   - 5-8 keywords per bucket with estimated search volumes where possible
    - Negative keyword list (20+ terms to prevent wasted spend)
    - RSA (Responsive Search Ad) copy: 5 headlines + 3 descriptions per campaign
    - Bidding strategy recommendation: when to use manual CPC vs. Target CPA vs. Max Conversions
@@ -717,7 +717,7 @@ RESPOND WITH VALID JSON ONLY:
   }
 }`,
 
-  "ads-meta": (ctx) => `You are the ZieAds Meta Ads Strategist. Build the most complete, actionable Facebook & Instagram paid ads strategy possible — ready to implement in Ads Manager without any additional research.
+  "ads-meta": (ctx) => `You are the ZieAds Meta Ads Strategist. Build the most complete, actionable Facebook & Instagram paid ads strategy possible - ready to implement in Ads Manager without any additional research.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
@@ -734,17 +734,17 @@ BUSINESS CONTEXT:
 - Has Lead Form: ${ctx.scrapedData.businessSignals.hasLeadForm}
 - Detected Pixels: ${ctx.scrapedData.detectedPixels.join(', ') || 'None'}
 
-DELIVERABLES REQUIRED (be specific to THIS business — no generic filler):
+DELIVERABLES REQUIRED (be specific to THIS business - no generic filler):
 
-1. ACCOUNT STRUCTURE (3–4 campaigns):
+1. ACCOUNT STRUCTURE (3-4 campaigns):
    For each campaign: name, objective (Awareness/Traffic/Engagement/Leads/Sales/App), daily/monthly budget, optimization event, placement strategy (Advantage+ vs manual), bid strategy
 
-2. AD SET ARCHITECTURE (2–3 ad sets per campaign):
+2. AD SET ARCHITECTURE (2-3 ad sets per campaign):
    For each ad set: name, audience type (Cold/Warm/Hot), detailed targeting (interests, behaviors, demographics), geographic targeting, age/gender breakdown, placement (Feed/Stories/Reels/Messenger), daily budget
 
 3. AUDIENCE STRATEGY:
    - 3 cold interest-based audiences with specific interest stacks (real Facebook interests, not categories)
-   - 2 warm audiences (video viewers, page engagers, website visitors — with windows)
+   - 2 warm audiences (video viewers, page engagers, website visitors - with windows)
    - 2 hot retargeting audiences (cart abandoners, lead form openers, buyer LTV windows)
    - 3 lookalike seed audiences ranked by quality
    - Custom audience exclusion strategy
@@ -774,7 +774,7 @@ DELIVERABLES REQUIRED (be specific to THIS business — no generic filler):
 8. 30-DAY LAUNCH PLAN:
    - Week 1: launch checklist
    - Week 2: optimization checkpoints
-   - Week 3–4: scaling decisions
+   - Week 3-4: scaling decisions
 
 Score Meta Ads readiness for this business 0-100.
 
@@ -856,7 +856,7 @@ RESPOND WITH VALID JSON ONLY:
   }
 }`,
 
-  "ads-tiktok": (ctx) => `You are the ZieAds TikTok Ads Strategist. Build a complete TikTok For Business strategy with UGC scripts, Spark Ads setup, TopView/In-Feed planning, and full creative direction — ready to brief creators and launch campaigns.
+  "ads-tiktok": (ctx) => `You are the ZieAds TikTok Ads Strategist. Build a complete TikTok For Business strategy with UGC scripts, Spark Ads setup, TopView/In-Feed planning, and full creative direction - ready to brief creators and launch campaigns.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
@@ -882,8 +882,8 @@ DELIVERABLES REQUIRED:
    - TikTok Shopping Ads (if e-commerce): LIVE shopping, video shopping, catalog setup
    - Branded Hashtag Challenge (if brand awareness goal)
 
-3. UGC CREATOR BRIEF — 5 full video script outlines:
-   For each script: hook (first 3 seconds, word-for-word), problem setup (3–5 seconds), solution reveal (5–8 seconds), proof/social proof (3–5 seconds), CTA (2–3 seconds), total length, creator persona to brief, audio direction (trending sound / original / voiceover), text overlay suggestions
+3. UGC CREATOR BRIEF - 5 full video script outlines:
+   For each script: hook (first 3 seconds, word-for-word), problem setup (3-5 seconds), solution reveal (5-8 seconds), proof/social proof (3-5 seconds), CTA (2-3 seconds), total length, creator persona to brief, audio direction (trending sound / original / voiceover), text overlay suggestions
 
 4. SPARK ADS STRATEGY:
    - How to find creators for Spark Ads authorization
@@ -988,7 +988,7 @@ RESPOND WITH VALID JSON ONLY:
   }
 }`,
 
-  "ads-linkedin": (ctx) => `You are the ZieAds LinkedIn B2B Ads Strategist. Build a complete Account-Based Marketing (ABM) strategy on LinkedIn — from ICP targeting to full-funnel content offers, ad formats, and pipeline measurement.
+  "ads-linkedin": (ctx) => `You are the ZieAds LinkedIn B2B Ads Strategist. Build a complete Account-Based Marketing (ABM) strategy on LinkedIn - from ICP targeting to full-funnel content offers, ad formats, and pipeline measurement.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
@@ -1011,7 +1011,7 @@ DELIVERABLES REQUIRED:
    - Account tiers: Tier 1 (strategic, 1:1 ABM), Tier 2 (scalable, 1:few), Tier 3 (programmatic, 1:many)
 
 2. CAMPAIGN ARCHITECTURE (LinkedIn Campaign Manager):
-   - 3–4 campaigns each with: objective, format, audience, budget, bid strategy
+   - 3-4 campaigns each with: objective, format, audience, budget, bid strategy
    - Funnel mapping: Awareness → Consideration → Decision → Post-sale
    - Campaign groups structure recommendation
 
@@ -1039,7 +1039,7 @@ DELIVERABLES REQUIRED:
    - For each: format, title, funnel stage, expected CPL, follow-up sequence
 
 6. CONVERSATION ADS SCRIPTS:
-   - 2 full Conversation Ad scripts with: subject, intro message, 2–3 CTA options, follow-up branch
+   - 2 full Conversation Ad scripts with: subject, intro message, 2-3 CTA options, follow-up branch
 
 7. ORGANIC + PAID SYNERGY:
    - Thought leadership post topics for ICP-relevant organic reach
@@ -1161,7 +1161,7 @@ RESPOND WITH VALID JSON ONLY:
   "linkedin": (ctx) => AGENT_PROMPTS["ads-linkedin"](ctx),
 
   // PRD Skill #14: Full Strategy Report
-  "ads-report": (ctx) => `You are the ZieAds Senior Strategy Director. Write a complete, detailed paid advertising strategy report for this business — the kind of document a senior media buyer at a top agency would produce after a full account audit.
+  "ads-report": (ctx) => `You are the ZieAds Senior Strategy Director. Write a complete, detailed paid advertising strategy report for this business - the kind of document a senior media buyer at a top agency would produce after a full account audit.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
@@ -1179,12 +1179,12 @@ BUSINESS CONTEXT:
 - Has Blog: ${ctx.scrapedData.businessSignals.hasBlog}
 - Detected Pixels: ${ctx.scrapedData.detectedPixels.join(', ') || 'None'}
 
-REPORT SECTIONS REQUIRED (write detailed prose for each — not bullet points):
+REPORT SECTIONS REQUIRED (write detailed prose for each - not bullet points):
 
-1. EXECUTIVE SUMMARY (150–200 words):
+1. EXECUTIVE SUMMARY (150-200 words):
    Business overview, current paid ads opportunity, key findings, primary recommendation, expected outcome if strategy is executed.
 
-2. MARKET & COMPETITIVE LANDSCAPE (100–150 words):
+2. MARKET & COMPETITIVE LANDSCAPE (100-150 words):
    Industry context, competitive intensity, primary opportunity in the market, main differentiator to exploit.
 
 3. TARGET AUDIENCE & ICP (150 words):
@@ -1193,7 +1193,7 @@ REPORT SECTIONS REQUIRED (write detailed prose for each — not bullet points):
 4. PLATFORM STRATEGY & RECOMMENDATIONS:
    Which platforms to use, why, in what priority order, with specific rationale for this business type and goal.
 
-5. CREATIVE DIRECTION (100–150 words):
+5. CREATIVE DIRECTION (100-150 words):
    Visual style, tone of voice, creative hooks, format recommendations, production guidance.
 
 6. BUDGET ALLOCATION (detailed):
@@ -1212,7 +1212,7 @@ REPORT SECTIONS REQUIRED (write detailed prose for each — not bullet points):
     Specific actions, who does what, expected outcomes per phase.
 
 11. RISK FACTORS & MITIGATION:
-    3–5 risks that could derail the strategy and how to mitigate each.
+    3-5 risks that could derail the strategy and how to mitigate each.
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -1264,7 +1264,7 @@ RESPOND WITH VALID JSON ONLY:
   "report": (ctx) => AGENT_PROMPTS["ads-report"](ctx),
 
   // PRD Skill #15: White-Label Agency PDF Report
-  "ads-report-pdf": (ctx) => `You are the ZieAds White-Label Agency Report Generator. Create a premium, fully structured agency deck — the kind sent to clients before a retainer kickoff. Every section must be polished, specific, and client-presentation-ready.
+  "ads-report-pdf": (ctx) => `You are the ZieAds White-Label Agency Report Generator. Create a premium, fully structured agency deck - the kind sent to clients before a retainer kickoff. Every section must be polished, specific, and client-presentation-ready.
 
 BUSINESS CONTEXT:
 - URL: ${ctx.url}
@@ -1283,18 +1283,18 @@ BUSINESS CONTEXT:
 REPORT DECK SECTIONS:
 
 1. COVER PAGE:
-   - Report title (e.g., "Paid Advertising Strategy Audit — [Business Name]")
+   - Report title (e.g., "Paid Advertising Strategy Audit - [Business Name]")
    - Subtitle (e.g., "Full-Funnel Growth Strategy & Implementation Roadmap")
    - Prepared for: business name, URL
    - Report date
    - Agency branding placeholder note
 
 2. EXECUTIVE BRIEF (client-facing summary, non-technical):
-   - 3–4 sentences: what we found, what opportunity exists, what we recommend
+   - 3-4 sentences: what we found, what opportunity exists, what we recommend
    - The single most important thing to fix immediately
    - Expected outcome in 90 days if recommendations are followed
 
-3. AUDIT SCORES (8 dimensions, each scored 0–100):
+3. AUDIT SCORES (8 dimensions, each scored 0-100):
    - Creative & Offer Strength
    - Audience Clarity
    - Landing Page Conversion
@@ -1308,7 +1308,7 @@ REPORT DECK SECTIONS:
 4. TOP FINDINGS (5 findings, client-presentation format):
    For each: severity, title (short), client-friendly description (what it means for revenue), recommended fix, estimated time to implement, expected impact
 
-5. PLATFORM RECOMMENDATIONS (3–4 platforms):
+5. PLATFORM RECOMMENDATIONS (3-4 platforms):
    For each: platform name, fit score, why it's right for this business, recommended ad format, expected CPA/ROAS, budget allocation
 
 6. CREATIVE BRIEF (3 ad concepts):
@@ -1326,7 +1326,7 @@ REPORT DECK SECTIONS:
 9. NEXT STEPS (5-step onboarding sequence):
    Specific actions for the first 30 days post-engagement
 
-10. APPENDIX — Benchmarks:
+10. APPENDIX - Benchmarks:
     Industry benchmarks table for all relevant platforms
 
 RESPOND WITH VALID JSON ONLY:
@@ -1414,7 +1414,7 @@ RESPOND WITH VALID JSON ONLY:
 }`,
   "report-pdf": (ctx) => AGENT_PROMPTS["ads-report-pdf"](ctx),
 
-  // Quick Scan — fast 60-second readiness check, not the full creative-intelligence agent
+  // Quick Scan - fast 60-second readiness check, not the full creative-intelligence agent
   "ads-quick": (ctx) => `You are the ZieAds Quick Scan Agent. Run a fast 60-second paid ads readiness check on this business. Flag the 3 most critical issues stopping them from running profitable ads RIGHT NOW.
 
 BUSINESS CONTEXT:
@@ -1430,13 +1430,13 @@ BUSINESS CONTEXT:
 - Key Headings: ${ctx.scrapedData.headings.slice(0, 4).map(h => h.text).join('; ')}
 
 CHECK THESE 5 READINESS SIGNALS:
-1. Tracking & Pixels — Meta Pixel, Google Tag, TikTok Pixel present?
-2. Offer Clarity — is the hero offer specific, compelling, and immediately visible?
-3. Landing Page Speed — is the page fast enough for paid traffic (goal: under 2.5 seconds)?
-4. CTA Strength — is there a clear, prominent call-to-action?
-5. Ad Readiness — does the page have enough content to run quality ads?
+1. Tracking & Pixels - Meta Pixel, Google Tag, TikTok Pixel present?
+2. Offer Clarity - is the hero offer specific, compelling, and immediately visible?
+3. Landing Page Speed - is the page fast enough for paid traffic (goal: under 2.5 seconds)?
+4. CTA Strength - is there a clear, prominent call-to-action?
+5. Ad Readiness - does the page have enough content to run quality ads?
 
-Give an overall readiness score and 3 prioritised findings. Be direct and specific — name the exact problem, not generic advice.
+Give an overall readiness score and 3 prioritised findings. Be direct and specific - name the exact problem, not generic advice.
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -1603,7 +1603,7 @@ export async function runQuickScan(
   // 4. Mobile speed (estimated from load time)
   const speedOk = sd.pageLoadTime < 3000;
   signals["Page Speed"] = {
-    status: `${(sd.pageLoadTime / 1000).toFixed(1)}s load time ${speedOk ? "(Good)" : "(Slow — above 3s threshold)"}`,
+    status: `${(sd.pageLoadTime / 1000).toFixed(1)}s load time ${speedOk ? "(Good)" : "(Slow - above 3s threshold)"}`,
     score: speedOk ? 10 : 4,
   };
 
@@ -1646,7 +1646,7 @@ export async function runQuickScan(
   if (!speedOk) {
     findings.push({
       severity: "medium",
-      title: `Page loads in ${(sd.pageLoadTime / 1000).toFixed(1)}s — above the 3s threshold`,
+      title: `Page loads in ${(sd.pageLoadTime / 1000).toFixed(1)}s - above the 3s threshold`,
       impact: "Slow pages increase bounce rate by 32% and waste paid ad clicks.",
       recommendation: "Optimize images, minimize scripts, and consider a CDN.",
     });

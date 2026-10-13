@@ -64,11 +64,11 @@ function getAnthropicClient() {
 }
 
 // ─── Master system prompt (all 10 use cases) ─────────────────────────────
-const SYSTEM_PROMPT = `You are ZieAds AI Agent — the most advanced paid ads strategist AI for freelancers, agencies, and in-house marketers. You outperform generic tools by providing specific, data-grounded, immediately actionable insights across every dimension of paid advertising.
+const SYSTEM_PROMPT = `You are ZieAds AI Agent - the most advanced paid ads strategist AI for freelancers, agencies, and in-house marketers. You outperform generic tools by providing specific, data-grounded, immediately actionable insights across every dimension of paid advertising.
 
 You operate in two modes:
-1. **Chat mode** — conversational Q&A about paid ads strategy
-2. **Analysis mode** — structured deep-dive triggered by specific use-case commands
+1. **Chat mode** - conversational Q&A about paid ads strategy
+2. **Analysis mode** - structured deep-dive triggered by specific use-case commands
 
 ## Core expertise (all platforms):
 - **Meta Ads**: Campaign Architecture (CBO/ABO), creative fatigue detection, audience overlap, ROAS optimization, retargeting sequences, Dynamic Product Ads, Advantage+ Shopping
@@ -124,15 +124,15 @@ Pre-flight checklist before going live. Check: pixel firing, UTM structure, land
 Output: Pass/Fail checklist, critical blockers (do not launch until fixed), warnings (fix soon), estimated risk if launched as-is.
 
 ## Response rules:
-- **Always cite numbers**. Never say "your ROAS is low" — say "your ROAS of 1.8x is 40% below the 3.0x e-commerce benchmark."
+- **Always cite numbers**. Never say "your ROAS is low". Say "your ROAS of 1.8x is 40% below the 3.0x e-commerce benchmark."
 - **Always give financial impact**. Every finding gets a $ or % business impact.
-- **Use tables for comparisons**. When comparing campaigns, creatives, or platforms — use a markdown table.
+- **Use tables for comparisons**. When comparing campaigns, creatives, or platforms - use a markdown table.
 - **Give ranked recommendations**. Always number them: "1. [highest impact] 2. [second] 3. [third]"
 - **No filler phrases**. No "Great question!", no "I hope this helps." Start every response with the insight.
 - **Ready-to-use outputs**. If asked for copy, write the actual ad copy. If asked for a campaign structure, write the actual structure with naming conventions.
 - **Reference audit data first**. If the user's audit context is available, lead with what you know about their specific business before adding general advice.
 - **Incorporate Onboarding & Persona Profile**: Always tailor your advice, tone, workflows, and solutions to the user's specific persona/role (e.g. Solo founder, Agency owner, In-house marketer), their stated strategic goals, current marketing tool stack, scale, and focus platforms provided in the profile.
-- **NEVER use the em-dash character '—' in your responses**. Use standard hyphens '-' or other punctuation instead. Using em-dashes makes the text look like generic AI slop.
+- **NEVER use the em dash (Unicode U+2014) or en dash (U+2013) in your responses**. Use commas, periods, colons or a plain hyphen instead. Dashes make the text look like generic AI writing.
 
 ## Tone:
 Senior strategist at a top-5 performance agency. Honest, direct, technically precise, focused on ROI. You tell users hard truths when their setup is wrong.`;
@@ -177,7 +177,7 @@ function buildBusinessContext(profile: any): string {
   }
 
   if (parts.length === 0) return '';
-  return `\n\n## USER ONBOARDING & BUSINESS PROFILE (Crucial Context — tailor your advice, tone, and strategic depth directly to this profile):\n${parts.join('\n')}`;
+  return `\n\n## USER ONBOARDING & BUSINESS PROFILE (Crucial Context - tailor your advice, tone, and strategic depth directly to this profile):\n${parts.join('\n')}`;
 }
 
 function buildSystemPrompt(profile: any): string {
@@ -207,7 +207,7 @@ function buildAnalysisPrompt(mode: string, data: string, auditContext: string): 
 ${auditContext}
 
 ## Data provided by user:
-${data || "No additional data provided — use audit context above."}
+${data || "No additional data provided - use audit context above."}
 
 Produce the full structured output for this mode. Include all tables, scores, financial impact figures, and prioritized recommendations.`;
 }
@@ -354,7 +354,8 @@ agentRouter.post("/run", async (req, res) => {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { message = "", conversationId, mode, data } = req.body as { message?: string; conversationId?: string; mode?: string; data?: string };
+  const { message = "", conversationId, mode, data, tzOffsetMin } = req.body as { message?: string; conversationId?: string; mode?: string; data?: string; tzOffsetMin?: number };
+  const tz = Number.isFinite(Number(tzOffsetMin)) ? Math.max(-840, Math.min(840, Math.round(Number(tzOffsetMin)))) : 0;
   const modeInfo = mode ? MODE_TASKS[mode] : undefined;
   if (!message.trim() && !modeInfo) return res.status(400).json({ error: "message is required" });
   if (message.length > 20000) return res.status(400).json({ error: "Message is too long" });
@@ -413,10 +414,12 @@ agentRouter.post("/run", async (req, res) => {
     while (prior.length && prior[0].role !== "user") prior.shift();
 
     const userContent = await resolveAttachment(userText);
-    const today = new Date().toISOString().slice(0, 10);
-    const system = `${buildSystemPrompt(profile)}\n${AGENT_INSTRUCTIONS}\n\nToday's date: ${today}.`;
+    const localNow = new Date(Date.now() + tz * 60000).toISOString().slice(0, 16).replace("T", " ");
+    const sign = tz >= 0 ? "+" : "-";
+    const offset = `${sign}${String(Math.floor(Math.abs(tz) / 60)).padStart(2, "0")}:${String(Math.abs(tz) % 60).padStart(2, "0")}`;
+    const system = `${buildSystemPrompt(profile)}\n${AGENT_INSTRUCTIONS}\n\nUser's local time now: ${localNow} (UTC${offset}). Use this offset in every scheduled_for value.`;
 
-    const { text, steps } = await runAgent({
+    const { text, steps, artifacts } = await runAgent({
       userId,
       system,
       history: prior,
@@ -424,11 +427,14 @@ agentRouter.post("/run", async (req, res) => {
       emit: (e: AgentEvent) => send(e),
       signal: controller.signal,
       budgetMs: Number(process.env.AGENT_BUDGET_MS) || 48000,
+      tzOffsetMin: tz,
     });
 
-    const marker = steps.length
-      ? `\n<!--zieads-steps:${Buffer.from(JSON.stringify(steps.map((s) => ({ tool: s.tool, label: s.label, ok: s.ok, summary: s.summary, ms: s.ms, round: s.round })))).toString("base64")}-->`
-      : "";
+    const record = {
+      steps: steps.map((s) => ({ tool: s.tool, label: s.label, ok: s.ok, summary: s.summary, ms: s.ms, round: s.round })),
+      artifacts,
+    };
+    const marker = steps.length ? `\n<!--zieads-steps:${Buffer.from(JSON.stringify(record)).toString("base64")}-->` : "";
     await saveMessage({ conversationId: convId!, userId, role: "assistant", content: text + marker });
     await incrementAgentUsage(userId);
     await deductCredits(userId, "ai_chat_daily", 1, modeInfo ? `agent_analyze_${mode}` : "agent_run");

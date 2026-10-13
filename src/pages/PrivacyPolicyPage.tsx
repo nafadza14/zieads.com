@@ -218,7 +218,7 @@ export default function PrivacyPolicyPage() {
                 <div className="space-y-1">
                   <h3 className="text-[14.5px] font-bold text-black">2.5 Payment Information</h3>
                   <p className="text-zinc-650 text-[14.5px]">
-                    If you subscribe to a paid ZieAds tier, payment is processed by Stripe, Inc., a PCI-DSS compliant payment processor. Stripe collects and handles your full payment card information directly through their secure infrastructure — these details never pass through or get stored on ZieAds servers. We receive from Stripe only the information necessary to manage your subscription: your Stripe customer identifier, billing email, the last four digits of your payment card, and transaction history records.
+                    If you subscribe to a paid ZieAds tier, payment is processed by Stripe, Inc., a PCI-DSS compliant payment processor. Stripe collects and handles your full payment card information directly through their secure infrastructure. These details never pass through or get stored on ZieAds servers. We receive from Stripe only the information necessary to manage your subscription: your Stripe customer identifier, billing email, the last four digits of your payment card, and transaction history records.
                   </p>
                 </div>
 
@@ -250,7 +250,7 @@ export default function PrivacyPolicyPage() {
                 4. Legal Basis for Processing
               </h2>
               <p>
-                Under international privacy laws, including the Indonesian PDP Law (Article 20) and the EU GDPR (Article 6), we must establish a valid legal ground to process your personal data. Most of our processing activities are grounded in <strong>Contractual Necessity</strong> — we process your account configuration, social channel tokens, and metric uploads to deliver the core SaaS features you requested.
+                Under international privacy laws, including the Indonesian PDP Law (Article 20) and the EU GDPR (Article 6), we must establish a valid legal ground to process your personal data. Most of our processing activities are grounded in <strong>Contractual Necessity</strong>: we process your account configuration, social channel tokens, and metric uploads to deliver the core SaaS features you requested.
               </p>
               <p>
                 Where we process data to safeguard our database, detect abuse, or optimize performance, we rely on our <strong>Legitimate Interest</strong> to maintain a secure and functional application. Where processing requires explicit opt-in (such as marketing lists or tracking cookies), we rely on your <strong>Consent</strong>, which can be withdrawn at any time. We also process billing records under <strong>Legal Obligation</strong> to comply with national tax laws.
