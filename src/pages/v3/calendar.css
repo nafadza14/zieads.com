@@ -155,8 +155,17 @@
 /* Feed preview */
 .zca-feed-card { position: sticky; top: 0; }
 @media (max-width: 1100px) { .zca-feed-card { position: static; } }
-.zca-feed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; border-radius: 14px; overflow: hidden; }
-.zca-tile { position: relative; aspect-ratio: 1 / 1; background: var(--zd-gray); overflow: hidden; cursor: pointer; animation: zcaTileIn 0.5s var(--zd-ease) both; }
+.zca-feed-toggle { margin-bottom: 12px; }
+.zca-feed-cap { margin-bottom: 8px; font-size: 11.5px; color: var(--zd-ink-3); }
+/* Profile grid: square corners and hairline gaps, like the real apps. Only the outer frame is softened. */
+.zca-feed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; border-radius: 10px; overflow: hidden; background: #fff; animation: zdFade 0.35s ease both; }
+.zca-feed.is-tiktok { gap: 1px; }
+.zca-tile { position: relative; aspect-ratio: 3 / 4; border-radius: 0; background: var(--zd-gray); overflow: hidden; cursor: pointer; animation: zcaTileIn 0.5s var(--zd-ease) both; }
+.zca-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.zca-tile-kind { position: absolute; z-index: 2; top: 6px; right: 6px; display: inline-flex; color: #fff; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); pointer-events: none; }
+.zca-tile-views { position: absolute; z-index: 2; left: 6px; bottom: 5px; display: inline-flex; align-items: center; gap: 3px; color: #fff; font-size: 11px; font-weight: 600; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); pointer-events: none; }
+.zca-tile-views svg { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.zca-feed.is-tiktok .zca-tile::after { content: ''; position: absolute; inset: auto 0 0 0; height: 32%; background: linear-gradient(transparent, rgba(0, 0, 0, 0.35)); pointer-events: none; }
 .zca-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.7s var(--zd-ease); }
 .zca-tile:hover img { transform: scale(1.08); }
 .zca-tile-text { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--zd-ink-3); }

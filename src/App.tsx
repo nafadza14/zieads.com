@@ -51,6 +51,34 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   return <CreditProvider>{children}</CreditProvider>;
 };
 
+// Short, recognisable tab titles: the ZieAds favicon plus "Page | ZieAds"
+const PAGE_TITLES: Record<string, string> = {
+  '/sign-in': 'Log in',
+  '/sign-up': 'Sign up',
+  '/pricing': 'Pricing',
+  '/agent': 'Zie AI Agent',
+  '/analyst': 'AI Analyst',
+  '/composer': 'Composer',
+  '/calendar': 'Calendar',
+  '/analytics': 'Analytics',
+  '/inbox': 'Inbox',
+  '/hunt': 'Competitor Hunt',
+  '/connections': 'Connections',
+  '/settings': 'Settings',
+  '/clients': 'Dashboard',
+  '/scan-result': 'Website scan',
+  '/audit/progress': 'Running audit',
+  '/audit/report': 'Audit report',
+};
+function TabTitle() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const page = PAGE_TITLES[pathname];
+    document.title = page ? `${page} | ZieAds` : 'ZieAds | AI Marketing Agent for Social Media Scheduling, Analytics and Ads';
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   const [scanData, setScanData] = useState<any>(() => {
     const saved = localStorage.getItem('zieads_scanData');
@@ -75,6 +103,7 @@ export default function App() {
 
   return (
     <Router>
+      <TabTitle />
       <Routes>
         <Route path="/" element={<LandingPage onScanComplete={setScanData} />} />
         <Route path="/pricing" element={<PricingPage />} />

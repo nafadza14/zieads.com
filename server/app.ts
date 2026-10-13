@@ -31,6 +31,7 @@ import { authRouter } from "./routes/api-auth.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
 import { deepStripDashes } from "./utils/noEmDash.js";
+import { autofillBrandProfile, brandCompleteness, getBrandProfile, saveBrandProfile } from "./brandProfile.js";
 
 const app = express();
 app.use(
@@ -164,6 +165,38 @@ app.get("/api/profile", async (req, res) => {
 
   const profile = await getProfile(userId);
   res.json({ success: true, data: profile });
+});
+
+// ─── Brand profile (knowledge for Zie, the AI Agent) ─────
+app.get("/api/profile/brand", async (req, res) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  const [brand, profile] = await Promise.all([getBrandProfile(userId), getProfile(userId)]);
+  res.json({ success: true, data: brand, legacy: profile, completeness: brandCompleteness(brand) });
+});
+
+app.post("/api/profile/brand", async (req, res) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const { profile, storage } = await saveBrandProfile(userId, req.body?.brand || req.body);
+    res.json({ success: true, data: profile, storage, completeness: brandCompleteness(profile) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Could not save the brand profile" });
+  }
+});
+
+app.post("/api/profile/brand/autofill", async (req, res) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  const url = String(req.body?.url || "").trim();
+  if (!url) return res.status(400).json({ error: "url is required" });
+  try {
+    const draft = await autofillBrandProfile(url);
+    res.json({ success: true, data: draft });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Could not read that website" });
+  }
 });
 
 // ─── Quick Scan ─────────────────────────────────────────

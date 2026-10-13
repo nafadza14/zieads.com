@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Bot, Lightbulb, AlertTriangle, Download } from 'lucide-react';
+import {  Lightbulb, AlertTriangle, Download } from 'lucide-react';
+import ZIcon from '../components/icons/ZIcon';
 import { generateSkillPDF } from '../lib/pdfGenerator';
 import NounIcon from '../components/NounIcon';
 import ZieAdsLogo from '../components/ZieAdsLogo';
@@ -3340,7 +3341,7 @@ export default function SkillReport() {
   const url = searchParams.get('url') || '';
   const businessName = searchParams.get('businessName') || '';
 
-  const meta = SKILL_META[skillName] || { title: skillName, icon: <Bot size={40} />, platform: 'AI Analysis', color: RP };
+  const meta = SKILL_META[skillName] || { title: skillName, icon: <ZIcon name="ai-analyst" size={40} />, platform: 'AI Analysis', color: RP };
 
   // Rotate tips
   useEffect(() => {

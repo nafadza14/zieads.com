@@ -17,6 +17,7 @@ import {
   isTestUser,
 } from "../supabaseServer.js";
 import { runAgent, AGENT_INSTRUCTIONS, type AgentEvent } from "../agent/runtime.js";
+import { getBrandProfile, brandProfileToPrompt } from "../brandProfile.js";
 
 export const agentRouter = express.Router();
 
@@ -404,7 +405,7 @@ agentRouter.post("/run", async (req, res) => {
   const heartbeat = setInterval(() => send({ type: "ping" }), 10000);
 
   try {
-    const [history, profile] = await Promise.all([getConversationMessages(convId!, userId), getProfile(userId)]);
+    const [history, profile, brand] = await Promise.all([getConversationMessages(convId!, userId), getProfile(userId), getBrandProfile(userId)]);
     const prior = history
       .slice(0, -1)
       .slice(-16)
@@ -417,7 +418,7 @@ agentRouter.post("/run", async (req, res) => {
     const localNow = new Date(Date.now() + tz * 60000).toISOString().slice(0, 16).replace("T", " ");
     const sign = tz >= 0 ? "+" : "-";
     const offset = `${sign}${String(Math.floor(Math.abs(tz) / 60)).padStart(2, "0")}:${String(Math.abs(tz) % 60).padStart(2, "0")}`;
-    const system = `${buildSystemPrompt(profile)}\n${AGENT_INSTRUCTIONS}\n\nUser's local time now: ${localNow} (UTC${offset}). Use this offset in every scheduled_for value.`;
+    const system = `${buildSystemPrompt(profile)}${brandProfileToPrompt(brand)}\n${AGENT_INSTRUCTIONS}\n\nUser's local time now: ${localNow} (UTC${offset}). Use this offset in every scheduled_for value.`;
 
     const { text, steps, artifacts } = await runAgent({
       userId,

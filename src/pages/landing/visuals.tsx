@@ -26,13 +26,15 @@ import {
   Search,
   Send,
   ShieldCheck,
-  Sparkles,
+  
   TrendingDown,
   TrendingUp,
   Users,
   Briefcase,
   BatteryLow,
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
+import ZieAvatar from '../../components/ZieAvatar';
 import SocialIcon from '../../components/v3/SocialIcon';
 import ZieAdsLogo from '../../components/ZieAdsLogo';
 import NounGlyph from './NounGlyph';
@@ -136,7 +138,7 @@ function AgentDot({ size = 28, active = false }: { size?: number; active?: boole
   return (
     <span className={`zv-orb ${active ? 'is-active' : ''}`} style={{ width: size, height: size }}>
       <span>
-        <Bot size={Math.round(size * 0.45)} />
+        <ZieAvatar size={size - 4} ring={false} />
       </span>
     </span>
   );
@@ -255,7 +257,7 @@ export function AuditFindingsVisual() {
 const BRIEF_ROWS = [
   { icon: <TrendingUp size={13} />, tone: 'good', t: 'Tuesday Reel reach', v: '+18%' },
   { icon: <TrendingDown size={13} />, tone: 'bad', t: 'Meta CPC on ad set 3', v: '+22%' },
-  { icon: <Sparkles size={13} />, tone: 'accent', t: 'Boost the Reel, pause ad set 3', v: 'Action' },
+  { icon: <ZIcon name="action" size={13} />, tone: 'accent', t: 'Boost the Reel, pause ad set 3', v: 'Action' },
 ];
 
 export function BriefingVisual() {
@@ -334,7 +336,7 @@ const TILE_ICONS: Record<string, { noun: string; icon: ReactNode }> = {
 };
 
 export function FeatureTile({ name }: { name: string }) {
-  const t = TILE_ICONS[name] || { noun: name, icon: <Sparkles size={26} /> };
+  const t = TILE_ICONS[name] || { noun: name, icon: <ZIcon name="feature" size={26} /> };
   return (
     <VisualCard tone="gray" ratio="16 / 10" className="zv-tile">
       {(inView) => (
@@ -528,7 +530,7 @@ export function ScoreVisual({ dims }: { dims: { name: string; value: number }[] 
             </div>
           ))}
           <div className={`zv-insight ${inView ? 'is-on' : ''}`}>
-            <Sparkles size={13} /> Fix the landing page first. It is costing you the most.
+            <ZIcon name="insight" size={13} /> Fix the landing page first. It is costing you the most.
           </div>
         </div>
       )}

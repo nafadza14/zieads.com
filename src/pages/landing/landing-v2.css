@@ -1043,3 +1043,33 @@
   .landing-page .zx-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
   .landing-page .zx-tab { white-space: nowrap; }
 }
+
+/* Hero: one dashboard for every social account */
+.landing-page .hero-one-dash {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  margin: 22px auto 0;
+  padding: 8px 18px 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(17, 17, 17, 0.06);
+  box-shadow: 0 8px 24px rgba(17, 17, 17, 0.05);
+  animation: zxFadeUp 0.7s 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.landing-page .hero-one-dash-stack { display: inline-flex; flex-shrink: 0; gap: 4px; }
+.landing-page .hero-one-dash-stack > span {
+  position: relative;
+  display: inline-flex;
+  border-radius: 7px;
+  animation: zxPop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.landing-page .hero-one-dash-text { font-size: 14px !important; line-height: 1.4; color: #505050; text-align: left; }
+.landing-page .hero-one-dash-text strong { color: #111; font-weight: 600; }
+@keyframes zxPop { from { opacity: 0; transform: scale(0.6) translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes zxFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px) {
+  .landing-page .hero-one-dash { border-radius: 18px; padding: 10px 12px; align-items: flex-start; }
+  .landing-page .hero-one-dash-text { font-size: 13px !important; }
+}

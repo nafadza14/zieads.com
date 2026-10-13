@@ -3,20 +3,22 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   BarChart3,
-  Bot,
+  
   ChevronDown,
   Inbox,
   PenLine,
   Search,
-  Sparkles,
+  
   X,
 } from 'lucide-react';
+import ZIcon from '../../../components/icons/ZIcon';
+import ZieAvatar from '../../../components/ZieAvatar';
 import ZieAdsLogo from '../../../components/ZieAdsLogo';
 
 const FEATURES = [
   { id: 'free-audit-try', icon: <Search size={18} />, title: 'Free website audit', desc: 'Score your ads readiness in 3 minutes' },
-  { id: 'ai-analyst', icon: <Sparkles size={18} />, title: 'AI Analyst', desc: 'A marketing briefing every morning' },
-  { id: 'product-tour', icon: <Bot size={18} />, title: 'AI Agent', desc: 'Ask anything, run 10 analysis modes' },
+  { id: 'ai-analyst', icon: <ZIcon name="ai-analyst" size={18} />, title: 'AI Analyst', desc: 'A marketing briefing every morning' },
+  { id: 'product-tour', icon: <ZieAvatar size={18} ring={false} />, title: 'AI Agent', desc: 'Ask anything, run 10 analysis modes' },
   { id: 'composer', icon: <PenLine size={18} />, title: 'Composer and Calendar', desc: 'Write once, schedule everywhere' },
   { id: 'analytics', icon: <BarChart3 size={18} />, title: 'Analytics', desc: 'Numbers that explain themselves' },
   { id: 'inbox', icon: <Inbox size={18} />, title: 'Inbox and Competitor Hunt', desc: 'Every comment, every rival, one place' },

@@ -25,13 +25,14 @@ import {
   Trash2,
   ExternalLink,
   Shield,
-  Zap,
+  
   ChevronDown,
   Globe,
   Building2,
   Gauge,
   Radar as RadarIcon,
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
 import './hunt.css';
 
 type Tone = 'good' | 'warn' | 'bad';
@@ -300,7 +301,7 @@ export default function HuntPage() {
               <StatCard
                 label="Audited"
                 value={scored.length}
-                icon={<Zap />}
+                icon={<ZIcon name="audit" />}
                 hint={anyAuditing ? 'Audit in progress' : `${competitors.length - scored.length} awaiting audit`}
                 hintTone={anyAuditing ? 'accent' : 'muted'}
               />
@@ -397,7 +398,7 @@ export default function HuntPage() {
                         <div className="zhu-detail">
                           {!hasScore ? (
                             <div className="zhu-no-audit">
-                              <span className="zhu-gap-icon"><Zap size={14} /></span>
+                              <span className="zhu-gap-icon"><ZIcon name="audit" size={14} /></span>
                               <span>No audit history yet. Run "Audit now" to scan this competitor's readiness.</span>
                             </div>
                           ) : (

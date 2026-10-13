@@ -18,11 +18,12 @@ import {
   Swords,
   Quote,
   Layers,
-  Sparkles,
+  
   ListChecks,
   Wrench,
   Gauge,
 } from 'lucide-react';
+import ZIcon from '../components/icons/ZIcon';
 import V3Layout from '../components/v3/V3Layout';
 import {
   Card,
@@ -303,7 +304,7 @@ export default function ReportDashboard() {
         return (
           <>
             <Card>
-              <CardTitle icon={<Sparkles />}>Core creative strategy</CardTitle>
+              <CardTitle icon={<ZIcon name="creative" />}>Core creative strategy</CardTitle>
               <p className="zrd-lede">{d.heroOfferAssessment}</p>
               <div className="zd-grid-3">
                 <Card hover className="zd-card-soft" padding={16}>

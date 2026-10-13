@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Globe, Lightbulb, Lock, Mail, Sparkles, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Globe, Lightbulb, Lock, Mail,  XCircle } from 'lucide-react';
+import ZIcon from '../components/icons/ZIcon';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { TextRollButton } from './landing/ui';
 import './audit-flow.css';
@@ -210,7 +211,7 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
               <TextRollButton type="submit" text="Unlock full audit" />
             </form>
             <p className="zf-unlock-note">
-              <Sparkles size={13} /> Free plan, no credit card. Need more?{' '}
+              <ZIcon name="free-plan" size={13} /> Free plan, no credit card. Need more?{' '}
               <a href="/#pricing" onClick={(e) => { e.preventDefault(); navigate('/#pricing'); }}>
                 See paid plans
               </a>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Check, CreditCard, Copy, Gift, Calendar, Sparkles, Target, BarChart3, LineChart, History, Bell, Briefcase, MessageSquare, Code2, LayoutGrid } from 'lucide-react';
+import { ArrowRight, Check, CreditCard, Copy, Gift, Calendar,  Target, BarChart3, LineChart, History, Bell, Briefcase, MessageSquare, Code2, LayoutGrid } from 'lucide-react';
+import ZIcon from '../components/icons/ZIcon';
 import { supabase } from '../lib/supabaseClient';
 import NounIcon from '../components/NounIcon';
 import { useCreditStore } from '../lib/creditStore';
@@ -95,6 +96,7 @@ const PLATFORMS = ['Instagram', 'TikTok', 'LinkedIn', 'Facebook', 'Google Ads', 
 
 import { generatePDF } from '../lib/pdfGenerator';
 import CompareAuditView from '../components/CompareAuditView';
+import BrandSettings from './settings/BrandSettings';
 import IndustryInsights from '../components/IndustryInsights';
 import AdsIntegrationMock from '../components/AdsIntegrationMock';
 import CollaborativeReport from '../components/CollaborativeReport';
@@ -398,8 +400,8 @@ export default function ClientDashboard({ reportData }: Props) {
   const HEAD: Record<string, { label: string; title: string; subtitle: string }> = {
     settings: {
       label: 'Settings',
-      title: 'Your workspace settings.',
-      subtitle: 'Your business profile and campaign goals. These settings frame every AI Agent audit and daily briefing.',
+      title: 'Your brand, in Zie\'s words.',
+      subtitle: 'Describe your business once. Zie, your AI Agent, uses it for every answer, draft, reply and briefing.',
     },
     reports: {
       label: 'Reports',
@@ -492,7 +494,7 @@ export default function ClientDashboard({ reportData }: Props) {
               </div>
             </Card>
             <div className="zcd-command-hint">
-              <Sparkles size={13} />
+              <ZIcon name="tip" size={13} />
               <span>{SKILLS.find(s => s.id === selectedSkill)?.name}: {SKILLS.find(s => s.id === selectedSkill)?.desc}</span>
             </div>
             {/* Skill credit depletion inline banner */}
@@ -508,7 +510,7 @@ export default function ClientDashboard({ reportData }: Props) {
         {false && skillResult && sidebarNav !== 'reports' && (
           <Card>
             <CardTitle
-              icon={<Sparkles />}
+              icon={<ZIcon name="report" />}
               action={<GhostButton onClick={() => void 0}>Back to dashboard</GhostButton>}
             >
               Result: {SKILLS.find(s => s.id === skillResult.skillId)?.name}
@@ -764,7 +766,7 @@ export default function ClientDashboard({ reportData }: Props) {
             {hasReport && (
               <Card glass>
                 <CardTitle
-                  icon={<Sparkles />}
+                  icon={<ZIcon name="briefing" />}
                   sub={businessName || auditUrl}
                   action={<Pill tone="accent"><span className="zd-live" /> Latest</Pill>}
                 >
@@ -912,141 +914,7 @@ export default function ClientDashboard({ reportData }: Props) {
         )}
 
         {/* ══════ SETTINGS VIEW ══════ */}
-        {sidebarNav === 'settings' && (
-          <form className="zcd-stack zcd-narrow" onSubmit={handleSaveSettings}>
-            {/* Card 1: Business Basics */}
-            <Card>
-              <CardTitle icon={<Briefcase />} sub="Who you are and what you sell">Business basics</CardTitle>
-
-              <div className="zcd-field">
-                <label className="zd-label" htmlFor="zcd-bn">Business name</label>
-                <input
-                  id="zcd-bn"
-                  type="text"
-                  className="zd-input"
-                  value={profileForm.businessName}
-                  onChange={e => setProfileForm(p => ({ ...p, businessName: e.target.value }))}
-                  placeholder="E.g. Acme Corp"
-                />
-              </div>
-
-              <div className="zcd-field">
-                <label className="zd-label" htmlFor="zcd-url">Primary website URL</label>
-                <input
-                  id="zcd-url"
-                  type="url"
-                  className="zd-input"
-                  value={profileForm.primaryUrl}
-                  onChange={e => setProfileForm(p => ({ ...p, primaryUrl: e.target.value }))}
-                  placeholder="https://example.com"
-                />
-              </div>
-
-              <div className="zcd-field">
-                <label className="zd-label">Business type</label>
-                <div className="zcd-opt-grid">
-                  {BUSINESS_TYPES.map(t =>
-                    optCard(profileForm.businessType === t, t, BIZ_SUB[t], () => setProfileForm(p => ({ ...p, businessType: t })), t)
-                  )}
-                </div>
-              </div>
-
-              <div className="zcd-field">
-                <label className="zd-label">Monthly ads budget</label>
-                <div className="zcd-opt-grid">
-                  {BUDGETS.map(b =>
-                    optCard(profileForm.monthlyBudget === b, b, 'per month', () => setProfileForm(p => ({ ...p, monthlyBudget: b })), b)
-                  )}
-                </div>
-              </div>
-            </Card>
-
-            {/* Card 2: AI Context & Onboarding Persona Profile */}
-            <Card>
-              <CardTitle
-                icon={<Sparkles />}
-                sub="Your onboarding answers tune the AI Agent's tone, strategic depth and recommendations across ZieAds."
-                action={<Pill tone="accent">Used by AI Agent & Analytics</Pill>}
-              >
-                AI persona and onboarding profile
-              </CardTitle>
-
-              <div className="zcd-field">
-                <label className="zd-label">Your role</label>
-                <div className="zcd-opts">
-                  {ROLES.map(r => opt(profileForm.role === r, r, () => setProfileForm(p => ({ ...p, role: r })), r))}
-                </div>
-              </div>
-
-              <div className="zcd-field">
-                <label className="zd-label">Accounts managed</label>
-                <div className="zcd-opts">
-                  {ACCOUNT_VOLUMES.map(v => opt(profileForm.accountVolume === v, `${v} accounts`, () => setProfileForm(p => ({ ...p, accountVolume: v })), v))}
-                </div>
-              </div>
-
-              <div className="zcd-field">
-                <label className="zd-label">Strategic marketing priorities</label>
-                <p className="zcd-field-hint">Pick as many as you like</p>
-                <div className="zcd-opts">
-                  {ONBOARDING_GOALS.map(g => opt(profileForm.goals.includes(g), g, () => toggleGoalSetting(g), g))}
-                </div>
-              </div>
-
-              <div className="zcd-field">
-                <label className="zd-label">Current marketing tool stack</label>
-                <p className="zcd-field-hint">Pick as many as you like</p>
-                <div className="zcd-opts">
-                  {ONBOARDING_TOOLS.map(t => opt(profileForm.currentTools.includes(t), t, () => toggleToolSetting(t), t))}
-                </div>
-              </div>
-
-              <div className="zcd-field">
-                <label className="zd-label">Channels in focus</label>
-                <p className="zcd-field-hint">Pick as many as you like</p>
-                <div className="zcd-opts">
-                  {PLATFORMS.map(pl => opt(profileForm.platformsInFocus.includes(pl), pl, () => togglePlatformSetting(pl), pl))}
-                </div>
-              </div>
-            </Card>
-
-            {/* Card 3: Biggest Challenge */}
-            <Card>
-              <CardTitle icon={<MessageSquare />} sub="The AI agent frames its analysis around your specific pain point.">
-                Your biggest challenge
-              </CardTitle>
-              <textarea
-                className="zd-textarea"
-                value={profileForm.challenge}
-                onChange={e => setProfileForm(p => ({ ...p, challenge: e.target.value }))}
-                placeholder="e.g. My ROAS keeps dropping after 7 days of a new campaign..."
-                rows={3}
-              />
-            </Card>
-
-            {/* Card 4: Notifications */}
-            <Card>
-              <CardTitle icon={<Bell />}>Notifications</CardTitle>
-              <label className="zcd-switch" htmlFor="wd">
-                <input
-                  type="checkbox"
-                  checked={profileForm.weeklyDigest}
-                  onChange={e => setProfileForm(p => ({ ...p, weeklyDigest: e.target.checked }))}
-                  id="wd"
-                />
-                <span className="zcd-switch-track" aria-hidden="true" />
-                <span>Send me the Monday weekly score digest email</span>
-              </label>
-            </Card>
-
-            <div className="zcd-save">
-              <TextRollButton type="submit" text="Save settings" />
-              {savedFlash && (
-                <Pill tone="good" className="zcd-saved"><Check /> Saved</Pill>
-              )}
-            </div>
-          </form>
-        )}
+        {sidebarNav === 'settings' && <BrandSettings />}
 
         {/* ══════ REFERRALS VIEW ══════ */}
         {sidebarNav === 'referrals' && (

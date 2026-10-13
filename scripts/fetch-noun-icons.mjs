@@ -12,10 +12,14 @@
     macOS / Linux:
       NOUN_KEY=your_key NOUN_SECRET=your_secret node scripts/fetch-noun-icons.mjs
 
-  It searches one icon per term below and writes
-  src/pages/landing/noun-icons.ts  ->  NOUN_ICONS = { key: { id, url, attribution } }
-  The landing page (NounGlyph) uses these automatically and falls back to the
-  built-in line icons for any key that is missing.
+  It searches one icon per term below, downloads each PNG into public/noun/<key>.png
+  (self-hosted, no hotlinking) and writes
+  src/pages/landing/noun-icons.ts  ->  NOUN_ICONS = { key: { id, url: '/noun/<key>.png', attribution } }
+  The landing page (NounGlyph) and the app icons (ZIcon) use these automatically and
+  fall back to the built-in line icons for any key that is missing.
+
+  The app's semantic icons come from src/components/icons/icon-terms.json and are
+  stored under the key `ui-<name>` (for example ui-insight).
 
   Keys are read from environment variables only. Never commit them.
 */
@@ -87,6 +91,19 @@ async function search(term, publicDomain) {
   return (json.icons || [])[0];
 }
 
+// Semantic app icons (shared with src/components/icons/iconRegistry.ts).
+const UI_TERMS = JSON.parse(fs.readFileSync(path.join('src', 'components', 'icons', 'icon-terms.json'), 'utf8'));
+for (const [name, def] of Object.entries(UI_TERMS)) TERMS[`ui-${name}`] = def.noun;
+
+const PUBLIC_DIR = path.join('public', 'noun');
+fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+
+async function download(url, file) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`download ${res.status} for ${url}`);
+  fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+}
+
 const out = {};
 for (const [key, term] of Object.entries(TERMS)) {
   try {
@@ -95,9 +112,11 @@ for (const [key, term] of Object.entries(TERMS)) {
       console.log(`- ${key}: no result for "${term}"`);
       continue;
     }
+    const remote = icon.thumbnail_url || `https://static.thenounproject.com/png/${icon.id}-200.png`;
+    await download(remote, path.join(PUBLIC_DIR, `${key}.png`));
     out[key] = {
       id: String(icon.id),
-      url: icon.thumbnail_url || `https://static.thenounproject.com/png/${icon.id}-200.png`,
+      url: `/noun/${key}.png`,
       attribution: icon.attribution || '',
     };
     console.log(`+ ${key}: #${icon.id} ${icon.attribution || ''}`);
@@ -114,5 +133,5 @@ fs.writeFileSync(
     JSON.stringify(out, null, 2) +
     ';\n',
 );
-console.log(`\nSaved ${Object.keys(out).length} icons to ${file}`);
+console.log(`\nSaved ${Object.keys(out).length} icons to ${file} (images in ${PUBLIC_DIR})`);
 console.log('If any icon is not public domain, keep its attribution (shown above) in your site credits.');

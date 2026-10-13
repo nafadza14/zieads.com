@@ -2,13 +2,13 @@ import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ZieAdsLogo from '../ZieAdsLogo';
 import { 
-  Sparkles, 
+   
   Calendar, 
   Target, 
   Link2, 
   Home, 
   FileText, 
-  Bot, 
+   
   User, 
   Share2, 
   Settings as SettingsIcon, 
@@ -21,6 +21,8 @@ import {
   AlertCircle,
   Search
 } from 'lucide-react';
+import ZIcon from '../icons/ZIcon';
+import ZieAvatar from '../ZieAvatar';
 import { supabase } from '../../lib/supabaseClient';
 import { useCreditStore } from '../../lib/creditStore';
 import { useDemoMode } from '../../lib/demoStore';
@@ -121,8 +123,8 @@ export default function V3Layout({ children }: Props) {
   const currentPath = location.pathname;
 
   const v3Items = [
-    { k: '/analyst', l: 'AI Analyst', icon: <Sparkles size={15} /> },
-    { k: '/agent', l: 'AI Agent', icon: <Bot size={15} /> },
+    { k: '/analyst', l: 'AI Analyst', icon: <ZIcon name="ai-analyst" size={15} /> },
+    { k: '/agent', l: 'AI Agent', icon: <ZieAvatar size={15} ring={false} /> },
     { k: '/composer', l: 'Composer', icon: <PenTool size={15} /> },
     { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} /> },
     { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} /> },

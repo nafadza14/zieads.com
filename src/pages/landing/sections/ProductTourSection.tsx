@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Bot, Calendar, Check, Inbox, Link2, PenLine, Radar, Sparkles } from 'lucide-react';
+import { BarChart3,  Calendar, Check, Inbox, Link2, PenLine, Radar } from 'lucide-react';
+import ZIcon from '../../../components/icons/ZIcon';
+import ZieAvatar from '../../../components/ZieAvatar';
 import SocialIcon from '../../../components/v3/SocialIcon';
 import { SHOTS } from '../images';
 import { Chip, Shot, useScrollProgress } from '../collage';
@@ -10,7 +12,7 @@ const TOUR = [
   {
     id: 'analyst',
     label: 'AI Analyst',
-    icon: <Sparkles size={15} />,
+    icon: <ZIcon name="ai-analyst" size={15} />,
     title: 'A briefing waiting for you every morning.',
     desc: 'The agent reads your accounts overnight and opens your day with what changed, why it matters and what to do first.',
     points: ['Wins, concerns and actions in one card', 'Alerts when a metric moves', 'Live status for every connected channel'],
@@ -20,7 +22,7 @@ const TOUR = [
   {
     id: 'agent',
     label: 'AI Agent',
-    icon: <Bot size={15} />,
+    icon: <ZieAvatar size={15} ring={false} />,
     title: 'Ask anything about your marketing.',
     desc: 'Chat with an agent that already knows your brand, or run one of ten deep analysis modes in a single click.',
     points: ['ROAS drops diagnosed with evidence', 'Hooks, captions and ad copy on demand', 'Budget splits across Meta, Google and TikTok'],
@@ -182,7 +184,7 @@ export default function ProductTourSection() {
             <div className="zt-float zt-float-b">
               <Chip>
                 <span className="zc-chip-ico">
-                  <Sparkles size={15} />
+                  <ZieAvatar size={15} ring={false} />
                 </span>
                 <span>
                   <small>Agent status</small>

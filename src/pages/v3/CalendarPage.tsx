@@ -30,11 +30,34 @@ import {
   AlertCircle,
   X,
   Plus,
-  Sparkles,
+  
   PenLine,
   CheckCircle2,
+  Clapperboard,
+  Copy,
+  Play,
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
+import { PROFILE_GRID, isVideoMime } from '../../lib/platformFormats';
 import './calendar.css';
+
+type FeedPlatform = 'instagram' | 'tiktok';
+type TileKind = 'image' | 'video' | 'reel' | 'carousel';
+type FeedItem = {
+  id: string;
+  url: string;
+  isScheduled: boolean;
+  event: any;
+  permalink: string | null;
+  likes?: number;
+  comments?: number;
+  views?: number;
+  platform: FeedPlatform;
+  kind: TileKind;
+};
+
+const compactNumber = (n: number) =>
+  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M` : n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n);
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -72,6 +95,8 @@ export default function CalendarPage() {
   // Presentation only: month grid vs agenda list, and slide direction for month changes
   const [view, setView] = useState<'month' | 'list'>(window.innerWidth < 768 ? 'list' : 'month');
   const [navDir, setNavDir] = useState<1 | -1>(1);
+  // Which profile grid the feed preview shows when both platforms have posts
+  const [feedPlatform, setFeedPlatform] = useState<FeedPlatform>('instagram');
 
   const getAuthHeaders = async () => {
     const { data } = await supabase.auth.getSession();
@@ -286,26 +311,53 @@ export default function CalendarPage() {
   );
   const igScheduledSorted = [...igScheduled].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
-  const mergedFeedItems = [
-    ...igScheduledSorted.slice(0, 3).map(e => ({
-      id: e.id,
-      url: e.media?.[0] || '',
-      isScheduled: true,
-      event: e,
-      permalink: null,
-      likes: undefined,
-      comments: undefined
-    })),
+  // Feed tiles: planned posts first (like a profile grid shows the newest first), then live posts.
+  const normPlatform = (p?: string): FeedPlatform => (p && p.toLowerCase().includes('tiktok') ? 'tiktok' : 'instagram');
+  const tileKind = (mediaType?: string, url?: string, count = 1): TileKind => {
+    const t = (mediaType || '').toUpperCase();
+    if (t.includes('REEL')) return 'reel';
+    if (t.includes('CAROUSEL') || t.includes('ALBUM') || count > 1) return 'carousel';
+    if (t.includes('VIDEO') || isVideoMime(undefined, url)) return 'video';
+    return 'image';
+  };
+  const mediaUrl = (m: any) => (typeof m === 'string' ? m : m?.file_url || m?.url || '');
+
+  const mergedFeedItems: FeedItem[] = [
+    ...igScheduledSorted.slice(0, 3).map(e => {
+      const first = e.media?.[0];
+      const url = mediaUrl(first);
+      return {
+        id: e.id,
+        url,
+        isScheduled: true,
+        event: e,
+        permalink: null,
+        likes: undefined,
+        comments: undefined,
+        views: undefined,
+        platform: normPlatform(e.platforms?.[0]?.platform),
+        kind: tileKind(typeof first === 'object' ? first?.mime_type : undefined, url, e.media?.length || 0),
+      };
+    }),
     ...visualFeed.slice(0, 6).map((item, idx) => ({
       id: `pub_${idx}`,
-      url: item.media_url,
+      url: item.thumbnail_url || item.media_url,
       isScheduled: false,
       event: null,
       permalink: item.permalink,
       likes: item.like_count,
-      comments: item.comments_count
-    }))
+      comments: item.comments_count,
+      views: item.view_count ?? item.views ?? item.play_count ?? item.plays,
+      platform: normPlatform(item.platform),
+      kind: tileKind(item.media_type, item.media_url),
+    })),
   ];
+  const feedPlatforms = Array.from(new Set(mergedFeedItems.map(i => i.platform)));
+  const activeFeedPlatform: FeedPlatform = feedPlatforms.includes(feedPlatform)
+    ? feedPlatform
+    : feedPlatforms.includes('instagram') || feedPlatforms.length === 0 ? 'instagram' : 'tiktok';
+  const feedTiles = mergedFeedItems.filter(i => i.platform === activeFeedPlatform);
+  const grid = PROFILE_GRID[activeFeedPlatform];
 
   // Presentation helpers
   const now = new Date();
@@ -383,10 +435,10 @@ export default function CalendarPage() {
                 <SegTabs
                   size="sm"
                   value={view}
-                  onChange={setView}
+                  onChange={(id) => setView(id as 'month' | 'list')}
                   tabs={[
-                    { id: 'month', label: 'Month', icon: <LayoutGrid size={13} /> },
-                    { id: 'list', label: 'Agenda', icon: <ListIcon size={13} /> },
+                    { id: 'month' as const, label: 'Month', icon: <LayoutGrid size={13} /> },
+                    { id: 'list' as const, label: 'Agenda', icon: <ListIcon size={13} /> },
                   ]}
                 />
               </div>
@@ -485,12 +537,26 @@ export default function CalendarPage() {
           <Card className="zca-feed-card">
             <CardTitle
               icon={<LayoutGrid />}
-              sub="See how scheduled and published posts line up on your feed."
+              sub="See how scheduled and published posts line up on your profile grid."
             >
               Visual feed preview
             </CardTitle>
 
-            {mergedFeedItems.length === 0 ? (
+            {feedPlatforms.length > 1 && (
+              <div className="zca-feed-toggle">
+                <SegTabs
+                  size="sm"
+                  value={activeFeedPlatform}
+                  onChange={(id) => setFeedPlatform(id as FeedPlatform)}
+                  tabs={[
+                    { id: 'instagram' as const, label: 'Instagram', icon: <SocialIcon platform="instagram" size={12} /> },
+                    { id: 'tiktok' as const, label: 'TikTok', icon: <SocialIcon platform="tiktok" size={12} /> },
+                  ]}
+                />
+              </div>
+            )}
+
+            {feedTiles.length === 0 ? (
               <EmptyState
                 icon={<LayoutGrid size={22} />}
                 title="Your feed is empty"
@@ -498,12 +564,17 @@ export default function CalendarPage() {
               />
             ) : (
               <>
-                <div className="zca-feed">
-                  {mergedFeedItems.map((item, idx) => (
+                <div className="zca-feed-cap">{grid.label}</div>
+                <div
+                  key={activeFeedPlatform}
+                  className={`zca-feed is-${activeFeedPlatform}`}
+                  style={{ gridTemplateColumns: `repeat(${grid.columns}, minmax(0, 1fr))` }}
+                >
+                  {feedTiles.map((item, idx) => (
                     <div
-                      key={idx}
+                      key={item.id}
                       className={`zca-tile ${item.isScheduled ? 'is-planned' : ''}`}
-                      style={{ animationDelay: `${120 + idx * 55}ms` }}
+                      style={{ aspectRatio: `${grid.aspect}`, animationDelay: `${120 + idx * 55}ms` }}
                       onClick={() => {
                         if (item.isScheduled) {
                           setSelectedEvent(item.event);
@@ -513,9 +584,30 @@ export default function CalendarPage() {
                       }}
                     >
                       {item.url ? (
-                        <img src={item.url} alt="" loading="lazy" />
+                        isVideoMime(undefined, item.url) ? (
+                          <video src={item.url} muted playsInline preload="metadata" />
+                        ) : (
+                          <img src={item.url} alt="" loading="lazy" />
+                        )
                       ) : (
                         <div className="zca-tile-text">Text</div>
+                      )}
+                      {item.kind !== 'image' && (
+                        <span className="zca-tile-kind" aria-label={item.kind}>
+                          {item.kind === 'carousel' ? (
+                            <Copy size={14} />
+                          ) : item.kind === 'reel' ? (
+                            <Clapperboard size={14} />
+                          ) : (
+                            <Play size={14} fill="#fff" />
+                          )}
+                        </span>
+                      )}
+                      {activeFeedPlatform === 'tiktok' && !item.isScheduled && (
+                        <span className="zca-tile-views">
+                          <Play size={11} />
+                          {item.views !== undefined && item.views !== null ? compactNumber(Number(item.views)) : '0'}
+                        </span>
                       )}
                       <div className="zca-tile-overlay">
                         {item.isScheduled ? (
@@ -585,7 +677,7 @@ export default function CalendarPage() {
 
               {selectedEvent.status === 'draft' && (
                 <div className="zca-draft-note">
-                  <Sparkles size={14} />
+                  <ZIcon name="ai-draft" size={14} />
                   <div>
                     <strong>Your AI Agent drafted this post.</strong> It will not publish until you approve it. Open it in Composer to edit the copy or add media.
                   </div>

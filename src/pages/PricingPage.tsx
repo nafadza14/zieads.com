@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ZieAdsLogo from '../components/ZieAdsLogo';
-import { MessageSquare, Zap } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+import ZIcon from '../components/icons/ZIcon';
 import { useCreditStore } from '../lib/creditStore';
 import { supabase } from '../lib/supabaseClient';
 
@@ -475,7 +476,7 @@ export default function PricingPage() {
                     border: plan.recommended ? '1px solid rgba(30, 123, 255, 0.2)' : '1px solid var(--lp-border-subtle)',
                     display: 'inline-flex', alignItems: 'center', gap: 6
                   }}>
-                    <Zap size={12} style={{ opacity: 0.8 }} />
+                    <ZIcon name="credits" size={12} style={{ opacity: 0.8 }} />
                     <span>{plan.skillRun.label}</span>
                   </span>
                 </div>

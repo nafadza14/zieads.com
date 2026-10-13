@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Bell, Users, CreditCard, Zap, Cpu, MessageSquare, FileText,
+  LayoutDashboard, Bell, Users, CreditCard,  Cpu, MessageSquare, FileText,
   Key, BarChart2, Activity, Shield, UserCog, Settings, LogOut, Search,
   SlidersHorizontal, Plus, RotateCw, Play, CheckCircle, XCircle, X,
   ChevronRight, Calendar, DollarSign, TrendingUp, UserCheck, UserX,
   ExternalLink, Lock, MoreVertical, AlertTriangle
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
 import ZieAdsLogo from '../../components/ZieAdsLogo';
 
 // Predefined list of predefined keys to manage
@@ -726,7 +727,7 @@ export default function SuperadminDashboard() {
                 onClick={() => setActiveTab('credits')}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'credits' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
               >
-                <Zap size={16} />
+                <ZIcon name="credits" size={16} />
                 <span>Credits & Usage</span>
               </li>
             </ul>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, PlayCircle, Send, Sparkles, ArrowRight, Zap, Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine } from 'lucide-react';
+import {  PlayCircle, Send,  ArrowRight,  Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine } from 'lucide-react';
+import ZIcon from '../components/icons/ZIcon';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
   UilSearchAlt, UilBedDouble, UilChartDown, UilMoneyBill, UilEye, UilMedicalSquare, 
@@ -1137,7 +1138,7 @@ export default function AgentChat() {
                           {isListening ? <MicOff size={13} /> : <Mic size={13} />} {isListening ? 'Stop' : 'Voice'}
                         </button>
                         <button type="button" className="za-chip" onClick={() => setActiveTab('modes')}>
-                          <Zap size={13} /> Modes
+                          <ZIcon name="modes" size={13} /> Modes
                         </button>
                       </div>
                       <span className="za-char za-mono">{input.length.toLocaleString()}/3,000</span>
@@ -1249,7 +1250,7 @@ function MessageBubble({ message, streaming = false }: { message: Message; strea
     return (
       <div className="za-msg za-msg-mode">
         <span className="za-mode-chip">
-          <span className="za-mode-chip-icon">{uc?.icon || <Zap size={14} />}</span>
+          <span className="za-mode-chip-icon">{uc?.icon || <ZIcon name="modes" size={14} />}</span>
           {stripEmojis(message.content)}
         </span>
       </div>
@@ -1339,7 +1340,7 @@ function ProcessPanel({ process, hasAnswer }: { process: AgentProcess; hasAnswer
     <div className={`za-proc ${live ? 'is-live' : ''} is-${process.status}`}>
       <button type="button" className="za-proc-head" onClick={() => setManual(!open)} aria-expanded={open}>
         <span className="za-proc-ico">
-          {live ? <span className="za-work-spin" /> : process.status === 'error' || process.status === 'stopped' ? <Square size={10} fill="currentColor" /> : <Sparkles size={13} />}
+          {live ? <span className="za-work-spin" /> : process.status === 'error' || process.status === 'stopped' ? <Square size={10} fill="currentColor" /> : <ZIcon name="success" size={13} />}
         </span>
         <span key={title} className={`za-proc-title ${live ? 'za-shimmer' : ''}`}>{title}</span>
         <span className="za-proc-meta za-mono">
@@ -1385,12 +1386,12 @@ function ProcessPanel({ process, hasAnswer }: { process: AgentProcess; hasAnswer
                   <div className="za-tl-group">
                     {it.steps.length > 1 && (
                       <div className="za-tl-group-label">
-                        <Zap size={11} /> {it.steps.length} tasks {runningHere ? 'running' : 'ran'} in parallel
+                        <ZIcon name="parallel-tasks" size={11} /> {it.steps.length} tasks {runningHere ? 'running' : 'ran'} in parallel
                       </div>
                     )}
                     {it.steps.map((st, j) => (
                       <div key={st.id} className={`za-work-row is-${st.status}`} style={{ animationDelay: `${j * 60}ms` }}>
-                        <span className="za-work-row-ico">{TOOL_ICONS[st.tool] || <Zap size={14} />}</span>
+                        <span className="za-work-row-ico">{TOOL_ICONS[st.tool] || <ZIcon name="tool" size={14} />}</span>
                         <span className="za-work-row-text">
                           <strong className={st.status === 'running' ? 'za-shimmer' : ''}>{st.label}</strong>
                           {st.summary && <small>{st.summary}</small>}

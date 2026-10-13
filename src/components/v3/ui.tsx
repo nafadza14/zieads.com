@@ -5,7 +5,9 @@
   Styles live in ./dash.css (imported once by V3Layout).
 */
 import React, { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Bot } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import ZIcon from '../icons/ZIcon';
+import ZieAvatar from '../ZieAvatar';
 export { TextRollButton } from '../../pages/landing/ui';
 
 const reduced = () =>
@@ -253,7 +255,7 @@ export function Orb({ size = 36, active = false }: { size?: number; active?: boo
   return (
     <span className={`zd-orb ${active ? 'is-active' : ''}`} style={{ width: size, height: size }}>
       <span className="zd-orb-core">
-        <Bot size={Math.round(size * 0.45)} />
+        <ZieAvatar size={size - 4} ring={false} />
       </span>
     </span>
   );
@@ -300,7 +302,7 @@ export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; ti
         <span />
       </div>
       <div className="zd-empty-inner">
-        <span className="zd-empty-icon">{icon ?? <Bot size={22} />}</span>
+        <span className="zd-empty-icon">{icon ?? <ZIcon name="empty-state" size={22} />}</span>
         <h3>{title}</h3>
         {body && <p>{body}</p>}
         {action && <div className="zd-empty-action">{action}</div>}

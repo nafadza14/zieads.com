@@ -22,7 +22,7 @@ import {
 } from '../../components/v3/ui';
 import SocialIcon from '../../components/v3/SocialIcon';
 import {
-  Sparkles,
+  
   TrendingUp,
   AlertTriangle,
   Check,
@@ -36,6 +36,7 @@ import {
   Bell,
   Radio,
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
 import './analyst.css';
 
 /** Animate the numeric part of a metric string like "6.3%", "+148", "$0.51", "2.8x". */
@@ -308,7 +309,7 @@ export default function AnalystPage() {
           />
         ) : !briefing ? (
           <EmptyState
-            icon={<Sparkles size={22} />}
+            icon={<ZIcon name="briefing" size={22} />}
             title="Your first briefing is ready to compile"
             body="Your accounts are connected and initial baselines are analyzed. Generate your daily marketing report below."
             action={<TextRollButton text="Compile briefing" onClick={triggerOnDemandBriefing} />}

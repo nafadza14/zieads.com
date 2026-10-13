@@ -13,8 +13,7 @@ import {
   Printer,
   User,
   Database,
-  CreditCard,
-  Sparkles
+  CreditCard
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════

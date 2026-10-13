@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import SocialIcon from '../../components/v3/SocialIcon';
 import { 
   Calendar, 
-  Sparkles, 
+   
   Copy, 
   Check, 
   ThumbsUp, 
@@ -14,6 +14,7 @@ import {
   Linkedin, 
   MessageSquare 
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
 
 const P = 'var(--primary)';
 const G = 'var(--text-muted)';
@@ -118,7 +119,7 @@ export default function StudioPage() {
             {/* Week Strategy Intro Banner */}
             <div style={{ background: 'linear-gradient(135deg, var(--primary-bg) 0%, rgba(255,255,255,1) 100%)', border: `1px solid ${B}`, borderRadius: 10, padding: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', fontWeight: 700, color: P, textTransform: 'uppercase', marginBottom: 8 }}>
-                <Sparkles size={14} /> Weekly Strategy Overview
+                <ZIcon name="strategy" size={14} /> Weekly Strategy Overview
               </div>
               <h2 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 700 }}>
                 Week starting {currentWeekStr}

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Clock, Shield } from 'lucide-react';
 import { TextRollButton } from '../ui';
 import { Shader, Swirl, ChromaFlow, FlutedGlass, FilmGrain } from 'shaders/react';
 import { rotatingPhrases, rotatingPlaceholders } from '../data';
 import { usePrefersReducedMotion, useRotatingIndex, useRotatingPhrase } from '../hooks';
 import OnboardingModal from './OnboardingModal';
 import ZieAvatar from '../../../components/ZieAvatar';
+import SocialIcon from '../../../components/v3/SocialIcon';
 import { PlatformStrip } from '../visuals';
 
 /* ── SVG Icon Components ── */
@@ -213,10 +213,17 @@ export default function Hero() {
           </div>
 
           {/* Trust Strip */}
-          <div className="hero-trust-strip">
-            <span><Shield size={14} /> Free plan, no card required</span>
-            <span><Check size={14} style={{ color: '#10B981' }} /> Instant AI Response & Signup</span>
-            <span><Clock size={14} /> First briefing tomorrow morning</span>
+          <div className="hero-one-dash">
+            <span className="hero-one-dash-stack" aria-hidden="true">
+              {(['instagram', 'tiktok', 'linkedin', 'facebook', 'x'] as const).map((k, i) => (
+                <span key={k} style={{ zIndex: 5 - i, animationDelay: `${0.6 + i * 0.08}s` }}>
+                  <SocialIcon platform={k} size={22} />
+                </span>
+              ))}
+            </span>
+            <span className="hero-one-dash-text">
+              <strong>All your social accounts, one dashboard.</strong> Post, reply and track every channel from ZieAds.
+            </span>
           </div>
 
           {/* Platforms ZieAds works with */}

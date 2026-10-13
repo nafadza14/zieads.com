@@ -37,10 +37,29 @@ import {
   Globe,
   Eye,
   MessageCircle,
-  Sparkles,
+  
   PenLine,
-  Zap,
+  
+  Heart,
+  Bookmark,
+  Repeat2,
+  BarChart2,
+  ThumbsUp,
+  MessageSquare,
+  Share2,
+  MoreHorizontal,
+  Plus,
+  Play,
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
+import {
+  PlatformFormat,
+  defaultFormatFor,
+  formatCaption,
+  formatsFor,
+  isVideoMime,
+  sizeLabel,
+} from '../../lib/platformFormats';
 import './composer.css';
 
 /* Platform brand marks (brand colors are allowed). */
@@ -66,6 +85,348 @@ const renderWithTags = (text: string) =>
       <span key={i}>{part}</span>
     ),
   );
+
+/* ── Platform accurate preview ── */
+
+type PreviewMedia = { id: string; file_url: string; file_name?: string; mime_type?: string };
+
+/* One media item, image or video, cropped to fill its frame like the platform does. */
+function PvMedia({ item }: { item: PreviewMedia }) {
+  if (isVideoMime(item.mime_type, item.file_url)) {
+    return <video src={item.file_url} muted loop autoPlay playsInline preload="metadata" />;
+  }
+  return <img src={item.file_url} alt={item.file_name || ''} />;
+}
+
+/* Media frame in the exact aspect ratio. Gray placeholder with the size label when empty. */
+function PvFrame({
+  fmt,
+  media,
+  index = 0,
+  grid = false,
+  className = '',
+  children,
+}: {
+  fmt: PlatformFormat;
+  media: PreviewMedia[];
+  index?: number;
+  grid?: boolean;
+  className?: string;
+  children?: ReactNode;
+}) {
+  const shown = grid ? media.slice(0, 4) : media.slice(index, index + 1);
+  const extra = grid ? media.length - 4 : 0;
+  return (
+    <div className={`zco-fmt-frame ${className}`} style={{ aspectRatio: `${fmt.width} / ${fmt.height}` }}>
+      {shown.length === 0 ? (
+        <div className="zco-fmt-ph">
+          <ImageIcon />
+          <span>{sizeLabel(fmt)}</span>
+        </div>
+      ) : (
+        <div className={`zco-fmt-media n-${shown.length}`}>
+          {shown.map((m, i) => (
+            <div key={m.id} className="zco-fmt-cell">
+              <PvMedia item={m} />
+              {extra > 0 && i === shown.length - 1 && <span className="zco-fmt-more">+{extra}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+/* Caption that collapses after a limit and shows the platform's "more" link. */
+function PvCaption({
+  text,
+  limit,
+  moreLabel,
+  lead,
+  className = '',
+  clampLines,
+}: {
+  text: string;
+  limit: number;
+  moreLabel: string;
+  lead?: ReactNode;
+  className?: string;
+  clampLines?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const lines = text.split('\n');
+  const tooLong = text.length > limit || (clampLines ? lines.length > clampLines : false);
+  let shown = text;
+  if (!open && tooLong) {
+    shown = clampLines ? lines.slice(0, clampLines).join('\n') : text;
+    if (shown.length > limit) shown = shown.slice(0, limit).replace(/\s+\S*$/, '');
+  }
+  return (
+    <div className={`zco-fmt-cap ${className}`}>
+      {lead}
+      {text ? renderWithTags(shown) : <span className="zco-fmt-empty">Your caption will appear here.</span>}
+      {!open && tooLong ? (
+        <>
+          {'... '}
+          <button type="button" className="zco-fmt-morebtn" onClick={() => setOpen(true)}>
+            {moreLabel}
+          </button>
+        </>
+      ) : (
+        <span className="zco-caret" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
+
+const Avatar = ({ meta, size = 32, square = false }: { meta: { icon: ReactNode; color: string }; size?: number; square?: boolean }) => (
+  <span
+    className={`zco-fmt-avatar ${square ? 'is-square' : ''}`}
+    style={{ width: size, height: size, background: meta.color }}
+  >
+    {meta.icon}
+  </span>
+);
+
+function PlatformPreview({
+  fmt,
+  platform,
+  handle,
+  meta,
+  text,
+  media,
+  firstComment,
+}: {
+  fmt: PlatformFormat;
+  platform: string;
+  handle: string;
+  meta: { icon: ReactNode; color: string; name: string };
+  text: string;
+  media: PreviewMedia[];
+  firstComment?: string;
+}) {
+  const [slide, setSlide] = useState(0);
+  const idx = Math.min(slide, Math.max(0, media.length - 1));
+  const bare = handle.replace(/^@/, '');
+  const at = `@${bare}`;
+  const hasMulti = media.length > 1;
+  const dots = hasMulti && (
+    <div className="zco-fmt-dots" role="tablist" aria-label="Carousel">
+      {media.slice(0, 10).map((m, i) => (
+        <button
+          type="button"
+          key={m.id}
+          aria-label={`Slide ${i + 1}`}
+          aria-selected={i === idx}
+          className={i === idx ? 'is-on' : ''}
+          onClick={() => setSlide(i)}
+        />
+      ))}
+    </div>
+  );
+
+  switch (fmt.layout) {
+    case 'ig-feed':
+      return (
+        <div className="zco-fmt zco-fmt-ig" data-platform={platform}>
+          <div className="zco-fmt-row zco-fmt-head">
+            <span className="zco-fmt-ring"><Avatar meta={meta} size={28} /></span>
+            <strong className="zco-fmt-handle">{bare}</strong>
+            <MoreHorizontal className="zco-fmt-push" size={18} />
+          </div>
+          <PvFrame fmt={fmt} media={media} index={idx}>
+            {hasMulti && <span className="zco-fmt-count">{idx + 1}/{media.length}</span>}
+          </PvFrame>
+          <div className="zco-fmt-row zco-fmt-actions">
+            <Heart size={22} />
+            <MessageCircle size={22} />
+            <Send size={21} />
+            {dots ? <div className="zco-fmt-dots-mid">{dots}</div> : null}
+            <Bookmark size={22} className="zco-fmt-push" />
+          </div>
+          <div className="zco-fmt-body">
+            <div className="zco-fmt-likes">Be the first to like this</div>
+            <PvCaption text={text} limit={125} moreLabel="more" lead={<strong className="zco-fmt-lead">{bare} </strong>} />
+            {firstComment && (
+              <div className="zco-fmt-cap zco-fmt-comment">
+                <strong className="zco-fmt-lead">{bare} </strong>
+                {renderWithTags(firstComment)}
+              </div>
+            )}
+            <div className="zco-fmt-time">Just now</div>
+          </div>
+        </div>
+      );
+
+    case 'ig-reel':
+    case 'tiktok': {
+      const isTT = fmt.layout === 'tiktok';
+      return (
+        <div className={`zco-fmt zco-fmt-full ${isTT ? 'zco-fmt-tt' : 'zco-fmt-reel'}`} data-platform={platform}>
+          <PvFrame fmt={fmt} media={media} index={idx} className="is-full">
+            <div className="zco-fmt-shade" />
+            {isTT && <div className="zco-fmt-tt-top"><span>Following</span><strong>For You</strong></div>}
+            {!isTT && <div className="zco-fmt-reel-top">Reels</div>}
+            <div className="zco-fmt-rail">
+              {isTT && (
+                <span className="zco-fmt-rail-avatar">
+                  <Avatar meta={meta} size={38} />
+                  <span className="zco-fmt-follow"><Plus size={10} strokeWidth={3} /></span>
+                </span>
+              )}
+              <span><Heart size={isTT ? 26 : 24} fill={isTT ? '#fff' : 'none'} /><small>0</small></span>
+              <span>{isTT ? <MessageSquare size={24} fill="#fff" /> : <MessageCircle size={24} />}<small>0</small></span>
+              {isTT && <span><Bookmark size={24} fill="#fff" /><small>0</small></span>}
+              <span>{isTT ? <Share2 size={24} /> : <Send size={23} />}<small>{isTT ? 'Share' : ''}</small></span>
+              {!isTT && <span><MoreHorizontal size={22} /></span>}
+              <span className={`zco-fmt-disc ${isTT ? 'is-tt' : ''}`}><Music2 size={12} /></span>
+            </div>
+            <div className="zco-fmt-overlay">
+              {isTT ? (
+                <strong className="zco-fmt-ovname">{at}</strong>
+              ) : (
+                <div className="zco-fmt-ovuser">
+                  <Avatar meta={meta} size={26} />
+                  <strong>{bare}</strong>
+                  <span className="zco-fmt-follow-pill">Follow</span>
+                </div>
+              )}
+              <PvCaption text={text} limit={isTT ? 90 : 70} moreLabel="more" clampLines={2} className="is-overlay" />
+              <div className="zco-fmt-sound">
+                <Music2 size={11} />
+                <span className="zco-fmt-marquee">original sound - {bare}</span>
+              </div>
+            </div>
+            {hasMulti && <div className="zco-fmt-full-dots">{dots}</div>}
+          </PvFrame>
+        </div>
+      );
+    }
+
+    case 'linkedin':
+      return (
+        <div className="zco-fmt zco-fmt-li" data-platform={platform}>
+          <div className="zco-fmt-row zco-fmt-head is-tall">
+            <Avatar meta={meta} size={40} />
+            <div className="zco-fmt-who">
+              <strong>{bare}</strong>
+              <span>1,248 followers</span>
+              <span>Now <Globe size={10} /></span>
+            </div>
+            <MoreHorizontal className="zco-fmt-push" size={18} />
+          </div>
+          <div className="zco-fmt-body is-top">
+            <PvCaption text={text} limit={210} clampLines={3} moreLabel="see more" />
+          </div>
+          <PvFrame fmt={fmt} media={media} grid />
+          <div className="zco-fmt-row zco-fmt-stats">
+            <span className="zco-fmt-reacts">
+              <i className="r-like"><ThumbsUp size={9} /></i>
+              <i className="r-love"><Heart size={9} /></i>
+              <i className="r-clap"><ZIcon name="celebrate" size={9} /></i>
+            </span>
+            <span>24</span>
+            <span className="zco-fmt-push">3 comments · 2 reposts</span>
+          </div>
+          <div className="zco-fmt-row zco-fmt-bar">
+            <span><ThumbsUp size={16} /> Like</span>
+            <span><MessageSquare size={16} /> Comment</span>
+            <span><Repeat2 size={16} /> Repost</span>
+            <span><Send size={15} /> Send</span>
+          </div>
+        </div>
+      );
+
+    case 'facebook':
+      return (
+        <div className="zco-fmt zco-fmt-fb" data-platform={platform}>
+          <div className="zco-fmt-row zco-fmt-head is-tall">
+            <Avatar meta={meta} size={40} />
+            <div className="zco-fmt-who">
+              <strong>{bare}</strong>
+              <span>Just now · <Globe size={10} /></span>
+            </div>
+            <MoreHorizontal className="zco-fmt-push" size={18} />
+          </div>
+          <div className="zco-fmt-body is-top">
+            <PvCaption text={text} limit={250} clampLines={5} moreLabel="See more" />
+          </div>
+          <PvFrame fmt={fmt} media={media} grid />
+          <div className="zco-fmt-row zco-fmt-stats">
+            <span className="zco-fmt-reacts">
+              <i className="r-fb"><ThumbsUp size={9} /></i>
+              <i className="r-love"><Heart size={9} /></i>
+            </span>
+            <span>18</span>
+            <span className="zco-fmt-push">4 comments</span>
+          </div>
+          <div className="zco-fmt-row zco-fmt-bar">
+            <span><ThumbsUp size={16} /> Like</span>
+            <span><MessageCircle size={16} /> Comment</span>
+            <span><Share2 size={16} /> Share</span>
+          </div>
+        </div>
+      );
+
+    case 'x': {
+      const over = text.length > 280;
+      return (
+        <div className="zco-fmt zco-fmt-x" data-platform={platform}>
+          <div className="zco-fmt-xgrid">
+            <Avatar meta={meta} size={38} />
+            <div className="zco-fmt-xmain">
+              <div className="zco-fmt-xname">
+                <strong>{bare}</strong>
+                <span>{at} · now</span>
+                <MoreHorizontal className="zco-fmt-push" size={16} />
+              </div>
+              <div className="zco-fmt-cap is-x">
+                {text ? renderWithTags(over ? text.slice(0, 280) : text) : <span className="zco-fmt-empty">Your post will appear here.</span>}
+                {over && <mark className="zco-fmt-over">{text.slice(280)}</mark>}
+                <span className="zco-caret" aria-hidden="true" />
+              </div>
+              <PvFrame fmt={fmt} media={media} grid className="is-rounded" />
+              <div className="zco-fmt-row zco-fmt-xbar">
+                <span><MessageCircle size={15} /> 0</span>
+                <span><Repeat2 size={16} /> 0</span>
+                <span><Heart size={15} /> 0</span>
+                <span><BarChart2 size={15} /> 0</span>
+                <span className="zco-fmt-xend"><Bookmark size={15} /><Share2 size={15} /></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    case 'youtube': {
+      const title = text.split('\n').find((l) => l.trim()) || '';
+      const hasVideo = media.some((m) => isVideoMime(m.mime_type, m.file_url));
+      return (
+        <div className="zco-fmt zco-fmt-yt" data-platform={platform}>
+          <PvFrame fmt={fmt} media={media} className="is-yt">
+            {media.length > 0 && (
+              <>
+                {!hasVideo && <span className="zco-fmt-play"><Play size={18} fill="#fff" /></span>}
+                <span className="zco-fmt-dur">0:30</span>
+              </>
+            )}
+          </PvFrame>
+          <div className="zco-fmt-ytmeta">
+            <Avatar meta={meta} size={34} />
+            <div className="zco-fmt-ytinfo">
+              <div className={`zco-fmt-yttitle ${title ? '' : 'is-empty'}`}>{title || 'Your video title will appear here.'}</div>
+              <span>{bare} · 0 views · Just now</span>
+            </div>
+            <MoreHorizontal size={16} className="zco-fmt-push" />
+          </div>
+        </div>
+      );
+    }
+  }
+  return null;
+}
 
 export default function ComposerPage() {
   const navigate = useNavigate();
@@ -99,6 +460,8 @@ export default function ComposerPage() {
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerSuccess, setComposerSuccess] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // Preview format the user picked per platform (falls back to the platform default)
+  const [formatChoice, setFormatChoice] = useState<Record<string, string>>({});
 
   const characterLimits: Record<string, number> = {
     universal: 2200,
@@ -413,6 +776,14 @@ export default function ComposerPage() {
     : selectedConns[0];
   const previewMeta = platformMeta(previewConn?.platform);
   const previewText = getActiveText();
+  const previewPlatform = previewConn?.platform && formatsFor(previewConn.platform).length
+    ? previewConn.platform
+    : 'instagram';
+  const previewFormats = formatsFor(previewPlatform);
+  const previewHasVideo = mediaAttachments.some(m => isVideoMime(m.mime_type, m.file_url));
+  const previewFormat =
+    previewFormats.find(fm => fm.id === formatChoice[previewPlatform]) ||
+    defaultFormatFor(previewPlatform, previewHasVideo);
   const hasInstagram = selectedAccounts.some(id => connections.find(c => c.id === id)?.platform === 'instagram');
   const ringR = 9;
   const ringC = 2 * Math.PI * ringR;
@@ -422,7 +793,7 @@ export default function ComposerPage() {
     : scheduleType === 'now' ? 'Publish now' : 'Queue post';
 
   const scheduleOptions: { id: 'now' | 'queue' | 'schedule'; label: string; icon: ReactNode }[] = [
-    { id: 'now', label: 'Publish now', icon: <Zap /> },
+    { id: 'now', label: 'Publish now', icon: <ZIcon name="publish" /> },
     { id: 'queue', label: 'Add to queue (Autopilot)', icon: <Layers /> },
     { id: 'schedule', label: 'Schedule a custom time', icon: <CalendarIcon /> },
   ];
@@ -441,7 +812,7 @@ export default function ComposerPage() {
         {editingDraft && (
           <div className="zco-draft-banner" role="status">
             <span className="zco-draft-ico">
-              <Sparkles size={15} />
+              <ZIcon name="ai-draft" size={15} />
             </span>
             <div className="zco-draft-text">
               <strong>Reviewing a draft from your AI Agent</strong>
@@ -565,7 +936,7 @@ export default function ComposerPage() {
 
               {isInheriting && (
                 <div className="zco-banner is-inherit">
-                  <span><Sparkles size={13} /> Inheriting from Default. Start typing to customize for this platform.</span>
+                  <span><ZIcon name="inherit" size={13} /> Inheriting from Default. Start typing to customize for this platform.</span>
                 </div>
               )}
               {activeTab !== 'universal' && !isInheriting && (
@@ -661,30 +1032,46 @@ export default function ComposerPage() {
               >
                 Preview
               </CardTitle>
-              <div className="zco-pv-head">
-                <span className="zco-pv-avatar" style={{ background: previewConn ? previewMeta.color : 'var(--zd-ink)' }}>
-                  {previewConn ? previewMeta.icon : <Send />}
-                </span>
-                <div style={{ minWidth: 0 }}>
-                  <div className="zco-pv-name">{previewConn?.account_handle || 'Your account'}</div>
-                  <div className="zco-pv-meta">
-                    {previewConn ? previewMeta.name : 'No account selected'}
-                    {selectedConns.length > 1 && activeTab === 'universal' && <span>+{selectedConns.length - 1} more</span>}
-                  </div>
-                </div>
-              </div>
-              {mediaAttachments.length > 0 && (
-                <div className={`zco-pv-media n-${Math.min(4, mediaAttachments.length)}`}>
-                  {mediaAttachments.slice(0, 4).map(item => (
-                    <img key={item.id} src={item.file_url} alt={item.file_name || ''} />
+              {previewFormats.length > 1 && (
+                <div className="zco-fmt-switch" role="tablist" aria-label="Preview format">
+                  {previewFormats.map(fm => (
+                    <button
+                      type="button"
+                      role="tab"
+                      key={fm.id}
+                      aria-selected={fm.id === previewFormat.id}
+                      className={fm.id === previewFormat.id ? 'is-active' : ''}
+                      onClick={() => setFormatChoice(prev => ({ ...prev, [previewPlatform]: fm.id }))}
+                    >
+                      <span
+                        className="zco-fmt-shape"
+                        style={{ aspectRatio: `${fm.width} / ${fm.height}` }}
+                        aria-hidden="true"
+                      />
+                      {fm.label}
+                    </button>
                   ))}
                 </div>
               )}
-              <div className={`zco-pv-text ${previewText ? '' : 'is-empty'}`}>
-                {previewText ? renderWithTags(previewText) : 'Your caption will appear here.'}
-                <span className="zco-caret" aria-hidden="true" />
+              <div className="zco-fmt-caption">
+                Previewing: <strong>{formatCaption(previewFormat)}</strong>
+                {!previewConn && <span> (no account selected yet)</span>}
+                {selectedConns.length > 1 && activeTab === 'universal' && (
+                  <span> · +{selectedConns.length - 1} more, open a platform tab to preview it</span>
+                )}
               </div>
-              {hasInstagram && firstComment && (
+              <div className="zco-fmt-stage" key={`${previewPlatform}-${previewFormat.id}`}>
+                <PlatformPreview
+                  fmt={previewFormat}
+                  platform={previewPlatform}
+                  handle={previewConn?.account_handle || 'youraccount'}
+                  meta={previewConn ? previewMeta : platformMeta('instagram')}
+                  text={previewText}
+                  media={mediaAttachments}
+                  firstComment={previewPlatform === 'instagram' && previewFormat.layout === 'ig-feed' && hasInstagram ? firstComment : ''}
+                />
+              </div>
+              {previewPlatform === 'instagram' && previewFormat.layout !== 'ig-feed' && hasInstagram && firstComment && (
                 <div className="zco-pv-comment">
                   <strong>First comment</strong>
                   {renderWithTags(firstComment)}

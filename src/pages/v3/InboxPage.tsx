@@ -25,8 +25,9 @@ import {
   ArrowLeft,
   RefreshCw,
   CornerDownRight,
-  Sparkles,
+  
 } from 'lucide-react';
+import ZIcon from '../../components/icons/ZIcon';
 import './inbox.css';
 
 export default function InboxPage() {
@@ -614,7 +615,7 @@ export default function InboxPage() {
                           <Pill tone={getSentimentTone(c.sentiment)}>{c.sentiment || 'neutral'}</Pill>
                           {hasAiDraft(c) && (
                             <span className="zin-ai-draft">
-                              <Sparkles size={11} /> AI draft
+                              <ZIcon name="ai-draft" size={11} /> AI draft
                             </span>
                           )}
                           {userHasReplied && (
@@ -725,7 +726,7 @@ export default function InboxPage() {
                           Replying to <strong>{selectedComment.author_username || selectedComment.commenter_handle}</strong>
                           {hasAiDraft(selectedComment) && replyText === selectedComment.reply_text && (
                             <span className="zin-ai-draft is-inline">
-                              <Sparkles size={11} /> Drafted by AI Agent, edit and send
+                              <ZIcon name="ai-draft" size={11} /> Drafted by AI Agent, edit and send
                             </span>
                           )}
                         </span>
