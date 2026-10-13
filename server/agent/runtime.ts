@@ -17,6 +17,10 @@ import { AGENT_TOOLS, TOOL_MAP, type ToolContext } from "./tools.js";
 export type AgentEvent =
   | { type: "status"; text: string }
   | { type: "thought"; text: string }
+  | { type: "round_start"; round: number }
+  | { type: "text_delta"; text: string; round: number }
+  | { type: "thinking_delta"; text: string; round: number }
+  | { type: "round_end"; round: number; tools: number }
   | { type: "step_start"; id: string; tool: string; label: string; args: any; round: number }
   | { type: "step_end"; id: string; tool: string; ok: boolean; summary: string; ms: number }
   | { type: "final"; text: string };
@@ -100,7 +104,76 @@ async function runBatch(
 
 const WRAP_UP = "Time to answer. Using the data you already gathered, write the final answer now. Do not request more tools.";
 
-// ─── Anthropic ─────────────────────────────────────────────────────────────
+/** Hides <think>...</think> from streamed text (tags may be split across chunks) */
+class ThinkFilter {
+  private buf = "";
+  private inThink = false;
+  push(chunk: string): { text: string; thinking: string } {
+    this.buf += chunk;
+    let text = "";
+    let thinking = "";
+    for (;;) {
+      const tag = this.inThink ? "</think>" : "<think>";
+      const i = this.buf.indexOf(tag);
+      if (i >= 0) {
+        const part = this.buf.slice(0, i);
+        if (this.inThink) thinking += part;
+        else text += part;
+        this.buf = this.buf.slice(i + tag.length);
+        this.inThink = !this.inThink;
+        continue;
+      }
+      // Keep a short tail in case a tag is split across chunks
+      const keep = Math.min(this.buf.length, tag.length - 1);
+      let safe = this.buf.length - keep;
+      const lt = this.buf.lastIndexOf("<");
+      if (lt < 0 || lt < this.buf.length - keep) safe = this.buf.length;
+      else safe = lt;
+      const part = this.buf.slice(0, safe);
+      this.buf = this.buf.slice(safe);
+      if (this.inThink) thinking += part;
+      else text += part;
+      return { text, thinking };
+    }
+  }
+  flush() {
+    const rest = this.buf;
+    this.buf = "";
+    return this.inThink ? { text: "", thinking: rest } : { text: rest, thinking: "" };
+  }
+}
+
+const cleanDelta = (s: string) => s.replace(/ ?\u2014 ?/g, " - ").replace(/\u2013/g, "-");
+
+/** Emits streamed text for one round; leading whitespace is dropped */
+function makeRoundWriter(opts: RunAgentOptions, round: number) {
+  const filter = new ThinkFilter();
+  let full = "";
+  let started = false;
+  const out = (r: { text: string; thinking: string }) => {
+    if (r.thinking) opts.emit({ type: "thinking_delta", text: r.thinking, round });
+    let t = r.text;
+    if (!started) {
+      t = t.replace(/^\s+/, "");
+      if (t) started = true;
+    }
+    if (t) {
+      t = cleanDelta(t);
+      full += t;
+      opts.emit({ type: "text_delta", text: t, round });
+    }
+  };
+  return {
+    push: (chunk: string) => out(filter.push(chunk)),
+    thinking: (chunk: string) => chunk && opts.emit({ type: "thinking_delta", text: chunk, round }),
+    end: () => {
+      out(filter.flush());
+      return full.trim();
+    },
+  };
+}
+
+// ─── Anthropic (streaming) ─────────────────────────────────────────────────
 async function runAnthropic(opts: RunAgentOptions, steps: AgentStep[]): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY not set");
@@ -115,39 +188,59 @@ async function runAnthropic(opts: RunAgentOptions, steps: AgentStep[]): Promise<
   for (let round = 1; round <= maxRounds + 1; round++) {
     const mustFinish = round > maxRounds || Date.now() > deadline - 15000;
     if (mustFinish && round > 1) messages.push({ role: "user", content: WRAP_UP });
-    const resp: any = await client.messages.create(
-      {
-        model,
-        max_tokens: 4096,
-        system: opts.system,
-        tools,
-        tool_choice: mustFinish ? { type: "none" } : { type: "auto" },
-        messages,
-      },
+    opts.emit({ type: "round_start", round });
+    const writer = makeRoundWriter(opts, round);
+    const stream: any = await client.messages.create(
+      { model, max_tokens: 4096, system: opts.system, tools, tool_choice: mustFinish ? { type: "none" } : { type: "auto" }, messages, stream: true },
       { signal: opts.signal },
     );
-    const text = resp.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim();
-    const uses = resp.content.filter((b: any) => b.type === "tool_use");
+    const blocks: any[] = [];
+    for await (const ev of stream) {
+      if (ev.type === "content_block_start") {
+        const b = ev.content_block;
+        blocks[ev.index] = b.type === "tool_use" ? { type: "tool_use", id: b.id, name: b.name, json: "" } : { type: b.type, text: "" };
+      } else if (ev.type === "content_block_delta") {
+        const blk = blocks[ev.index];
+        if (!blk) continue;
+        if (ev.delta.type === "text_delta") {
+          blk.text += ev.delta.text;
+          writer.push(ev.delta.text);
+        } else if (ev.delta.type === "input_json_delta") {
+          blk.json += ev.delta.partial_json;
+        } else if (ev.delta.type === "thinking_delta") {
+          writer.thinking(ev.delta.thinking);
+        }
+      }
+    }
+    const text = writer.end();
+    const uses = blocks
+      .filter((b) => b?.type === "tool_use")
+      .map((b) => {
+        let input: any = {};
+        try {
+          input = b.json ? JSON.parse(b.json) : {};
+        } catch {}
+        return { type: "tool_use", id: b.id, name: b.name, input };
+      });
+    opts.emit({ type: "round_end", round, tools: mustFinish ? 0 : uses.length });
     if (!uses.length || mustFinish) return text;
 
-    if (text) opts.emit({ type: "thought", text: noEmDash(text) });
-    messages.push({ role: "assistant", content: resp.content });
-    const results = await runBatch(uses.map((u: any) => ({ id: u.id, name: u.name, args: u.input })), round, opts, steps);
-    messages.push({
-      role: "user",
-      content: results.map((r) => ({ type: "tool_result", tool_use_id: r.id, content: r.content, is_error: !r.ok })),
-    });
+    const assistantContent: any[] = [];
+    const rawText = blocks.filter((b) => b?.type === "text").map((b) => b.text).join("");
+    if (rawText.trim()) assistantContent.push({ type: "text", text: rawText });
+    assistantContent.push(...uses);
+    messages.push({ role: "assistant", content: assistantContent });
+    const results = await runBatch(uses.map((u) => ({ id: u.id, name: u.name, args: u.input })), round, opts, steps);
+    messages.push({ role: "user", content: results.map((r) => ({ type: "tool_result", tool_use_id: r.id, content: r.content, is_error: !r.ok })) });
   }
   return "";
 }
 
-// ─── OpenAI compatible (Sumopod) ───────────────────────────────────────────
+// ─── OpenAI compatible (Sumopod), streaming ────────────────────────────────
 function toOpenAIContent(content: string | any[]) {
   if (typeof content === "string") return content;
   return content.map((b) =>
-    b.type === "image"
-      ? { type: "image_url", image_url: { url: `data:${b.source.media_type};base64,${b.source.data}` } }
-      : { type: "text", text: b.text },
+    b.type === "image" ? { type: "image_url", image_url: { url: `data:${b.source.media_type};base64,${b.source.data}` } } : { type: "text", text: b.text },
   );
 }
 
@@ -169,35 +262,79 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
   for (let round = 1; round <= maxRounds + 1; round++) {
     const mustFinish = round > maxRounds || Date.now() > deadline - 15000;
     if (mustFinish && round > 1) messages.push({ role: "user", content: WRAP_UP });
+    opts.emit({ type: "round_start", round });
+    const writer = makeRoundWriter(opts, round);
+
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages,
-        tools,
-        tool_choice: mustFinish ? "none" : "auto",
-        parallel_tool_calls: true,
-        max_tokens: 4096,
-        temperature: 0.4,
-      }),
+      body: JSON.stringify({ model, messages, tools, tool_choice: mustFinish ? "none" : "auto", parallel_tool_calls: true, max_tokens: 4096, temperature: 0.4, stream: true }),
       signal: opts.signal,
     });
     if (!res.ok) throw new Error(`AI provider error (${res.status}): ${(await res.text()).slice(0, 300)}`);
-    const data: any = await res.json();
-    const msg = data.choices?.[0]?.message || {};
-    const text = stripThink(typeof msg.content === "string" ? msg.content : "");
-    const calls = (msg.tool_calls || []).filter((c: any) => c?.function?.name);
-    if (!calls.length || mustFinish) return text;
 
-    if (text) opts.emit({ type: "thought", text: noEmDash(text) });
-    messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
-    const parsed = calls.map((c: any, i: number) => {
+    let rawContent = "";
+    const calls: Array<{ id: string; name: string; args: string }> = [];
+    const onDelta = (d: any) => {
+      if (!d) return;
+      if (typeof d.reasoning_content === "string") writer.thinking(d.reasoning_content);
+      if (typeof d.content === "string" && d.content) {
+        rawContent += d.content;
+        writer.push(d.content);
+      }
+      for (const tc of d.tool_calls || []) {
+        const i = typeof tc.index === "number" ? tc.index : calls.length;
+        const c = (calls[i] ||= { id: "", name: "", args: "" });
+        if (tc.id) c.id = tc.id;
+        if (tc.function?.name) c.name += tc.function.name;
+        if (tc.function?.arguments) c.args += tc.function.arguments;
+      }
+    };
+
+    const type = res.headers.get("content-type") || "";
+    if (!res.body || type.includes("application/json")) {
+      // Provider ignored stream:true; the UI still reveals the text gradually
+      const data: any = await res.json();
+      const m = data.choices?.[0]?.message || {};
+      onDelta({ content: m.content, reasoning_content: m.reasoning_content, tool_calls: (m.tool_calls || []).map((t: any, index: number) => ({ ...t, index })) });
+    } else {
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            onDelta(JSON.parse(payload).choices?.[0]?.delta);
+          } catch {}
+        }
+      }
+    }
+
+    const text = writer.end();
+    const valid = calls.filter((c) => c && c.name);
+    opts.emit({ type: "round_end", round, tools: mustFinish ? 0 : valid.length });
+    if (!valid.length || mustFinish) return text;
+
+    const parsed = valid.map((c, i) => {
       let args: any = {};
       try {
-        args = c.function.arguments ? JSON.parse(c.function.arguments) : {};
+        args = c.args ? JSON.parse(c.args) : {};
       } catch {}
-      return { id: c.id || `call_${round}_${i}`, name: c.function.name, args };
+      return { id: c.id || `call_${round}_${i}`, name: c.name, args, rawArgs: c.args || "{}" };
+    });
+    messages.push({
+      role: "assistant",
+      content: rawContent || "",
+      tool_calls: parsed.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: c.rawArgs } })),
     });
     const results = await runBatch(parsed, round, opts, steps);
     for (const r of results) messages.push({ role: "tool", tool_call_id: r.id, content: r.content });

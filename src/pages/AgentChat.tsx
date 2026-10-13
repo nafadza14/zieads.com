@@ -31,6 +31,19 @@ interface AgentStepUI {
   round: number;
 }
 
+/** One entry in the agent's visible work log */
+type ProcessItem =
+  | { kind: 'thinking'; round: number; text: string }
+  | { kind: 'note'; round: number; text: string }
+  | { kind: 'steps'; round: number; steps: AgentStepUI[] };
+
+interface AgentProcess {
+  status: 'running' | 'writing' | 'done' | 'stopped' | 'error';
+  startedAt?: number;
+  endedAt?: number;
+  items: ProcessItem[];
+}
+
 interface Message {
   id?: string;
   role: 'user' | 'assistant';
@@ -39,10 +52,8 @@ interface Message {
   isAnalysis?: boolean;
   analysisMode?: string;
   /** Agent run details */
-  steps?: AgentStepUI[];
-  thoughts?: string[];
+  process?: AgentProcess;
   working?: boolean;
-  phase?: string;
 }
 
 // Saved replies carry their steps in a hidden trailing marker
@@ -51,14 +62,20 @@ function parseStoredMessage(m: Message): Message {
   if (m.role !== 'assistant' || !m.content) return m;
   const hit = m.content.match(STEPS_MARKER);
   if (!hit) return m;
-  let steps: AgentStepUI[] | undefined;
+  const content = m.content.replace(STEPS_MARKER, '');
   try {
-    const raw = JSON.parse(decodeURIComponent(escape(atob(hit[1]))));
-    steps = raw.map((s: any, i: number) => ({ id: `s${i}`, tool: s.tool, label: s.label, status: s.ok ? 'done' : 'error', summary: s.summary, ms: s.ms, round: s.round || 1 }));
+    const raw: any[] = JSON.parse(decodeURIComponent(escape(atob(hit[1]))));
+    const byRound = new Map<number, AgentStepUI[]>();
+    raw.forEach((st, i) => {
+      const r = st.round || 1;
+      if (!byRound.has(r)) byRound.set(r, []);
+      byRound.get(r)!.push({ id: `s${i}`, tool: st.tool, label: st.label, status: st.ok ? 'done' : 'error', summary: st.summary, ms: st.ms, round: r });
+    });
+    const items: ProcessItem[] = [...byRound.entries()].sort((x, y) => x[0] - y[0]).map(([round, steps]) => ({ kind: 'steps', round, steps }));
+    return { ...m, content, process: { status: 'done', items } };
   } catch {
-    steps = undefined;
+    return { ...m, content };
   }
-  return { ...m, content: m.content.replace(STEPS_MARKER, ''), steps };
 }
 
 const AGENT_SUGGESTIONS = [
@@ -280,14 +297,17 @@ export default function AgentChat() {
   const [additionalData, setAdditionalData] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const typewriterIntervalRef = useRef<any>(null);
 
   const stopGeneration = () => {
     if (abortControllerRef.current) {
+      // The stream handler marks the run as stopped and keeps the text received so far
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+      return;
     }
     if (typewriterIntervalRef.current) {
       clearInterval(typewriterIntervalRef.current);
@@ -325,45 +345,64 @@ export default function AgentChat() {
     typewriterIntervalRef.current = interval;
   };
 
-  /** Reveal text into the last (placeholder) assistant message */
-  const typeIntoLast = (text: string, onFinish?: () => void) => {
-    const step = Math.max(4, Math.ceil(text.length / 90));
-    let n = 0;
-    const interval = setInterval(() => {
-      n = Math.min(text.length, n + step);
-      const partial = text.slice(0, n);
+  // ─── Live streaming state (one run at a time) ────────────────────────────
+  const streamRef = useRef({ target: '', shown: 0, done: false, raf: 0, onFinish: undefined as undefined | (() => void) });
+
+  const patchLast = useCallback(
+    (fn: (m: Message) => Message) =>
       setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
-        if (last && last.role === 'assistant') copy[copy.length - 1] = { ...last, content: partial, working: false };
+        if (last && last.role === 'assistant') copy[copy.length - 1] = fn(last);
         return copy;
-      });
-      if (n >= text.length) {
-        clearInterval(interval);
-        typewriterIntervalRef.current = null;
-        setLoading(false);
-        onFinish?.();
-      }
-    }, 16);
-    typewriterIntervalRef.current = interval;
+      }),
+    [],
+  );
+
+  const patchProcess = (fn: (p: AgentProcess) => AgentProcess) =>
+    patchLast((m) => ({ ...m, process: fn(m.process || { status: 'running', items: [] }) }));
+
+  /** Reveal streamed text smoothly, a few characters per frame, like a typing cursor */
+  const pumpStream = () => {
+    const st = streamRef.current;
+    const backlog = st.target.length - st.shown;
+    if (backlog > 0) {
+      // Natural reading pace: about 2 to 6 characters per frame, faster only for very long backlogs
+      st.shown += Math.min(backlog > 1500 ? 14 : 6, Math.max(2, Math.ceil(backlog / 40)));
+      const text = st.target.slice(0, st.shown);
+      patchLast((m) => ({ ...m, content: text }));
+    }
+    if (st.done && st.shown >= st.target.length) {
+      st.raf = 0;
+      patchLast((m) => ({
+        ...m,
+        working: false,
+        process: m.process ? { ...m.process, status: m.process.status === 'writing' || m.process.status === 'running' ? 'done' : m.process.status, endedAt: m.process.endedAt || Date.now() } : m.process,
+      }));
+      setLoading(false);
+      const cb = st.onFinish;
+      st.onFinish = undefined;
+      cb?.();
+      return;
+    }
+    st.raf = requestAnimationFrame(pumpStream);
   };
 
-  const patchLast = (fn: (m: Message) => Message) =>
-    setMessages((prev) => {
-      const copy = [...prev];
-      const last = copy[copy.length - 1];
-      if (last && last.role === 'assistant') copy[copy.length - 1] = fn(last);
-      return copy;
-    });
-
-  /** Run the tool-using agent and stream its steps into the thread */
+  /** Run the tool-using agent and stream its work and answer into the thread */
   const runAgentStream = async (body: Record<string, any>, onFinish?: () => void) => {
-    setMessages((prev) => [...prev, { role: 'assistant', content: '', steps: [], thoughts: [], working: true, phase: 'Planning' }]);
+    const st = streamRef.current;
+    if (st.raf) cancelAnimationFrame(st.raf);
+    Object.assign(st, { target: '', shown: 0, done: false, raf: 0, onFinish });
+    setMessages((prev) => [...prev, { role: 'assistant', content: '', working: true, process: { status: 'running', startedAt: Date.now(), items: [] } }]);
+    st.raf = requestAnimationFrame(pumpStream);
+
     const controller = new AbortController();
     abortControllerRef.current = controller;
     const headers = await getAuthHeaders();
     let finalText = '';
     let failed = '';
+    let roundText = '';
+
     try {
       const res = await fetch('/api/agent/run', {
         method: 'POST',
@@ -378,7 +417,7 @@ export default function AgentChat() {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';
-        while (true) {
+        for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
           buf += decoder.decode(value, { stream: true });
@@ -393,46 +432,92 @@ export default function AgentChat() {
             } catch {
               continue;
             }
-            if (ev.type === 'meta') {
-              if (!activeConvId && ev.conversationId) setActiveConvId(ev.conversationId);
-            } else if (ev.type === 'status') {
-              patchLast((m) => ({ ...m, phase: ev.text }));
-            } else if (ev.type === 'thought') {
-              patchLast((m) => ({ ...m, thoughts: [...(m.thoughts || []), ev.text] }));
-            } else if (ev.type === 'step_start') {
-              patchLast((m) => ({
-                ...m,
-                phase: 'Working',
-                steps: [...(m.steps || []), { id: ev.id, tool: ev.tool, label: ev.label, status: 'running', round: ev.round }],
-              }));
-            } else if (ev.type === 'step_end') {
-              patchLast((m) => ({
-                ...m,
-                steps: (m.steps || []).map((st) => (st.id === ev.id ? { ...st, status: ev.ok ? 'done' : 'error', summary: ev.summary, ms: ev.ms } : st)),
-              }));
-            } else if (ev.type === 'final') {
-              finalText = ev.text;
-              patchLast((m) => ({ ...m, phase: 'Writing' }));
-            } else if (ev.type === 'done') {
-              if (ev.usage) setUsage((prev) => ({ ...prev, used: ev.usage.used, limit: ev.usage.limit }));
-            } else if (ev.type === 'error') {
-              failed = ev.message;
+            switch (ev.type) {
+              case 'meta':
+                if (!activeConvId && ev.conversationId) setActiveConvId(ev.conversationId);
+                break;
+              case 'round_start':
+                roundText = '';
+                break;
+              case 'thinking_delta':
+                patchProcess((p) => {
+                  const items = [...p.items];
+                  const last = items[items.length - 1];
+                  if (last && last.kind === 'thinking' && last.round === ev.round) items[items.length - 1] = { ...last, text: last.text + ev.text };
+                  else items.push({ kind: 'thinking', round: ev.round, text: ev.text.replace(/^\s+/, '') });
+                  return { ...p, items };
+                });
+                break;
+              case 'text_delta':
+                // Text streams straight into the answer; if tools follow, it becomes a note in the work log
+                roundText += ev.text;
+                st.target += ev.text;
+                patchProcess((p) => (p.status === 'running' ? { ...p, status: 'writing' } : p));
+                break;
+              case 'round_end':
+                if (ev.tools > 0) {
+                  const note = roundText.trim();
+                  st.target = '';
+                  st.shown = 0;
+                  patchLast((m) => ({ ...m, content: '' }));
+                  patchProcess((p) => ({ ...p, status: 'running', items: note ? [...p.items, { kind: 'note', round: ev.round, text: note }] : p.items }));
+                }
+                roundText = '';
+                break;
+              case 'step_start':
+                patchProcess((p) => {
+                  const items = [...p.items];
+                  const step: AgentStepUI = { id: ev.id, tool: ev.tool, label: ev.label, status: 'running', round: ev.round };
+                  const idx = items.findIndex((it) => it.kind === 'steps' && it.round === ev.round);
+                  if (idx >= 0) {
+                    const g = items[idx] as Extract<ProcessItem, { kind: 'steps' }>;
+                    items[idx] = { ...g, steps: [...g.steps, step] };
+                  } else items.push({ kind: 'steps', round: ev.round, steps: [step] });
+                  return { ...p, status: 'running', items };
+                });
+                break;
+              case 'step_end':
+                patchProcess((p) => ({
+                  ...p,
+                  items: p.items.map((it) =>
+                    it.kind === 'steps'
+                      ? { ...it, steps: it.steps.map((x) => (x.id === ev.id ? { ...x, status: ev.ok ? 'done' : 'error', summary: ev.summary, ms: ev.ms } : x)) }
+                      : it,
+                  ),
+                }));
+                break;
+              case 'final':
+                finalText = ev.text;
+                break;
+              case 'done':
+                if (ev.usage) setUsage((prev) => ({ ...prev, used: ev.usage.used, limit: ev.usage.limit }));
+                break;
+              case 'error':
+                failed = ev.message;
+                break;
             }
           }
         }
       }
     } catch (err: any) {
-      failed = err.name === 'AbortError' ? '_Stopped._' : 'Network error. Please check your connection.';
+      if (err.name === 'AbortError') failed = 'stopped';
+      else failed = 'Network error. Please check your connection.';
     }
     abortControllerRef.current = null;
     refreshConversations();
-    if (finalText) {
-      typeIntoLast(finalText, onFinish);
-    } else {
-      patchLast((m) => ({ ...m, working: false, content: failed || 'No answer was returned. Please try again.' }));
-      setLoading(false);
-      onFinish?.();
+
+    if (failed === 'stopped') {
+      patchProcess((p) => ({ ...p, status: 'stopped', endedAt: Date.now() }));
+      if (!st.target.trim()) st.target = '_Stopped._';
+    } else if (failed && !st.target.trim()) {
+      patchProcess((p) => ({ ...p, status: 'error', endedAt: Date.now() }));
+      st.target = failed;
+    } else if (!st.target.trim()) {
+      st.target = finalText || 'No answer was returned. Please try again.';
     }
+    patchProcess((p) => ({ ...p, endedAt: p.endedAt || Date.now() }));
+    st.done = true;
+    if (!st.raf) st.raf = requestAnimationFrame(pumpStream);
     inputRef.current?.focus();
   };
 
@@ -635,7 +720,10 @@ export default function AgentChat() {
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
+    if (nearBottom || !loading) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -922,7 +1010,7 @@ export default function AgentChat() {
           {/* Tab: Chat */}
           {activeTab === 'chat' && (
             <>
-              <div className="za-scroll" key="chat">
+              <div className="za-scroll" key="chat" ref={scrollRef}>
                 {messages.length === 0 ? (
                   <div className="za-empty">
                     <div className="za-empty-inner">
@@ -956,7 +1044,7 @@ export default function AgentChat() {
                 ) : (
                   <div className="za-thread">
                     {messages.map((msg, i) => (
-                      <MessageBubble key={msg.id || i} message={msg} streaming={loading && i === messages.length - 1 && msg.role === 'assistant'} />
+                      <MessageBubble key={msg.id || i} message={msg} streaming={!!msg.working && !!msg.content} />
                     ))}
                     {loading && (messages[messages.length - 1]?.role === 'user') && <TypingIndicator running={!!runningMode} />}
                     <div ref={messagesEndRef} />
@@ -1169,10 +1257,10 @@ function MessageBubble({ message, streaming = false }: { message: Message; strea
     <div className={`za-msg ${isUser ? 'za-msg-user' : 'za-msg-agent'} ${isAnalysisResult ? 'is-wide' : ''} ${streaming ? 'is-streaming' : ''}`}>
       {!isUser && <AgentOrb size={30} />}
       <div className="za-bubble-wrap">
-        {!isUser && (message.working || (message.steps && message.steps.length > 0)) && <AgentWorkPanel message={message} />}
-        {(isUser || message.content) && (
-          <div className="za-bubble">
-            <MarkdownContent content={stripEmojis(message.content)} isUser={isUser} />
+        {!isUser && message.process && <ProcessPanel process={message.process} hasAnswer={!!message.content} />}
+        {(isUser || message.content || (message.working && message.process?.status === 'writing')) && (
+          <div className={`za-bubble ${!isUser && message.working ? 'is-typing' : ''}`}>
+            <MarkdownContent content={stripEmojis(message.content)} isUser={isUser} caret={!isUser && !!message.working} />
           </div>
         )}
         {!isUser && message.content && !streaming && !message.working && (
@@ -1200,91 +1288,148 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   create_draft_post: <PenLine size={14} />,
 };
 
-function AgentWorkPanel({ message }: { message: Message }) {
-  const steps = message.steps || [];
-  const running = steps.filter((s) => s.status === 'running').length;
-  const done = steps.filter((s) => s.status !== 'running').length;
-  const live = !!message.working;
-  const [open, setOpen] = useState(live);
+function useTicker(active: boolean) {
+  const [, set] = useState(0);
   useEffect(() => {
-    if (live) setOpen(true);
-    else if (message.content) setOpen(false);
-  }, [live, !!message.content]);
-  const totalMs = steps.reduce((m, s) => Math.max(m, s.ms || 0), 0);
-  const rounds = new Set(steps.map((s) => s.round)).size;
+    if (!active) return;
+    const t = setInterval(() => set((n) => n + 1), 500);
+    return () => clearInterval(t);
+  }, [active]);
+}
 
-  const title = live
-    ? running > 1
-      ? `Working on ${running} tasks in parallel`
-      : running === 1
-        ? steps.find((s) => s.status === 'running')?.label || 'Working'
-        : steps.length
-          ? message.phase === 'Writing' ? 'Writing your answer' : 'Reviewing results'
-          : 'Planning the work'
-    : `Used ${steps.length} ${steps.length === 1 ? 'data source' : 'data sources'}${rounds > 1 ? ` in ${rounds} rounds` : ''}`;
+const fmtSecs = (ms: number) => (ms < 60000 ? `${Math.max(1, Math.round(ms / 1000))}s` : `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`);
+
+/** Claude-style collapsible work log: thinking, notes and parallel tool steps */
+function ProcessPanel({ process, hasAnswer }: { process: AgentProcess; hasAnswer: boolean }) {
+  const live = process.status === 'running' || process.status === 'writing';
+  const [manual, setManual] = useState<boolean | null>(null);
+  useTicker(live);
+  // Open while working; fold away once the answer starts, unless the user chose otherwise
+  const open = manual ?? (live && !hasAnswer);
+
+  const allSteps = process.items.flatMap((it) => (it.kind === 'steps' ? it.steps : []));
+  const running = allSteps.filter((x) => x.status === 'running');
+  const lastThinking = [...process.items].reverse().find((it) => it.kind === 'thinking');
+  const elapsed = process.startedAt ? (process.endedAt || Date.now()) - process.startedAt : 0;
+
+  let title: string;
+  if (process.status === 'writing') title = 'Writing the answer';
+  else if (live) {
+    if (running.length > 1) title = `Running ${running.length} tasks in parallel`;
+    else if (running.length === 1) title = running[0].label;
+    else if (lastThinking && process.items[process.items.length - 1] === lastThinking) title = 'Thinking';
+    else title = allSteps.length ? 'Reviewing what it found' : 'Planning the work';
+  } else if (process.status === 'stopped') title = 'Stopped';
+  else if (process.status === 'error') title = 'Could not finish';
+  else title = allSteps.length ? `Used ${allSteps.length} ${allSteps.length === 1 ? 'data source' : 'data sources'}` : 'Thought it through';
+
+  if (!live && !process.items.length && process.status === 'done') return null;
 
   return (
-    <div className={`za-work ${live ? 'is-live' : ''}`}>
-      <button type="button" className="za-work-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="za-work-ico">{live ? <span className="za-work-spin" /> : <Check size={13} />}</span>
-        <span className="za-work-title">{title}</span>
-        {steps.length > 0 && (
-          <span className="za-work-count za-mono">
-            {done}/{steps.length}
-            {!live && totalMs ? ` · ${(totalMs / 1000).toFixed(1)}s` : ''}
-          </span>
-        )}
+    <div className={`za-proc ${live ? 'is-live' : ''} is-${process.status}`}>
+      <button type="button" className="za-proc-head" onClick={() => setManual(!open)} aria-expanded={open}>
+        <span className="za-proc-ico">
+          {live ? <span className="za-work-spin" /> : process.status === 'error' || process.status === 'stopped' ? <Square size={10} fill="currentColor" /> : <Sparkles size={13} />}
+        </span>
+        <span key={title} className={`za-proc-title ${live ? 'za-shimmer' : ''}`}>{title}</span>
+        <span className="za-proc-meta za-mono">
+          {elapsed > 0 && (live ? fmtSecs(elapsed) : `${fmtSecs(elapsed)}`)}
+          {allSteps.length > 0 && ` · ${allSteps.length} steps`}
+        </span>
         <ChevronDown size={14} className={`za-work-chev ${open ? 'is-open' : ''}`} />
       </button>
-      {open && (
-        <div className="za-work-body">
-          {(message.thoughts || []).slice(-2).map((t, i) => (
-            <p key={i} className="za-work-thought">{stripEmojis(t)}</p>
-          ))}
-          {steps.length === 0 && live && (
-            <div className="za-work-row is-running">
-              <span className="za-work-row-ico"><Sparkles size={14} /></span>
-              <span className="za-work-row-text"><strong className="za-shimmer">Reading your request and choosing the data to pull</strong></span>
-            </div>
-          )}
-          {steps.map((st, i) => (
-            <div key={st.id} className={`za-work-row is-${st.status}`} style={{ animationDelay: `${i * 50}ms` }}>
-              <span className="za-work-row-ico">{TOOL_ICONS[st.tool] || <Zap size={14} />}</span>
-              <span className="za-work-row-text">
-                <strong className={st.status === 'running' ? 'za-shimmer' : ''}>{st.label}</strong>
-                {st.summary && <small>{st.summary}</small>}
-              </span>
-              <span className="za-work-row-state">
-                {st.status === 'running' ? <span className="za-work-spin is-sm" /> : st.status === 'done' ? <Check size={13} /> : <X size={13} />}
-              </span>
-            </div>
-          ))}
+
+      <div className={`za-proc-collapse ${open ? 'is-open' : ''}`}>
+        <div className="za-proc-inner">
+          <div className="za-proc-body">
+            {process.items.length === 0 && live && (
+              <div className="za-tl-item">
+                <span className="za-tl-dot is-live" />
+                <p className="za-tl-thought za-shimmer">Reading your request and choosing the data to pull</p>
+              </div>
+            )}
+            {process.items.map((it, i) => {
+              const isLast = i === process.items.length - 1;
+              if (it.kind === 'thinking') {
+                return (
+                  <div key={i} className="za-tl-item">
+                    <span className={`za-tl-dot ${live && isLast ? 'is-live' : ''}`} />
+                    <p className="za-tl-thought">{it.text.trim().slice(-700)}</p>
+                  </div>
+                );
+              }
+              if (it.kind === 'note') {
+                return (
+                  <div key={i} className="za-tl-item">
+                    <span className="za-tl-dot" />
+                    <div className="za-tl-note">
+                      <MarkdownContent content={stripEmojis(it.text)} isUser={false} />
+                    </div>
+                  </div>
+                );
+              }
+              const runningHere = it.steps.filter((x) => x.status === 'running').length;
+              return (
+                <div key={i} className="za-tl-item">
+                  <span className={`za-tl-dot ${runningHere ? 'is-live' : ''}`} />
+                  <div className="za-tl-group">
+                    {it.steps.length > 1 && (
+                      <div className="za-tl-group-label">
+                        <Zap size={11} /> {it.steps.length} tasks {runningHere ? 'running' : 'ran'} in parallel
+                      </div>
+                    )}
+                    {it.steps.map((st, j) => (
+                      <div key={st.id} className={`za-work-row is-${st.status}`} style={{ animationDelay: `${j * 60}ms` }}>
+                        <span className="za-work-row-ico">{TOOL_ICONS[st.tool] || <Zap size={14} />}</span>
+                        <span className="za-work-row-text">
+                          <strong className={st.status === 'running' ? 'za-shimmer' : ''}>{st.label}</strong>
+                          {st.summary && <small>{st.summary}</small>}
+                        </span>
+                        <span className="za-work-row-state">
+                          {st.status === 'running' ? <span className="za-work-spin is-sm" /> : st.status === 'done' ? <Check size={13} /> : <X size={13} />}
+                          {st.ms !== undefined && st.status !== 'running' && <em className="za-mono">{(st.ms / 1000).toFixed(1)}s</em>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
-function MarkdownContent({ content, isUser }: { content: string; isUser: boolean }) {
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const CARET = '<span class="za-caret" aria-hidden="true"></span>';
+
+function MarkdownContent({ content, isUser, caret = false }: { content: string; isUser: boolean; caret?: boolean }) {
   const lines = content.split('\n');
   const result: React.ReactNode[] = [];
   let i = 0;
+  // The typing caret sits at the end of the last line that has text
+  let caretLine = -1;
+  if (caret) for (let k = lines.length - 1; k >= 0; k--) if (lines[k].trim()) { caretLine = k; break; }
 
   while (i < lines.length) {
     const line = lines[i];
-    const rendered = line
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>');
+    const rendered =
+      escapeHtml(line)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>') + (i === caretLine && !line.includes('|') ? CARET : '');
 
     // Table detection
     if (line.includes('|') && i + 1 < lines.length && lines[i + 1].includes('---')) {
+      const tableStart = i;
       const tableLines: string[] = [];
       while (i < lines.length && lines[i].includes('|')) {
         tableLines.push(lines[i]);
         i++;
       }
-      result.push(<MarkdownTable key={i} rows={tableLines} isUser={isUser} />);
+      result.push(<MarkdownTable key={`t${tableStart}`} rows={tableLines} isUser={isUser} />);
       continue;
     }
 
@@ -1328,7 +1473,7 @@ function MarkdownTable({ rows }: { rows: string[]; isUser: boolean }) {
   const parseRow = (row: string) => row.split('|').filter((_, i, a) => i > 0 && i < a.length - 1).map((c) => c.trim());
   const header = parseRow(rows[0]);
   const body = rows.slice(2).map(parseRow);
-  const md = (s: string) => s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  const md = (s: string) => escapeHtml(s).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
   return (
     <div className="za-table-wrap">

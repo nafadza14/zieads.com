@@ -1001,3 +1001,82 @@
   .za-work, .za-work-row { animation: none; }
   .za-work-spin { animation-duration: 2s; }
 }
+
+/* ── Claude-style process log ─────────────────────────── */
+.za-msg-agent .za-bubble-wrap:has(.za-proc) { flex: 1; max-width: min(88%, 760px); }
+.za-proc { margin-bottom: 10px; animation: zaFadeUp 0.4s var(--za-ease) both; }
+.za-proc-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 7px 12px 7px 8px;
+  border: 1px solid var(--za-line);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+}
+.za-proc-head:hover { background: #fafafa; }
+.za-proc.is-live .za-proc-head { border-color: #ffd9c2; box-shadow: 0 6px 20px rgba(242, 101, 34, 0.08); }
+.za-proc-ico {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--za-accent-soft); color: var(--za-accent);
+}
+.za-proc.is-done .za-proc-ico { background: #f3f3f3; color: var(--za-ink-2); }
+.za-proc.is-error .za-proc-ico, .za-proc.is-stopped .za-proc-ico { background: #fef2f2; color: #dc2626; }
+.za-proc-title { font-size: 13px; font-weight: 600; color: var(--za-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: zaFadeUp 0.3s var(--za-ease) both; }
+.za-proc-meta { font-size: 11.5px; color: var(--za-ink-3); white-space: nowrap; }
+
+.za-proc-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.4s var(--za-ease); }
+.za-proc-collapse.is-open { grid-template-rows: 1fr; }
+.za-proc-inner { overflow: hidden; min-height: 0; }
+.za-proc-body {
+  position: relative;
+  margin: 10px 0 2px 18px;
+  padding: 2px 0 2px 18px;
+  border-left: 1.5px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.za-tl-item { position: relative; animation: zaFadeUp 0.35s var(--za-ease) both; }
+.za-tl-dot {
+  position: absolute; left: -24.5px; top: 7px;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #fff; border: 2px solid #d9d9d9;
+}
+.za-tl-dot.is-live { border-color: var(--za-accent); box-shadow: 0 0 0 4px rgba(242, 101, 34, 0.14); animation: zaPulseOrange 1.6s ease-in-out infinite; }
+.za-tl-thought {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--za-ink-3);
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.za-tl-note { font-size: 13.5px; color: var(--za-ink-2); }
+.za-tl-note .za-md-p { margin: 0; }
+.za-tl-group { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--za-line); border-radius: 16px; background: rgba(255, 255, 255, 0.9); }
+.za-tl-group-label { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--za-accent); }
+.za-work-row-state { width: auto; min-width: 20px; gap: 6px; align-items: center; }
+.za-work-row-state em { font-style: normal; font-size: 11px; color: var(--za-ink-4); }
+.za-bubble.is-typing { border-color: #f3e1d6; }
+@media (max-width: 640px) {
+  .za-msg-agent .za-bubble-wrap:has(.za-proc) { max-width: 100%; }
+  .za-proc-body { margin-left: 12px; padding-left: 14px; }
+  .za-tl-dot { left: -20.5px; }
+  .za-work-row-state em { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .za-proc, .za-tl-item, .za-proc-title { animation: none; }
+  .za-proc-collapse { transition: none; }
+}
+.za-msg.is-streaming .za-bubble > :last-child::after { content: none; }
+.za-caret { display: inline-block; width: 8px; height: 8px; margin-left: 5px; border-radius: 50%; background: var(--za-accent); vertical-align: 1px; animation: zaCaret 1s ease-in-out infinite; }
+@keyframes zaCaret { 50% { transform: scale(0.6); opacity: 0.45; } }
