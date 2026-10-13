@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3,  Calendar, Check, Inbox, Link2, PenLine, Radar } from 'lucide-react';
+import { BarChart3,  Calendar, Check, Inbox, Link2, PenLine, Radar, BotMessageSquare } from 'lucide-react';
 import ZIcon from '../../../components/icons/ZIcon';
 import ZieAvatar from '../../../components/ZieAvatar';
 import SocialIcon from '../../../components/v3/SocialIcon';
@@ -22,7 +22,7 @@ const TOUR = [
   {
     id: 'agent',
     label: 'AI Agent',
-    icon: <ZieAvatar size={15} ring={false} />,
+    icon: <BotMessageSquare size={15} />,
     title: 'Ask anything about your marketing.',
     desc: 'Chat with an agent that already knows your brand, or run one of ten deep analysis modes in a single click.',
     points: ['ROAS drops diagnosed with evidence', 'Hooks, captions and ad copy on demand', 'Budget splits across Meta, Google and TikTok'],
@@ -183,9 +183,7 @@ export default function ProductTourSection() {
             </div>
             <div className="zt-float zt-float-b">
               <Chip>
-                <span className="zc-chip-ico">
-                  <ZieAvatar size={15} ring={false} />
-                </span>
+                <ZieAvatar size={30} />
                 <span>
                   <small>Agent status</small>
                   <strong>Watching 24/7</strong>

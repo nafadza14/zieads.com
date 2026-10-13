@@ -19,8 +19,7 @@ import {
   Menu,
   X,
   AlertCircle,
-  Search
-} from 'lucide-react';
+  Search, BotMessageSquare } from 'lucide-react';
 import ZIcon from '../icons/ZIcon';
 import ZieAvatar from '../ZieAvatar';
 import { supabase } from '../../lib/supabaseClient';
@@ -124,7 +123,7 @@ export default function V3Layout({ children }: Props) {
 
   const v3Items = [
     { k: '/analyst', l: 'AI Analyst', icon: <ZIcon name="ai-analyst" size={15} /> },
-    { k: '/agent', l: 'AI Agent', icon: <ZieAvatar size={15} ring={false} /> },
+    { k: '/agent', l: 'AI Agent', icon: <BotMessageSquare size={15} /> },
     { k: '/composer', l: 'Composer', icon: <PenTool size={15} /> },
     { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} /> },
     { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} /> },

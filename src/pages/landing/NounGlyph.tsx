@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { NOUN_ICONS } from './noun-icons';
+import { NOUN_APPROVED } from '../../components/icons/nounApproved';
 
 type NounEntry = { id: string; url: string; attribution?: string };
 const MAP: Record<string, NounEntry> = NOUN_ICONS;
@@ -10,7 +11,7 @@ const MAP: Record<string, NounEntry> = NOUN_ICONS;
  * the fallback line icon instead, so the page never shows a broken glyph.
  */
 export default function NounGlyph({ name, fallback, size = 24 }: { name: string; fallback: ReactNode; size?: number }) {
-  const entry = MAP[name];
+  const entry = NOUN_APPROVED.has(name) ? MAP[name] : undefined;
   const [ok, setOk] = useState<boolean | null>(entry ? null : false);
 
   useEffect(() => {

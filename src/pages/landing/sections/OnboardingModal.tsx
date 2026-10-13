@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Link2,  UserPlus, X } from 'lucide-react';
+import { Check, Link2,  UserPlus, X, BotMessageSquare } from 'lucide-react';
 import ZieAvatar from '../../../components/ZieAvatar';
 import { TextRollButton } from '../ui';
 import SocialIcon from '../../../components/v3/SocialIcon';
@@ -15,7 +15,7 @@ interface Props {
 const STEPS = [
   { icon: <UserPlus size={16} />, title: 'Create your free account', desc: 'Takes about 30 seconds. No credit card.' },
   { icon: <Link2 size={16} />, title: 'Connect your channels', desc: 'Instagram, TikTok, LinkedIn and more, read only.' },
-  { icon: <ZieAvatar size={16} ring={false} />, title: 'Your AI Agent gets to work', desc: 'It answers this request with your real data.' },
+  { icon: <BotMessageSquare size={16} />, title: 'Your AI Agent gets to work', desc: 'It answers this request with your real data.' },
 ];
 
 export default function OnboardingModal({ pendingPrompt, onConfirm, onClose }: Props) {

@@ -90,31 +90,6 @@ export const NOUN_ICONS: Record<string, { id: string; url: string; attribution?:
     "url": "/noun/publish.png",
     "attribution": "send by Marina Rizo from Noun Project"
   },
-  "social-instagram": {
-    "id": "3548799",
-    "url": "/noun/social-instagram.png",
-    "attribution": "live tv by Gregor Cresnar from Noun Project"
-  },
-  "social-tiktok": {
-    "id": "4849194",
-    "url": "/noun/social-tiktok.png",
-    "attribution": "tiktok by lutfiadela from Noun Project"
-  },
-  "social-linkedin": {
-    "id": "6250690",
-    "url": "/noun/social-linkedin.png",
-    "attribution": "networking by Alex Burte from Noun Project"
-  },
-  "social-facebook": {
-    "id": "216816",
-    "url": "/noun/social-facebook.png",
-    "attribution": "profile by Prateekshankar Dixit from Noun Project"
-  },
-  "social-googleads": {
-    "id": "5058108",
-    "url": "/noun/social-googleads.png",
-    "attribution": "advertising by Vectplus from Noun Project"
-  },
   "ui-ai-analyst": {
     "id": "7771496",
     "url": "/noun/ui-ai-analyst.png",

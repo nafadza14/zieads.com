@@ -1,6 +1,5 @@
 import React, { useId } from 'react';
 import { BRAND_MARKS } from './brandMarks';
-import { NOUN_ICONS } from '../../pages/landing/noun-icons';
 
 /*
   Platform icons built from the official brand marks (see ./brandMarks.ts).
@@ -10,8 +9,8 @@ import { NOUN_ICONS } from '../../pages/landing/noun-icons';
     'mark'  the mark alone in its brand color
     'mono'  the mark alone in currentColor (for monochrome logo rows)
 
-  If scripts/fetch-noun-icons.mjs has stored a Noun Project icon under the key
-  `social-<platform>`, that icon is used instead.
+  Social platforms ALWAYS use their official logo marks. Never swap them for
+  generic icons (icon libraries do not carry real brand logos).
 */
 
 interface SocialIconProps {
@@ -40,11 +39,6 @@ export default function SocialIcon({ platform, size = 20, style, variant = 'tile
   const key = KEY[platform.toLowerCase()];
   const mark = key ? BRAND_MARKS[key] : undefined;
   const base: React.CSSProperties = { flexShrink: 0, display: 'inline-block', verticalAlign: 'middle', ...style };
-
-  const noun = key ? NOUN_ICONS[`social-${key}`] : undefined;
-  if (noun) {
-    return <img src={noun.url} alt={platform} title={noun.attribution} width={size} height={size} style={{ ...base, objectFit: 'contain' }} />;
-  }
 
   if (!mark) {
     return (

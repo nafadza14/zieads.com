@@ -136,11 +136,7 @@ function Window({ title, children, className = '' }: { title?: ReactNode; childr
 
 function AgentDot({ size = 28, active = false }: { size?: number; active?: boolean }) {
   return (
-    <span className={`zv-orb ${active ? 'is-active' : ''}`} style={{ width: size, height: size }}>
-      <span>
-        <ZieAvatar size={size - 4} ring={false} />
-      </span>
-    </span>
+    <ZieAvatar size={size} active={active} />
   );
 }
 

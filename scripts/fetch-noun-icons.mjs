@@ -54,14 +54,7 @@ const TERMS = {
   draft: 'pencil',
   approve: 'approve',
   publish: 'paper plane',
-  // Social platform icons. These replace the official brand marks in SocialIcon when present.
-  // Delete these lines if you prefer the official logos.
-  'social-instagram': 'instagram',
-  'social-tiktok': 'tiktok',
-  'social-linkedin': 'linkedin',
-  'social-facebook': 'facebook',
-  'social-meta': 'meta logo',
-  'social-googleads': 'google ads',
+  // Social platforms are NOT fetched: they always use their official logos (SocialIcon).
 };
 
 const enc = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
@@ -135,3 +128,4 @@ fs.writeFileSync(
 );
 console.log(`\nSaved ${Object.keys(out).length} icons to ${file} (images in ${PUBLIC_DIR})`);
 console.log('If any icon is not public domain, keep its attribution (shown above) in your site credits.');
+console.log('Fetched icons stay hidden until you review public/noun/<key>.png and add the key to src/components/icons/nounApproved.ts.');

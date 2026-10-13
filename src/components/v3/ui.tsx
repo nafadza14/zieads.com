@@ -253,11 +253,7 @@ export function Pill({ children, tone = 'neutral', className = '' }: { children:
 
 export function Orb({ size = 36, active = false }: { size?: number; active?: boolean }) {
   return (
-    <span className={`zd-orb ${active ? 'is-active' : ''}`} style={{ width: size, height: size }}>
-      <span className="zd-orb-core">
-        <ZieAvatar size={size - 4} ring={false} />
-      </span>
-    </span>
+    <ZieAvatar size={size} active={active} />
   );
 }
 

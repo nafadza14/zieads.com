@@ -14,3 +14,8 @@
 
 ## AI Agent
 - See `server/agent/` (runtime + tools). Everything the agent creates is a draft the user reviews: posts land on the calendar with status `draft`, comment replies are saved in `comments_inbox.reply_text` without sending, competitors are added to Hunt.
+
+## Icons
+- Social platforms ALWAYS use their official logos via `SocialIcon` (brand marks in `src/components/v3/brandMarks.ts`). Never replace them with generic or Noun Project icons.
+- UI icons go through `ZIcon` (semantic names in `src/components/icons/icon-terms.json`) and render as lucide line icons. A Noun Project icon is only used after it is reviewed and its key is added to `src/components/icons/nounApproved.ts`.
+- The Zie character (`ZieAvatar`) is the AI Agent's avatar. In menus and tabs the agent uses a line icon.

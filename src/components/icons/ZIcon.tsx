@@ -10,6 +10,7 @@
 import { CSSProperties, useEffect, useState } from 'react';
 import { NOUN_ICONS } from '../../pages/landing/noun-icons';
 import { ICONS, IconName } from './iconRegistry';
+import { NOUN_APPROVED } from './nounApproved';
 
 type NounEntry = { id: string; url: string; attribution?: string };
 const MAP: Record<string, NounEntry> = NOUN_ICONS;
@@ -24,7 +25,7 @@ export type ZIconProps = {
 };
 
 export default function ZIcon({ name, size, className, style, strokeWidth, 'aria-label': ariaLabel }: ZIconProps) {
-  const entry = MAP['ui-' + name];
+  const entry = NOUN_APPROVED.has('ui-' + name) ? MAP['ui-' + name] : undefined;
   const [ok, setOk] = useState<boolean | null>(entry ? null : false);
 
   useEffect(() => {
