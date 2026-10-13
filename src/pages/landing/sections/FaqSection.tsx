@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { faqItems } from '../data';
-import { IMG } from '../images';
-import { AnimatedHeading, ImageCard, Reveal, Section } from '../ui';
+import { AnimatedHeading, Reveal, Section } from '../ui';
+import { AskVisual } from '../visuals';
 
 // FAQPage structured data for rich results in Google Search
 const faqSchema = {
@@ -30,7 +30,9 @@ export default function FaqSection() {
               Everything you need to know about the AI marketing agent, pricing, supported platforms and data access.
             </p>
           </Reveal>
-          <ImageCard src={IMG.faq} alt="Founder reading answers about ZieAds on a laptop" ratio="4 / 3" className="zx-faq-image" />
+          <div className="zx-faq-image">
+            <AskVisual />
+          </div>
         </div>
 
         <div className="zx-faq-list">

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ShieldCheck } from 'lucide-react';
 import { reportTabs } from '../data';
-import { IMG } from '../images';
-import { AnimatedHeading, CountUp, ImageCard, Reveal, Section, TextRollButton } from '../ui';
+import { AnimatedHeading, CountUp, Reveal, Section, TextRollButton } from '../ui';
+import { AuditScanVisual, AuditFindingsVisual } from '../visuals';
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -94,19 +94,12 @@ export default function FreeAuditSection({ onScanComplete }: Props) {
             </p>
           </Reveal>
 
-          <ImageCard src={IMG.auditSmall} alt="Marketer reviewing a website audit on a laptop" ratio="16 / 10" className="zx-card-small" delay={200} />
+          <div className="zx-card-small">
+            <AuditFindingsVisual />
+          </div>
         </div>
 
-        <ImageCard src={IMG.auditMain} alt="Analytics dashboard showing a paid ads readiness score" ratio="4 / 5" delay={120}>
-          <div className="zx-float-chip zx-float-bottom-left">
-            <span className="zx-chip-label">Readiness score</span>
-            <span className="zx-chip-value">
-              <CountUp to={61} />
-              <small>/100</small>
-            </span>
-          </div>
-          <div className="zx-float-chip zx-float-top-right zx-chip-dark">6 dimensions scored</div>
-        </ImageCard>
+        <AuditScanVisual />
       </div>
 
       <Reveal className="zx-report-card" delay={100}>

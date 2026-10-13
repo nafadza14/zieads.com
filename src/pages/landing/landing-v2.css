@@ -246,7 +246,7 @@
   gap: 8px;
 }
 .landing-page .zx-split-copy .zx-heading { margin-bottom: 28px !important; }
-.landing-page .zx-card-small { max-width: 320px; margin-top: 40px; }
+.landing-page .zx-card-small { width: 100%; max-width: 340px; margin-top: 40px; }
 
 .landing-page .zx-trio {
   display: grid;

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { dailyBriefingCards } from '../data';
-import { IMG } from '../images';
-import { AnimatedHeading, ImageCard, Reveal, Section, TextRollButton } from '../ui';
+import { AnimatedHeading, Reveal, Section, TextRollButton } from '../ui';
+import { BriefingVisual, NotifyVisual, FeatureTile } from '../visuals';
 
 export default function DailyBriefingSection() {
   const navigate = useNavigate();
@@ -12,7 +12,9 @@ export default function DailyBriefingSection() {
 
       {/* Reference layout: small card, copy + CTA, large card */}
       <div className="zx-trio">
-        <ImageCard src={IMG.briefingSmall} alt="Morning coffee next to a laptop with the daily briefing" ratio="4 / 3" className="zx-trio-small" delay={60} />
+        <div className="zx-trio-small">
+          <NotifyVisual />
+        </div>
 
         <div className="zx-trio-copy">
           <Reveal delay={120}>
@@ -30,18 +32,15 @@ export default function DailyBriefingSection() {
           </Reveal>
         </div>
 
-        <ImageCard src={IMG.briefingMain} alt="Marketing team reviewing their AI briefing together" ratio="16 / 11" className="zx-trio-large" delay={140}>
-          <div className="zx-float-card zx-float-bottom-left">
-            <span className="zx-live-dot" /> Today's briefing
-            <strong>Boost the Tuesday Reel. Pause ad set 3.</strong>
-          </div>
-        </ImageCard>
+        <div className="zx-trio-large">
+          <BriefingVisual />
+        </div>
       </div>
 
       <div className="zx-grid-3">
         {dailyBriefingCards.map((card, i) => (
           <Reveal key={card.name} delay={(i % 3) * 90} className="zx-feature-card">
-            <ImageCard src={card.image} alt={card.name} ratio="16 / 10" parallax={false} />
+            <FeatureTile name={card.name} />
             <div className="zx-feature-body">
               <div className="zx-feature-title">
                 <span className="zx-icon-dot">

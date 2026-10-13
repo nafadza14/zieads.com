@@ -1,5 +1,6 @@
 import { testimonials } from '../data';
-import { AnimatedHeading, ImageCard, Reveal, Section } from '../ui';
+import { AnimatedHeading, Reveal, Section } from '../ui';
+import { ResultVisual } from '../visuals';
 
 export default function TestimonialsSection() {
   return (
@@ -9,9 +10,7 @@ export default function TestimonialsSection() {
       <div className="zx-grid-3">
         {testimonials.map((t, i) => (
           <Reveal key={t.name} delay={i * 110} className="zx-story-card">
-            <ImageCard src={t.cover} alt={`${t.name}, ${t.role}`} ratio="4 / 3" parallax={false}>
-              <div className="zx-float-chip zx-float-bottom-left zx-chip-accent">{t.result}</div>
-            </ImageCard>
+            <ResultVisual kind={t.visual} result={t.result} />
             <div className="zx-story-body">
               <div className="zx-stars" aria-label="5 out of 5 stars">
                 {[...Array(5)].map((_, si) => (

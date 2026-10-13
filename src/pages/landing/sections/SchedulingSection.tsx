@@ -1,27 +1,11 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarClock, Check } from 'lucide-react';
-import { IMG } from '../images';
-import { AnimatedHeading, ImageCard, Reveal, Section, TextRollButton } from '../ui';
+import { Check } from 'lucide-react';
+import { AnimatedHeading, Reveal, Section, TextRollButton } from '../ui';
+import { ComposerVisual } from '../visuals';
 
-const platforms = [
-  { name: 'Instagram', tip: 'Square crop, 5 hashtags, link in bio. Suggested time: Tuesday, 5:45 PM.' },
-  { name: 'TikTok', tip: 'Shorter hook, vertical safe captions, trending sound slot. Suggested time: Wednesday, 7:10 PM.' },
-  { name: 'LinkedIn', tip: 'Professional opener, carousel format, no hashtags in the first line. Suggested time: Thursday, 8:30 AM.' },
-  { name: 'Facebook', tip: 'Longer caption, native link preview, question to spark comments. Suggested time: Friday, 12:15 PM.' },
-];
 
 export default function SchedulingSection() {
   const navigate = useNavigate();
-  const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  // Auto cycle through platforms so the mockup feels alive
-  useEffect(() => {
-    if (paused) return;
-    const t = setInterval(() => setActive((a) => (a + 1) % platforms.length), 3200);
-    return () => clearInterval(t);
-  }, [paused]);
 
   return (
     <Section id="composer" number="03" label="Composer & Calendar" tone="white">
@@ -51,34 +35,7 @@ export default function SchedulingSection() {
           </Reveal>
         </div>
 
-        <ImageCard src={IMG.composerMain} alt="Social media content calendar on a laptop" ratio="5 / 4" delay={100}>
-          <div
-            className="zx-glass-panel"
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
-          >
-            <div className="zx-platform-tabs">
-              {platforms.map((p, i) => (
-                <button
-                  key={p.name}
-                  className={`zx-platform-tab ${active === i ? 'is-active' : ''}`}
-                  onClick={() => setActive(i)}
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-            <p className="zx-glass-text" key={active}>
-              {platforms[active].tip}
-            </p>
-            <div className="zx-glass-foot">
-              <span>
-                <CalendarClock size={14} /> Queued for this week: 12 posts
-              </span>
-              <span className="zx-mini-btn">Approve and schedule</span>
-            </div>
-          </div>
-        </ImageCard>
+        <ComposerVisual />
       </div>
     </Section>
   );

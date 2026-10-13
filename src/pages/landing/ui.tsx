@@ -189,7 +189,7 @@ export function CountUp({
   return (
     <span ref={ref} className="mono-num">
       {prefix}
-      {val.toFixed(decimals)}
+      {val.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
       {suffix}
     </span>
   );

@@ -1,7 +1,7 @@
 import { ShieldCheck } from 'lucide-react';
 import { comparisonRows } from '../data';
-import { IMG } from '../images';
-import { AnimatedHeading, ImageCard, Reveal, Section } from '../ui';
+import { AnimatedHeading, Reveal, Section } from '../ui';
+import { ApprovalVisual } from '../visuals';
 
 export default function ComparisonSection() {
   return (
@@ -45,7 +45,7 @@ export default function ComparisonSection() {
       </Reveal>
 
       <div className="zx-split zx-split-media-left zx-split-tight">
-        <ImageCard src={IMG.comparison} alt="Marketer approving AI recommendations before they go live" ratio="16 / 10" />
+        <ApprovalVisual />
         <Reveal className="zx-note-card" delay={140}>
           <span className="zx-icon-dot zx-icon-dot-lg">
             <ShieldCheck size={20} />

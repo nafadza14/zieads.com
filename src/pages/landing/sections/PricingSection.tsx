@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { pricingPlans } from '../data';
-import { IMG } from '../images';
-import { AnimatedHeading, ImageCard, Reveal, Section, TextRollButton, scrollToId } from '../ui';
+import { AnimatedHeading, Reveal, Section, TextRollButton, scrollToId } from '../ui';
+import { CostVisual } from '../visuals';
 
 export default function PricingSection() {
   const navigate = useNavigate();
@@ -55,12 +55,7 @@ export default function PricingSection() {
           </p>
           <TextRollButton text="Run a free audit" onClick={() => scrollToId('free-audit-try')} />
         </Reveal>
-        <ImageCard src={IMG.pricingRoi} alt="Calculating marketing budget savings" ratio="16 / 10">
-          <div className="zx-float-chip zx-float-bottom-left">
-            <span className="zx-chip-label">Annual savings vs. analyst</span>
-            <span className="zx-chip-value">$47,652</span>
-          </div>
-        </ImageCard>
+        <CostVisual />
       </div>
     </Section>
   );

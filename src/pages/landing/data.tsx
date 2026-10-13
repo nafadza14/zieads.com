@@ -12,7 +12,6 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { IMG } from './images';
 
 export const rotatingPlaceholders = [
   "Ask AI Agent: 'Generate 5 viral TikTok hooks for my brand...'",
@@ -327,7 +326,6 @@ export interface BriefingCard {
   Icon: LucideIcon;
   name: string;
   desc: string;
-  image: string;
 }
 
 export const dailyBriefingCards: BriefingCard[] = [
@@ -335,37 +333,31 @@ export const dailyBriefingCards: BriefingCard[] = [
     Icon: Activity,
     name: 'Daily Diagnosis',
     desc: 'A five minute summary of what moved across your accounts overnight, ranked by impact so you know exactly where to focus first.',
-    image: IMG.cardDiagnosis,
   },
   {
     Icon: TrendingDown,
     name: 'ROAS Drop Analysis',
     desc: 'When return on ad spend falls, the agent ranks the most likely causes by probability and shows you the evidence behind each one.',
-    image: IMG.cardRoas,
   },
   {
     Icon: EyeOff,
     name: 'Creative Fatigue Alerts',
     desc: 'Spot tired ads and stale content formats before performance drops, with fresh hooks based on what already works for your audience.',
-    image: IMG.cardFatigue,
   },
   {
     Icon: Sliders,
     name: 'Smart Scheduling',
     desc: 'Plan and queue posts for Instagram, TikTok, LinkedIn and Facebook at the times your own audience is most active.',
-    image: IMG.cardScheduling,
   },
   {
     Icon: Radar,
     name: 'Competitor Hunt',
     desc: 'Track competitor accounts, see what they publish and where they grow, then find the content gaps you can win.',
-    image: IMG.cardCompetitor,
   },
   {
     Icon: Rocket,
     name: 'Unified Inbox',
     desc: 'Reply to comments from every connected account in one inbox, sorted by sentiment and priority so warm leads never slip away.',
-    image: IMG.cardInbox,
   },
 ];
 
@@ -442,8 +434,8 @@ export interface Testimonial {
   name: string;
   role: string;
   avatar: string;
-  cover: string;
   result: string;
+  visual: 'hours' | 'posts' | 'reporting';
 }
 
 /* PLACEHOLDER TESTIMONIALS: replace with real customer quotes after launch */
@@ -454,8 +446,8 @@ export const testimonials: Testimonial[] = [
     name: 'Agnes Angelina',
     role: 'Founder, DTC skincare brand',
     avatar: '/testimonial-agnes.jpg',
-    cover: IMG.testimonial1,
     result: '6 hours saved every week',
+    visual: 'hours',
   },
   {
     quote:
@@ -463,8 +455,8 @@ export const testimonials: Testimonial[] = [
     name: 'Andreas L Lino',
     role: 'Solo founder, 2 person team',
     avatar: '/testimonial-andreas.jpg',
-    cover: IMG.testimonial2,
     result: '2 of 3 new angles became top posts',
+    visual: 'posts',
   },
   {
     quote:
@@ -472,8 +464,8 @@ export const testimonials: Testimonial[] = [
     name: 'Lucas Keneth',
     role: 'Freelance marketing consultant',
     avatar: '/testimonial-lucas.jpg',
-    cover: IMG.testimonial3,
     result: 'Monday reporting cut from 8 hours to 1',
+    visual: 'reporting',
   },
 ];
 
@@ -484,7 +476,7 @@ export interface Persona {
   body: string;
   features: string[];
   plan_suggestion: string;
-  image: string;
+  visual: 'founder' | 'freelancer' | 'agency';
 }
 
 export const personas: Persona[] = [
@@ -495,7 +487,7 @@ export const personas: Persona[] = [
     body: 'ZieAds monitors your social media and ads, sends a daily briefing and tells you exactly what to do next. Analyst level insight for a fraction of the cost of a full time hire.',
     features: ['Free website audit, no signup', 'Daily briefing across every channel', 'Scheduling and analytics in one place'],
     plan_suggestion: 'Start free and upgrade when it pays for itself.',
-    image: IMG.personaFounder,
+    visual: 'founder',
   },
   {
     Icon: UserCheck,
@@ -504,7 +496,7 @@ export const personas: Persona[] = [
     body: 'Audit any client website before the first meeting. Arrive with a readiness score, a prioritized gap list and an action plan, then let the agent watch their accounts between calls.',
     features: ['Audit any URL in minutes', 'White label PDF reports', 'Separate briefings for each client'],
     plan_suggestion: 'Pro is built for client work.',
-    image: IMG.personaFreelancer,
+    visual: 'freelancer',
   },
   {
     Icon: Users,
@@ -513,7 +505,7 @@ export const personas: Persona[] = [
     body: 'Track every account, client and platform with an AI agent that never takes a day off. Get aggregate reporting, team seats and a dedicated briefing for each brand you manage.',
     features: ['Unlimited audits', 'White label reports with your logo', 'Team seats and client portals'],
     plan_suggestion: 'The Agency plan grows with your roster.',
-    image: IMG.personaAgency,
+    visual: 'agency',
   },
 ];
 

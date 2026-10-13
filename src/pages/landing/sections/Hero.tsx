@@ -6,6 +6,7 @@ import { Shader, Swirl, ChromaFlow, FlutedGlass, FilmGrain } from 'shaders/react
 import { rotatingPhrases, rotatingPlaceholders } from '../data';
 import { usePrefersReducedMotion, useRotatingIndex, useRotatingPhrase } from '../hooks';
 import OnboardingModal from './OnboardingModal';
+import { PlatformStrip } from '../visuals';
 
 /* ── SVG Icon Components ── */
 const AISparkleIcon = () => (
@@ -226,6 +227,9 @@ export default function Hero() {
             <span><Check size={14} style={{ color: '#10B981' }} /> Instant AI Response & Signup</span>
             <span><Clock size={14} /> First briefing tomorrow morning</span>
           </div>
+
+          {/* Platforms ZieAds works with */}
+          <PlatformStrip />
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import { MessageCircle, Radar } from 'lucide-react';
-import { IMG } from '../images';
-import { AnimatedHeading, ImageCard, Reveal, Section } from '../ui';
+import { AnimatedHeading, Reveal, Section } from '../ui';
+import { InboxVisual, RadarVisual } from '../visuals';
 
 const inboxItems = [
   { who: '@maya.studio', text: 'Do you ship to Jakarta?', tag: 'Buying signal', tone: 'hot' },
@@ -15,19 +15,7 @@ export default function InboxWatchSection() {
 
       <div className="zx-grid-2 zx-grid-offset">
         <Reveal className="zx-project">
-          <ImageCard src={IMG.inbox} alt="Social media manager replying to comments in a unified inbox" ratio="4 / 3">
-            <div className="zx-inbox-stack">
-              {inboxItems.map((m) => (
-                <div key={m.who} className="zx-inbox-item">
-                  <div>
-                    <strong>{m.who}</strong>
-                    <span>{m.text}</span>
-                  </div>
-                  <em className={`zx-tag zx-tag-${m.tone}`}>{m.tag}</em>
-                </div>
-              ))}
-            </div>
-          </ImageCard>
+          <InboxVisual />
           <div className="zx-project-meta">
             <div className="zx-feature-title">
               <span className="zx-icon-dot">
@@ -43,14 +31,7 @@ export default function InboxWatchSection() {
         </Reveal>
 
         <Reveal className="zx-project" delay={160}>
-          <ImageCard src={IMG.competitor} alt="Marketing team mapping competitor strategy on a whiteboard" ratio="4 / 3">
-            <div className="zx-radar">
-              <span className="zx-radar-sweep" />
-              <span className="zx-radar-ping" style={{ top: '28%', left: '62%' }} />
-              <span className="zx-radar-ping" style={{ top: '64%', left: '34%', animationDelay: '0.8s' }} />
-              <span className="zx-radar-ping" style={{ top: '44%', left: '74%', animationDelay: '1.6s' }} />
-            </div>
-          </ImageCard>
+          <RadarVisual />
           <div className="zx-project-meta">
             <div className="zx-feature-title">
               <span className="zx-icon-dot">

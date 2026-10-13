@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { IMG } from '../images';
-import { AnimatedHeading, ImageCard, Reveal, Section, TextRollButton } from '../ui';
+import { AnimatedHeading, Reveal, Section, TextRollButton } from '../ui';
+import { ConsolidateVisual } from '../visuals';
 
 const tools = [
   'Social media scheduler',
@@ -18,11 +18,7 @@ export default function ConsolidationSection() {
   return (
     <Section id="all-in-one" number="06" label="All in One" tone="gray">
       <div className="zx-split zx-split-media-left">
-        <ImageCard src={IMG.consolidation} alt="Team working from one shared marketing workspace" ratio="1 / 1">
-          <div className="zx-float-chip zx-float-center zx-chip-dark zx-chip-big">
-            5 tools <span className="zx-arrow-glyph">&rarr;</span> 1 agent
-          </div>
-        </ImageCard>
+        <ConsolidateVisual />
 
         <div className="zx-split-copy">
           <AnimatedHeading text="Replace five marketing tools with one AI marketing agent." />
