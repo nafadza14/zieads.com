@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
+import SocialIcon from '../components/v3/SocialIcon';
+import { AuditScanVisual, BriefingVisual, ChartVisual, InboxVisual } from './landing/visuals';
+import './landing/landing-v2.css';
+import './landing/visuals.css';
+import './auth.css';
 import { supabase } from '../lib/supabaseClient';
 
 const GoogleIcon = () => (
@@ -9,18 +15,6 @@ const GoogleIcon = () => (
     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-  </svg>
-);
-
-const AppleIcon = () => (
-  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.69-1.13 1.83-.99 2.94.1.08 2.16.88 2.82-.47c.66-.81 1.11-1.93.99-3.06z" />
-  </svg>
-);
-
-const FacebookIcon = () => (
-  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="#1877F2">
-    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
   </svg>
 );
 
@@ -98,222 +92,240 @@ export default function AuthPage() {
     }
   };
 
+  const [mode, setMode] = useState<'in' | 'up'>(isSignUp ? 'up' : 'in');
+  useEffect(() => setMode(isSignUp ? 'up' : 'in'), [isSignUp]);
+  const switchMode = (m: 'in' | 'up') => {
+    setError(null);
+    setSuccessMsg(null);
+    navigate(m === 'up' ? `/sign-up${location.search}` : `/sign-in${location.search}`, { state: location.state, replace: true });
+  };
+
   return (
-    <div className="landing-page min-h-screen w-full relative flex flex-col justify-between overflow-x-hidden bg-white font-sans selection:bg-pink-100">
-      
-      {/* Ambient Gradient Background Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-pink-300/20 to-cyan-300/20 blur-[100px] pointer-events-none z-0"></div>
-      <div className="absolute top-[20%] left-[20%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-tr from-cyan-200/10 to-blue-300/20 blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-pink-200/20 to-purple-300/20 blur-[140px] pointer-events-none z-0"></div>
-      
-      {/* Main Dual-Panel Content */}
-      <main className="flex-1 flex items-center justify-center px-4 md:px-12 py-6 z-10 relative">
-        <div className="w-full max-w-[1000px] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
-          
-          {/* Left Panel: Transparent/No-Card Auth Form */}
-          <div className="flex flex-col justify-center text-left max-w-[450px] mx-auto w-full p-4 md:p-6">
-            
-            {/* Logo inside form column */}
-            <div
-              className="flex items-center gap-2.5 cursor-pointer mb-8 w-fit"
-              onClick={() => navigate('/')}
-            >
-              <div className="lp-auth-logo-bg p-2 rounded-xl">
-                <ZieAdsLogo size={20} className="text-gray-900" />
-              </div>
-              <span className="lp-auth-logo-text text-[18px]">zieads</span>
+    <div className="landing-page za-auth">
+      <div className="za-auth-grid">
+        {/* ── Form column ── */}
+        <div className="za-auth-form-col">
+          <header className="za-auth-top">
+            <button className="za-auth-brand" onClick={() => navigate('/')}>
+              <ZieAdsLogo size={26} />
+              <span>zieads</span>
+            </button>
+            <button className="za-auth-back" onClick={() => navigate('/')}>
+              <ArrowLeft size={14} /> Back to home
+            </button>
+          </header>
+
+          <div className="za-auth-form-wrap">
+            <div className="za-auth-switch" role="tablist">
+              <span className="za-auth-switch-pill" style={{ transform: `translateX(${mode === 'in' ? 0 : 100}%)` }} />
+              <button role="tab" aria-selected={mode === 'in'} className={mode === 'in' ? 'is-active' : ''} onClick={() => switchMode('in')}>
+                Log in
+              </button>
+              <button role="tab" aria-selected={mode === 'up'} className={mode === 'up' ? 'is-active' : ''} onClick={() => switchMode('up')}>
+                Create account
+              </button>
             </div>
-            <h1 className="text-[28px] font-bold text-gray-950 tracking-tight" style={{ marginBottom: '8px' }}>
-              {isSignUp ? 'Create an account' : 'Welcome back'}
-            </h1>
-            <p className="text-[14px] text-gray-500 font-medium" style={{ marginBottom: '64px' }}>
-              Continue with one of the following options
+
+            <h1 className="za-auth-title" key={`t-${mode}`}>{isSignUp ? 'Meet your AI marketing agent.' : 'Welcome back.'}</h1>
+            <p className="za-auth-sub">
+              {isSignUp
+                ? 'Free plan, no credit card. Your first briefing arrives tomorrow morning.'
+                : 'Log in to see today\'s briefing and pick up where your agent left off.'}
             </p>
 
-
-
-            {error && (
-              <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-[14px]">
-                {error}
-              </div>
+            {isSignUp && (
+              <ul className="za-auth-perks">
+                <li>
+                  <Check size={14} /> Free website audit
+                </li>
+                <li>
+                  <Check size={14} /> No ad account access
+                </li>
+                <li>
+                  <Check size={14} /> First briefing in 24 hours
+                </li>
+              </ul>
             )}
-            {successMsg && (
-              <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-[14px]">
-                {successMsg}
-              </div>
-            )}
 
-            <form onSubmit={handleEmailSubmit}>
-              {/* Email Field */}
-              <div style={{ marginBottom: '24px' }}>
-                <label className="block text-[14px] font-bold text-gray-950" style={{ marginBottom: '8px' }}>Email</label>
-                <input
-                  id="email-input"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email Address"
-                  className="w-full border border-[#E2D9D4] bg-white transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-450"
-                  style={{
-                    height: '60px',
-                    borderRadius: '16px',
-                    textAlign: 'left',
-                    paddingLeft: '16px',
-                    paddingRight: '16px',
-                    fontSize: '15px'
-                  }}
-                />
-              </div>
+            <button
+              id="google-signin-btn"
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="za-auth-google"
+            >
+              {googleLoading ? <span className="za-auth-spin" /> : <GoogleIcon />}
+              Continue with Google
+            </button>
 
-              {/* Password Field */}
-              <div style={{ marginBottom: '20px' }}>
-                <label className="block text-[14px] font-bold text-gray-950" style={{ marginBottom: '8px' }}>Password</label>
-                <div className="relative">
+            <div className="za-auth-or">
+              <span>or with email</span>
+            </div>
+
+            {error && <div className="za-auth-alert is-error">{error}</div>}
+            {successMsg && <div className="za-auth-alert is-success">{successMsg}</div>}
+
+            <form onSubmit={handleEmailSubmit} className="za-auth-form">
+              <label className="za-auth-field">
+                <span>Work email</span>
+                <div className="za-auth-input">
+                  <Mail size={16} />
+                  <input
+                    id="email-input"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@brand.com"
+                  />
+                </div>
+              </label>
+
+              <label className="za-auth-field">
+                <span>Password</span>
+                <div className="za-auth-input">
+                  <Lock size={16} />
                   <input
                     id="password-input"
                     type={isPasswordVisible ? 'text' : 'password'}
                     required
+                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={isSignUp ? 'At least 6 characters' : 'Password 8-16 character'}
-                    className="w-full border border-[#E2D9D4] bg-white transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 placeholder:text-gray-455"
-                    style={{
-                      height: '60px',
-                      borderRadius: '16px',
-                      textAlign: 'left',
-                      paddingLeft: '16px',
-                      paddingRight: '48px',
-                      fontSize: '15px'
-                    }}
+                    placeholder={isSignUp ? 'At least 6 characters' : 'Your password'}
                   />
                   <button
                     type="button"
+                    className="za-auth-eye"
                     onClick={() => setIsPasswordVisible(!isPasswordVisible)}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
                   >
-                    {isPasswordVisible ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                      </svg>
-                    )}
+                    {isPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-              </div>
+              </label>
 
-              {/* Options Row */}
-              <div className="flex items-center justify-between text-[13px] pt-1" style={{ marginBottom: '28px' }}>
-                <label className="flex items-center gap-2 text-gray-400 font-medium cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 accent-gray-900 cursor-pointer"
-                  />
-                  <span className="text-gray-400">Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => navigate('/reset-password')}
-                  className="text-gray-950 font-bold hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
+              {!isSignUp && (
+                <div className="za-auth-row">
+                  <label className="za-auth-check">
+                    <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+                    <span>Remember me</span>
+                  </label>
+                  <button type="button" className="za-auth-link" onClick={() => navigate('/reset-password')}>
+                    Forgot password?
+                  </button>
+                </div>
+              )}
 
-              {/* Submit Button */}
-              <button
-                id="email-submit-btn"
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center btn-lp-primary-gradient text-white font-bold transition-all active:scale-[0.98] disabled:opacity-60"
-                style={{
-                  height: '60px',
-                  borderRadius: '16px',
-                  fontSize: '16px',
-                  marginBottom: '20px'
-                }}
-              >
-                {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
-              </button>
-
-              {/* Social Google Login Wrapper with spacing */}
-              <button
-                id="google-signin-btn"
-                onClick={handleGoogleSignIn}
-                disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 border border-[#E5E0DA] bg-white hover:bg-gray-50 text-gray-750 font-bold transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
-                style={{
-                  height: '60px',
-                  borderRadius: '16px',
-                  fontSize: '15px'
-                }}
-              >
-                {googleLoading ? (
-                  <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                ) : (
-                  <GoogleIcon />
-                )}
-                Continue with Google
+              <button id="email-submit-btn" type="submit" disabled={loading} className="za-auth-submit">
+                <span>{loading ? 'Processing...' : isSignUp ? 'Create free account' : 'Log in'}</span>
+                <span className="za-auth-submit-arrow">
+                  <ArrowRight size={15} />
+                </span>
               </button>
             </form>
 
-            {/* Auth Toggle footer */}
-            <p className="text-center mt-6 text-[14px] text-gray-500 font-medium">
-              {isSignUp ? (
-                <>Already have an account?{' '}
-                  <button onClick={() => navigate('/sign-in')} className="text-gray-950 font-bold hover:underline">Log In</button>
-                </>
-              ) : (
-                <>New to ZieAds?{' '}
-                  <button onClick={() => navigate('/sign-up')} className="text-gray-950 font-bold hover:underline">Get Started</button>
-                </>
-              )}
+            <p className="za-auth-legal">
+              By continuing you agree to the{' '}
+              <button type="button" onClick={() => navigate('/terms')}>Terms of Service</button> and{' '}
+              <button type="button" onClick={() => navigate('/privacy-policy')}>Privacy Policy</button>.
             </p>
           </div>
-
-          {/* Right Panel: Floating Astronaut (Solid background so white image blends seamlessly) */}
-          <div className="hidden lg:flex flex-col justify-center items-center rounded-[32px] border border-gray-100 bg-[#FFFDFD] shadow-[0_15px_50px_rgba(0,0,0,0.03)] p-10 relative overflow-hidden group min-h-[500px]">
-            {/* Animated subtle light orb inside astronaut container */}
-            <div className="absolute w-[250px] h-[250px] rounded-full bg-gradient-to-tr from-pink-300/10 via-purple-300/10 to-cyan-300/10 blur-[50px] z-0 animate-pulse"></div>
-            
-            <img
-              src="/astronaut_floating.png"
-              alt="Floating Astronaut illustration"
-              className="w-full max-w-[300px] h-auto object-contain z-10 relative drop-shadow-[0_15px_35px_rgba(0,0,0,0.04)] group-hover:scale-105 group-hover:-translate-y-1.5 transition-all duration-700 ease-out"
-              style={{
-                animation: 'float 6s ease-in-out infinite'
-              }}
-            />
-          </div>
-
         </div>
-      </main>
 
-      {/* Footer Links */}
-      <footer className="w-full py-4 text-center text-[12px] text-gray-400 z-10 relative">
-        <div className="flex justify-center gap-4">
-          <button onClick={() => navigate('/terms')} className="hover:underline hover:text-gray-600 transition-colors">Terms of Service</button>
-          <span>·</span>
-          <button onClick={() => navigate('/privacy-policy')} className="hover:underline hover:text-gray-600 transition-colors">Privacy Policy</button>
-        </div>
-      </footer>
-
-      {/* Embedded CSS for Floating animation */}
-      <style>{`
-        @keyframes float {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-12px) rotate(1deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
-        }
-      `}</style>
+        {/* ── Showcase column: what you get, in motion ── */}
+        <AuthShowcase />
+      </div>
     </div>
   );
 }
 
+const SLIDES = [
+  {
+    eyebrow: 'Every morning, 07:00',
+    title: 'A briefing that tells you what to do next.',
+    visual: <BriefingVisual />,
+  },
+  {
+    eyebrow: 'Free website audit',
+    title: 'Your ads readiness, scored in 3 minutes.',
+    visual: <AuditScanVisual />,
+  },
+  {
+    eyebrow: 'Unified inbox',
+    title: 'Every comment from every channel, sorted.',
+    visual: <InboxVisual />,
+  },
+  {
+    eyebrow: 'Analytics',
+    title: 'Numbers that explain themselves.',
+    visual: <ChartVisual />,
+  },
+];
 
+const QUOTES = [
+  { q: 'Now the briefing is waiting when I wake up. I got my weekends back.', name: 'Agnes Angelina', role: 'Founder, DTC skincare brand', avatar: '/testimonial-agnes.jpg' },
+  { q: 'It flagged my best Reel format going stale two weeks before I would have noticed.', name: 'Andreas L Lino', role: 'Solo founder', avatar: '/testimonial-andreas.jpg' },
+  { q: 'Monday reporting for six clients went from a full day to about an hour.', name: 'Lucas Keneth', role: 'Marketing consultant', avatar: '/testimonial-lucas.jpg' },
+];
+
+const SLIDE_MS = 5500;
+
+function AuthShowcase() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = window.setTimeout(() => setI((x) => (x + 1) % SLIDES.length), SLIDE_MS);
+    return () => window.clearTimeout(t);
+  }, [i]);
+  const slide = SLIDES[i];
+  const quote = QUOTES[i % QUOTES.length];
+
+  return (
+    <aside className="za-show" aria-label="What ZieAds does">
+      <div className="za-show-aura" aria-hidden="true">
+        <span />
+        <span />
+      </div>
+      <div className="za-show-dots" aria-hidden="true" />
+
+      <div className="za-show-head">
+        <div className="za-show-bars">
+          {SLIDES.map((s, k) => (
+            <button key={s.title} onClick={() => setI(k)} className={k === i ? 'is-active' : k < i ? 'is-done' : ''} aria-label={s.eyebrow}>
+              <span style={{ animationDuration: `${SLIDE_MS}ms` }} key={`${k}-${i}`} />
+            </button>
+          ))}
+        </div>
+        <div className="za-show-copy" key={`c-${i}`}>
+          <span className="za-show-eyebrow">{slide.eyebrow}</span>
+          <h2>{slide.title}</h2>
+        </div>
+      </div>
+
+      <div className="za-show-stage" key={`v-${i}`}>
+        {slide.visual}
+      </div>
+
+      <div className="za-show-foot">
+        <div className="za-show-quote" key={`q-${i}`}>
+          <p>"{quote.q}"</p>
+          <div className="za-show-author">
+            <img src={quote.avatar} alt="" />
+            <span>
+              <strong>{quote.name}</strong>
+              <small>{quote.role}</small>
+            </span>
+          </div>
+        </div>
+        <div className="za-show-channels">
+          <SocialIcon platform="instagram" size={22} />
+          <SocialIcon platform="tiktok" size={22} />
+          <SocialIcon platform="linkedin" size={22} />
+          <SocialIcon platform="facebook" size={22} />
+          <span>Works with your channels</span>
+        </div>
+      </div>
+    </aside>
+  );
+}

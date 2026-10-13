@@ -12,6 +12,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { PHOTOS } from './images';
 
 export const rotatingPlaceholders = [
   "Ask AI Agent: 'Generate 5 viral TikTok hooks for my brand...'",
@@ -434,6 +435,7 @@ export interface Testimonial {
   name: string;
   role: string;
   avatar: string;
+  photo: string;
   result: string;
   visual: 'hours' | 'posts' | 'reporting';
 }
@@ -446,6 +448,7 @@ export const testimonials: Testimonial[] = [
     name: 'Agnes Angelina',
     role: 'Founder, DTC skincare brand',
     avatar: '/testimonial-agnes.jpg',
+    photo: PHOTOS.storySkincare,
     result: '6 hours saved every week',
     visual: 'hours',
   },
@@ -455,6 +458,7 @@ export const testimonials: Testimonial[] = [
     name: 'Andreas L Lino',
     role: 'Solo founder, 2 person team',
     avatar: '/testimonial-andreas.jpg',
+    photo: PHOTOS.storyCreator,
     result: '2 of 3 new angles became top posts',
     visual: 'posts',
   },
@@ -464,6 +468,7 @@ export const testimonials: Testimonial[] = [
     name: 'Lucas Keneth',
     role: 'Freelance marketing consultant',
     avatar: '/testimonial-lucas.jpg',
+    photo: PHOTOS.storyConsultant,
     result: 'Monday reporting cut from 8 hours to 1',
     visual: 'reporting',
   },

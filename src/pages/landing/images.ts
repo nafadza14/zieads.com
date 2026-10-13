@@ -37,6 +37,11 @@ export const PHOTOS = {
   agency: u('1521737604893-d14cc237f11d', 900), // agency team
   faq: u('1600880292089-90a7e086ee0c', 900), // people at work
   final: u('1556761175-5973dc0f32e7', 1800), // team meeting
+
+  // 08 Customer stories: one photo per story, matched to what the customer does
+  storySkincare: u('1556228578-8c89e6adf883', 1000), // Agnes: skincare products (DTC skincare brand)
+  storyCreator: u('1611162616475-46b635cb6868', 1000), // Andreas: short video and Reels on a phone
+  storyConsultant: u('1551434678-e076c223a692', 1000), // Lucas: consultant managing several client accounts
 };
 
 // Backwards compatibility for older imports

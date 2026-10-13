@@ -1,61 +1,179 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  ArrowRight,
+  BarChart3,
+  Bot,
+  ChevronDown,
+  Inbox,
+  PenLine,
+  Search,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import ZieAdsLogo from '../../../components/ZieAdsLogo';
 
-function LiveClock() {
-  const [time, setTime] = useState('');
+const FEATURES = [
+  { id: 'free-audit-try', icon: <Search size={18} />, title: 'Free website audit', desc: 'Score your ads readiness in 3 minutes' },
+  { id: 'ai-analyst', icon: <Sparkles size={18} />, title: 'AI Analyst', desc: 'A marketing briefing every morning' },
+  { id: 'product-tour', icon: <Bot size={18} />, title: 'AI Agent', desc: 'Ask anything, run 10 analysis modes' },
+  { id: 'composer', icon: <PenLine size={18} />, title: 'Composer and Calendar', desc: 'Write once, schedule everywhere' },
+  { id: 'analytics', icon: <BarChart3 size={18} />, title: 'Analytics', desc: 'Numbers that explain themselves' },
+  { id: 'inbox', icon: <Inbox size={18} />, title: 'Inbox and Competitor Hunt', desc: 'Every comment, every rival, one place' },
+];
 
-  useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      const h = now.getHours() % 12 || 12;
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
-      setTime(`${h}:${m} ${ampm}`);
-    };
-    update();
-    const id = setInterval(update, 10_000);
-    return () => clearInterval(id);
-  }, []);
+const LINKS = [
+  { id: 'product-tour', label: 'Product tour' },
+  { id: 'pricing', label: 'Pricing' },
+  { id: 'stories', label: 'Customers' },
+  { id: 'faq', label: 'FAQ' },
+];
 
-  return (
-    <span className="nav-clock text-[12px] text-gray-500 font-medium tracking-wide hidden lg:inline">
-      {time}
-    </span>
-  );
-}
+// Sections the scroll spy watches, in page order
+const SPY = ['product-tour', 'free-audit-try', 'ai-analyst', 'composer', 'analytics', 'inbox', 'pricing', 'stories', 'faq'];
+const FEATURE_IDS = new Set(FEATURES.map((f) => f.id).filter((id) => id !== 'product-tour'));
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [featuresOpen, setFeaturesOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [active, setActive] = useState<string>('');
+  const closeTimer = useRef<number | null>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  // Jump to a section: smooth scroll on the landing page, or route home first
+  const goTo = useCallback(
+    (id: string) => {
+      setMobileOpen(false);
+      setFeaturesOpen(false);
+      if (location.pathname !== '/') {
+        navigate(`/#${id}`);
+        return;
+      }
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', `#${id}`);
+      }
+    },
+    [location.pathname, navigate],
+  );
+
+  // Solid navbar after scrolling + scroll spy
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 24);
+      const probe = window.innerHeight * 0.35;
+      let current = '';
+      for (const id of SPY) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= probe) current = id;
+      }
+      setActive(current);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Close menus on Escape or outside click
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setFeaturesOpen(false);
+        setMobileOpen(false);
+      }
+    };
+    const onDown = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setFeaturesOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onDown);
+    };
+  }, []);
+
+  // Lock page scroll while the mobile sheet is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
+  const openFeatures = () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    setFeaturesOpen(true);
+  };
+  const closeFeaturesSoon = () => {
+    closeTimer.current = window.setTimeout(() => setFeaturesOpen(false), 160);
+  };
+
+  const featuresActive = FEATURE_IDS.has(active);
 
   return (
-    <nav className="navbar">
+    <>
+    <nav className={`navbar zn-nav ${scrolled ? 'is-scrolled' : ''}`} aria-label="Main">
       <div className="nav-inner">
-        {/* Logo */}
-        <div className="nav-brand" onClick={() => navigate('/')}>
+        <button className="nav-brand zn-brand" onClick={() => (location.pathname === '/' ? window.scrollTo({ top: 0, behavior: 'smooth' }) : navigate('/'))} aria-label="ZieAds home">
           <ZieAdsLogo size={28} />
           <span className="brand-name">zieads</span>
+        </button>
+
+        {/* Desktop links */}
+        <div className="zn-links">
+          <div className="zn-drop" ref={dropRef} onMouseEnter={openFeatures} onMouseLeave={closeFeaturesSoon}>
+            <button
+              className={`zn-link ${featuresActive ? 'is-active' : ''} ${featuresOpen ? 'is-open' : ''}`}
+              aria-expanded={featuresOpen}
+              aria-haspopup="true"
+              onClick={() => setFeaturesOpen((o) => !o)}
+            >
+              Features <ChevronDown size={14} className="zn-chev" />
+            </button>
+            <div className={`zn-panel ${featuresOpen ? 'is-open' : ''}`} role="menu">
+              <div className="zn-panel-grid">
+                {FEATURES.map((f, i) => (
+                  <button
+                    key={f.title}
+                    role="menuitem"
+                    className={`zn-item ${active === f.id ? 'is-active' : ''}`}
+                    style={{ transitionDelay: featuresOpen ? `${i * 30}ms` : '0ms' }}
+                    onClick={() => goTo(f.id)}
+                  >
+                    <span className="zn-item-ico">{f.icon}</span>
+                    <span>
+                      <strong>{f.title}</strong>
+                      <small>{f.desc}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button className="zn-panel-foot" onClick={() => goTo('product-tour')}>
+                <span>
+                  <strong>See the real product</strong>
+                  <small>Take the interactive tour of every screen</small>
+                </span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+          {LINKS.map((l) => (
+            <button key={l.id} className={`zn-link ${active === l.id ? 'is-active' : ''}`} onClick={() => goTo(l.id)}>
+              {l.label}
+            </button>
+          ))}
         </div>
 
-        {/* Desktop Links */}
-        <div className="nav-links hidden md:flex">
-          <a href="#free-audit-try">Platform</a>
-          <a href="#features-overview" className="nav-link-dropdown">
-            Features
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">Community</a>
-          <a href="#contact">Contact</a>
-        </div>
-
-        {/* Desktop Actions */}
-        <div className="nav-actions hidden md:flex">
-          <LiveClock />
+        {/* Desktop actions */}
+        <div className="zn-actions">
+          <button className="zn-login" onClick={() => navigate('/sign-in')}>
+            Log in
+          </button>
           <button
             className="group inline-flex items-center gap-1.5 bg-[#F26522] hover:bg-[#e05a1a] text-white text-[13px] font-medium rounded-full pl-4 pr-1.5 py-1.5 transition-colors duration-300 cursor-pointer"
             onClick={() => navigate('/sign-up')}
@@ -63,7 +181,9 @@ export default function Navbar() {
             <span className="overflow-hidden h-[18px]">
               <span className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:-translate-y-1/2">
                 <span className="h-[18px] flex items-center">Start free</span>
-                <span className="h-[18px] flex items-center">Start free</span>
+                <span className="h-[18px] flex items-center" aria-hidden="true">
+                  Start free
+                </span>
               </span>
             </span>
             <span className="w-6 h-6 bg-white rounded-full flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:rotate-0 -rotate-45">
@@ -72,55 +192,51 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile Hamburger */}
-        <button
-          className="flex md:hidden p-2 text-gray-700 hover:text-gray-950 focus:outline-none transition-colors ml-auto"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Toggle Menu"
-          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-        >
-          {isMobileMenuOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
+        {/* Mobile toggle */}
+        <button className="zn-burger" onClick={() => setMobileOpen((o) => !o)} aria-label={mobileOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileOpen}>
+          <span className={mobileOpen ? 'is-x' : ''} />
+          <span className={mobileOpen ? 'is-x' : ''} />
         </button>
-
-        {/* Mobile Bottom Sheet Overlay */}
-        {isMobileMenuOpen && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/30 z-[200] md:hidden"
-              onClick={() => setIsMobileMenuOpen(false)}
-            />
-            <div className="mobile-nav-sheet">
-              <div className="mobile-nav-links">
-                <a href="#free-audit-try" onClick={() => setIsMobileMenuOpen(false)}>Platform</a>
-                <a href="#features-overview" onClick={() => setIsMobileMenuOpen(false)}>Features</a>
-                <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</a>
-                <a href="#faq" onClick={() => setIsMobileMenuOpen(false)}>Community</a>
-              </div>
-              <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '12px 0' }} />
-              <button
-                className="mobile-nav-cta"
-                onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-up'); }}
-              >
-                Start free
-              </button>
-              <button
-                className="mobile-nav-btn-outline"
-                onClick={() => { setIsMobileMenuOpen(false); navigate('/sign-in'); }}
-              >
-                Log In
-              </button>
-            </div>
-          </>
-        )}
       </div>
     </nav>
+
+      {/* Mobile sheet (outside the nav: the nav is transformed, which would trap fixed children) */}
+      {mobileOpen && <div className="zn-backdrop" onClick={() => setMobileOpen(false)} />}
+      <div className={`zn-sheet ${mobileOpen ? 'is-open' : ''}`} aria-hidden={!mobileOpen}>
+        <div className="zn-sheet-head">
+          <span className="zn-sheet-label">Features</span>
+          <button className="zn-sheet-close" onClick={() => setMobileOpen(false)} aria-label="Close menu">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="zn-sheet-grid">
+          {FEATURES.map((f) => (
+            <button key={f.title} className="zn-item" onClick={() => goTo(f.id)}>
+              <span className="zn-item-ico">{f.icon}</span>
+              <span>
+                <strong>{f.title}</strong>
+                <small>{f.desc}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="zn-sheet-links">
+          {LINKS.map((l) => (
+            <button key={l.id} onClick={() => goTo(l.id)}>
+              {l.label}
+              <ArrowRight size={14} />
+            </button>
+          ))}
+        </div>
+        <div className="zn-sheet-cta">
+          <button className="zn-cta-primary" onClick={() => { setMobileOpen(false); navigate('/sign-up'); }}>
+            Start free
+          </button>
+          <button className="zn-cta-ghost" onClick={() => { setMobileOpen(false); navigate('/sign-in'); }}>
+            Log in
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

@@ -243,7 +243,7 @@
 .landing-page .zx-feature-card:hover .zx-tile-shot .zc-shot-view img { scale: 1.06; }
 
 /* Testimonials: portrait photos */
-.landing-page .zc-story .zc-photo img { object-position: 50% 22%; }
+.landing-page .zc-story .zc-photo img { object-position: 50% 50%; }
 .landing-page .zc-story .zc-layer-front, .landing-page .zc-persona .zc-layer-front { width: 56% !important; }
 
 /* Final CTA photo, toned into the dark brand card */
