@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react';
+import { Check, ShieldCheck } from 'lucide-react';
 import { comparisonRows } from '../data';
 import { AnimatedHeading, Reveal, Section } from '../ui';
 import { ApprovalVisual } from '../visuals';
@@ -54,16 +54,38 @@ export default function ComparisonSection() {
           ratio="16 / 11"
           front={<ApprovalVisual />}
         />
-        <Reveal className="zx-note-card" delay={140}>
-          <span className="zx-icon-dot zx-icon-dot-lg">
-            <ShieldCheck size={20} />
-          </span>
+        <Reveal className="zx-promise-card" delay={140}>
+          <div className="zx-promise-head">
+            <span className="zx-promise-badge">
+              <ShieldCheck size={22} />
+            </span>
+            <span className="zx-promise-eyebrow">Our promise</span>
+          </div>
           <h3>What the agent will never do</h3>
           <p>
-            ZieAds never spends your budget or publishes content without your approval. It monitors, analyzes, drafts and
-            recommends. You make the final call, and the agent executes once you approve. That is the right balance for
-            marketing you care about.
+            ZieAds monitors, analyzes, drafts and recommends. You make the final call, and the agent executes once you
+            approve. That is the right balance for marketing you care about.
           </p>
+          <ul className="zx-promise-list">
+            <li>
+              <span className="zx-promise-check">
+                <Check size={13} />
+              </span>
+              Never publishes a post without your approval
+            </li>
+            <li>
+              <span className="zx-promise-check">
+                <Check size={13} />
+              </span>
+              Never spends ad budget on its own
+            </li>
+            <li>
+              <span className="zx-promise-check">
+                <Check size={13} />
+              </span>
+              Disconnect any channel at any time
+            </li>
+          </ul>
         </Reveal>
       </div>
     </Section>

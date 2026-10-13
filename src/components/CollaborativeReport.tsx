@@ -1,4 +1,12 @@
+import React from 'react';
 import { useState } from 'react';
+
+// Callout card: soft tint of the status color with a hairline border (replaces the old left stripe).
+const callout = (color: string): React.CSSProperties => ({
+  background: `color-mix(in srgb, ${color} 6%, #ffffff)`,
+  border: `1px solid color-mix(in srgb, ${color} 22%, #ffffff)`,
+  borderRadius: 14,
+});
 
 const P = 'var(--primary)';
 const G = 'var(--text-muted)';
@@ -51,7 +59,7 @@ export default function CollaborativeReport({ findings, onUpdate }: { findings: 
           <h4 style={{ fontSize: '1.2rem', color: D, marginBottom: 8, fontWeight: 700 }}>{f.title}</h4>
           <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: 16 }}>{f.description}</p>
           
-          <div style={{ background: 'var(--bg-soft)', padding: 16, borderRadius: 6, borderLeft: `3px solid ${P}` }}>
+          <div style={{ background: 'var(--bg-soft)', padding: 16, borderRadius: 6, ...callout(P) }}>
             <strong style={{ display: 'block', fontSize: '0.85rem', color: D, marginBottom: 4 }}>Action Item</strong>
             <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>{f.actionableStep}</span>
           </div>

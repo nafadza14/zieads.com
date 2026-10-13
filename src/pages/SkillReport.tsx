@@ -7,6 +7,13 @@ import ZieAdsLogo from '../components/ZieAdsLogo';
 import LiveAdsSection from '../components/LiveAdsSection';
 import { supabase } from '../lib/supabaseClient';
 
+// Callout card: soft tint of the status color with a hairline border (replaces the old left stripe).
+const callout = (color: string): React.CSSProperties => ({
+  background: `color-mix(in srgb, ${color} 6%, #ffffff)`,
+  border: `1px solid color-mix(in srgb, ${color} 22%, #ffffff)`,
+  borderRadius: 14,
+});
+
 // ─── Design tokens (match ClientDashboard) ───────────────────────
 const RP = 'var(--primary)';
 const RD = 'var(--text)';
@@ -368,7 +375,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.heroOfferAssessment && (
           <>
             <SectionTitle sub="Offer clarity and competitive differentiation">Hero Offer Assessment</SectionTitle>
-            <div style={{ padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', marginBottom: 32 }}>
+            <div style={{ padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 32, ...callout('#16a34a') }}>
               <p style={{ fontSize: '0.95rem', color: '#1e293b', lineHeight: 1.65 }}>{d.heroOfferAssessment}</p>
             </div>
           </>
@@ -453,7 +460,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 { label: 'Audience Gaps', items: d.competitiveGaps.audienceGaps, color: RP },
                 { label: 'Creative Gaps', items: d.competitiveGaps.creativeGaps, color: RP },
               ].map(({ label, items, color }) => items?.length ? (
-                <div key={label} style={{ padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}` }}>
+                <div key={label} style={{ padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', ...callout(color) }}>
                   <p style={{ fontSize: '0.825rem', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>{label}</p>
                   <ul style={{ paddingLeft: 16 }}>
                     {items.map((item: string, i: number) => (
@@ -469,7 +476,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.positioningRecommendation && (
           <>
             <SectionTitle sub="How to position your brand to win">Positioning Strategy</SectionTitle>
-            <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: `3px solid ${RP}`, borderRadius: 0, marginBottom: 32 }}>
+            <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 32, ...callout(RP) }}>
               <p style={{ fontSize: '1rem', color: '#1e293b', lineHeight: 1.7 }}>{d.positioningRecommendation}</p>
             </div>
           </>
@@ -563,7 +570,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 const list: any[] = audience[key] || [];
                 if (!list.length) return null;
                 return (
-                  <div key={key} style={{ background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}`, borderRadius: 0 }}>
+                  <div key={key} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 0, ...callout(color) }}>
                     <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
                       <p style={{ fontWeight: 800, color, fontSize: '0.875rem' }}>{label} Audiences</p>
                     </div>
@@ -613,7 +620,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                   </div>
                   <div style={{ padding: 16 }}>
                     {c.concept && <p style={{ fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>{c.concept}</p>}
-                    {c.hook && <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, marginBottom: 8, borderLeft: `3px solid ${RP}` }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hook</p><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{c.hook}</p></div>}
+                    {c.hook && <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, marginBottom: 8, ...callout(RP) }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hook</p><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{c.hook}</p></div>}
                     {c.visualDirection && <p style={{ fontSize: '0.825rem', color: RP, marginBottom: 6 }}><strong style={{ color: '#1e293b' }}>Visual: </strong>{c.visualDirection}</p>}
                     {c.copyAngle && <p style={{ fontSize: '0.825rem', color: RP, marginBottom: 6 }}><strong style={{ color: '#1e293b' }}>Angle: </strong>{c.copyAngle}</p>}
                     {c.emotionalTrigger && <Tag color='#e8457a' bg='#fff0f3'>{c.emotionalTrigger}</Tag>}
@@ -622,7 +629,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               ))}
             </div>
             {creative.ugcVsPolishedSplit && (
-              <div style={{ padding: '12px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0, marginBottom: 16 }}>
+              <div style={{ padding: '12px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 16, ...callout('#16a34a') }}>
                 <p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>UGC vs Polished Split</p>
                 <p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{creative.ugcVsPolishedSplit}</p>
               </div>
@@ -748,7 +755,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                       </div>
                     ))}
                     {w.checkpoints?.length > 0 && (
-                      <div style={{ marginTop: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, borderLeft: '2px solid #e2e8f0' }}>
+                      <div style={{ marginTop: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, ...callout('#e2e8f0') }}>
                         <p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Checkpoints</p>
                         {w.checkpoints.map((cp: string, ci: number) => <p key={ci} style={{ fontSize: '0.825rem', color: RP }}>✓ {cp}</p>)}
                       </div>
@@ -1007,13 +1014,13 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 32 }}>
               {testing.killThreshold && (
-                <div style={{ padding: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0 }}>
+                <div style={{ padding: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, ...callout('#dc2626') }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 4 }}>Kill Threshold</p>
                   <p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{testing.killThreshold}</p>
                 </div>
               )}
               {testing.scaleThreshold && (
-                <div style={{ padding: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0 }}>
+                <div style={{ padding: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, ...callout('#16a34a') }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 4 }}>Scale Threshold</p>
                   <p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{testing.scaleThreshold}</p>
                 </div>
@@ -1070,9 +1077,9 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               ))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 32 }}>
-              {kpi.greenThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0 }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a', marginBottom: 3, textTransform: 'uppercase' }}>Scale When</p><p style={{ fontSize: '0.825rem', color: '#1e293b' }}>{kpi.greenThreshold}</p></div>}
-              {kpi.yellowThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #d97706', borderRadius: 0 }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#d97706', marginBottom: 3, textTransform: 'uppercase' }}>Optimise</p><p style={{ fontSize: '0.825rem', color: '#1e293b' }}>{kpi.yellowThreshold}</p></div>}
-              {kpi.redThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0 }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#dc2626', marginBottom: 3, textTransform: 'uppercase' }}>Pause If</p><p style={{ fontSize: '0.825rem', color: '#1e293b' }}>{kpi.redThreshold}</p></div>}
+              {kpi.greenThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, ...callout('#16a34a') }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a', marginBottom: 3, textTransform: 'uppercase' }}>Scale When</p><p style={{ fontSize: '0.825rem', color: '#1e293b' }}>{kpi.greenThreshold}</p></div>}
+              {kpi.yellowThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, ...callout('#d97706') }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#d97706', marginBottom: 3, textTransform: 'uppercase' }}>Optimise</p><p style={{ fontSize: '0.825rem', color: '#1e293b' }}>{kpi.yellowThreshold}</p></div>}
+              {kpi.redThreshold && <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, ...callout('#dc2626') }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#dc2626', marginBottom: 3, textTransform: 'uppercase' }}>Pause If</p><p style={{ fontSize: '0.825rem', color: '#1e293b' }}>{kpi.redThreshold}</p></div>}
             </div>
           </>
         )}
@@ -1366,7 +1373,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
         {d.executiveSummary && (
           <>
             <SectionTitle sub="Senior media buyer assessment of this business">Executive Summary</SectionTitle>
-            <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: `3px solid ${RP}`, borderRadius: 0, marginBottom: 32 }}>
+            <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 32, ...callout(RP) }}>
               <p style={{ fontSize: '1.02rem', color: '#1e293b', lineHeight: 1.8 }}>{d.executiveSummary}</p>
             </div>
           </>
@@ -1403,13 +1410,13 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 {(targetAud.keyObjections?.length > 0 || targetAud.emotionalTriggers?.length > 0) && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     {targetAud.keyObjections?.length > 0 && (
-                      <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0 }}>
+                      <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, ...callout('#dc2626') }}>
                         <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 8 }}>Key Objections</p>
                         {targetAud.keyObjections.map((o: string, i: number) => <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}><span style={{ color: '#94a3b8', fontWeight: 700 }}>✕</span><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{o}</p></div>)}
                       </div>
                     )}
                     {targetAud.emotionalTriggers?.length > 0 && (
-                      <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0 }}>
+                      <div style={{ padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, ...callout('#16a34a') }}>
                         <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 8 }}>Emotional Triggers</p>
                         {targetAud.emotionalTriggers.map((t: string, i: number) => <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}><span style={{ color: '#94a3b8', fontWeight: 700 }}>→</span><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{t}</p></div>)}
                       </div>
@@ -1499,12 +1506,12 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               <div style={{ marginBottom: 32 }}>
                 {funnelArch.summary && <p style={{ fontSize: '0.875rem', color: RP, marginBottom: 14 }}>{funnelArch.summary}</p>}
                 {[['TOFU', funnelArch.tofu, '#4285F4'], ['MOFU', funnelArch.mofu, '#f59e0b'], ['BOFU', funnelArch.bofu, '#16a34a']].filter(([, v]) => v).map(([stage, content, color]) => (
-                  <div key={stage as string} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${color as string}`, borderRadius: 0, marginBottom: 8 }}>
+                  <div key={stage as string} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 8, ...callout(color as string) }}>
                     <span style={{ fontWeight: 800, color: color as string, minWidth: 50, fontSize: '0.875rem' }}>{stage as string}</span>
                     <p style={{ fontSize: '0.875rem', color: '#1e293b', lineHeight: 1.6 }}>{content as string}</p>
                   </div>
                 ))}
-                {funnelArch.retargetingSequence && <div style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: `3px solid ${RP}`, borderRadius: 0, marginTop: 8 }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Retargeting Sequence</p><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{funnelArch.retargetingSequence}</p></div>}
+                {funnelArch.retargetingSequence && <div style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginTop: 8, ...callout(RP) }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Retargeting Sequence</p><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{funnelArch.retargetingSequence}</p></div>}
               </div>
             )}
           </>
@@ -1577,7 +1584,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                       </div>
                     ))}
                     {phase.expectedOutcome && (
-                      <div style={{ marginTop: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 0, borderLeft: '2px solid #16a34a' }}>
+                      <div style={{ marginTop: 10, padding: '8px 12px', background: '#f8fafc', borderRadius: 0, ...callout('#16a34a') }}>
                         <p style={{ fontSize: '0.825rem', color: '#16a34a', fontWeight: 600 }}>Expected: {phase.expectedOutcome}</p>
                       </div>
                     )}
@@ -1658,7 +1665,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 </div>
               )}
               {brief.expectedOutcome && (
-                <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 6, borderLeft: '3px solid #16a34a' }}>
+                <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 6, ...callout('#16a34a') }}>
                   <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 4 }}>Expected Outcome (90 days)</p>
                   <p style={{ fontSize: '0.92rem', color: '#1e293b' }}>{brief.expectedOutcome}</p>
                 </div>
@@ -1753,7 +1760,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                     {c.format && <Tag>{c.format}</Tag>}
                   </div>
                   <div style={{ padding: 16 }}>
-                    {c.hook && <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 0, marginBottom: 8, borderLeft: `3px solid ${RP}` }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hook</p><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{c.hook}</p></div>}
+                    {c.hook && <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 0, marginBottom: 8, ...callout(RP) }}><p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hook</p><p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{c.hook}</p></div>}
                     {c.visualDirection && <p style={{ fontSize: '0.825rem', color: RP, marginBottom: 4 }}><strong style={{ color: '#1e293b' }}>Visual: </strong>{c.visualDirection}</p>}
                     {c.copyDirection && <p style={{ fontSize: '0.825rem', color: RP, marginBottom: 4 }}><strong style={{ color: '#1e293b' }}>Copy: </strong>{c.copyDirection}</p>}
                     {c.targetAudience && <p style={{ fontSize: '0.825rem', color: '#94a3b8', marginBottom: 4 }}>Audience: {c.targetAudience}</p>}
@@ -1885,7 +1892,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
       <>
         {/* Overall verdict */}
         {(d.readyToRun !== undefined || d.estimatedReadinessGrade) && (
-          <div style={{ marginBottom: 32, padding: 16, borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: `4px solid ${d.readyToRun ? '#16a34a' : '#dc2626'}` }}>
+          <div style={{ marginBottom: 32, padding: 16, borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0', ...callout(d.readyToRun ? '#16a34a' : '#dc2626') }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <span style={{ fontSize: '2rem' }}>{d.readyToRun ? '🟢' : '🔴'}</span>
               <div>
@@ -1910,7 +1917,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="5 key readiness signals checked">Readiness Signals</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12, marginBottom: 32 }}>
               {Object.entries(signals).map(([key, val]: [string, any]) => (
-                <div key={key} style={{ padding: '16px 18px', background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${statusColor(val.status)}`, borderRadius: 0 }}>
+                <div key={key} style={{ padding: '16px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 0, ...callout(statusColor(val.status)) }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#1e293b' }}>{signalLabels[key] || key}</p>
                     <span style={{ width: 22, height: 22, borderRadius: '50%', background: statusColor(val.status), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 800 }}>
@@ -1994,7 +2001,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Fix these in under 30 minutes each">Quick Wins</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {d.quickWins.map((win: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #16a34a', borderRadius: 0, marginBottom: 0, borderBottom: i < d.quickWins.length - 1 ? '1px solid #e2e8f0' : '1px solid #e2e8f0' }}>
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 0, borderBottom: i < d.quickWins.length - 1 ? '1px solid #e2e8f0' : '1px solid #e2e8f0', ...callout('#16a34a') }}>
                   <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '1rem' }}>{i + 1}.</span>
                   <p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{win}</p>
                 </div>
@@ -2038,7 +2045,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Missing trust elements that reduce conversion">Trust Signal Gaps</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {d.trustSignalGaps.map((gap: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0, marginBottom: 0, borderBottom: '1px solid #e2e8f0' }}>
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 0, borderBottom: '1px solid #e2e8f0', ...callout('#dc2626') }}>
                   <span style={{ color: '#dc2626', fontWeight: 700 }}>✕</span>
                   <p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{gap}</p>
                 </div>
@@ -2153,7 +2160,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                 const audiences: any[] = tiers[key] || [];
                 if (!audiences.length) return null;
                 return (
-                  <div key={key} style={{ background: '#fff', border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}`, borderRadius: 0, overflow: 'hidden' }}>
+                  <div key={key} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 0, overflow: 'hidden', ...callout(color) }}>
                     <div style={{ padding: '12px 18px', borderBottom: '1px solid #e2e8f0' }}>
                       <p style={{ fontWeight: 800, fontSize: '0.875rem', color }}>{label}</p>
                     </div>
@@ -2471,7 +2478,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
               ].map(({ label, items, color }) => {
                 const normalizedItems = Array.isArray(items) ? items.map((item: any) => typeof item === 'string' ? item : `${item.platform || ''}: ${item.opportunity || ''}`) : [];
                 return normalizedItems.length ? (
-                  <div key={label} style={{ padding: 18, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', borderLeft: `3px solid ${color}` }}>
+                  <div key={label} style={{ padding: 18, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', ...callout(color) }}>
                     <p style={{ fontSize: '0.825rem', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>{label}</p>
                     <ul style={{ paddingLeft: 16 }}>
                       {normalizedItems.map((item: string, i: number) => (
@@ -2644,7 +2651,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
                     <div style={{ padding: 16 }}>
                       {stage.currentState && <p style={{ fontSize: '0.875rem', color: '#475569', marginBottom: 12 }}>{stage.currentState}</p>}
                       {(stage.recommendedAdType || stage.recommendedOffer) && (
-                        <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, marginBottom: 10, borderLeft: `3px solid ${RP}` }}>
+                        <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, marginBottom: 10, ...callout(RP) }}>
                           <p style={{ fontSize: '0.78rem', fontWeight: 700, color: RP, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recommended</p>
                           <p style={{ fontSize: '0.875rem', color: '#1e293b' }}>{stage.recommendedAdType || stage.recommendedOffer}</p>
                         </div>
@@ -2730,7 +2737,7 @@ function renderSkillContent(skillName: string, data: any, businessName: string, 
             <SectionTitle sub="Top issues killing conversions right now">Conversion Blockers</SectionTitle>
             <div style={{ marginBottom: 32 }}>
               {blockers.map((b: any, i: number) => (
-                <div key={i} style={{ padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderLeft: '3px solid #dc2626', borderRadius: 0, marginBottom: 8 }}>
+                <div key={i} style={{ padding: '14px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 0, marginBottom: 8, ...callout('#dc2626') }}>
                   <p style={{ fontWeight: 700, color: '#1e293b', marginBottom: 4, fontSize: '0.875rem' }}>{typeof b === 'string' ? b : b.blocker}</p>
                   {b.impact && <p style={{ fontSize: '0.825rem', color: RP, marginBottom: 4 }}>Impact: {b.impact}</p>}
                   {b.fix && (

@@ -540,10 +540,14 @@
 }
 .za-msg-user .za-md-num { background: rgba(255, 255, 255, 0.15); color: #fff; }
 .za-md-dot { flex-shrink: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--za-accent); margin: 10px 4px 0 6px; }
-.za-md-flag { margin: 4px 0 8px; padding: 10px 14px; border-radius: 12px; background: var(--za-gray); border-left: 3px solid var(--za-line); }
-.za-flag-red { border-left-color: #dc2626; background: #fef5f5; }
-.za-flag-amber { border-left-color: #f59e0b; background: #fffaf0; }
-.za-flag-green { border-left-color: #16a34a; background: #f3fbf5; }
+.za-md-flag { position: relative; margin: 6px 0 10px; padding: 11px 14px 11px 34px; border-radius: 12px; background: var(--za-gray); border: 1px solid var(--za-line); }
+.za-md-flag::before { content: ''; position: absolute; left: 14px; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--za-ink-4); box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04); }
+.za-flag-red { background: #fef6f6; border-color: #f8d7d7; }
+.za-flag-red::before { background: #dc2626; box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12); }
+.za-flag-amber { background: #fffaf1; border-color: #f6e3bd; }
+.za-flag-amber::before { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.14); }
+.za-flag-green { background: #f3fbf6; border-color: #cdebd8; }
+.za-flag-green::before { background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12); }
 .za-table-wrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--za-line); border-radius: 12px; }
 .za-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .za-table th { background: var(--za-gray); text-align: left; font-weight: 600; padding: 10px 14px; white-space: nowrap; }
