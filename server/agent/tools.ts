@@ -11,6 +11,7 @@ import * as igApi from "../utils/instagramApi.js";
 import { scrapeUrl } from "../scraper.js";
 import { stripDashes } from "../utils/noEmDash.js";
 import { computeOverview } from "../monitor/overview.js";
+import { syncCompetitorContent } from "../competitors/sync.js";
 
 export interface ToolContext {
   userId: string;
@@ -437,6 +438,61 @@ const getCompetitors: AgentTool = {
   summarize: (r) => (r.count ? `${r.count} competitors: ${r.competitors.slice(0, 3).map((c: any) => c.name).join(", ")}` : "No competitors tracked"),
 };
 
+// ─── 7b. Competitor live ads and posts ─────────────────────────────────────
+const getCompetitorContent: AgentTool = {
+  name: "get_competitor_content",
+  label: "Reading competitor ads and posts",
+  description:
+    "Live ads (Meta, TikTok, LinkedIn ad libraries) and recent organic posts (Instagram, Facebook, TikTok, LinkedIn) of a tracked competitor, with captions, formats, run time and engagement. Use it to explain what a competitor is running, which angles and formats they repeat, and what the user could test.",
+  parameters: {
+    type: "object",
+    properties: {
+      competitor: { type: "string", description: "Competitor name (partial match). Leave empty for all tracked competitors." },
+      kind: { type: "string", enum: ["all", "ad", "organic"], description: "Ads, organic posts or both" },
+      refresh: { type: "boolean", description: "Pull fresh content first (slower). Only when the user asks for the latest." },
+    },
+    additionalProperties: false,
+  },
+  async run(input: any, { userId }) {
+    let q = supabaseAdmin.from("competitors").select("id, name, content_synced_at").eq("user_id", userId);
+    if (input.competitor) q = q.ilike("name", `%${String(input.competitor).slice(0, 60)}%`);
+    const { data: comps } = await q.limit(5);
+    if (!comps?.length) return { found: false, note: "No matching competitor. Suggest adding it in Competitor Hunt (/hunt)." };
+    const out: any[] = [];
+    for (const c of comps.slice(0, 3)) {
+      if (input.refresh) await syncCompetitorContent(userId, c.id, 30000).catch(() => null);
+      let cq = supabaseAdmin.from("competitor_content").select("kind, source, media_type, caption, headline, cta, is_active, started_at, posted_at, metrics, url").eq("competitor_id", c.id);
+      if (input.kind === "ad" || input.kind === "organic") cq = cq.eq("kind", input.kind);
+      const { data: rows } = await cq.order("posted_at", { ascending: false, nullsFirst: false }).limit(40);
+      const items = (rows || []).map((r: any) => ({
+        kind: r.kind,
+        source: r.source,
+        format: r.media_type,
+        active: r.is_active ?? undefined,
+        date: (r.started_at || r.posted_at || "").slice(0, 10),
+        run_days: r.metrics?.run_days ?? undefined,
+        variants: r.metrics?.variants ?? undefined,
+        likes: r.metrics?.likes ?? undefined,
+        comments: r.metrics?.comments ?? undefined,
+        views: r.metrics?.views ?? undefined,
+        headline: r.headline ? trim(r.headline, 120) : undefined,
+        cta: r.cta || undefined,
+        text: trim(r.caption || "", 280),
+        url: r.url,
+      }));
+      out.push({
+        name: c.name,
+        last_refreshed: c.content_synced_at,
+        active_ads: items.filter((i) => i.kind === "ad" && i.active).length,
+        organic_posts: items.filter((i) => i.kind === "organic").length,
+        items,
+      });
+    }
+    return { found: true, competitors: out };
+  },
+  summarize: (r) => (r.found ? r.competitors.map((c: any) => `${c.name}: ${c.active_ads} active ads, ${c.organic_posts} posts`).join("; ") : "No matching competitor"),
+};
+
 // ─── 8. AI Analyst briefing ────────────────────────────────────────────────
 const getLatestBriefing: AgentTool = {
   name: "get_latest_briefing",
@@ -819,6 +875,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   getInboxSummary,
   getContentCalendar,
   getCompetitors,
+  getCompetitorContent,
   getLatestBriefing,
   getAuditAndProfile,
   scanWebsite,

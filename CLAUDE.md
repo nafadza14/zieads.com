@@ -29,3 +29,7 @@
 - Status badges (sentiment, draft state, buying question) use `Pill`: a neutral chip with a 1px border, ink text and a 6px colored dot. Never pastel filled pills (mint green, pink, peach) with colored text, and no gradient tints on rows. Color is never the only signal: the label says the state.
 - Status colors are muted (`--zd-good`, `--zd-warn`, `--zd-bad` in `dash.css`) and live on dots, icons and thin marks, not on text or large fills.
 - Never use the sparkle icon for Zie or AI actions. Name the action instead: `briefing` (newspaper) for Compile briefing, `reply-draft` for Draft replies, `analyze` for Analyze, a plain arrow for Do it.
+
+## Competitor Hunt
+- Live competitor ads and posts come from `server/competitors/` (adapters in `sources.ts`, sync in `sync.ts`), stored in `competitor_content`. Setup and coverage per platform in `docs/competitor-hunt-live-content.md`.
+- Show creatives in their real format and ratio; never fake ad performance (spend and ROAS are private). Use public signals: days running, active or ended, number of versions, engagement on organic posts.

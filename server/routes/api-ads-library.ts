@@ -71,12 +71,13 @@ adsLibraryRouter.get("/", async (req, res) => {
 
       return {
         id: ad.id,
-        snapshotUrl: ad.ad_snapshot_url || null,
+        // Never send ad_snapshot_url to the browser: it carries our access token
+        snapshotUrl: ad.id ? `https://www.facebook.com/ads/library/?id=${ad.id}` : null,
         pageName: ad.page_name || "",
         pageId: ad.page_id || "",
         // Profile picture as thumbnail stand-in (public graph endpoint)
         pagePicture: ad.page_id
-          ? `https://graph.facebook.com/${ad.page_id}/picture?type=normal&access_token=${encodeURIComponent(token)}`
+          ? `https://graph.facebook.com/${ad.page_id}/picture?type=normal`
           : null,
         headline: ad.ad_creative_link_titles?.[0] || null,
         body: ad.ad_creative_bodies?.[0] || null,

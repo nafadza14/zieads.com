@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { NO_EM_DASH_RULE } from "../utils/noEmDash.js";
 import { computeOverview, type Period } from "../monitor/overview.js";
+import { syncCompetitorContent, proxied, mediaAllowed } from "../competitors/sync.js";
+import { providerConfigured } from "../competitors/sources.js";
 import { createHmac } from "crypto";
 import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import {
@@ -4196,31 +4198,58 @@ async function listCompetitorsHandler(req: any, res: any) {
   try {
     const { data, error } = await supabaseAdmin
       .from("competitors")
-      .select("id, name, website_url, instagram_username, last_audited_at, audit_score, audit_report, created_at")
+      .select("*")
       .eq("user_id", req.userId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    res.json({ success: true, data });
+    // Content counts per competitor for the list view
+    const stats: Record<string, any> = {};
+    const { data: rows } = await supabaseAdmin
+      .from("competitor_content")
+      .select("competitor_id, kind, is_active, posted_at, first_seen_at")
+      .eq("user_id", req.userId)
+      .limit(5000);
+    const d7 = Date.now() - 7 * 86400000;
+    const d30 = Date.now() - 30 * 86400000;
+    for (const r of rows || []) {
+      const st = (stats[r.competitor_id] ||= { active_ads: 0, ads: 0, posts_30d: 0, new_7d: 0 });
+      if (r.kind === "ad") {
+        st.ads++;
+        if (r.is_active) st.active_ads++;
+      } else if (r.posted_at && new Date(r.posted_at).getTime() >= d30) st.posts_30d++;
+      if (r.first_seen_at && new Date(r.first_seen_at).getTime() >= d7 && (r.kind === "ad" ? r.is_active : r.posted_at && new Date(r.posted_at).getTime() >= d7)) st.new_7d++;
+    }
+    res.json({
+      success: true,
+      provider_configured: providerConfigured(),
+      data: (data || []).map((c: any) => ({ ...c, logo_url: proxied(c.logo_url), content_stats: stats[c.id] || { active_ads: 0, ads: 0, posts_30d: 0, new_7d: 0 } })),
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 }
 
 async function addCompetitorHandler(req: any, res: any) {
-  let { name, website_url, instagram_username } = req.body;
-  if (!name || !website_url) {
-    return res.status(400).json({ error: "name and website_url are required." });
+  let { name, website_url, instagram_username, tiktok_username, facebook_url, linkedin_url } = req.body;
+  if (!name || (!website_url && !instagram_username && !tiktok_username && !facebook_url)) {
+    return res.status(400).json({ error: "Add the brand name and its website or one social account." });
   }
 
-  name = name.slice(0, 100);
-  if (!website_url.startsWith("https://")) {
-    return res.status(400).json({ error: "website_url must start with https://" });
-  }
-
-  if (instagram_username) {
-    instagram_username = instagram_username.replace(/^@/, "");
-  }
+  name = String(name).slice(0, 100);
+  if (website_url && !/^https?:\/\//.test(website_url)) website_url = `https://${website_url}`;
+  if (website_url && !website_url.startsWith("https://")) website_url = website_url.replace(/^http:/, "https:");
+  const handle = (h: any) => (h ? String(h).trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?(instagram|tiktok)\.com\/@?/i, "").replace(/[/?#].*$/, "").slice(0, 60) || null : null);
+  const pageUrl = (u: any, host: string) => {
+    if (!u) return null;
+    const v = String(u).trim();
+    if (/^https?:\/\//.test(v)) return v.includes(host) ? v.replace(/^http:/, "https:").slice(0, 300) : null;
+    return `https://www.${host}/${v.replace(/^\//, "")}`.slice(0, 300);
+  };
+  instagram_username = handle(instagram_username);
+  tiktok_username = handle(tiktok_username);
+  facebook_url = pageUrl(facebook_url, "facebook.com");
+  linkedin_url = linkedin_url ? (String(linkedin_url).includes("linkedin.com") ? pageUrl(linkedin_url, "linkedin.com") : `https://www.linkedin.com/company/${String(linkedin_url).trim()}`) : null;
 
   try {
     const { count, error: countErr } = await supabaseAdmin
@@ -4234,12 +4263,9 @@ async function addCompetitorHandler(req: any, res: any) {
       return res.status(400).json({ error: "limit_reached", message: "You have reached the maximum limit of 25 tracked competitors. Please upgrade your plan to track more." });
     }
 
-    const { data: duplicate } = await supabaseAdmin
-      .from("competitors")
-      .select("id")
-      .eq("user_id", req.userId)
-      .eq("website_url", website_url)
-      .maybeSingle();
+    const { data: duplicate } = website_url
+      ? await supabaseAdmin.from("competitors").select("id").eq("user_id", req.userId).eq("website_url", website_url).maybeSingle()
+      : await supabaseAdmin.from("competitors").select("id").eq("user_id", req.userId).ilike("name", name).maybeSingle();
 
     if (duplicate) {
       return res.status(409).json({ error: "Already tracking this competitor." });
@@ -4250,8 +4276,11 @@ async function addCompetitorHandler(req: any, res: any) {
       .insert({
         user_id: req.userId,
         name,
-        website_url,
-        instagram_username
+        website_url: website_url || null,
+        instagram_username,
+        tiktok_username,
+        facebook_url,
+        linkedin_url,
       })
       .select()
       .single();
@@ -4342,6 +4371,102 @@ apiV3Router.delete("/competitors/:id", requireAuth, async (req: any, res) => {
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Competitor Hunt: live ads and posts ──────────────────────────────────
+apiV3Router.patch("/competitors/:id", requireAuth, async (req: any, res) => {
+  const allowed = ["instagram_username", "tiktok_username", "facebook_url", "linkedin_url", "website_url", "name"];
+  const patch: Record<string, any> = {};
+  for (const k of allowed) if (k in (req.body || {})) patch[k] = req.body[k] ? String(req.body[k]).trim().slice(0, 300) : null;
+  if (patch.instagram_username) patch.instagram_username = patch.instagram_username.replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/[/?#].*$/, "");
+  if (patch.tiktok_username) patch.tiktok_username = patch.tiktok_username.replace(/^@/, "").replace(/^https?:\/\/(www\.)?tiktok\.com\/@?/i, "").replace(/[/?#].*$/, "");
+  if (patch.facebook_url && !/^https:\/\//.test(patch.facebook_url)) patch.facebook_url = `https://www.facebook.com/${patch.facebook_url.replace(/^\//, "")}`;
+  if (patch.linkedin_url && !/^https:\/\//.test(patch.linkedin_url)) patch.linkedin_url = `https://www.linkedin.com/company/${patch.linkedin_url.replace(/^\//, "")}`;
+  if ("facebook_url" in patch || "name" in patch) patch.meta_page_id = null; // look the ad page up again
+  const { data, error } = await supabaseAdmin.from("competitors").update(patch).eq("id", req.params.id).eq("user_id", req.userId).select().maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: "Competitor not found." });
+  res.json({ success: true, data });
+});
+
+apiV3Router.post("/competitors/:id/sync", requireAuth, async (req: any, res) => {
+  try {
+    const { data: comp } = await supabaseAdmin.from("competitors").select("id, content_synced_at").eq("id", req.params.id).eq("user_id", req.userId).maybeSingle();
+    if (!comp) return res.status(404).json({ error: "Competitor not found." });
+    const fresh = comp.content_synced_at && Date.now() - new Date(comp.content_synced_at).getTime() < (req.body?.force ? 2 : 30) * 60000;
+    if (fresh) return res.json({ success: true, skipped: "fresh", synced_at: comp.content_synced_at });
+    const r = await syncCompetitorContent(req.userId, comp.id, 45000);
+    res.json({ success: true, ...r });
+  } catch (err: any) {
+    console.error("[Hunt] sync failed", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiV3Router.get("/competitors/:id/content", requireAuth, async (req: any, res) => {
+  try {
+    const { data: comp } = await supabaseAdmin.from("competitors").select("*").eq("id", req.params.id).eq("user_id", req.userId).maybeSingle();
+    if (!comp) return res.status(404).json({ error: "Competitor not found." });
+    let q = supabaseAdmin.from("competitor_content").select("*").eq("competitor_id", comp.id).eq("user_id", req.userId);
+    const kind = String(req.query.kind || "");
+    if (kind === "ad" || kind === "organic") q = q.eq("kind", kind);
+    const source = String(req.query.source || "");
+    if (source) q = q.eq("source", source);
+    if (req.query.active === "1") q = q.eq("is_active", true);
+    const { data: rows, error } = await q.order("posted_at", { ascending: false, nullsFirst: false }).limit(300);
+    if (error) throw error;
+    const items = (rows || []).map((r: any) => ({
+      ...r,
+      thumbnail_url: proxied(r.thumbnail_url),
+      carousel: (r.carousel || []).map((c: any) => ({ ...c, thumbnail_url: proxied(c.thumbnail_url) })),
+    }));
+    // Summary for the header
+    const now = Date.now();
+    const ads = items.filter((i: any) => i.kind === "ad");
+    const organic = items.filter((i: any) => i.kind === "organic");
+    const recent = organic.filter((i: any) => i.posted_at && now - new Date(i.posted_at).getTime() < 30 * 86400000);
+    const byFormat: Record<string, number> = {};
+    for (const a of ads.filter((x: any) => x.is_active)) byFormat[a.media_type] = (byFormat[a.media_type] || 0) + 1;
+    const longest = ads.filter((a: any) => a.is_active && a.metrics?.run_days).sort((a: any, b: any) => b.metrics.run_days - a.metrics.run_days)[0];
+    const eng = (i: any) => (i.metrics?.likes || 0) + (i.metrics?.comments || 0) + (i.metrics?.shares || 0);
+    res.json({
+      success: true,
+      provider_configured: providerConfigured(),
+      competitor: { ...comp, logo_url: proxied(comp.logo_url) },
+      summary: {
+        active_ads: ads.filter((a: any) => a.is_active).length,
+        ads_total: ads.length,
+        new_ads_7d: ads.filter((a: any) => a.started_at && now - new Date(a.started_at).getTime() < 7 * 86400000).length,
+        posts_30d: recent.length,
+        posts_per_week: Math.round((recent.length / 30) * 7 * 10) / 10,
+        ad_formats: byFormat,
+        longest_running: longest ? { id: longest.id, run_days: longest.metrics.run_days } : null,
+        top_post: organic.length ? [...organic].sort((a: any, b: any) => eng(b) - eng(a))[0]?.id : null,
+      },
+      items,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Image proxy for competitor thumbnails (Instagram and Facebook block hotlinking). Signed URLs only.
+apiV3Router.get("/hunt/media", async (req: any, res) => {
+  const u = String(req.query.u || "");
+  const s = String(req.query.s || "");
+  if (!mediaAllowed(u, s)) return res.status(403).end();
+  try {
+    const r = await fetch(u, { headers: { "user-agent": "Mozilla/5.0", accept: "image/*" }, signal: AbortSignal.timeout(10000) });
+    const type = r.headers.get("content-type") || "";
+    if (!r.ok || !type.startsWith("image/")) return res.status(r.ok ? 415 : r.status).end();
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 6 * 1024 * 1024) return res.status(413).end();
+    res.setHeader("Content-Type", type);
+    res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=86400, immutable");
+    res.end(buf);
+  } catch {
+    res.status(502).end();
   }
 });
 
@@ -4596,7 +4721,25 @@ apiV3Router.all("/monitor/tick", async (req: any, res) => {
       await monitorUser(userId, "monitor_tick").catch((e: any) => console.error("[Monitor tick]", userId, e.message));
       done.push(userId);
     }
-    res.json({ success: true, due: due.length, processed: done.length, remaining: due.length - done.length });
+    // Competitor content: refresh the stalest tracked competitors with whatever time is left
+    const refreshHours = Number(process.env.COMPETITOR_REFRESH_HOURS) || 12;
+    const competitorsDone: string[] = [];
+    if (providerConfigured() && budget - Date.now() > 20000) {
+      const cutoff = new Date(Date.now() - refreshHours * 3600000).toISOString();
+      const { data: comps } = await supabaseAdmin
+        .from("competitors")
+        .select("id, user_id, content_synced_at")
+        .or(`content_synced_at.is.null,content_synced_at.lt.${cutoff}`)
+        .order("content_synced_at", { ascending: true, nullsFirst: true })
+        .limit(5);
+      for (const c of comps || []) {
+        const left = budget - Date.now();
+        if (left < 20000) break;
+        await syncCompetitorContent(c.user_id, c.id, Math.min(40000, left)).catch((e: any) => console.error("[Monitor tick] competitor", c.id, e.message));
+        competitorsDone.push(c.id);
+      }
+    }
+    res.json({ success: true, due: due.length, processed: done.length, remaining: due.length - done.length, competitors_refreshed: competitorsDone.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
