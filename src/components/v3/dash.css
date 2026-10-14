@@ -18,12 +18,13 @@
   --zd-accent: #f26522;
   --zd-accent-hover: #e05a1a;
   --zd-accent-soft: #fff1e8;
-  --zd-good: #16a34a;
-  --zd-good-soft: #ecfaf1;
-  --zd-warn: #b7791f;
-  --zd-warn-soft: #fdf6e7;
-  --zd-bad: #dc2626;
-  --zd-bad-soft: #fef2f2;
+  /* Status colors: muted, used for dots, icons and thin marks. Text stays ink. */
+  --zd-good: #2f8a57;
+  --zd-good-soft: #f4f6f4;
+  --zd-warn: #c27c0e;
+  --zd-warn-soft: #f8f6f1;
+  --zd-bad: #d0443a;
+  --zd-bad-soft: #f9f4f3;
   --zd-glass: rgba(255, 255, 255, 0.72);
   --zd-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --zd-radius: 20px;
@@ -142,23 +143,10 @@
   animation: zdSlideIn 0.45s var(--zd-ease) both;
   transition: background 0.25s, color 0.25s, transform 0.3s var(--zd-ease), box-shadow 0.25s;
 }
-.zd-nav-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 3px;
-  height: 0;
-  border-radius: 3px;
-  background: var(--zd-accent);
-  transform: translateY(-50%);
-  transition: height 0.35s var(--zd-ease);
-}
 .zd-nav-item svg { color: var(--zd-ink-3); transition: color 0.25s, transform 0.4s var(--zd-ease); flex-shrink: 0; }
 .zd-nav-item:hover { background: #fff; color: var(--zd-ink); transform: translateX(2px); }
 .zd-nav-item:hover svg { color: var(--zd-ink); transform: scale(1.08); }
 .zd-nav-item.is-active { background: #fff; color: var(--zd-ink); font-weight: 600; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
-.zd-nav-item.is-active::before { height: 60%; }
 .zd-nav-item.is-active svg { color: var(--zd-accent); }
 .zd-nav-new { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--zd-accent); background: var(--zd-accent-soft); border-radius: 999px; padding: 2px 7px; }
 
@@ -349,14 +337,17 @@
 .zd-seg.size-sm .zd-seg-btn { padding: 6px 12px; font-size: 12px; }
 
 /* Pills */
-.zd-pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
-.zd-pill svg { width: 12px; height: 12px; }
-.zd-pill.tone-neutral { background: var(--zd-gray); color: var(--zd-ink-2); }
-.zd-pill.tone-accent { background: var(--zd-accent-soft); color: var(--zd-accent); }
-.zd-pill.tone-good { background: var(--zd-good-soft); color: var(--zd-good); }
-.zd-pill.tone-warn { background: var(--zd-warn-soft); color: var(--zd-warn); }
-.zd-pill.tone-bad { background: var(--zd-bad-soft); color: var(--zd-bad); }
-.zd-pill.tone-dark { background: var(--zd-ink); color: #fff; }
+/* Status badge: neutral chip + a small colored dot. The label carries the meaning, the dot only reinforces it (Geist / Sprout pattern). */
+.zd-pill { --dot: transparent; display: inline-flex; align-items: center; gap: 6px; height: 22px; border-radius: 6px; padding: 0 8px; border: 1px solid var(--zd-line); background: #fff; color: var(--zd-ink-2); font-size: 11.5px; font-weight: 550; white-space: nowrap; text-transform: capitalize; }
+.zd-pill svg { width: 12px; height: 12px; color: var(--dot); }
+.zd-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); flex: none; }
+.zd-pill.tone-neutral { --dot: #b9b6b0; }
+.zd-pill.tone-accent { --dot: var(--zd-accent); }
+.zd-pill.tone-good { --dot: var(--zd-good); }
+.zd-pill.tone-warn { --dot: var(--zd-warn); }
+.zd-pill.tone-bad { --dot: var(--zd-bad); }
+.zd-pill.tone-dark { background: var(--zd-ink); border-color: var(--zd-ink); color: #fff; }
+.zd-pill.tone-dark::before { display: none; }
 
 /* Chips (toggleable filters, platform selectors) */
 .zd-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--zd-line); background: #fff; border-radius: 999px; padding: 6px 13px; font-size: 13px; font-weight: 500; color: var(--zd-ink-2); cursor: pointer; transition: border-color 0.25s, color 0.25s, background 0.25s, transform 0.3s var(--zd-ease); }

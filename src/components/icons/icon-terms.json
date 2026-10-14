@@ -1,24 +1,98 @@
 {
-  "ai-analyst": { "noun": "data analysis", "meaning": "The AI Analyst feature that reads your accounts and reports" },
-  "briefing": { "noun": "newspaper", "meaning": "A daily or morning marketing briefing" },
-  "insight": { "noun": "insight lightbulb", "meaning": "A finding or recommendation drawn from data" },
-  "tip": { "noun": "information", "meaning": "A hint or explanation of the selected option" },
-  "action": { "noun": "call to action", "meaning": "A recommended next action to take" },
-  "feature": { "noun": "puzzle piece", "meaning": "A generic product feature" },
-  "free-plan": { "noun": "gift", "meaning": "The free plan, no payment needed" },
-  "report": { "noun": "report document", "meaning": "A generated analysis report or result" },
-  "creative": { "noun": "creative palette", "meaning": "Creative strategy for ads and content" },
-  "ai-draft": { "noun": "draft document", "meaning": "Content drafted by the AI Agent, awaiting review" },
-  "strategy": { "noun": "strategy compass", "meaning": "A weekly content or marketing strategy" },
-  "celebrate": { "noun": "clapping hands", "meaning": "The Celebrate reaction on a social post preview" },
-  "publish": { "noun": "paper plane", "meaning": "Publish a post right now" },
-  "inherit": { "noun": "link chain", "meaning": "A platform version inheriting the default copy" },
-  "audit": { "noun": "audit checklist", "meaning": "An audit of a website or competitor" },
-  "credits": { "noun": "coins", "meaning": "Usage credits and skill runs" },
-  "auto-fill": { "noun": "magic wand", "meaning": "Automatically fill a form from a website" },
-  "success": { "noun": "task complete", "meaning": "A finished, successful task" },
-  "modes": { "noun": "mode selection", "meaning": "The AI Agent analysis modes" },
-  "parallel-tasks": { "noun": "parallel process", "meaning": "Several agent tasks running in parallel" },
-  "tool": { "noun": "wrench tool", "meaning": "A generic agent tool call" },
-  "empty-state": { "noun": "empty box", "meaning": "Nothing to show yet" }
+  "ai-analyst": {
+    "noun": "data analysis",
+    "meaning": "The AI Analyst feature that reads your accounts and reports"
+  },
+  "briefing": {
+    "noun": "newspaper",
+    "meaning": "A daily or morning marketing briefing"
+  },
+  "insight": {
+    "noun": "insight lightbulb",
+    "meaning": "A finding or recommendation drawn from data"
+  },
+  "tip": {
+    "noun": "information",
+    "meaning": "A hint or explanation of the selected option"
+  },
+  "action": {
+    "noun": "call to action",
+    "meaning": "A recommended next action to take"
+  },
+  "feature": {
+    "noun": "puzzle piece",
+    "meaning": "A generic product feature"
+  },
+  "free-plan": {
+    "noun": "gift",
+    "meaning": "The free plan, no payment needed"
+  },
+  "report": {
+    "noun": "report document",
+    "meaning": "A generated analysis report or result"
+  },
+  "creative": {
+    "noun": "creative palette",
+    "meaning": "Creative strategy for ads and content"
+  },
+  "ai-draft": {
+    "noun": "draft document",
+    "meaning": "Content drafted by the AI Agent, awaiting review"
+  },
+  "strategy": {
+    "noun": "strategy compass",
+    "meaning": "A weekly content or marketing strategy"
+  },
+  "celebrate": {
+    "noun": "clapping hands",
+    "meaning": "The Celebrate reaction on a social post preview"
+  },
+  "publish": {
+    "noun": "paper plane",
+    "meaning": "Publish a post right now"
+  },
+  "inherit": {
+    "noun": "link chain",
+    "meaning": "A platform version inheriting the default copy"
+  },
+  "audit": {
+    "noun": "audit checklist",
+    "meaning": "An audit of a website or competitor"
+  },
+  "credits": {
+    "noun": "coins",
+    "meaning": "Usage credits and skill runs"
+  },
+  "auto-fill": {
+    "noun": "magic wand",
+    "meaning": "Automatically fill a form from a website"
+  },
+  "success": {
+    "noun": "task complete",
+    "meaning": "A finished, successful task"
+  },
+  "modes": {
+    "noun": "mode selection",
+    "meaning": "The AI Agent analysis modes"
+  },
+  "parallel-tasks": {
+    "noun": "parallel process",
+    "meaning": "Several agent tasks running in parallel"
+  },
+  "tool": {
+    "noun": "wrench tool",
+    "meaning": "A generic agent tool call"
+  },
+  "empty-state": {
+    "noun": "empty box",
+    "meaning": "Nothing to show yet"
+  },
+  "analyze": {
+    "noun": "magnifying glass chart",
+    "meaning": "Ask Zie to analyze data (comments, results)"
+  },
+  "reply-draft": {
+    "noun": "reply message",
+    "meaning": "Ask Zie to draft replies to comments"
+  }
 }

@@ -9,6 +9,8 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BrainCircuit,
+  MessageSquareReply,
+  ScanSearch,
   CheckCircle2,
   CircleDashed,
   ClipboardCheck,
@@ -58,6 +60,8 @@ const LUCIDE: Record<IconName, LucideIcon> = {
   'parallel-tasks': Split,
   tool: Wrench,
   'empty-state': CircleDashed,
+  analyze: ScanSearch,
+  'reply-draft': MessageSquareReply,
 };
 
 export type IconDef = { noun: string; lucide: LucideIcon; meaning: string };

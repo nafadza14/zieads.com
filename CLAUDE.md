@@ -23,3 +23,9 @@
 ## Buttons
 - Product UI (dashboard, AI Agent, settings) uses the compact `Button` from `src/components/v3/ui.tsx` (rounded 8px, variants primary, soft, secondary, ghost, danger). One primary per view.
 - The pill `TextRollButton` is only for marketing surfaces: landing page, auth, onboarding modal, pricing, quick scan result. See `docs/button-guidelines.md`.
+
+## No AI slop patterns
+- Never build a card, list item or input with a colored accent bar on one side (border-left stripe, side bar pseudo element). Selected or active items use a white background, a soft shadow and bolder text.
+- Status badges (sentiment, draft state, buying question) use `Pill`: a neutral chip with a 1px border, ink text and a 6px colored dot. Never pastel filled pills (mint green, pink, peach) with colored text, and no gradient tints on rows. Color is never the only signal: the label says the state.
+- Status colors are muted (`--zd-good`, `--zd-warn`, `--zd-bad` in `dash.css`) and live on dots, icons and thin marks, not on text or large fills.
+- Never use the sparkle icon for Zie or AI actions. Name the action instead: `briefing` (newspaper) for Compile briefing, `reply-draft` for Draft replies, `analyze` for Analyze, a plain arrow for Do it.

@@ -19,6 +19,7 @@ import { sampleOverview, type Period } from '../../data/sample-overview';
 import { Button, Card, CardTitle, CountUp, EmptyState, PageBody, PageHeader, Pill, SegTabs, Skeleton } from '../../components/v3/ui';
 import SocialIcon from '../../components/v3/SocialIcon';
 import ZieAvatar from '../../components/ZieAvatar';
+import ZIcon from '../../components/icons/ZIcon';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -30,14 +31,13 @@ import {
   Clock,
   Eye,
   Heart,
+  Info,
   Link2,
   MessageCircle,
   MessageSquareWarning,
   Minus,
   RefreshCw,
   ShoppingBag,
-  Smile,
-  Sparkles,
   Timer,
   TrendingUp,
   UserPlus,
@@ -130,7 +130,7 @@ const SEV_ICON: Record<string, ReactNode> = {
   bad: <AlertTriangle size={14} />,
   warn: <MessageSquareWarning size={14} />,
   good: <CheckCircle2 size={14} />,
-  info: <Sparkles size={14} />,
+  info: <Info size={14} />,
 };
 
 export default function AnalystPage() {
@@ -316,7 +316,7 @@ export default function AnalystPage() {
                 <Button variant="secondary" size="sm" icon={<RefreshCw />} loading={syncing} onClick={() => sync(true)}>
                   Sync now
                 </Button>
-                <Button variant="soft" size="sm" icon={<Sparkles />} loading={compiling} onClick={compile}>
+                <Button variant="soft" size="sm" icon={<ZIcon name="briefing" />} loading={compiling} onClick={compile}>
                   Compile briefing
                 </Button>
               </>
@@ -397,7 +397,7 @@ export default function AnalystPage() {
                           <strong>{t.title}</strong>
                           <small>{t.detail}</small>
                         </div>
-                        <Button size="sm" variant={t.prompt ? 'soft' : 'secondary'} icon={t.prompt ? <Sparkles /> : undefined} onClick={() => (t.prompt ? askZie(t.prompt) : navigate(t.link))}>
+                        <Button size="sm" variant={t.prompt ? 'soft' : 'secondary'} icon={t.prompt ? <ZIcon name="reply-draft" /> : undefined} onClick={() => (t.prompt ? askZie(t.prompt) : navigate(t.link))}>
                           {t.cta}
                         </Button>
                       </li>
@@ -445,7 +445,7 @@ export default function AnalystPage() {
                 icon={<MessageCircle />}
                 sub={`${k?.comments.value ?? 0} comments in the ${p.long}, ${data?.comments?.questions ?? 0} questions`}
                 action={
-                  <Button size="sm" variant="soft" icon={<Sparkles />} onClick={() => askZie(`Analyze my comments from the ${p.long}: group them into themes, flag complaints and buying questions, and draft replies for the ones that need an answer`)}>
+                  <Button size="sm" variant="soft" icon={<ZIcon name="analyze" />} onClick={() => askZie(`Analyze my comments from the ${p.long}: group them into themes, flag complaints and buying questions, and draft replies for the ones that need an answer`)}>
                     Analyze with Zie
                   </Button>
                 }
@@ -469,9 +469,9 @@ export default function AnalystPage() {
                     )}
                   </div>
                   <div className="zan-sent-legend">
-                    <span><Smile size={13} /> {sentTotal ? Math.round((sentiment.positive / sentTotal) * 100) : 0}% positive</span>
-                    <span>{sentiment.neutral} neutral</span>
-                    <span className="is-bad">{sentiment.negative} negative</span>
+                    <span><i className="is-positive" /> {sentTotal ? Math.round((sentiment.positive / sentTotal) * 100) : 0}% positive</span>
+                    <span><i className="is-neutral" /> {sentiment.neutral} neutral</span>
+                    <span><i className="is-negative" /> {sentiment.negative} negative</span>
                   </div>
                   {data?.comments?.themes?.length > 0 && (
                     <>
@@ -496,7 +496,7 @@ export default function AnalystPage() {
                       <SocialIcon platform={c.platform} size={16} />
                       <span className="zan-wait-who">@{c.from}</span>
                       <span className="zan-wait-text">{c.text}</span>
-                      {c.intent && <Pill tone="accent">Buying</Pill>}
+                      {c.intent && <Pill tone="accent">Buying question</Pill>}
                       {c.sentiment === 'negative' && <Pill tone="bad">Negative</Pill>}
                       {c.has_ai_draft && <Pill tone="good">Draft ready</Pill>}
                       <span className={`zan-wait-time ${c.waiting_hours >= 24 ? 'is-late' : ''}`}>{fmtHours(c.waiting_hours)}</span>
@@ -547,7 +547,7 @@ export default function AnalystPage() {
 
               {/* Briefing */}
               <Card className="zan-brief">
-                <CardTitle icon={<Sparkles />} sub={briefing?.briefing_date ? `Compiled for ${briefing.briefing_date}` : 'Your daily summary from Zie'}>
+                <CardTitle icon={<ZIcon name="briefing" />} sub={briefing?.briefing_date ? `Compiled for ${briefing.briefing_date}` : 'Your daily summary from Zie'}>
                   Zie's briefing
                 </CardTitle>
                 {briefing ? (
@@ -563,7 +563,7 @@ export default function AnalystPage() {
                               <strong>{a.action}</strong>
                               {a.reasoning && <small>{a.reasoning}</small>}
                             </div>
-                            <Button size="sm" variant="ghost" icon={<Sparkles />} onClick={() => askZie(`Help me do this now: ${a.action}`)}>
+                            <Button size="sm" variant="ghost" iconRight={<ArrowRight />} onClick={() => askZie(`Help me do this now: ${a.action}`)}>
                               Do it
                             </Button>
                           </li>
@@ -574,7 +574,7 @@ export default function AnalystPage() {
                 ) : (
                   <div className="zan-brief-empty">
                     <p>No briefing for today yet. Zie compiles one every morning; you can also compile it now.</p>
-                    <Button variant="soft" size="sm" icon={<Sparkles />} loading={compiling} onClick={compile}>
+                    <Button variant="soft" size="sm" icon={<ZIcon name="briefing" />} loading={compiling} onClick={compile}>
                       Compile briefing
                     </Button>
                   </div>

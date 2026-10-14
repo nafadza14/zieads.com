@@ -204,7 +204,7 @@ function ReplyCard({ item, index }: { item: Extract<AgentArtifact, { kind: 'repl
         </div>
       ) : (
         <>
-          <textarea className="za-art-reply-input" value={reply} onChange={(e) => setReply(e.target.value)} onBlur={persist} rows={2} aria-label="Reply" />
+          <textarea className="za-art-reply-input" value={reply} onChange={(e) => setReply(e.target.value)} onBlur={persist} rows={2} aria-label="Reply" ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; } }} onInput={(e) => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; }} />
           {error && (
             <div className="za-art-error">
               <AlertCircle size={13} /> {error}

@@ -29,9 +29,10 @@
   animation: zcoToastIn 0.55s var(--zd-ease) both;
 }
 .zco-toast svg { flex-shrink: 0; margin-top: 1px; }
-.zco-toast.tone-good { background: var(--zd-good-soft); color: var(--zd-good); border-color: rgba(22, 163, 74, 0.2); }
-.zco-toast.tone-bad { background: var(--zd-bad-soft); color: var(--zd-bad); border-color: rgba(220, 38, 38, 0.2); }
-.zco-toast.tone-warn { background: var(--zd-warn-soft); color: var(--zd-warn); border-color: rgba(183, 121, 31, 0.2); }
+.zco-toast.tone-good, .zco-toast.tone-bad, .zco-toast.tone-warn { background: #fff; color: var(--zd-ink); border-color: var(--zd-line); }
+.zco-toast.tone-good svg { color: var(--zd-good); }
+.zco-toast.tone-bad svg { color: var(--zd-bad); }
+.zco-toast.tone-warn svg { color: var(--zd-warn); }
 .zco-toast .zco-link { text-decoration: underline; cursor: pointer; font-weight: 650; }
 .zco-toast-bar {
   position: relative;

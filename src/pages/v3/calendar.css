@@ -105,7 +105,7 @@
 }
 .zca-chip:hover { transform: translateY(-2px); border-color: rgba(242, 101, 34, 0.4); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.07); }
 .zca-chip.is-selected { border-color: var(--zd-accent); box-shadow: 0 0 0 3px rgba(242, 101, 34, 0.12); }
-.zca-chip.is-failed { background: var(--zd-bad-soft); border-color: rgba(220, 38, 38, 0.25); color: var(--zd-bad); }
+.zca-chip.is-failed { background: #fff; border-color: var(--zd-bad); color: var(--zd-ink); }
 .zca-chip-dot { width: 7px; height: 7px; align-self: center; border-radius: 50%; flex-shrink: 0; }
 .zca-chip-icon { display: inline-flex; flex-shrink: 0; }
 .zca-chip-warn { flex-shrink: 0; }
