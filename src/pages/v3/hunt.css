@@ -156,3 +156,7 @@ a.zd-btn { text-decoration: none; display: inline-flex; align-items: center; gap
   .zhu-filter-right { margin-left: 0; width: 100%; justify-content: space-between; }
   .zhu-cta { margin-left: 0; }
 }
+
+/* Official live embeds */
+.zhu-embeds { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.zhu-embed-body { display: flex; justify-content: center; min-height: 200px; }

@@ -8,8 +8,10 @@ import { supabaseAdmin } from '../supabaseServer.js';
 import {
   type ContentItem,
   type Source,
+  discoveryConfigured,
   facebookPosts,
   findMetaPage,
+  instagramDiscovery,
   instagramPosts,
   linkedinAds,
   linkedinPosts,
@@ -21,7 +23,10 @@ import {
   tiktokVideos,
 } from './sources.js';
 
-export type SourceStatus = { ok: boolean; count: number; error?: string; skipped?: string; at: string };
+export type SourceStatus = { ok: boolean; count: number; error?: string; skipped?: string; at: string; via?: 'server' | 'collector' };
+
+/** The local collector (residential IP) owns a source while it has reported on it in the last 48 hours */
+const collectorOwns = (st?: SourceStatus) => Boolean(st?.via === 'collector' && st.at && Date.now() - new Date(st.at).getTime() < 48 * 3600000);
 
 const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
   Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error('Timed out')), ms))]);
@@ -73,7 +78,16 @@ export async function syncCompetitorContent(userId: string, competitorId: string
       run: () => (provider && comp.meta_page_id ? metaAds(comp.meta_page_id) : metaAdsOfficial(comp.name)),
       skip: !provider && !process.env.FACEBOOK_ACCESS_TOKEN ? 'No ads data provider configured' : undefined,
     },
-    { source: 'instagram', run: () => instagramPosts(comp.instagram_username), skip: !comp.instagram_username ? 'Add the Instagram handle' : !provider ? 'No data provider configured' : undefined },
+    {
+      source: 'instagram',
+      run: async () => {
+        if (provider) return instagramPosts(comp.instagram_username);
+        const r = await instagramDiscovery(comp.instagram_username);
+        if (r.profile?.picture && !comp.logo_url) await supabaseAdmin.from('competitors').update({ logo_url: r.profile.picture }).eq('id', comp.id);
+        return r.items;
+      },
+      skip: !comp.instagram_username ? 'Add the Instagram handle' : !provider && !discoveryConfigured() ? 'No data source configured' : undefined,
+    },
     { source: 'facebook', run: () => facebookPosts(comp.facebook_url), skip: !comp.facebook_url ? 'Add the Facebook page' : !provider ? 'No data provider configured' : undefined },
     { source: 'tiktok', run: () => tiktokVideos(comp.tiktok_username), skip: !comp.tiktok_username ? 'Add the TikTok handle' : !provider ? 'No data provider configured' : undefined },
     { source: 'tiktok_ads', run: () => tiktokAds(comp.name) },
@@ -92,13 +106,16 @@ export async function syncCompetitorContent(userId: string, competitorId: string
   const status: Record<string, SourceStatus> = { ...(comp.content_sync_status || {}) };
   const results = await Promise.all(
     jobs.map(async (j) => {
+      // Leave sources the local collector is handling alone, unless a paid provider is set
+      if (j.skip && collectorOwns(status[j.source])) return [] as ContentItem[];
+      if (!provider && collectorOwns(status[j.source]) && j.source !== 'instagram') return [] as ContentItem[];
       if (j.skip) {
         status[j.source] = { ok: false, count: 0, skipped: j.skip, at: now };
         return [] as ContentItem[];
       }
       try {
         const items = await withTimeout(j.run(), per);
-        status[j.source] = { ok: true, count: items.length, at: now };
+        status[j.source] = { ok: true, count: items.length, at: now, via: 'server' };
         return items;
       } catch (e: any) {
         status[j.source] = { ok: false, count: 0, error: String(e?.message || e).slice(0, 160), at: now };
@@ -107,8 +124,15 @@ export async function syncCompetitorContent(userId: string, competitorId: string
     }),
   );
 
-  const rows = results.flat().map((it) => ({
-    competitor_id: comp.id,
+  const added = await saveContent(comp.id, userId, results.flat(), now);
+  await supabaseAdmin.from('competitors').update({ content_synced_at: now, content_sync_status: status }).eq('id', comp.id);
+  return { synced_at: now, status, added };
+}
+
+/** Upsert normalized items for one competitor. Shared by the server sync and the local collector. */
+export async function saveContent(competitorId: string, userId: string, items: ContentItem[], now = new Date().toISOString()) {
+  const rows = items.map((it) => ({
+    competitor_id: competitorId,
     user_id: userId,
     platform: it.platform,
     kind: it.kind,
@@ -137,9 +161,15 @@ export async function syncCompetitorContent(userId: string, competitorId: string
     const { error } = await supabaseAdmin.from('competitor_content').upsert(rows.slice(i, i + 200), { onConflict: 'competitor_id,source,external_id' });
     if (error) console.error('[Hunt] content upsert failed:', error.message);
   }
+  return rows.length;
+}
 
-  await supabaseAdmin.from('competitors').update({ content_synced_at: now, content_sync_status: status }).eq('id', comp.id);
-  return { synced_at: now, status, added: rows.length };
+/** Merge per-source statuses without wiping what another worker reported */
+export async function mergeStatus(competitorId: string, patch: Record<string, SourceStatus>) {
+  const { data } = await supabaseAdmin.from('competitors').select('content_sync_status').eq('id', competitorId).maybeSingle();
+  const next = { ...(data?.content_sync_status || {}), ...patch };
+  await supabaseAdmin.from('competitors').update({ content_sync_status: next, content_synced_at: new Date().toISOString() }).eq('id', competitorId);
+  return next;
 }
 
 // ─── Media proxy signing ───────────────────────────────────────────────────

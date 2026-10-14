@@ -107,7 +107,7 @@ export async function findMetaPage(name: string, igHandle?: string | null) {
     : null;
 }
 
-function mapMetaAd(ad: any): ContentItem | null {
+export function mapMetaAd(ad: any): ContentItem | null {
   const s = ad.snapshot || {};
   const id = String(ad.ad_archive_id || ad.ad_id || '');
   if (!id) return null;
@@ -221,31 +221,70 @@ export async function metaAdsOfficial(searchTerm: string): Promise<ContentItem[]
 // ─── Instagram ─────────────────────────────────────────────────────────────
 export async function instagramPosts(handle: string): Promise<ContentItem[]> {
   const j = await sc('/v2/instagram/user/posts', { handle });
-  return (j.items || []).map((p: any): ContentItem => {
-    const cand = p.image_versions2?.candidates?.[0];
-    const isReel = p.product_type === 'clips' || p.media_type === 2;
-    const isCarousel = p.media_type === 8 || Array.isArray(p.carousel_media);
+  return (j.items || []).map(mapInstagramItem);
+}
+
+/** Instagram web/private API media item (the shape instagram.com itself loads) */
+export function mapInstagramItem(p: any): ContentItem {
+  const cand = p.image_versions2?.candidates?.[0];
+  const isReel = p.product_type === 'clips' || p.media_type === 2;
+  const isCarousel = p.media_type === 8 || Array.isArray(p.carousel_media);
+  return {
+    platform: 'instagram',
+    kind: 'organic',
+    source: 'instagram',
+    external_id: String(p.code || p.id || p.pk),
+    url: p.url || (p.code ? `https://www.instagram.com/p/${p.code}/` : null),
+    caption: clean(p.caption?.text),
+    media_type: isReel ? 'video' : isCarousel ? 'carousel' : 'image',
+    thumbnail_url: cand?.url || p.display_uri || p.carousel_media?.[0]?.image_versions2?.candidates?.[0]?.url || null,
+    media_url: p.video_versions?.[0]?.url || null,
+    carousel: Array.isArray(p.carousel_media) ? p.carousel_media.slice(0, 10).map((c: any) => ({ thumbnail_url: c.image_versions2?.candidates?.[0]?.url || null, media_url: c.video_versions?.[0]?.url || null })) : [],
+    aspect: isReel ? '9:16' : ratio(p.original_width || cand?.width, p.original_height || cand?.height) || '4:5',
+    posted_at: unix(p.taken_at) || unix(p.created_at),
+    metrics: {
+      likes: num(p.like_count),
+      comments: num(p.comment_count),
+      views: num(p.play_count) ?? num(p.ig_play_count) ?? num(p.view_count),
+      format: isReel ? 'reel' : isCarousel ? 'carousel' : 'image',
+    },
+  };
+}
+
+// Official and free: Instagram Graph API Business Discovery. Reads any public Business or
+// Creator account through the ZieAds owner's own Instagram Business account.
+// env META_DISCOVERY_TOKEN (Facebook user or system user token with instagram_basic,
+// instagram_manage_insights, pages_read_engagement) and META_DISCOVERY_IG_ID.
+export const discoveryConfigured = () => Boolean(process.env.META_DISCOVERY_TOKEN && process.env.META_DISCOVERY_IG_ID);
+
+export async function instagramDiscovery(handle: string): Promise<{ items: ContentItem[]; profile: any }> {
+  const fields = `business_discovery.username(${handle.replace(/[^A-Za-z0-9_.]/g, '')}){username,name,profile_picture_url,followers_count,media_count,media.limit(30){id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,view_count,children{media_type,media_url,thumbnail_url}}}`;
+  const url = `https://graph.facebook.com/v21.0/${process.env.META_DISCOVERY_IG_ID}?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(process.env.META_DISCOVERY_TOKEN || '')}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+  const j = await res.json();
+  if (j.error) throw new Error(j.error.error_user_msg || j.error.message || 'Business Discovery failed');
+  const bd = j.business_discovery || {};
+  const items = (bd.media?.data || []).map((m: any): ContentItem => {
+    const isReel = m.media_product_type === 'REELS' || m.media_type === 'VIDEO';
+    const isCarousel = m.media_type === 'CAROUSEL_ALBUM';
+    const kids: any[] = m.children?.data || [];
     return {
       platform: 'instagram',
       kind: 'organic',
       source: 'instagram',
-      external_id: String(p.code || p.id || p.pk),
-      url: p.url || (p.code ? `https://www.instagram.com/p/${p.code}/` : null),
-      caption: clean(p.caption?.text),
+      external_id: String(m.permalink?.match(/\/(p|reel)\/([^/]+)/)?.[2] || m.id),
+      url: m.permalink || null,
+      caption: clean(m.caption),
       media_type: isReel ? 'video' : isCarousel ? 'carousel' : 'image',
-      thumbnail_url: cand?.url || p.display_uri || p.carousel_media?.[0]?.image_versions2?.candidates?.[0]?.url || null,
-      media_url: p.video_versions?.[0]?.url || null,
-      carousel: Array.isArray(p.carousel_media) ? p.carousel_media.slice(0, 10).map((c: any) => ({ thumbnail_url: c.image_versions2?.candidates?.[0]?.url || null, media_url: c.video_versions?.[0]?.url || null })) : [],
-      aspect: isReel ? '9:16' : ratio(p.original_width || cand?.width, p.original_height || cand?.height) || '4:5',
-      posted_at: unix(p.taken_at) || unix(p.created_at),
-      metrics: {
-        likes: num(p.like_count),
-        comments: num(p.comment_count),
-        views: num(p.play_count) ?? num(p.ig_play_count) ?? num(p.view_count),
-        format: isReel ? 'reel' : isCarousel ? 'carousel' : 'image',
-      },
+      thumbnail_url: m.thumbnail_url || (isReel ? null : m.media_url) || kids[0]?.thumbnail_url || kids[0]?.media_url || null,
+      media_url: isReel ? m.media_url || null : null,
+      carousel: kids.slice(0, 10).map((k) => ({ thumbnail_url: k.thumbnail_url || (k.media_type === 'VIDEO' ? null : k.media_url) || null, media_url: k.media_type === 'VIDEO' ? k.media_url : null })),
+      aspect: isReel ? '9:16' : '4:5',
+      posted_at: unix(m.timestamp),
+      metrics: { likes: num(m.like_count), comments: num(m.comments_count), views: num(m.view_count), format: isReel ? 'reel' : isCarousel ? 'carousel' : 'image' },
     };
   });
+  return { items, profile: { name: bd.name, picture: bd.profile_picture_url, followers: bd.followers_count, posts: bd.media_count } };
 }
 
 // ─── Facebook page posts ───────────────────────────────────────────────────
@@ -276,32 +315,56 @@ export async function facebookPosts(pageUrlOrId: string): Promise<ContentItem[]>
 export async function tiktokVideos(handle: string): Promise<ContentItem[]> {
   const j = await sc('/v3/tiktok/profile/videos', { handle, sort_by: 'latest' });
   const h = handle.replace(/^@/, '');
-  return (j.aweme_list || []).map((v: any): ContentItem => {
-    const st = v.statistics || {};
-    const cover = v.video?.cover?.url_list?.[0] || v.video?.origin_cover?.url_list?.[0] || v.video?.dynamic_cover?.url_list?.[0] || null;
-    const isPhoto = Boolean(v.image_post_info);
-    return {
-      platform: 'tiktok',
-      kind: 'organic',
-      source: 'tiktok',
-      external_id: String(v.aweme_id),
-      url: v.share_url?.split('?')[0] || `https://www.tiktok.com/@${h}/video/${v.aweme_id}`,
-      caption: clean(v.desc),
-      media_type: isPhoto ? 'carousel' : 'video',
-      thumbnail_url: isPhoto ? v.image_post_info?.images?.[0]?.display_image?.url_list?.[0] || cover : cover,
-      media_url: v.video?.play_addr?.url_list?.[0] || null,
-      aspect: '9:16',
-      posted_at: unix(v.create_time),
-      metrics: {
-        views: num(st.play_count),
-        likes: num(st.digg_count),
-        comments: num(st.comment_count),
-        shares: num(st.share_count),
-        saves: num(st.collect_count),
-        promoted: Boolean(v.is_ads || v.commerce_info?.ad_source),
-      },
-    };
-  });
+  return (j.aweme_list || []).map((v: any) => mapTikTokAweme(v, h));
+}
+
+/** TikTok app API item (aweme) */
+export function mapTikTokAweme(v: any, h: string): ContentItem {
+  const st = v.statistics || {};
+  const cover = v.video?.cover?.url_list?.[0] || v.video?.origin_cover?.url_list?.[0] || v.video?.dynamic_cover?.url_list?.[0] || null;
+  const isPhoto = Boolean(v.image_post_info);
+  return {
+    platform: 'tiktok',
+    kind: 'organic',
+    source: 'tiktok',
+    external_id: String(v.aweme_id),
+    url: v.share_url?.split('?')[0] || `https://www.tiktok.com/@${h}/video/${v.aweme_id}`,
+    caption: clean(v.desc),
+    media_type: isPhoto ? 'carousel' : 'video',
+    thumbnail_url: isPhoto ? v.image_post_info?.images?.[0]?.display_image?.url_list?.[0] || cover : cover,
+    media_url: v.video?.play_addr?.url_list?.[0] || null,
+    aspect: '9:16',
+    posted_at: unix(v.create_time),
+    metrics: {
+      views: num(st.play_count),
+      likes: num(st.digg_count),
+      comments: num(st.comment_count),
+      shares: num(st.share_count),
+      saves: num(st.collect_count),
+      promoted: Boolean(v.is_ads || v.commerce_info?.ad_source),
+    },
+  };
+}
+
+/** TikTok web item (the shape tiktok.com loads from /api/post/item_list) */
+export function mapTikTokWebItem(v: any, h: string): ContentItem {
+  const st = v.stats || v.statsV2 || {};
+  const photo = v.imagePost?.images || [];
+  return {
+    platform: 'tiktok',
+    kind: 'organic',
+    source: 'tiktok',
+    external_id: String(v.id),
+    url: `https://www.tiktok.com/@${h}/video/${v.id}`,
+    caption: clean(v.desc),
+    media_type: photo.length ? 'carousel' : 'video',
+    thumbnail_url: v.video?.cover || v.video?.originCover || v.video?.dynamicCover || photo[0]?.imageURL?.urlList?.[0] || null,
+    media_url: v.video?.playAddr || v.video?.downloadAddr || null,
+    carousel: photo.slice(0, 10).map((p: any) => ({ thumbnail_url: p.imageURL?.urlList?.[0] || null })),
+    aspect: '9:16',
+    posted_at: unix(Number(v.createTime)),
+    metrics: { views: num(st.playCount), likes: num(st.diggCount), comments: num(st.commentCount), shares: num(st.shareCount), saves: num(st.collectCount), promoted: Boolean(v.isAd) },
+  };
 }
 
 /*

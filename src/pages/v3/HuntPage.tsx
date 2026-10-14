@@ -326,6 +326,54 @@ function ContentModal({ item, onClose, onAsk }: { item: any; onClose: () => void
   );
 }
 
+/** TikTok creator embed and Facebook Page Plugin: official, free, always live */
+function LiveEmbeds({ tiktok, facebook }: { tiktok?: string | null; facebook?: string | null }) {
+  const ttRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!tiktok || !ttRef.current) return;
+    const h = tiktok.replace(/[^A-Za-z0-9_.]/g, '');
+    ttRef.current.innerHTML = `<blockquote class="tiktok-embed" cite="https://www.tiktok.com/@${h}" data-unique-id="${h}" data-embed-type="creator" style="max-width:100%;min-width:288px;margin:0"><section><a target="_blank" rel="noreferrer" href="https://www.tiktok.com/@${h}">@${h}</a></section></blockquote>`;
+    document.getElementById('zd-tiktok-embed')?.remove();
+    const sc = document.createElement('script');
+    sc.id = 'zd-tiktok-embed';
+    sc.src = 'https://www.tiktok.com/embed.js';
+    sc.async = true;
+    document.body.appendChild(sc);
+  }, [tiktok]);
+  if (!tiktok && !facebook) return null;
+  return (
+    <section className="zhu-embeds" aria-label="Live profiles">
+      {tiktok && (
+        <Card className="zhu-embed">
+          <CardTitle icon={<SocialIcon platform="tiktok" size={18} variant="mark" />} sub="Latest videos, straight from TikTok">
+            Live on TikTok
+          </CardTitle>
+          <div ref={ttRef} className="zhu-embed-body" />
+        </Card>
+      )}
+      {facebook && (
+        <Card className="zhu-embed">
+          <CardTitle icon={<SocialIcon platform="facebook" size={18} variant="mark" />} sub="Latest page posts, straight from Facebook">
+            Live on Facebook
+          </CardTitle>
+          <div className="zhu-embed-body">
+            <iframe
+              title="Facebook page posts"
+              src={`https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(facebook)}&tabs=timeline&width=500&height=640&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false`}
+              width="100%"
+              height="640"
+              style={{ border: 0, overflow: 'hidden', maxWidth: 500 }}
+              scrolling="no"
+              allow="encrypted-media"
+              loading="lazy"
+            />
+          </div>
+        </Card>
+      )}
+    </section>
+  );
+}
+
 function AccountFields({ value, onChange }: { value: any; onChange: (v: any) => void }) {
   const f = (k: string, label: string, platform: string, placeholder: string) => (
     <label className="zhu-acc">
@@ -347,7 +395,6 @@ export default function HuntPage() {
   const demo = useDemoMode();
   const navigate = useNavigate();
   const [competitors, setCompetitors] = useState<any[]>([]);
-  const [providerReady, setProviderReady] = useState(true);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [feed, setFeed] = useState<any>(null);
@@ -387,7 +434,6 @@ export default function HuntPage() {
       const j = await res.json();
       if (j.success) {
         setCompetitors(j.data || []);
-        setProviderReady(j.provider_configured !== false);
         setSelectedId((id) => (id && j.data.some((c: any) => c.id === id) ? id : j.data[0]?.id || null));
         if (!j.data?.length) setShowForm(true);
       }
@@ -408,10 +454,7 @@ export default function HuntPage() {
       try {
         const res = await fetch(`/api/v3/competitors/${id}/content`, { headers: await headers() });
         const j = await res.json();
-        if (j.success) {
-          setFeed(j);
-          setProviderReady(j.provider_configured !== false);
-        }
+        if (j.success) setFeed(j);
       } finally {
         setFeedLoading(false);
       }
@@ -696,10 +739,10 @@ export default function HuntPage() {
                   </Card>
                 )}
 
-                {!providerReady && !demo.isActive && (
+                {!demo.isActive && feed?.setup && !feed.setup.provider && !feed.setup.discovery && !feed.setup.official_ads && !feed.setup.collector_at && !items.length && (
                   <div className="zhu-banner">
                     <Info size={16} />
-                    <span>Live content is not connected yet. Set SCRAPECREATORS_API_KEY in the server environment to pull ads and posts from every platform.</span>
+                    <span>Ads and posts show up here after the next collection run. Meanwhile the live profiles below come straight from TikTok and Facebook.</span>
                   </div>
                 )}
 
@@ -718,7 +761,7 @@ export default function HuntPage() {
                     </div>
                     <div>
                       <small>Longest running ad</small>
-                      <strong>{s.longest_running ? `${s.longest_running.run_days} days` : 'n/a'}</strong>
+                      <strong>{s.longest_running ? `${s.longest_running.run_days} days` : 'None yet'}</strong>
                       <span>Long runners are usually winners</span>
                     </div>
                     <div>
@@ -728,7 +771,7 @@ export default function HuntPage() {
                     </div>
                     <div>
                       <small>Main ad format</small>
-                      <strong className="zhu-cap">{topFormat || 'n/a'}</strong>
+                      <strong className="zhu-cap">{topFormat || 'None yet'}</strong>
                       <span>Among active ads</span>
                     </div>
                   </section>
@@ -846,11 +889,16 @@ export default function HuntPage() {
                             ? 'Checking the Meta, TikTok and LinkedIn ad libraries and the brand accounts. This takes up to a minute.'
                             : source || kind !== 'all'
                               ? 'No content for this filter. Try another platform or show all.'
-                              : 'Press Refresh to pull the latest content, or add the brand accounts so Zie knows where to look.'}
+                              : 'Saved ads and posts appear after the next collection run. Add the brand accounts with Edit accounts so Zie knows where to look.'}
                         </p>
                       </div>
                     </div>
                   </Card>
+                )}
+
+                {/* Official live embeds: always current, loaded by the viewer's browser */}
+                {kind !== 'ad' && (!source || source === 'tiktok' || source === 'facebook') && (
+                  <LiveEmbeds tiktok={!counts.tiktok && (!source || source === 'tiktok') ? fc.tiktok_username : null} facebook={!counts.facebook && (!source || source === 'facebook') ? fc.facebook_url : null} />
                 )}
 
                 {/* Website audit (secondary) */}

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { NO_EM_DASH_RULE } from "../utils/noEmDash.js";
 import { computeOverview, type Period } from "../monitor/overview.js";
 import { syncCompetitorContent, proxied, mediaAllowed } from "../competitors/sync.js";
-import { providerConfigured } from "../competitors/sources.js";
+import { discoveryConfigured, providerConfigured } from "../competitors/sources.js";
 import { createHmac } from "crypto";
 import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import {
@@ -4430,9 +4430,15 @@ apiV3Router.get("/competitors/:id/content", requireAuth, async (req: any, res) =
     for (const a of ads.filter((x: any) => x.is_active)) byFormat[a.media_type] = (byFormat[a.media_type] || 0) + 1;
     const longest = ads.filter((a: any) => a.is_active && a.metrics?.run_days).sort((a: any, b: any) => b.metrics.run_days - a.metrics.run_days)[0];
     const eng = (i: any) => (i.metrics?.likes || 0) + (i.metrics?.comments || 0) + (i.metrics?.shares || 0);
+    const collectorAt = Object.values(comp.content_sync_status || {})
+      .filter((st: any) => st?.via === "collector")
+      .map((st: any) => st.at)
+      .sort()
+      .pop() || null;
     res.json({
       success: true,
       provider_configured: providerConfigured(),
+      setup: { provider: providerConfigured(), discovery: discoveryConfigured(), official_ads: Boolean(process.env.FACEBOOK_ACCESS_TOKEN), collector_at: collectorAt },
       competitor: { ...comp, logo_url: proxied(comp.logo_url) },
       summary: {
         active_ads: ads.filter((a: any) => a.is_active).length,
