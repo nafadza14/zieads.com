@@ -10,6 +10,7 @@ import { getDecryptedToken } from "../utils/tokenHelper.js";
 import * as igApi from "../utils/instagramApi.js";
 import { scrapeUrl } from "../scraper.js";
 import { stripDashes } from "../utils/noEmDash.js";
+import { computeOverview } from "../monitor/overview.js";
 
 export interface ToolContext {
   userId: string;
@@ -46,6 +47,24 @@ const trim = (s: any, n = 220) => (typeof s === "string" ? (s.length > n ? s.sli
 const platformArg = {
   type: "string",
   description: "Optional platform filter, for example instagram, tiktok, linkedin. Omit for all platforms.",
+};
+
+// ─── 0. Monitoring overview (what Zie has been watching) ───────────────────
+const getMonitoringOverview: AgentTool = {
+  name: "get_monitoring_overview",
+  label: "Checking what happened",
+  description:
+    "The always-on monitoring summary for the last 24h, 3d, 7d or 30d versus the previous period: comments (count, unanswered, overdue, buying questions, sentiment, recurring words), response rate and median reply time, follower change, reach, interactions, engagement rate, posts, top posts, drafts and failed posts, channel health and a timeline of what changed. Use it first for any 'what happened', 'how many comments', 'last 3 days' or 'this month' question.",
+  parameters: {
+    type: "object",
+    properties: { period: { type: "string", enum: ["24h", "3d", "7d", "30d"], description: "Default 24h" } },
+    additionalProperties: false,
+  },
+  async run(input, { userId }) {
+    const o: any = await computeOverview(userId, (input?.period as any) || "24h");
+    return { ...o, events: o.events.slice(0, 15), series: undefined, briefing: o.briefing ? { date: o.briefing.briefing_date, summary: o.briefing.summary } : null };
+  },
+  summarize: (r) => `${r.period}: ${r.kpis.comments.value} comments, ${r.kpis.unanswered.value} unanswered, ${r.kpis.posts.value} posts`,
 };
 
 // ─── 1. Connected accounts ─────────────────────────────────────────────────
@@ -792,6 +811,7 @@ const addCompetitor: AgentTool = {
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
+  getMonitoringOverview,
   listConnectedAccounts,
   getAccountMetrics,
   getPostPerformance,

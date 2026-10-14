@@ -16,6 +16,10 @@
     {
       "path": "/api/v3/cron/sync-instagram-comments",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/v3/monitor/tick",
+      "schedule": "15 2 * * *"
     }
   ],
   "rewrites": [

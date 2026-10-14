@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {  PlayCircle, Send,  ArrowRight,  Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine, ArrowUpRight, Plus, Play } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
 import ZieAdsLogo from '../components/ZieAdsLogo';
@@ -823,6 +823,18 @@ export default function AgentChat() {
 
     await runAgentStream({ mode: modeId, data: analysisContext }, () => setRunningMode(null));
   };
+
+  // Prompts handed over from other screens (AI Analyst "Do it", "Draft replies with Zie") run once on arrival
+  const location = useLocation();
+  const handoffDone = useRef(false);
+  useEffect(() => {
+    const handoff = (location.state as any)?.prompt;
+    if (!handoff || handoffDone.current || loadingConvs) return;
+    handoffDone.current = true;
+    navigate(location.pathname, { replace: true, state: null });
+    sendMessage(String(handoff));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, loadingConvs]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }

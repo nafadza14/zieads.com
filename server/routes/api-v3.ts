@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { NO_EM_DASH_RULE } from "../utils/noEmDash.js";
+import { computeOverview, type Period } from "../monitor/overview.js";
 import { createHmac } from "crypto";
 import { getUserIdFromRequest, supabaseAdmin } from "../supabaseServer.js";
 import {
@@ -4520,6 +4521,82 @@ apiV3Router.post("/jobs/run", async (req, res) => {
     }
 
     res.json({ success: true, briefingsGenerated: briefingCount, competitorAuditsRun: competitorAuditsCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── AI Analyst: always-on monitoring ─────────────────────────────────────────
+// One monitoring pass for one user: pull fresh comments, posts and insights from
+// every connected channel, then look for anomalies. Safe to call often; each
+// step is best effort so one broken channel never stops the others.
+async function monitorUser(userId: string, reason: string) {
+  const started = Date.now();
+  const { data: conns } = await supabaseAdmin.from("social_connections").select("platform").eq("user_id", userId).eq("is_active", true);
+  const platforms = new Set((conns || []).map((c: any) => c.platform));
+  const steps: Promise<any>[] = [];
+  if (platforms.has("instagram")) {
+    steps.push(syncUserInbox(userId, reason === "manual_refresh" ? "manual_refresh" : "cron_polling").catch((e: any) => console.error("[Monitor] inbox", e.message)));
+    steps.push(syncAll(userId).catch((e: any) => console.error("[Monitor] instagram", e.message)));
+  }
+  if (platforms.has("tiktok")) steps.push(syncTikTokInsightsForUser(userId).catch((e: any) => console.error("[Monitor] tiktok", e.message)));
+  await Promise.all(steps);
+  await detectAnomalies(userId).catch((e: any) => console.error("[Monitor] anomalies", e.message));
+  return { platforms: [...platforms], ms: Date.now() - started };
+}
+
+apiV3Router.get("/analyst/overview", requireAuth, async (req: any, res) => {
+  const period = (["24h", "3d", "7d", "30d"].includes(String(req.query.period)) ? req.query.period : "24h") as Period;
+  try {
+    res.json({ success: true, data: await computeOverview(req.userId, period) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Sync now (button) and the automatic refresh when the dashboard opens.
+// Skips work if this user's channels were synced in the last few minutes.
+apiV3Router.post("/analyst/sync", requireAuth, async (req: any, res) => {
+  try {
+    const force = req.body?.force === true;
+    const { data: conns } = await supabaseAdmin.from("social_connections").select("last_synced_at").eq("user_id", req.userId).eq("is_active", true);
+    if (!conns?.length) return res.json({ success: true, skipped: "no_connections" });
+    const newest = Math.max(...conns.map((c: any) => (c.last_synced_at ? new Date(c.last_synced_at).getTime() : 0)));
+    const minGap = force ? 2 * 60 * 1000 : 15 * 60 * 1000;
+    if (Date.now() - newest < minGap) return res.json({ success: true, skipped: "fresh", last_sync_at: new Date(newest).toISOString() });
+    const result = await monitorUser(req.userId, force ? "manual_refresh" : "auto_refresh");
+    res.json({ success: true, ...result, last_sync_at: new Date().toISOString() });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Called by a scheduler every 15 to 60 minutes (see docs/ai-analyst-monitoring.md).
+// Processes the users whose data is oldest first, within the function time limit.
+apiV3Router.all("/monitor/tick", async (req: any, res) => {
+  const secret = process.env.CRON_SECRET || process.env.V3_CRON_SECRET || (process.env.NODE_ENV === "production" ? "" : "local_secret");
+  if (!secret) return res.status(503).json({ error: "CRON_SECRET is not configured" });
+  if (req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ error: "Unauthorized" });
+  const budget = Date.now() + 50 * 1000;
+  const staleMinutes = Number(req.query.stale_minutes) || 30;
+  try {
+    const { data: rows } = await supabaseAdmin.from("social_connections").select("user_id, last_synced_at").eq("is_active", true);
+    const oldest: Record<string, number> = {};
+    for (const r of rows || []) {
+      const t = r.last_synced_at ? new Date(r.last_synced_at).getTime() : 0;
+      oldest[r.user_id] = Math.min(oldest[r.user_id] ?? Infinity, t);
+    }
+    const due = Object.entries(oldest)
+      .filter(([, t]) => Date.now() - t > staleMinutes * 60 * 1000)
+      .sort((a, b) => a[1] - b[1])
+      .map(([u]) => u);
+    const done: string[] = [];
+    for (const userId of due) {
+      if (Date.now() > budget) break;
+      await monitorUser(userId, "monitor_tick").catch((e: any) => console.error("[Monitor tick]", userId, e.message));
+      done.push(userId);
+    }
+    res.json({ success: true, due: due.length, processed: done.length, remaining: due.length - done.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
