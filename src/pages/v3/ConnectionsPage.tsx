@@ -10,7 +10,7 @@ import {
   PageHeader,
   Pill,
   Skeleton,
-  TextRollButton,
+  Button,
 } from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
@@ -392,8 +392,7 @@ export default function ConnectionsPage() {
           ) : redirectingId === id ? (
             <DarkButton loading>Connecting</DarkButton>
           ) : (
-            <TextRollButton
-              text={`Connect ${name}`}
+            <Button variant="soft" full icon={<Link2 />}
               onClick={async () => {
                 if (demo.isActive) {
                   alert("Please exit Demo Mode to connect real accounts.");
@@ -410,8 +409,7 @@ export default function ConnectionsPage() {
                 } else {
                   setPlatformToConnect(id);
                 }
-              }}
-            />
+              }}>{`Connect ${name}`}</Button>
           )}
         </div>
       </Card>

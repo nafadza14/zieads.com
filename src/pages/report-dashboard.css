@@ -115,9 +115,9 @@
 .zrd-callout.is-good svg { color: var(--zd-good); }
 
 .zrd-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
-.zrd-actions .zd-btn-dark { max-width: 100%; }
+.zrd-actions .zd-btn { max-width: 100%; }
 @media (max-width: 480px) {
-  .zrd-actions .zd-btn-dark { white-space: normal; text-align: left; }
+  .zrd-actions .zd-btn { white-space: normal; text-align: left; }
 }
 
 /* Platform rows */

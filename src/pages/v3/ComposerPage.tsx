@@ -11,7 +11,7 @@ import {
   PageHeader,
   Pill,
   Skeleton,
-  TextRollButton,
+  Button,
 } from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
@@ -1138,12 +1138,9 @@ export default function ComposerPage() {
               {submitting ? (
                 <DarkButton loading>Scheduling</DarkButton>
               ) : (
-                <TextRollButton
-                  text={ctaLabel}
-                  variant={demo.isActive ? 'dark' : 'orange'}
+                <Button size="lg" icon={<Send />}
                   onClick={() => handleSubmit()}
-                  disabled={submitting}
-                />
+                  disabled={submitting}>{ctaLabel}</Button>
               )}
               {submitting ? (
                 <LoadingState text="Sending to your channels" inline />

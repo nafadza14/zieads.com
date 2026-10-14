@@ -19,3 +19,7 @@
 - Social platforms ALWAYS use their official logos via `SocialIcon` (brand marks in `src/components/v3/brandMarks.ts`). Never replace them with generic or Noun Project icons.
 - UI icons go through `ZIcon` (semantic names in `src/components/icons/icon-terms.json`) and render as lucide line icons. A Noun Project icon is only used after it is reviewed and its key is added to `src/components/icons/nounApproved.ts`.
 - The Zie character (`ZieAvatar`) is the AI Agent's avatar. In menus and tabs the agent uses a line icon.
+
+## Buttons
+- Product UI (dashboard, AI Agent, settings) uses the compact `Button` from `src/components/v3/ui.tsx` (rounded 8px, variants primary, soft, secondary, ghost, danger). One primary per view.
+- The pill `TextRollButton` is only for marketing surfaces: landing page, auth, onboarding modal, pricing, quick scan result. See `docs/button-guidelines.md`.

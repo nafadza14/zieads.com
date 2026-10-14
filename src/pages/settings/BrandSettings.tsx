@@ -8,7 +8,7 @@ import ZIcon from '../../components/icons/ZIcon';
 import { supabase } from '../../lib/supabaseClient';
 import ZieAvatar from '../../components/ZieAvatar';
 import SocialIcon from '../../components/v3/SocialIcon';
-import { TextRollButton } from '../landing/ui';
+import { Button } from '../../components/v3/ui';
 import './brand-settings.css';
 
 type Product = { name?: string; price?: string; note?: string };
@@ -520,7 +520,7 @@ export default function BrandSettings() {
                 </button>
               ))}
             </nav>
-            <TextRollButton text={saving ? 'Saving...' : 'Save brand profile'} onClick={save} disabled={saving} className="bs-save" />
+            <Button icon={<Check />} onClick={save} loading={saving} full size="lg" className="bs-save">{saving ? 'Saving...' : 'Save brand profile'}</Button>
             {saved && (
               <p className="bs-saved">
                 <Check size={13} /> Saved. Zie uses it from your next message.

@@ -243,7 +243,7 @@ export default function V3Layout({ children }: Props) {
             <span>
               <strong>Demo mode.</strong> You are exploring sample data. Connect your accounts to see your own insights.
             </span>
-            <button className="zd-btn-ghost" onClick={handleExitDemo} style={{ padding: '5px 12px', fontSize: 12 }}>
+            <button className="zd-btn is-secondary is-sm" onClick={handleExitDemo}>
               Exit demo
             </button>
           </div>

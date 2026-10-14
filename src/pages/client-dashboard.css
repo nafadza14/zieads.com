@@ -7,13 +7,13 @@
 .zcd-command { display: flex; align-items: center; gap: 8px; padding: 6px; }
 .zcd-command .zd-select { width: auto; flex-shrink: 0; font-family: var(--zd-mono); font-size: 13px; border-radius: 999px; background: var(--zd-gray); border-color: transparent; cursor: pointer; padding: 10px 14px; }
 .zcd-command .zd-input { flex: 1; min-width: 0; border-color: transparent; background: transparent; font-size: 15px; }
-.zcd-command .zd-btn-dark { flex-shrink: 0; }
+.zcd-command .zd-btn { flex-shrink: 0; }
 .zcd-command-hint { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-left: 6px; font-size: 12.5px; color: var(--zd-ink-3); }
 @media (max-width: 640px) {
   .zcd-command { flex-wrap: wrap; }
   .zcd-command .zd-select { width: 100%; }
   .zcd-command .zd-input { flex-basis: 100%; border-color: var(--zd-line); background: #fff; }
-  .zcd-command .zd-btn-dark { width: 100%; }
+  .zcd-command .zd-btn { width: 100%; }
 }
 
 /* Generic vertical stack with staggered children */

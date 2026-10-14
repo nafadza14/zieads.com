@@ -402,17 +402,6 @@
 .zd-empty-action { margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 
 /* Buttons */
-.zd-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--zd-line); background: #fff; color: var(--zd-ink); border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.zd-btn-ghost:hover:not(:disabled) { border-color: var(--zd-ink); transform: translateY(-1px); }
-.zd-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-.zd-btn-ghost svg { width: 14px; height: 14px; }
-.zd-btn-dark { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; border: none; border-radius: 999px; background: var(--zd-ink); color: #fff; padding: 6px 6px 6px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.zd-btn-dark:hover:not(:disabled) { background: var(--zd-accent); }
-.zd-btn-dark:disabled { opacity: 0.55; cursor: not-allowed; }
-.zd-btn-dark.is-loading { background: var(--zd-accent); padding: 10px 16px; justify-content: center; opacity: 1; }
-.zd-btn-label { display: inline-flex; align-items: center; gap: 6px; }
-.zd-btn-arrow { width: 26px; height: 26px; border-radius: 50%; background: #fff; color: var(--zd-ink); display: flex; align-items: center; justify-content: center; transform: rotate(-45deg); transition: transform 0.5s var(--zd-ease), color 0.3s; }
-.zd-btn-dark:hover:not(:disabled) .zd-btn-arrow { transform: rotate(0); color: var(--zd-accent); }
 .zd-icon-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--zd-line); background: #fff; color: var(--zd-ink-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .zd-icon-btn:hover:not(:disabled) { border-color: var(--zd-ink); color: var(--zd-ink); }
 .zd-icon-btn svg { width: 15px; height: 15px; }

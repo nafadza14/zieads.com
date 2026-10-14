@@ -16,7 +16,7 @@ import {
   Pill,
   Skeleton,
   StatCard,
-  TextRollButton,
+  Button,
 } from '../../components/v3/ui';
 import {
   Target,
@@ -256,7 +256,7 @@ export default function HuntPage() {
                     <LoadingState text="Adding" inline />
                   </span>
                 ) : (
-                  <TextRollButton type="submit" text="Track site" disabled={addingCompetitor} />
+                  <Button icon={<Plus />} type="submit" disabled={addingCompetitor}>Track site</Button>
                 )}
               </span>
             </div>

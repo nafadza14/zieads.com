@@ -54,8 +54,8 @@
 }
 .zcn-warn svg { margin-top: 2px; flex-shrink: 0; }
 
-.zcn-foot .zd-btn-ghost { width: 100%; justify-content: center; }
-.zcn-foot .zd-btn-dark { width: 100%; }
+.zcn-foot .zd-btn { width: 100%; justify-content: center; }
+.zcn-foot .zd-btn { width: 100%; }
 .zcn-foot > button, .zcn-foot > a { width: 100%; }
 
 /* Modal */

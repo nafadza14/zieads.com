@@ -672,5 +672,5 @@
 .zco-draft-text strong { font-size: 14px; color: #111; }
 .zco-draft-text span { font-size: 13px; color: #6b6b6b; }
 .zco-draft-actions { display: flex; align-items: center; gap: 8px; }
-.zco-draft-delete { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: #b91c1c; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.zco-draft-delete { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #b91c1c; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .zco-draft-delete:hover { background: #fef2f2; }

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Check, Filter, Lightbulb, Palette, Search, Target } from 'lucide-react';
+import { BarChart3, Check, Filter, Lightbulb, Palette, Search, Target, ArrowLeft } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { supabase } from '../lib/supabaseClient';
-import { TextRollButton } from './landing/ui';
+import { Button } from '../components/v3/ui';
 import './audit-flow.css';
 
 interface Props {
@@ -243,7 +243,7 @@ export default function AuditProgress({ businessContext }: Props) {
           <div className="zf-card zf-error zf-rise">
             <strong>Something went wrong</strong>
             <p>{errorMsg}</p>
-            <TextRollButton text="Back to home" variant="dark" onClick={() => navigate('/')} />
+            <Button variant="secondary" icon={<ArrowLeft />} onClick={() => navigate('/')}>Back to home</Button>
           </div>
         )}
       </main>

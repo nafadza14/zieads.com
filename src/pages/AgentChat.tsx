@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {  PlayCircle, Send,  ArrowRight,  Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine } from 'lucide-react';
+import {  PlayCircle, Send,  ArrowRight,  Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine, ArrowUpRight, Plus, Play } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
@@ -12,7 +12,7 @@ import { useCreditStore } from '../lib/creditStore';
 import CreditBadge from '../components/CreditBadge';
 import FeatureGateModal from '../components/FeatureGateModal';
 import V3Layout from '../components/v3/V3Layout';
-import { TextRollButton } from './landing/ui';
+import { Button } from '../components/v3/ui';
 import './agent-chat.css';
 import ZieAvatar from '../components/ZieAvatar';
 import ArtifactDeck, { type AgentArtifact } from './agent/ArtifactCards';
@@ -862,14 +862,12 @@ export default function AgentChat() {
             <button className="za-ghost-btn" onClick={() => navigate('/clients')}>
               <ArrowRight size={14} style={{ transform: 'rotate(180deg)' }} /> Back to dashboard
             </button>
-            <TextRollButton
-              text="New conversation"
+            <Button icon={<Plus />}
               className="za-new-btn"
               onClick={() => {
                 startNew();
                 setSidebarOpen(false);
-              }}
-            />
+              }}>New conversation</Button>
           </div>
 
           <div className="za-conv-list">
@@ -1069,7 +1067,7 @@ export default function AgentChat() {
                       <strong>Monthly message limit reached</strong>
                       <span>You have used all {usage.limit} messages on your current plan.</span>
                     </div>
-                    <TextRollButton text="Upgrade plan" onClick={() => navigate('/pricing')} />
+                    <Button icon={<ArrowUpRight />} onClick={() => navigate('/pricing')}>Upgrade plan</Button>
                   </div>
                 ) : (
                   <div className={`za-composer ${loading ? 'is-loading' : ''} ${isListening ? 'is-listening' : ''}`}>
@@ -1207,23 +1205,9 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun, index }: {
       <div className="za-mode-label">{useCase.label}</div>
       <div className="za-mode-meta">{useCase.shortDesc}</div>
       <p className="za-mode-desc">{useCase.prompt.slice(0, 110)}...</p>
-      <button className="za-mode-run" onClick={onRun} disabled={isDisabled}>
-        {isRunning ? (
-          <>
-            <SpinnerDots /> Running analysis
-          </>
-        ) : (
-          <>
-            <span className="za-roll">
-              <span>Run analysis</span>
-              <span aria-hidden="true">Run analysis</span>
-            </span>
-            <span className="za-mode-run-arrow">
-              <ArrowRight size={13} />
-            </span>
-          </>
-        )}
-      </button>
+      <Button variant="soft" size="sm" className="za-mode-go" onClick={onRun} disabled={isDisabled} loading={isRunning} icon={<Play />}>
+        {isRunning ? 'Running analysis' : 'Run analysis'}
+      </Button>
     </div>
   );
 }

@@ -21,8 +21,7 @@ import {
   
   ListChecks,
   Wrench,
-  Gauge,
-} from 'lucide-react';
+  Gauge, Download } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
 import V3Layout from '../components/v3/V3Layout';
 import {
@@ -38,7 +37,7 @@ import {
   Pill,
   SegTabs,
   Skeleton,
-  TextRollButton,
+  Button,
 } from '../components/v3/ui';
 import SocialIcon from '../components/v3/SocialIcon';
 import NounIcon from '../components/NounIcon';
@@ -609,7 +608,7 @@ export default function ReportDashboard() {
             <GhostButton onClick={() => setShowBrandingModal(true)}>
               <Settings /> Settings
             </GhostButton>
-            <TextRollButton text="Export PDF" onClick={() => window.print()} />
+            <Button icon={<Download />} onClick={() => window.print()}>Export PDF</Button>
           </>
         }
       />

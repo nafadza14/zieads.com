@@ -96,7 +96,7 @@
   transition: color 0.25s, gap 0.35s var(--za-ease);
 }
 .za-ghost-btn:hover { color: var(--za-ink); gap: 9px; }
-.za-new-btn { width: 100%; justify-content: space-between; }
+.za-new-btn { width: 100%; }
 
 .za-conv-list { flex: 1; overflow-y: auto; padding: 8px 10px; }
 .za-eyebrow-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px 8px; }
@@ -1118,7 +1118,7 @@
 .za-art-edit textarea:focus, .za-art-edit input:focus, .za-art-reply-input:focus { border-color: var(--za-accent); box-shadow: 0 0 0 3px rgba(242, 101, 34, 0.12); }
 .za-art-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .za-art-btn {
-  display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 8px;
   border: 1px solid var(--za-line); background: #fff; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--za-ink);
   cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.3s var(--za-ease);
 }
@@ -1155,3 +1155,6 @@
 .za-eyebrow-pill .zie-avatar { margin: -4px 0 -4px -6px; }
 .za-zie-name { font-weight: 700; color: var(--za-accent); margin-right: 2px; }
 .za-powered .zie-avatar { margin-right: 2px; }
+
+/* Analysis mode card action (app button) */
+.za-mode-card .za-mode-go { margin-top: auto; align-self: flex-start; }

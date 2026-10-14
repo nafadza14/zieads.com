@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Check, CreditCard, Copy, Gift, Calendar,  Target, BarChart3, LineChart, History, Bell, Briefcase, MessageSquare, Code2, LayoutGrid } from 'lucide-react';
+import { ArrowRight, Check, CreditCard, Copy, Gift, Calendar,  Target, BarChart3, LineChart, History, Bell, Briefcase, MessageSquare, Code2, LayoutGrid, ArrowUpRight, ScanSearch } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
 import { supabase } from '../lib/supabaseClient';
 import NounIcon from '../components/NounIcon';
@@ -22,7 +22,7 @@ import {
   Pill,
   SegTabs,
   Skeleton,
-  TextRollButton,
+  Button,
 } from '../components/v3/ui';
 import './client-dashboard.css';
 
@@ -537,8 +537,7 @@ export default function ClientDashboard({ reportData }: Props) {
                   ))}
                 </div>
                 <div>
-                  <TextRollButton
-                    text="Run full 6 dimension audit"
+                  <Button icon={<ScanSearch />}
                     onClick={() => {
                       localStorage.setItem('zieads_businessContext', JSON.stringify({
                         url: skillResult.data.url,
@@ -546,8 +545,7 @@ export default function ClientDashboard({ reportData }: Props) {
                         auditType: 'full'
                       }));
                       window.location.href = '/audit/progress';
-                    }}
-                  />
+                    }}>Run full 6 dimension audit</Button>
                 </div>
               </div>
             ) : skillResult.skillId === 'copy' ? (
@@ -758,7 +756,7 @@ export default function ClientDashboard({ reportData }: Props) {
                 icon={<Target size={22} />}
                 title="No audits yet"
                 body="Paste any website URL above and run your first AI audit. You will get a full paid ads readiness score across 6 dimensions."
-                action={<TextRollButton text="Run your first audit" onClick={focusCommand} />}
+                action={<Button icon={<ScanSearch />} onClick={focusCommand}>Run your first audit</Button>}
               />
             ))}
 
@@ -951,7 +949,7 @@ export default function ClientDashboard({ reportData }: Props) {
                     Are you an agency or content creator? Earn a <strong>30% recurring commission</strong> on all paid plans for the first 12 months.
                   </p>
                   <div>
-                    <TextRollButton text="Register as affiliate" onClick={() => window.open('https://stripe.com/', '_blank')} />
+                    <Button icon={<ArrowUpRight />} onClick={() => window.open('https://stripe.com/', '_blank')}>Register as affiliate</Button>
                   </div>
                 </div>
               </Card>

@@ -17,7 +17,7 @@ import {
   PageHeader,
   Pill,
   Skeleton,
-  TextRollButton,
+  Button,
   WordReveal,
 } from '../../components/v3/ui';
 import SocialIcon from '../../components/v3/SocialIcon';
@@ -34,8 +34,7 @@ import {
   MessageSquare,
   Search,
   Bell,
-  Radio,
-} from 'lucide-react';
+  Radio, RefreshCw } from 'lucide-react';
 import ZIcon from '../../components/icons/ZIcon';
 import './analyst.css';
 
@@ -184,7 +183,7 @@ export default function AnalystPage() {
       body: 'Link Instagram, TikTok and LinkedIn so the agent can start watching.',
       done: hasConnections,
       primary: true,
-      action: <TextRollButton text="Connect" onClick={() => navigate('/connections')} />,
+      action: <Button icon={<Link2 />} onClick={() => navigate('/connections')}>Connect</Button>,
     },
     {
       key: 'audit',
@@ -223,7 +222,7 @@ export default function AnalystPage() {
         subtitle={todayStr}
         actions={
           hasConnections ? (
-            <TextRollButton text={loading ? 'Compiling' : 'Refresh briefing'} onClick={triggerOnDemandBriefing} disabled={loading} />
+            <Button icon={<RefreshCw />} onClick={triggerOnDemandBriefing} loading={loading}>{loading ? 'Compiling' : 'Refresh briefing'}</Button>
           ) : undefined
         }
       />
@@ -305,14 +304,14 @@ export default function AnalystPage() {
             icon={<Link2 size={22} />}
             title="Connect your marketing channels"
             body="To generate your daily intelligence, connect at least one organic social account or upload paid advertising performance spreadsheets."
-            action={<TextRollButton text="Go to Connections" onClick={() => navigate('/connections')} />}
+            action={<Button icon={<Link2 />} onClick={() => navigate('/connections')}>Go to Connections</Button>}
           />
         ) : !briefing ? (
           <EmptyState
             icon={<ZIcon name="briefing" size={22} />}
             title="Your first briefing is ready to compile"
             body="Your accounts are connected and initial baselines are analyzed. Generate your daily marketing report below."
-            action={<TextRollButton text="Compile briefing" onClick={triggerOnDemandBriefing} />}
+            action={<Button icon={<RefreshCw />} onClick={triggerOnDemandBriefing}>Compile briefing</Button>}
           />
         ) : (
           <div className="zan-layout" style={{ gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 300px' }}>

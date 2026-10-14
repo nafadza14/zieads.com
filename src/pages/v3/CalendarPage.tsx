@@ -11,7 +11,7 @@ import {
   Pill,
   SegTabs,
   Skeleton,
-  TextRollButton,
+  Button,
 } from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
@@ -405,7 +405,7 @@ export default function CalendarPage() {
         title="Content calendar"
         subtitle="Plan, review and coordinate every scheduled and published post in one view."
         actions={
-          <TextRollButton text="Create post" onClick={() => navigate('/composer')} />
+          <Button icon={<Plus />} onClick={() => navigate('/composer')}>Create post</Button>
         }
       />
 
@@ -501,7 +501,7 @@ export default function CalendarPage() {
                       icon={<CalendarIcon size={22} />}
                       title="Nothing planned this month"
                       body="Schedule a post and it will show up here."
-                      action={<TextRollButton text="Create post" onClick={() => navigate('/composer')} />}
+                      action={<Button icon={<Plus />} onClick={() => navigate('/composer')}>Create post</Button>}
                     />
                   </div>
                 ) : (

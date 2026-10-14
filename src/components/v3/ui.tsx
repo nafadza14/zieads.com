@@ -7,6 +7,7 @@
 import React, { CSSProperties, ReactNode, useEffect, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import ZIcon from '../icons/ZIcon';
+import './button.css';
 import ZieAvatar from '../ZieAvatar';
 export { TextRollButton } from '../../pages/landing/ui';
 
@@ -307,25 +308,76 @@ export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; ti
   );
 }
 
-/** Quiet secondary button (pill outline). */
+/*
+  App buttons (dashboard). Compact rounded rectangles, like the "Featured" badge:
+  marketing pages keep the big pill TextRollButton, the product UI uses these.
+
+  variant
+    primary    orange fill. The ONE main action of a view (Create post, Save, Export)
+    soft       orange tint. Secondary actions inside cards (Run, Approve, Compile)
+    secondary  white with border. Neutral actions (Dashboard, Settings, Cancel)
+    ghost      text only. Low emphasis (Close, Skip, View all)
+    danger     red tint. Destructive (Delete, Disconnect)
+  size: sm 30px, md 34px (default), lg 40px
+*/
+export type ButtonVariant = 'primary' | 'soft' | 'secondary' | 'ghost' | 'danger';
+export function Button({
+  children,
+  onClick,
+  disabled,
+  type = 'button',
+  className = '',
+  variant = 'primary',
+  size = 'md',
+  icon,
+  iconRight,
+  loading = false,
+  title,
+  full = false,
+}: {
+  children?: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  type?: 'button' | 'submit';
+  className?: string;
+  variant?: ButtonVariant;
+  size?: 'sm' | 'md' | 'lg';
+  icon?: ReactNode;
+  iconRight?: ReactNode;
+  loading?: boolean;
+  title?: string;
+  full?: boolean;
+}) {
+  return (
+    <button
+      type={type}
+      title={title}
+      className={`zd-btn is-${variant} is-${size} ${full ? 'is-full' : ''} ${loading ? 'is-loading' : ''} ${className}`}
+      onClick={onClick}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+    >
+      {loading ? <span className="zd-btn-spin" aria-hidden="true" /> : icon}
+      {children !== undefined && children !== null && <span className="zd-btn-text">{children}</span>}
+      {!loading && iconRight}
+    </button>
+  );
+}
+
+/** Neutral secondary action (kept for existing call sites). */
 export function GhostButton({ children, onClick, disabled, type = 'button', className = '' }: { children: ReactNode; onClick?: () => void; disabled?: boolean; type?: 'button' | 'submit'; className?: string }) {
   return (
-    <button type={type} className={`zd-btn-ghost ${className}`} onClick={onClick} disabled={disabled}>
+    <button type={type} className={`zd-btn is-secondary is-md ${className}`} onClick={onClick} disabled={disabled}>
       {children}
     </button>
   );
 }
 
-/** Dark pill with rotating arrow (compact primary inside cards). */
+/** Secondary action inside cards: orange tint (kept for existing call sites). */
 export function DarkButton({ children, onClick, disabled, type = 'button', className = '', loading = false }: { children: ReactNode; onClick?: () => void; disabled?: boolean; type?: 'button' | 'submit'; className?: string; loading?: boolean }) {
   return (
-    <button type={type} className={`zd-btn-dark ${loading ? 'is-loading' : ''} ${className}`} onClick={onClick} disabled={disabled || loading}>
-      <span className="zd-btn-label">{loading ? <LoadingState text="Working" inline /> : children}</span>
-      {!loading && (
-        <span className="zd-btn-arrow">
-          <ArrowRight size={13} />
-        </span>
-      )}
-    </button>
+    <Button type={type} variant="soft" className={className} onClick={onClick} disabled={disabled} loading={loading}>
+      {children}
+    </Button>
   );
 }

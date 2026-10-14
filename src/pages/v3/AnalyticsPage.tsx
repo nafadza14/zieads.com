@@ -13,7 +13,7 @@ import {
   Pill,
   Skeleton,
   StatCard,
-  TextRollButton,
+  Button,
 } from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
@@ -26,8 +26,7 @@ import {
   MessageCircle, 
   Clock, 
   Award,
-  Calendar
-} from 'lucide-react';
+  Calendar, Link2 } from 'lucide-react';
 
 
 export default function AnalyticsPage() {
@@ -134,7 +133,7 @@ export default function AnalyticsPage() {
           <EmptyState
             title="No posts yet"
             body="Connect a channel and publish a post to start seeing analytics."
-            action={<TextRollButton text="Connect an account" onClick={() => navigate('/connections')} />}
+            action={<Button icon={<Link2 />} onClick={() => navigate('/connections')}>Connect an account</Button>}
           />
         ) : (
           <>
@@ -217,7 +216,7 @@ export default function AnalyticsPage() {
                     icon={<Calendar size={20} />}
                     title="Not enough history yet"
                     body="Best posting windows need at least 30 days of post history. Connect your accounts and keep posting to unlock this insight."
-                    action={<TextRollButton text="Connect an account" onClick={() => navigate('/connections')} />}
+                    action={<Button icon={<Link2 />} onClick={() => navigate('/connections')}>Connect an account</Button>}
                   />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -1,0 +1,31 @@
+/* App buttons (dashboard and AI Agent). Self-contained so they work outside V3Layout too. */
+/* ── App buttons: compact rounded rectangles (see Button in ui.tsx) ── */
+.zd-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid transparent;
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1; letter-spacing: -0.005em;
+  white-space: nowrap; cursor: pointer; user-select: none; text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+.zd-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.zd-btn:active:not(:disabled) { transform: scale(0.98); }
+.zd-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(242, 101, 34, 0.28); }
+.zd-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.zd-btn.is-sm { height: 30px; padding: 0 11px; font-size: 12.5px; border-radius: 7px; }
+.zd-btn.is-sm svg { width: 14px; height: 14px; }
+.zd-btn.is-lg { height: 40px; padding: 0 18px; font-size: 14px; border-radius: 9px; }
+.zd-btn.is-full { width: 100%; }
+.zd-btn.is-primary { background: var(--zd-accent, #f26522); color: #fff; box-shadow: 0 1px 2px rgba(17, 17, 17, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.zd-btn.is-primary:hover:not(:disabled) { background: #e05a1a; }
+.zd-btn.is-soft { background: var(--zd-accent-soft, #fff1e8); color: #c2410c; }
+.zd-btn.is-soft:hover:not(:disabled) { background: #ffe1cf; color: #9a3412; }
+.zd-btn.is-secondary { background: #fff; color: var(--zd-ink, #111111); border-color: var(--zd-line, #ececec); box-shadow: 0 1px 2px rgba(17, 17, 17, 0.04); }
+.zd-btn.is-secondary:hover:not(:disabled) { background: #f7f7f7; border-color: #dcdcdc; }
+.zd-btn.is-ghost { background: transparent; color: var(--zd-ink-2, #505050); padding: 0 10px; }
+.zd-btn.is-ghost:hover:not(:disabled) { background: rgba(17, 17, 17, 0.05); color: var(--zd-ink, #111111); }
+.zd-btn.is-danger { background: #fef2f2; color: #b91c1c; }
+.zd-btn.is-danger:hover:not(:disabled) { background: #fee2e2; }
+.zd-btn.is-loading { cursor: progress; }
+.zd-btn-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: zdBtnSpin 0.7s linear infinite; opacity: 0.85; }
+.zd-btn-text { display: inline-flex; align-items: center; gap: 6px; }
+@keyframes zdBtnSpin { to { transform: rotate(360deg); } }

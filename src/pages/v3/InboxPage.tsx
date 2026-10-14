@@ -12,7 +12,7 @@ import {
   PageHeader,
   Pill,
   Skeleton,
-  TextRollButton,
+  Button,
 } from '../../components/v3/ui';
 import {
   Inbox,
@@ -24,9 +24,7 @@ import {
   Clock,
   ArrowLeft,
   RefreshCw,
-  CornerDownRight,
-  
-} from 'lucide-react';
+  CornerDownRight, Link2 } from 'lucide-react';
 import ZIcon from '../../components/icons/ZIcon';
 import './inbox.css';
 
@@ -429,7 +427,7 @@ export default function InboxPage() {
           icon={<AlertCircle size={22} />}
           title="No accounts connected yet"
           body="Connect an Instagram account to start receiving comments."
-          action={<TextRollButton text="Connect accounts" onClick={() => navigate('/connections')} />}
+          action={<Button icon={<Link2 />} onClick={() => navigate('/connections')}>Connect accounts</Button>}
         />
       );
     }
