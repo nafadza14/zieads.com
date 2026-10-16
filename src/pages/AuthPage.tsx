@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import SocialIcon from '../components/v3/SocialIcon';
 import './landing/landing-v2.css';
@@ -125,26 +125,12 @@ export default function AuthPage() {
               </button>
             </div>
 
-            <h1 className="za-auth-title" key={`t-${mode}`}>{isSignUp ? 'Meet your AI marketing agent.' : 'Welcome back.'}</h1>
+            <h1 className="za-auth-title">{isSignUp ? 'Meet your AI marketing agent.' : 'Welcome back.'}</h1>
             <p className="za-auth-sub">
               {isSignUp
                 ? 'Free plan, no credit card. Your first briefing arrives tomorrow morning.'
                 : 'Log in to see today\'s briefing and pick up where your agent left off.'}
             </p>
-
-            {isSignUp && (
-              <ul className="za-auth-perks">
-                <li>
-                  <Check size={14} /> Free website audit
-                </li>
-                <li>
-                  <Check size={14} /> No ad account access
-                </li>
-                <li>
-                  <Check size={14} /> First briefing in 24 hours
-                </li>
-              </ul>
-            )}
 
             <button
               id="google-signin-btn"
@@ -218,10 +204,7 @@ export default function AuthPage() {
               )}
 
               <button id="email-submit-btn" type="submit" disabled={loading} className="za-auth-submit">
-                <span>{loading ? 'Processing...' : isSignUp ? 'Create free account' : 'Log in'}</span>
-                <span className="za-auth-submit-arrow">
-                  <ArrowRight size={15} />
-                </span>
+                {loading ? (isSignUp ? 'Creating your account...' : 'Logging in...') : isSignUp ? 'Create free account' : 'Log in'}
               </button>
             </form>
 
@@ -240,101 +223,69 @@ export default function AuthPage() {
   );
 }
 
-// ─── Showcase: every social account, connected to one ZieAds login ─────────
-const HUB = [
+/*
+  Showcase column.
+  Design read: auth screen for Indonesian SMB owners and social media managers, in the
+  ZieAds language (white, system font, orange #F26522 as the one accent).
+  Dial: ENERGY 1 / RHYTHM 1 / MOTION 1 (hover states only).
+  Purpose: show the one thing a new account gets, Zie's daily briefing, so the person
+  knows what they are signing up for. It is a static example, labelled as one, with no
+  loops: the form on the left is the focal point and nothing competes with it.
+  Channels listed are the ones ZieAds really connects today (see ConnectionsPage).
+*/
+const CHANNELS = [
   { key: 'instagram', label: 'Instagram' },
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
-  { key: 'facebook', label: 'Facebook' },
-  { key: 'x', label: 'X' },
   { key: 'meta_ads', label: 'Meta Ads' },
   { key: 'google_ads', label: 'Google Ads' },
   { key: 'tiktok_ads', label: 'TikTok Ads' },
 ];
-const HUB_STEP = 520; // ms between connections
-const HUB_HOLD = 4200; // ms to hold the fully connected state before replaying
+
+const EXAMPLE = [
+  { k: 'Needs a reply', t: '3 comments ask about price and stock', d: 'Waiting since last night on your Reel. Zie drafted replies for you to check.' },
+  { k: 'What changed', t: 'Reach up on Instagram, flat on TikTok', d: 'The carousel from Tuesday did most of the work.' },
+  { k: 'Do today', t: 'Post the behind-the-scenes video at 19:00', d: 'Your audience is most active then. A draft is on the calendar.' },
+];
 
 function AuthShowcase() {
-  const [connected, setConnected] = useState(0);
-  useEffect(() => {
-    const delay = connected < HUB.length ? (connected === 0 ? 700 : HUB_STEP) : HUB_HOLD;
-    const t = window.setTimeout(() => setConnected((c) => (c < HUB.length ? c + 1 : 0)), delay);
-    return () => window.clearTimeout(t);
-  }, [connected]);
-
-  const all = connected === HUB.length;
-  const R = 41; // node orbit radius in % of the stage
-
   return (
-    <aside className="za-show" aria-label="Every social account in one ZieAds dashboard">
-      <div className="za-show-aura" aria-hidden="true">
-        <span />
-        <span />
-      </div>
-      <div className="za-show-dots" aria-hidden="true" />
-
+    <aside className="za-show" aria-label="What you get with ZieAds">
       <div className="za-show-copy">
-        <span className="za-show-eyebrow">One account, every channel</span>
-        <h2>All your social media accounts in one ZieAds dashboard.</h2>
+        <h2>Every account in one place. One briefing every morning.</h2>
+        <p>Zie checks your channels overnight and tells you what needs you, what changed and what to do next.</p>
       </div>
 
-      <div className="za-hub" aria-hidden="true">
-        <svg className="za-hub-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {HUB.map((n, i) => {
-            const a = (i / HUB.length) * Math.PI * 2 - Math.PI / 2;
-            const x = 50 + Math.cos(a) * R;
-            const y = 50 + Math.sin(a) * R;
-            const on = i < connected;
-            return (
-              <g key={n.key} className={on ? 'is-on' : ''}>
-                <line x1={x} y1={y} x2="50" y2="50" className="za-hub-line" />
-                {on && <line x1={x} y1={y} x2="50" y2="50" className="za-hub-flow" style={{ animationDelay: `${(i % 4) * 0.25}s` }} />}
-              </g>
-            );
-          })}
-        </svg>
-
-        {HUB.map((n, i) => {
-          const a = (i / HUB.length) * Math.PI * 2 - Math.PI / 2;
-          const on = i < connected;
-          return (
-            <div
-              key={n.key}
-              className={`za-hub-node ${on ? 'is-on' : ''} ${i === connected - 1 ? 'is-new' : ''}`}
-              style={{ left: `${50 + Math.cos(a) * R}%`, top: `${50 + Math.sin(a) * R}%` }}
-            >
-              <span className="za-hub-icon">
-                <SocialIcon platform={n.key} size={30} />
-                <span className="za-hub-check">
-                  <Check size={10} strokeWidth={3} />
-                </span>
-              </span>
-              <small>{n.label}</small>
-            </div>
-          );
-        })}
-
-        <div className={`za-hub-core ${all ? 'is-full' : ''}`}>
-          <span className="za-hub-pulse" />
-          <ZieAdsLogo size={44} />
-          <strong>1 ZieAds account</strong>
-          <span className="za-hub-count">
-            <b key={connected}>{connected}</b>/{HUB.length} channels connected
+      <figure className="za-brief">
+        <figcaption className="za-brief-head">
+          <img src="/zie/zie-avatar.webp" alt="" width={28} height={28} />
+          <span>
+            <strong>Zie's briefing</strong>
+            <small>Example</small>
           </span>
-        </div>
-      </div>
+        </figcaption>
+        <ol className="za-brief-list">
+          {EXAMPLE.map((e) => (
+            <li key={e.k}>
+              <span className="za-brief-k">{e.k}</span>
+              <strong>{e.t}</strong>
+              <p>{e.d}</p>
+            </li>
+          ))}
+        </ol>
+      </figure>
 
-      <ul className="za-hub-points">
-        <li>
-          <Check size={13} /> Post and schedule everywhere
-        </li>
-        <li>
-          <Check size={13} /> Every comment in one inbox
-        </li>
-        <li>
-          <Check size={13} /> One report for all channels
-        </li>
-      </ul>
+      <div className="za-show-channels">
+        <span>Connects with</span>
+        <ul>
+          {CHANNELS.map((c) => (
+            <li key={c.label}>
+              <SocialIcon platform={c.key} size={16} variant="mark" />
+              {c.label}
+            </li>
+          ))}
+        </ul>
+      </div>
     </aside>
   );
 }

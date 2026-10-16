@@ -33,3 +33,8 @@
 ## Competitor Hunt
 - Live competitor ads and posts come from `server/competitors/` (adapters in `sources.ts`, sync in `sync.ts`), stored in `competitor_content`. Setup and coverage per platform in `docs/competitor-hunt-live-content.md`.
 - Show creatives in their real format and ratio; never fake ad performance (spend and ROAS are private). Use public signals: days running, active or ended, number of versions, engagement on organic posts.
+
+## antislop
+- UI, copy and code work follows antislop (MIT, github.com/miqdadbadjuber/anti-slop), copied to `docs/antislop/`. Read `docs/antislop/antislop.md` (core) plus the one for the task: `antislop-ui.md`, `antislop-copywriting.md`, `antislop-layoutmobile.md`, `antislop-human.md`, `antislop-code.md`.
+- Design direction and dials live in `DESIGN.md`. Product and auth screens: ENERGY 1 / RHYTHM 1 / MOTION 1. Write the purpose of any animation in a comment next to it.
+- The files in `docs/antislop/` are third-party text kept as published (they quote em dashes as examples); the no em dash check does not scan `docs/`.
