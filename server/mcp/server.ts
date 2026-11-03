@@ -1,7 +1,8 @@
 /*
   ZieAds MCP server v1 (spec 10). Streamable HTTP transport, stateless:
   every request is one JSON-RPC message (or a batch) answered with JSON.
-  Auth: "Authorization: Bearer zk_..." keys made in Settings > API and MCP.
+  Auth: "Authorization: Bearer zk_..." keys made in Settings > API and MCP, or an
+  OAuth access token issued to Claude, ChatGPT and other connectors (server/mcp/oauth.ts).
   Keys are stored as SHA-256 hashes, scoped ("read", "draft"), rate limited per
   day by plan (mcpDailyCalls). Every write becomes a pending agent task the user
   approves in ZieAds, unless the key lists that action in auto_approve.
@@ -28,6 +29,7 @@ export interface McpKey {
   name: string;
   scopes: string[];
   auto_approve: string[];
+  kind?: string;
 }
 
 export const hashKey = (raw: string) => crypto.createHash("sha256").update(raw).digest("hex");
@@ -40,8 +42,10 @@ export function newKey(): { raw: string; hash: string; preview: string } {
 export async function authenticate(header?: string): Promise<McpKey | null> {
   const raw = String(header || "").replace(/^Bearer\s+/i, "").trim();
   if (!/^zk_[A-Za-z0-9_-]{20,}$/.test(raw)) return null;
-  const { data } = await supabaseAdmin.from("mcp_keys").select("id, user_id, name, scopes, auto_approve, revoked_at").eq("key_hash", hashKey(raw)).maybeSingle();
+  const { data } = await supabaseAdmin.from("mcp_keys").select("id, user_id, name, scopes, auto_approve, revoked_at, kind, expires_at").eq("key_hash", hashKey(raw)).maybeSingle();
   if (!data || data.revoked_at) return null;
+  // OAuth access tokens expire after an hour; the client refreshes them
+  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return null;
   return data as McpKey;
 }
 
@@ -84,6 +88,18 @@ async function writeTask(key: McpKey, kind: (typeof AUTO_APPROVABLE)[number], ti
 }
 
 export const TOOLS: Tool[] = [
+  {
+    name: "list_accounts",
+    title: "Connected accounts",
+    description: "Social accounts connected to ZieAds (platform, handle, status). Use the platform names here for create_draft_post.",
+    scope: "read",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true },
+    run: async (k) => {
+      const { data } = await supabaseAdmin.from("connected_accounts").select("id, platform, account_handle, is_active, created_at").eq("user_id", k.user_id).eq("is_active", true).limit(50);
+      return { accounts: (data || []).map((a: any) => ({ id: a.id, platform: a.platform, handle: a.account_handle, connected_at: a.created_at })) };
+    },
+  },
   {
     name: "get_briefing",
     title: "Today's briefing",
@@ -296,6 +312,13 @@ export async function handleMessage(key: McpKey, msg: any): Promise<any | null> 
     }
     case "ping":
       return { jsonrpc: "2.0", id, result: {} };
+    // Some clients ask for these even when the server only offers tools
+    case "resources/list":
+      return { jsonrpc: "2.0", id, result: { resources: [] } };
+    case "resources/templates/list":
+      return { jsonrpc: "2.0", id, result: { resourceTemplates: [] } };
+    case "prompts/list":
+      return { jsonrpc: "2.0", id, result: { prompts: [] } };
     case "tools/list":
       return {
         jsonrpc: "2.0",
@@ -320,4 +343,15 @@ export async function handleMessage(key: McpKey, msg: any): Promise<any | null> 
     default:
       return rpcError(id, -32601, `Method not found: ${method}`);
   }
+}
+
+/** Runs one tool for the REST API. Throws McpToolError for input problems, ScopeError for a missing scope. */
+export class ScopeError extends Error {}
+export async function runTool(key: McpKey, name: string, args: Json = {}) {
+  const tool = TOOLS.find((t) => t.name === name);
+  if (!tool) throw new Error(`Unknown tool ${name}`);
+  if (!key.scopes.includes(tool.scope)) throw new ScopeError(`This key does not have the "${tool.scope}" scope`);
+  const out = await tool.run(key, args);
+  await logActivity(key.user_id, "mcp", "api.called", "mcp_key", key.id, { tool: tool.name, via: "rest" });
+  return out;
 }

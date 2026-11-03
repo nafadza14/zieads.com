@@ -32,6 +32,10 @@
       "destination": "/api"
     },
     {
+      "source": "/.well-known/(.*)",
+      "destination": "/api"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

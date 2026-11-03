@@ -37,6 +37,8 @@ import { briefingRouter } from "./routes/api-briefing.js";
 import { inboxRouter } from "./routes/api-inbox.js";
 import { analyticsRouter } from "./routes/api-analytics.js";
 import { mcpRouter } from "./routes/api-mcp.js";
+import { oauthRouter } from "./routes/api-oauth.js";
+import { restRouter } from "./routes/api-rest.js";
 import { scheduledAgentsRouter } from "./routes/api-scheduled-agents.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
@@ -95,11 +97,15 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-superadmin-session-token, Mcp-Session-Id, MCP-Protocol-Version");
+  res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate, Mcp-Session-Id, X-RateLimit-Limit, X-RateLimit-Remaining");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
 // ─── Public Webhook API ────────────────────────────────
+// OAuth for MCP connectors (well-known metadata, register, token) and the REST API v1
+app.use(oauthRouter);
+app.use("/v1", restRouter);
 app.use("/v1", publicApiRouter);
 
 // ─── Credits API ───────────────────────────────────────

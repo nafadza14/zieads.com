@@ -24,6 +24,8 @@ import SuperadminDashboard from './pages/superadmin/SuperadminDashboard';
 import SettingsPage from './pages/settings/SettingsPage';
 import DataDeletionPage from './pages/DataDeletionPage';
 import VsPage from './pages/VsPage';
+import DocsPage from './pages/docs/DocsPage';
+import OAuthConsent from './pages/OAuthConsent';
 import ErrorBoundary from './components/ErrorBoundary';
 import { supabase } from './lib/supabaseClient';
 import { CreditProvider } from './lib/creditStore';
@@ -78,7 +80,7 @@ function TabTitle() {
   const { pathname } = useLocation();
   useEffect(() => {
     const page = PAGE_TITLES[pathname] || (pathname.startsWith('/settings') ? 'Settings' : undefined);
-    if (pathname.startsWith('/vs/')) return; // comparison pages set their own title
+    if (pathname.startsWith('/vs/') || pathname.startsWith('/docs') || pathname.startsWith('/oauth/')) return; // these pages set their own title
     document.title = page ? `${page} | ZieAds` : 'ZieAds | Your AI social media manager';
   }, [pathname]);
   return null;
@@ -158,6 +160,9 @@ export default function App() {
         <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
         <Route path="/privacy.html" element={<Navigate to="/privacy-policy" replace />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/docs" element={<DocsPage />} />
+        <Route path="/docs/*" element={<DocsPage />} />
+        <Route path="/oauth/authorize" element={<OAuthConsent />} />
         <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
         <Route path="/tos" element={<Navigate to="/terms" replace />} />
         <Route path="/terms.html" element={<Navigate to="/terms" replace />} />

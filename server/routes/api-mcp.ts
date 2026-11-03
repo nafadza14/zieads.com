@@ -13,6 +13,7 @@ import { getUserIdFromRequest, supabaseAdmin, getEffectivePlan } from "../supaba
 import { PLAN_LIMITS } from "../creditConfig.js";
 import { logActivity } from "../activity.js";
 import { authenticate, countCall, handleMessage, newKey, AUTO_APPROVABLE } from "../mcp/server.js";
+import { resourceMetadataUrl } from "./api-oauth.js";
 
 export const mcpRouter = Router();
 
@@ -24,6 +25,8 @@ async function requireAuth(req: any, res: any, next: any) {
 }
 
 const SCOPES = ["read", "draft"];
+/** A missing table means the API and MCP migration was not run on this Supabase project */
+const setupHint = (m: string) => (/mcp_keys|kind|does not exist|schema cache/i.test(m) ? "API and MCP is not set up on the database yet. Run supabase/migrations/20261104_api_mcp_oauth.sql in the Supabase SQL editor." : m);
 const cleanScopes = (v: any) => {
   const s = (Array.isArray(v) ? v : ["read", "draft"]).filter((x: any) => SCOPES.includes(x));
   return s.includes("read") ? [...new Set(s)] : ["read", ...new Set(s)];
@@ -33,8 +36,9 @@ const cleanAuto = (v: any) => (Array.isArray(v) ? [...new Set(v.filter((x: any) 
 mcpRouter.post("/mcp", async (req: any, res) => {
   const key = await authenticate(req.headers.authorization);
   if (!key) {
-    res.setHeader("WWW-Authenticate", 'Bearer realm="zieads", error="invalid_token"');
-    return res.status(401).json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Missing or revoked ZieAds MCP key. Create one in Settings, API and MCP." } });
+    // resource_metadata tells OAuth clients (Claude, ChatGPT) where to start "Sign in with ZieAds"
+    res.setHeader("WWW-Authenticate", `Bearer realm="zieads", resource_metadata="${resourceMetadataUrl(req)}"${req.headers.authorization ? ', error="invalid_token"' : ""}`);
+    return res.status(401).json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Missing, expired or revoked ZieAds key. Connect with OAuth or create a key in Settings, API and MCP." } });
   }
   const body = req.body;
   const batch = Array.isArray(body) ? body : [body];
@@ -68,13 +72,13 @@ mcpRouter.delete("/mcp", (_req, res) => {
 });
 
 mcpRouter.get("/mcp/keys", requireAuth, async (req: any, res) => {
-  const { data, error } = await supabaseAdmin.from("mcp_keys").select("id, name, key_preview, scopes, auto_approve, last_used_at, revoked_at, created_at").eq("user_id", req.userId).order("created_at", { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  const { data, error } = await supabaseAdmin.from("mcp_keys").select("id, name, key_preview, scopes, auto_approve, last_used_at, revoked_at, created_at, kind").eq("user_id", req.userId).order("created_at", { ascending: false });
+  if (error) return res.status(500).json({ error: setupHint(error.message) });
   res.json({ success: true, keys: data || [], auto_approvable: AUTO_APPROVABLE });
 });
 
 mcpRouter.post("/mcp/keys", requireAuth, async (req: any, res) => {
-  const { count } = await supabaseAdmin.from("mcp_keys").select("id", { count: "exact", head: true }).eq("user_id", req.userId).is("revoked_at", null);
+  const { count } = await supabaseAdmin.from("mcp_keys").select("id", { count: "exact", head: true }).eq("user_id", req.userId).eq("kind", "key").is("revoked_at", null);
   if ((count || 0) >= 10) return res.status(400).json({ error: "You can have 10 active keys. Revoke one first." });
   const k = newKey();
   const row = {
@@ -84,9 +88,10 @@ mcpRouter.post("/mcp/keys", requireAuth, async (req: any, res) => {
     key_preview: k.preview,
     scopes: cleanScopes(req.body?.scopes),
     auto_approve: cleanAuto(req.body?.auto_approve),
+    kind: "key",
   };
-  const { data, error } = await supabaseAdmin.from("mcp_keys").insert(row).select("id, name, key_preview, scopes, auto_approve, created_at").single();
-  if (error) return res.status(500).json({ error: error.message });
+  const { data, error } = await supabaseAdmin.from("mcp_keys").insert(row).select("id, name, key_preview, scopes, auto_approve, created_at, kind").single();
+  if (error) return res.status(500).json({ error: setupHint(error.message) });
   await logActivity(req.userId, "user", "mcp.key_created", "mcp_key", data.id, { name: row.name, scopes: row.scopes, auto_approve: row.auto_approve });
   res.json({ success: true, key: data, secret: k.raw });
 });
