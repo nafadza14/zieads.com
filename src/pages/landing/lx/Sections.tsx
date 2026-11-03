@@ -571,13 +571,13 @@ export function LxAudit({ onScanComplete }: { onScanComplete: (data: any) => voi
 }
 
 /* ── FAQ ──────────────────────────────────────────────── */
-export function LxFaq() {
+export function LxFaq({ n = '09' }: { n?: string }) {
   const [open, setOpen] = useState(0);
   return (
     <section className="lx-section lx-center" id="faq" aria-labelledby="lx-faq">
       <div className="lx-wrap">
         <LxReveal>
-          <LxBadge n="09">FAQ</LxBadge>
+          <LxBadge n={n}>FAQ</LxBadge>
           <h2 className="lx-h2" id="lx-faq">
             Frequently asked questions
           </h2>
