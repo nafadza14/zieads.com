@@ -377,6 +377,11 @@ export function LxIntegrations() {
               <Check size={15} /> MCP server for Claude, ChatGPT and Cursor. Writes become approvals in ZieAds
             </li>
           </ul>
+          <p className="lx-int-links">
+            <a href="/mcp">About the MCP server</a>
+            <a href="/api">REST API</a>
+            <a href="/docs">Docs</a>
+          </p>
         </LxReveal>
         <LxReveal delay={120}>
           <div className="lx-grid" role="img" aria-label="ZieAds in the middle of Instagram, Facebook, TikTok, LinkedIn, Meta Ads, Google Ads, MCP and CSV import">

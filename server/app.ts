@@ -37,7 +37,7 @@ import { briefingRouter } from "./routes/api-briefing.js";
 import { inboxRouter } from "./routes/api-inbox.js";
 import { analyticsRouter } from "./routes/api-analytics.js";
 import { mcpRouter } from "./routes/api-mcp.js";
-import { oauthRouter } from "./routes/api-oauth.js";
+import { oauthRouter, publicOrigin } from "./routes/api-oauth.js";
 import { restRouter } from "./routes/api-rest.js";
 import { scheduledAgentsRouter } from "./routes/api-scheduled-agents.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
@@ -103,6 +103,21 @@ app.use((req, res, next) => {
 });
 
 // ─── Public Webhook API ────────────────────────────────
+// zieads.com/api is the REST API product page. On Vercel the bare /api path lands on this
+// function, so a browser asking for HTML gets the app shell and the SPA renders the page.
+app.get(["/api", "/api/"], async (req, res, next) => {
+  if (!req.accepts("html") || req.path.length > 5) return next();
+  try {
+    const r = await fetch(`${publicOrigin(req)}/index.html`);
+    if (!r.ok) return next();
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=300");
+    res.send(await r.text());
+  } catch {
+    next();
+  }
+});
+
 // OAuth for MCP connectors (well-known metadata, register, token) and the REST API v1
 app.use(oauthRouter);
 app.use("/v1", restRouter);

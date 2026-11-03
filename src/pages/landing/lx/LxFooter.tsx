@@ -19,7 +19,9 @@ export default function LxFooter() {
             <a href="/#features">Features</a>
             <a href="/#how">How it works</a>
             <a href="/#integrations">Integrations and MCP</a>
-            <a href="/docs">API and MCP docs</a>
+            <a href="/mcp">MCP server</a>
+            <a href="/api">REST API</a>
+            <a href="/docs">Developer docs</a>
             <a href="/#pricing">Pricing</a>
             <a href="/#audit">Free website audit</a>
           </div>
