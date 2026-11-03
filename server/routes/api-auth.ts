@@ -734,6 +734,13 @@ authRouter.get("/connections", requireAuth, async (req: any, res) => {
       facebook: { connected: false },
       tiktok: { connected: false },
       linkedin: { connected: false },
+      threads: { connected: false },
+      bluesky: { connected: false },
+      mastodon: { connected: false },
+      youtube: { connected: false },
+      pinterest: { connected: false },
+      telegram: { connected: false },
+      discord: { connected: false },
     };
 
     data?.forEach((row: any) => {

@@ -111,6 +111,13 @@ export function LxStrip() {
     { p: 'facebook', label: 'Facebook' },
     { p: 'tiktok', label: 'TikTok' },
     { p: 'linkedin', label: 'LinkedIn' },
+    { p: 'threads', label: 'Threads' },
+    { p: 'youtube', label: 'YouTube' },
+    { p: 'pinterest', label: 'Pinterest' },
+    { p: 'bluesky', label: 'Bluesky' },
+    { p: 'mastodon', label: 'Mastodon' },
+    { p: 'telegram', label: 'Telegram' },
+    { p: 'discord', label: 'Discord' },
   ];
   const ads: Array<{ p: string; label: string }> = [
     { p: 'meta', label: 'Meta Ads' },
@@ -139,7 +146,7 @@ export function LxStrip() {
           ))}
         </div>
       </div>
-      <p className="lx-strip-next">Coming next: X, Bluesky, YouTube, Threads and Pinterest</p>
+      <p className="lx-strip-next">Coming next: X, Tumblr and Reddit</p>
     </div>
   );
 }

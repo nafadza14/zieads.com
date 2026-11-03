@@ -67,8 +67,14 @@ const PLATFORM_META: Record<string, { icon: ReactNode; color: string; name: stri
   tiktok: { icon: <SocialIcon platform="tiktok" size={16} />, color: '#ffffff', name: 'TikTok' },
   linkedin: { icon: <SocialIcon platform="linkedin" size={16} />, color: '#ffffff', name: 'LinkedIn' },
   facebook: { icon: <SocialIcon platform="facebook" size={16} />, color: '#ffffff', name: 'Facebook' },
-  x: { icon: <Globe />, color: '#ffffff', name: 'X' },
-  youtube: { icon: <Globe />, color: '#ffffff', name: 'YouTube' },
+  x: { icon: <SocialIcon platform="x" size={16} />, color: '#ffffff', name: 'X' },
+  youtube: { icon: <SocialIcon platform="youtube" size={16} />, color: '#ffffff', name: 'YouTube' },
+  threads: { icon: <SocialIcon platform="threads" size={16} />, color: '#ffffff', name: 'Threads' },
+  pinterest: { icon: <SocialIcon platform="pinterest" size={16} />, color: '#ffffff', name: 'Pinterest' },
+  bluesky: { icon: <SocialIcon platform="bluesky" size={16} />, color: '#ffffff', name: 'Bluesky' },
+  mastodon: { icon: <SocialIcon platform="mastodon" size={16} />, color: '#ffffff', name: 'Mastodon' },
+  telegram: { icon: <SocialIcon platform="telegram" size={16} />, color: '#ffffff', name: 'Telegram' },
+  discord: { icon: <SocialIcon platform="discord" size={16} />, color: '#ffffff', name: 'Discord' },
 };
 const platformMeta = (p?: string) =>
   (p && PLATFORM_META[p]) || { icon: <Globe />, color: '#505050', name: p ? p.charAt(0).toUpperCase() + p.slice(1) : 'Post' };
@@ -452,6 +458,10 @@ export default function ComposerPage() {
   // TikTok posting screen (spec 9.2 audit rules): no default privacy, interactions off by default
   const [tiktokOpts, setTiktokOpts] = useState<{ privacy: string; comment: boolean; duet: boolean; stitch: boolean; commercial: boolean; yourBrand: boolean; branded: boolean; musicConsent: boolean }>({ privacy: '', comment: false, duet: false, stitch: false, commercial: false, yourBrand: false, branded: false, musicConsent: false });
   const [tiktokCreator, setTiktokCreator] = useState<{ nickname?: string; privacy_options?: string[]; comment_disabled?: boolean; duet_disabled?: boolean; stitch_disabled?: boolean; max_video_post_duration_sec?: number; source?: string } | null>(null);
+  // YouTube and Pinterest options: title and privacy for a video, board and link for a Pin
+  const [ytOpts, setYtOpts] = useState<{ title: string; privacy: string }>({ title: '', privacy: 'public' });
+  const [pinOpts, setPinOpts] = useState<{ board_id: string; link: string }>({ board_id: '', link: '' });
+  const [pinBoards, setPinBoards] = useState<Array<{ id: string; name: string }>>([]);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   const [customOverrides, setCustomOverrides] = useState<Record<string, string>>({}); // accountId -> customized content
@@ -704,6 +714,17 @@ export default function ComposerPage() {
   }
   const blockingIssues = scheduleType !== 'draft' && Object.values(issuesByAccount).some(hasErrors);
   const hasTikTok = selectedAccounts.some((id) => connections.find((c) => c.id === id)?.platform === 'tiktok');
+  const hasYouTube = selectedAccounts.some((id) => connections.find((c) => c.id === id)?.platform === 'youtube');
+  const hasPinterest = selectedAccounts.some((id) => connections.find((c) => c.id === id)?.platform === 'pinterest');
+  useEffect(() => {
+    if (!hasPinterest || pinBoards.length) return;
+    api('/api/auth/pinterest/boards')
+      .then((j) => {
+        setPinBoards(j.boards || []);
+        setPinOpts((o) => ({ ...o, board_id: o.board_id || j.default_board_id || j.boards?.[0]?.id || '' }));
+      })
+      .catch(() => undefined);
+  }, [hasPinterest]);
 
   // TikTok creator info: nickname, allowed privacy levels and interaction settings
   useEffect(() => {
@@ -742,6 +763,8 @@ export default function ComposerPage() {
         const opts: Record<string, unknown> = {};
         if (publishMethod === 'manual_reminder') opts.manual = true;
         if (platform === 'tiktok') Object.assign(opts, { tiktok: tiktokOpts });
+        if (platform === 'youtube') Object.assign(opts, { privacy: ytOpts.privacy, ...(ytOpts.title.trim() ? { title: ytOpts.title.trim() } : {}) });
+        if (platform === 'pinterest') Object.assign(opts, { ...(pinOpts.board_id ? { board_id: pinOpts.board_id } : {}), ...(pinOpts.link.trim() ? { link: pinOpts.link.trim() } : {}) });
         return {
           account_id: id,
           platform,
@@ -1078,6 +1101,41 @@ export default function ComposerPage() {
                     )}
                   </ul>
                 )}
+              </Card>
+            )}
+
+            {hasYouTube && (
+              <Card className="zco-tiktok">
+                <CardTitle icon={<SocialIcon platform="youtube" size={16} />} sub="The description is your caption">
+                  YouTube settings
+                </CardTitle>
+                <label className="zd-label" htmlFor="zco-yt-title">Title</label>
+                <input id="zco-yt-title" className="zd-input zco-field" maxLength={100} placeholder="Empty uses the first line of the caption" value={ytOpts.title} onChange={(e) => setYtOpts({ ...ytOpts, title: e.target.value })} />
+                <label className="zd-label" htmlFor="zco-yt-privacy">Visibility</label>
+                <select id="zco-yt-privacy" className="zd-select zco-field" value={ytOpts.privacy} onChange={(e) => setYtOpts({ ...ytOpts, privacy: e.target.value })}>
+                  <option value="public">Public</option>
+                  <option value="unlisted">Unlisted</option>
+                  <option value="private">Private</option>
+                </select>
+              </Card>
+            )}
+
+            {hasPinterest && (
+              <Card className="zco-tiktok">
+                <CardTitle icon={<SocialIcon platform="pinterest" size={16} />} sub="The title is the first line of the caption">
+                  Pinterest settings
+                </CardTitle>
+                <label className="zd-label" htmlFor="zco-pin-board">Board</label>
+                <select id="zco-pin-board" className="zd-select zco-field" value={pinOpts.board_id} onChange={(e) => setPinOpts({ ...pinOpts, board_id: e.target.value })}>
+                  {pinBoards.length === 0 && <option value="">No boards found</option>}
+                  {pinBoards.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+                <label className="zd-label" htmlFor="zco-pin-link">Link</label>
+                <input id="zco-pin-link" className="zd-input zco-field" type="url" placeholder="https://yourstore.com/product" value={pinOpts.link} onChange={(e) => setPinOpts({ ...pinOpts, link: e.target.value })} />
               </Card>
             )}
 

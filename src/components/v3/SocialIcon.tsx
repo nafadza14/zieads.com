@@ -39,6 +39,8 @@ const KEY: Record<string, string> = {
   mastodon: 'mastodon',
   reddit: 'reddit',
   tumblr: 'tumblr',
+  telegram: 'telegram',
+  discord: 'discord',
 };
 
 export default function SocialIcon({ platform, size = 20, style, variant = 'tile' }: SocialIconProps) {

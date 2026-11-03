@@ -54,7 +54,7 @@ export interface SubmitInput {
   scheduled_for?: string;
 }
 
-const SUPPORTED = new Set(["instagram", "facebook", "tiktok", "linkedin"]);
+const SUPPORTED = new Set(["instagram", "facebook", "tiktok", "linkedin", "threads", "pinterest", "youtube", "bluesky", "mastodon", "telegram", "discord"]);
 
 export async function resolveMedia(userId: string, ids: string[] = [], temp: SubmitInput["media_attachments"] = []) {
   const urls: string[] = [];

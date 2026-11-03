@@ -68,8 +68,10 @@ export const PROFILE_GRID: Record<'instagram' | 'tiktok', { ratio: string; aspec
 export const isVideoMime = (mime?: string, url?: string) =>
   (!!mime && mime.startsWith('video/')) || (!!url && /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url));
 
+// Networks without their own preview borrow the closest layout: text first feeds look like X, chats like Facebook
+const PREVIEW_ALIAS: Record<string, PlatformId> = { threads: 'x', bluesky: 'x', mastodon: 'x', telegram: 'facebook', discord: 'facebook', pinterest: 'instagram' };
 export const formatsFor = (platform?: string): PlatformFormat[] =>
-  PLATFORM_FORMATS[(platform as PlatformId) || 'instagram'] || PLATFORM_FORMATS.instagram;
+  PLATFORM_FORMATS[((platform && PREVIEW_ALIAS[platform]) || platform || 'instagram') as PlatformId] || PLATFORM_FORMATS.instagram;
 
 /** Pick the right default: video goes to the vertical format where one exists. */
 export const defaultFormatFor = (platform: string | undefined, hasVideo: boolean): PlatformFormat => {

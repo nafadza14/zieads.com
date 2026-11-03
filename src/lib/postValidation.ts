@@ -4,7 +4,7 @@
   Limits follow each platform's published rules (checked November 2026).
 */
 
-export type ValidatePlatform = 'instagram' | 'facebook' | 'tiktok' | 'linkedin' | 'threads';
+export type ValidatePlatform = 'instagram' | 'facebook' | 'tiktok' | 'linkedin' | 'threads' | 'pinterest' | 'youtube' | 'bluesky' | 'mastodon' | 'telegram' | 'discord';
 
 export interface MediaInfo {
   url?: string;
@@ -46,6 +46,17 @@ export const RULES: Record<ValidatePlatform, PlatformRules> = {
   tiktok: { captionMax: 2200, mediaRequired: true, mediaMax: 1, videoMaxSec: 600, videoMinSec: 3, linksClickable: false, firstComment: false },
   linkedin: { captionMax: 3000, mediaRequired: false, mediaMax: 9, videoMaxSec: 900, linksClickable: true, firstComment: true },
   threads: { captionMax: 500, mediaRequired: false, mediaMax: 10, videoMaxSec: 300, linksClickable: true, firstComment: false },
+  // Pin description 500, title is taken from the first line; images only from ZieAds for now
+  pinterest: { captionMax: 500, mediaRequired: true, mediaMax: 5, linksClickable: false, firstComment: false },
+  // Description 5,000; the title is the first line, up to 100 characters
+  youtube: { captionMax: 5000, mediaRequired: true, mediaMax: 1, videoMaxSec: 43200, linksClickable: true, firstComment: false },
+  // 300 characters (graphemes), up to 4 images of 1 MB each
+  bluesky: { captionMax: 300, mediaRequired: false, mediaMax: 4, linksClickable: true, firstComment: false },
+  // 500 is the default; many servers allow more
+  mastodon: { captionMax: 500, mediaRequired: false, mediaMax: 4, linksClickable: true, firstComment: false },
+  // 4,096 for text; with media the caption above 1,024 goes out as a second message
+  telegram: { captionMax: 4096, mediaRequired: false, mediaMax: 10, linksClickable: true, firstComment: false },
+  discord: { captionMax: 2000, mediaRequired: false, mediaMax: 10, linksClickable: true, firstComment: false },
 };
 
 const isVideo = (m: MediaInfo) => (m.mime ? m.mime.startsWith('video/') : /\.(mp4|mov|m4v|webm)(\?|$)/i.test(m.url || ''));
@@ -66,6 +77,9 @@ export function validatePost(platform: ValidatePlatform, d: PostDraft, opts: { c
   if (!r.mediaRequired && d.media.length === 0 && !caption.trim() && !d.link) out.push({ level: 'error', code: 'empty', message: 'Add text, a link or media.' });
   if (d.media.length > r.mediaMax) out.push({ level: 'error', code: 'too_much_media', message: `${label(platform)} takes up to ${r.mediaMax} item${r.mediaMax === 1 ? '' : 's'} in one post.` });
   if (platform === 'tiktok' && d.media.length && !d.media.every(isVideo)) out.push({ level: 'error', code: 'video_required', message: 'TikTok posts from ZieAds must be a video.' });
+  if (platform === 'youtube' && (d.media.length !== 1 || !isVideo(d.media[0]))) out.push({ level: 'error', code: 'video_required', message: 'YouTube needs one video.' });
+  if (platform === 'pinterest' && d.media.some(isVideo)) out.push({ level: 'error', code: 'image_required', message: 'Pinterest posts from ZieAds take images. Post video Pins from Pinterest.' });
+  if (platform === 'bluesky' && d.media.some(isVideo)) out.push({ level: 'error', code: 'image_required', message: 'Bluesky posts from ZieAds take images. Post videos from the Bluesky app.' });
   const maxSec = opts.creatorMaxVideoSec ?? r.videoMaxSec;
   for (const m of d.media) {
     if (isVideo(m) && m.durationSec !== undefined) {
@@ -86,5 +100,5 @@ export function validatePost(platform: ValidatePlatform, d: PostDraft, opts: { c
 export const hasErrors = (issues: Issue[]) => issues.some((i) => i.level === 'error');
 
 function label(p: ValidatePlatform) {
-  return { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', linkedin: 'LinkedIn', threads: 'Threads' }[p];
+  return { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', linkedin: 'LinkedIn', threads: 'Threads', pinterest: 'Pinterest', youtube: 'YouTube', bluesky: 'Bluesky', mastodon: 'Mastodon', telegram: 'Telegram', discord: 'Discord' }[p];
 }

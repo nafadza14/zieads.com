@@ -37,6 +37,7 @@ import { briefingRouter } from "./routes/api-briefing.js";
 import { inboxRouter } from "./routes/api-inbox.js";
 import { analyticsRouter } from "./routes/api-analytics.js";
 import { mcpRouter, mcpGet, mcpPost } from "./routes/api-mcp.js";
+import { socialRouter } from "./routes/api-social.js";
 import { oauthRouter, publicOrigin } from "./routes/api-oauth.js";
 import { restNotFound, restRouter } from "./routes/api-rest.js";
 import { scheduledAgentsRouter } from "./routes/api-scheduled-agents.js";
@@ -158,6 +159,8 @@ app.use("/api", mcpRouter);
 app.use("/api/v3", apiV3Router);
 
 // ─── Social Media Platform Connections API ─────────────
+// Threads, Pinterest, YouTube, Mastodon, Bluesky, Telegram, Discord first; the original four fall through
+app.use("/api/auth", socialRouter);
 app.use("/api/auth", authRouter);
 
 // ─── Settings, team, data export and deletion, client error reports ─

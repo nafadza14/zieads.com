@@ -15,7 +15,7 @@ export interface BulkRow {
 
 export const BULK_TEMPLATE = 'date,time,platform,caption,media_url,first_comment\n2026-11-10,09:00,instagram,"New serum drop, link in bio",https://example.com/serum.jpg,"Which shade are you?"\n';
 
-const PLATFORMS = new Set(["instagram", "facebook", "tiktok", "linkedin"]);
+const PLATFORMS = new Set(["instagram", "facebook", "tiktok", "linkedin", "threads", "pinterest", "youtube", "bluesky", "mastodon", "telegram", "discord"]);
 
 /** RFC 4180 style CSV: quotes, escaped quotes, commas and new lines inside quotes */
 export function parseCsv(text: string): string[][] {

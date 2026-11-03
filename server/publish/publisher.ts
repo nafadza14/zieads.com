@@ -7,6 +7,7 @@
     and a Guardian task that tells the user what happened and what to do.
   - TikTok before the Direct Post audit and LinkedIn media posts use the push
     reminder path: status needs_action and a task, never a fake "published".
+  - Threads, Pinterest, YouTube, Bluesky, Mastodon, Telegram and Discord live in server/social/publishers.ts.
 */
 import crypto from "crypto";
 import { supabaseAdmin } from "../supabaseServer.js";
@@ -16,6 +17,8 @@ import { publishToPage, commentOnPost, explainGraphError, GraphError } from "../
 import { getFacebookPage } from "../facebook/connect.js";
 import { validatePost, hasErrors, ValidatePlatform } from "../../src/lib/postValidation.js";
 import { createAgentTask, logActivity } from "../activity.js";
+import { PublishError, NeedsAction } from "./errors.js";
+import { NETWORK_PUBLISHERS } from "../social/publishers.js";
 
 export const MAX_ATTEMPTS = 3;
 
@@ -34,22 +37,6 @@ export interface PublishResult {
   externalId?: string;
   permalink?: string;
   reason?: string;
-}
-
-class PublishError extends Error {
-  retryable: boolean;
-  needsReconnect: boolean;
-  constructor(message: string, retryable: boolean, needsReconnect = false) {
-    super(message);
-    this.retryable = retryable;
-    this.needsReconnect = needsReconnect;
-  }
-}
-
-class NeedsAction extends Error {
-  constructor(message: string) {
-    super(message);
-  }
 }
 
 const isVideoUrl = (u: string) => /\.(mp4|mov|m4v|webm)(\?|$)/i.test(u);
@@ -206,6 +193,7 @@ const DISPATCH: Record<string, (post: any) => Promise<{ externalId: string; perm
   facebook: publishFacebook,
   tiktok: publishTikTok,
   linkedin: publishLinkedIn,
+  ...NETWORK_PUBLISHERS,
 };
 
 async function markConnection(userId: string, platform: string, reason: string) {

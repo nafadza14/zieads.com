@@ -218,7 +218,7 @@ export const TOOLS: Tool[] = [
       type: "object",
       required: ["platform", "caption"],
       properties: {
-        platform: { type: "string", enum: ["instagram", "facebook", "tiktok", "linkedin"] },
+        platform: { type: "string", enum: ["instagram", "facebook", "tiktok", "linkedin", "threads", "pinterest", "youtube", "bluesky", "mastodon", "telegram", "discord"] },
         caption: { type: "string", maxLength: 2200 },
         scheduled_for: { type: "string", format: "date-time", description: "When it should go out once approved" },
         media_url: { type: "string", format: "uri", description: "Public https URL of an image or video" },
@@ -235,7 +235,7 @@ export const TOOLS: Tool[] = [
       if (when && isNaN(when.getTime())) throw new McpToolError("scheduled_for must be an ISO date");
       const { data: acct } = await supabaseAdmin.from("connected_accounts").select("id").eq("user_id", k.user_id).eq("platform", a.platform).eq("is_active", true).limit(1).maybeSingle();
       if (!acct) throw new McpToolError(`${a.platform} is not connected in ZieAds.`);
-      const media = a.media_url ? [{ id: "mcp_media", file_url: String(a.media_url), mime_type: /\.(mp4|mov|m4v|webm)(\?|$)/i.test(String(a.media_url)) ? "video/mp4" : "image/jpeg" }] : [];
+      const media = a.media_url ? [{ id: "temp_mcp_media", file_url: String(a.media_url), mime_type: /\.(mp4|mov|m4v|webm)(\?|$)/i.test(String(a.media_url)) ? "video/mp4" : "image/jpeg" }] : [];
       const out = await submitPosts(k.user_id, { targets: [{ platform: a.platform, account_id: acct.id, first_comment: str(a.first_comment) }], caption, media_attachments: media, media_ids: media.map((m) => m.id), mode: "draft" });
       if (!out.ok) throw new McpToolError(out.error || "The post could not be created", out.issues);
       const postId = out.posts![0].id;

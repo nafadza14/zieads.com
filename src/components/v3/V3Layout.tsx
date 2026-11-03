@@ -258,7 +258,7 @@ export default function V3Layout({ children }: Props) {
               <X size={13} />
             </button>
           </div>
-          <div className="zd-acct-segs" aria-hidden="true">
+          <div className="zd-acct-segs" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${PLATFORM_COUNT}, 1fr)` }}>
             {Array.from({ length: PLATFORM_COUNT }, (_, i) => (
               <i key={i} className={i < accounts.length ? 'is-on' : ''} />
             ))}

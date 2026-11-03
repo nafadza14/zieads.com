@@ -13,7 +13,7 @@ import SocialIcon from '../../components/v3/SocialIcon';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections } from '../../data/sample-data';
 import { api, authHeaders } from '../../lib/api';
-import { PLATFORMS } from '../../lib/platforms';
+import { PLATFORMS, Platform } from '../../lib/platforms';
 import { refreshConnections } from '../../lib/connectionsStore';
 import './connections.css';
 
@@ -36,6 +36,7 @@ const ERROR_TEXT: Record<string, string> = {
   csrf: 'The connection link expired. Try again.',
   no_pages: 'Your Facebook account does not manage any Page. Create a Page or ask for full control of one, then connect again.',
   invalid_callback: 'The platform sent an incomplete response. Try again.',
+  exchange_failed: 'the sign in did not finish.',
 };
 
 interface Conn {
@@ -83,6 +84,7 @@ export default function ConnectionsPage() {
   const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
   const [pagePicker, setPagePicker] = useState<{ pages: any[]; selected: string | null } | null>(null);
   const [importFor, setImportFor] = useState<AdsId | null>(null);
+  const [formFor, setFormFor] = useState<Platform | null>(null);
 
   const load = async () => {
     if (demo.isActive) {
@@ -129,7 +131,8 @@ export default function ConnectionsPage() {
       const [platform, ...rest] = error.split('_');
       const key = rest.join('_');
       const name = ORGANIC.find((o) => o.id === platform)?.name || platform;
-      setBanner({ tone: 'bad', text: `${name}: ${ERROR_TEXT[key] || `the connection failed (${key.replace(/_/g, ' ')}). Try again or contact support.`}` });
+      const detail = p.get('detail');
+      setBanner({ tone: 'bad', text: `${name}: ${ERROR_TEXT[key] || `the connection failed (${key.replace(/_/g, ' ')}). Try again or contact support.`}${detail ? ` ${detail}` : ''}` });
     }
     if (connected || error) window.history.replaceState({}, document.title, window.location.pathname);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,6 +140,9 @@ export default function ConnectionsPage() {
 
   const connect = async (id: OrganicId) => {
     if (demo.isActive) return setBanner({ tone: 'warn', text: 'Exit demo mode to connect your own accounts.' });
+    const def = PLATFORMS.find((p) => p.id === id);
+    // Telegram, Discord, Bluesky and Mastodon ask for a channel, webhook, app password or server first
+    if (def?.connect === 'form' || def?.connect === 'oauth_form') return setFormFor(def);
     setBusy(id);
     try {
       const j = await api<{ url: string }>(`/api/auth/${id}/connect`, { body: {} });
@@ -436,6 +442,18 @@ export default function ConnectionsPage() {
         )}
       </PageBody>
 
+      {formFor && (
+        <ConnectFormModal
+          platform={formFor}
+          onClose={() => setFormFor(null)}
+          onDone={(text) => {
+            setFormFor(null);
+            setBanner({ tone: 'good', text, action: { label: 'Create a post', to: '/composer' } });
+            load();
+          }}
+        />
+      )}
+
       {pagePicker && (
         <div className="zcn-overlay" role="dialog" aria-modal="true" aria-label="Choose a Facebook Page">
           <Card className="zcn-modal" padding={26}>
@@ -584,6 +602,81 @@ function AdsImportModal({ platform, name, onClose, onDone }: { platform: AdsId; 
             Import {preview ? `${preview.count} rows` : ''}
           </Button>
         </div>
+      </Card>
+    </div>
+  );
+}
+
+/** Connect form for networks that need a value first (Telegram, Discord, Bluesky, Mastodon) */
+function ConnectFormModal({ platform, onClose, onDone }: { platform: Platform; onClose: () => void; onDone: (text: string) => void }) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setErr('');
+    try {
+      if (platform.connect === 'oauth_form') {
+        const j = await api<{ url: string }>(`/api/auth/${platform.id}/connect`, { body: values });
+        window.location.href = j.url;
+        return;
+      }
+      const j = await api(`/api/auth/${platform.id}/credentials`, { body: values });
+      onDone(`${platform.name} is connected${j.display_name ? ` as ${j.display_name}` : ''}. It is ready in the Composer.`);
+    } catch (e: any) {
+      setErr(e.message);
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="zcn-overlay" role="dialog" aria-modal="true" aria-label={`Connect ${platform.name}`}>
+      <Card className="zcn-modal" padding={26}>
+        <form onSubmit={submit}>
+          <div className="zcn-modal-head">
+            <span className="zd-icon-dot">
+              <SocialIcon platform={platform.id} size={18} />
+            </span>
+            <div>
+              <h3>Connect {platform.name}</h3>
+              {platform.howTo && <p>{platform.howTo}</p>}
+            </div>
+          </div>
+          <div className="zcn-form">
+            {(platform.fields || []).map((f, i) => (
+              <label key={f.key} className="zcn-field">
+                <span>
+                  {f.label}
+                  {f.optional && <em> optional</em>}
+                </span>
+                <input
+                  className="zd-input"
+                  type={f.type === 'password' ? 'password' : f.type === 'url' ? 'url' : 'text'}
+                  autoComplete="off"
+                  autoFocus={i === 0}
+                  placeholder={f.placeholder}
+                  required={!f.optional}
+                  value={values[f.key] || ''}
+                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                />
+                {f.help && <small>{f.help}</small>}
+              </label>
+            ))}
+          </div>
+          {err && (
+            <p className="zcn-form-err" role="alert">
+              {err}
+            </p>
+          )}
+          <div className="zcn-actions">
+            <Button variant="ghost" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={busy}>
+              {platform.connect === 'oauth_form' ? 'Continue' : `Connect ${platform.name}`}
+            </Button>
+          </div>
+        </form>
       </Card>
     </div>
   );

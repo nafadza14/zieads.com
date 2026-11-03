@@ -323,7 +323,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     q: 'Which platforms does ZieAds support today?',
-    a: 'Scheduling and analytics: Instagram, Facebook Pages, TikTok and LinkedIn. Inbox: Instagram and Facebook comments, with TikTok and LinkedIn coming soon. Competitor tracking: Instagram, Threads and the Meta Ad Library (ads that ran in the EU and UK). X, Bluesky, YouTube, Threads publishing and Pinterest are on the roadmap.',
+    a: 'Publishing: Instagram, Facebook Pages, Threads, TikTok, LinkedIn, YouTube, Pinterest, Bluesky, Mastodon, Telegram channels and Discord channels. Analytics: Instagram, Facebook, TikTok and LinkedIn. Inbox: Instagram and Facebook comments, with more coming. Competitor tracking: Instagram, Threads and the Meta Ad Library (ads that ran in the EU and UK). X, Tumblr and Reddit are on the roadmap.',
   },
   {
     q: 'Is there a free plan?',

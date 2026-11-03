@@ -150,3 +150,11 @@
 /* Networks that are not wired up yet: same card, quieter */
 .zcn-card.is-soon .zcn-brand { opacity: 0.55; }
 .zcn-card.is-soon .zcn-name { color: var(--zd-ink-3); }
+
+/* Connect form (Telegram, Discord, Bluesky, Mastodon) */
+.zcn-form { display: grid; gap: 14px; margin: 18px 0 6px; }
+.zcn-field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--zd-ink); }
+.zcn-field em { font-style: normal; font-weight: 500; color: var(--zd-ink-4); }
+.zcn-field input { width: 100%; }
+.zcn-field small { font-weight: 400; color: var(--zd-ink-3); }
+.zcn-form-err { margin: 8px 0 0; font-size: 13px; color: var(--zd-bad); }
