@@ -1153,9 +1153,20 @@
 .za-mode-pack-head h3 { margin: 0; font-size: 16px; font-weight: 650; color: #111; }
 .za-mode-pack-head span { flex: 1; min-width: 220px; font-size: 13px; color: #717171; }
 
-/* v4: the agent lives inside the main app shell. The conversation list is a second column. */
-.za-chat.is-embedded { height: 100%; flex: 1; min-height: 0; background: #fff; }
-.za-chat.is-embedded .za-sidebar { width: 248px; background: #fff; }
-.za-chat.is-embedded .za-side-actions { padding-top: 16px; }
-.za-chat.is-embedded .za-main { background: #fff; }
-.za-chat.is-embedded .za-greeting { font-size: clamp(24px, 2.6vw, 32px); max-width: 640px; margin-left: auto; margin-right: auto; }
+/* v4 full screen: the agent takes the whole window, styled like the dashboard (white sidebar, white canvas) */
+.za-chat.is-full { position: fixed; inset: 0; z-index: 50; background: #fff; }
+.za-chat.is-full .za-sidebar { width: 256px; background: #fff; }
+.za-chat.is-full .za-brand { padding: 18px 18px 14px; }
+.za-chat.is-full .za-brand-name { font-size: 17px; }
+.za-chat.is-full .za-side-actions { padding: 0 14px 14px; gap: 8px; }
+.za-chat.is-full .za-back-btn,
+.za-chat.is-full .za-new-btn { width: 100%; justify-content: flex-start; }
+.za-chat.is-full .za-main { background: #fff; }
+.za-chat.is-full .za-greeting { font-size: clamp(24px, 2.6vw, 32px); max-width: 640px; margin-left: auto; margin-right: auto; }
+/* The header back arrow only shows on small screens, where the sidebar is a drawer */
+.za-back-icon {
+  display: none; width: 34px; height: 34px; flex-shrink: 0; align-items: center; justify-content: center;
+  border: 1px solid var(--za-line); border-radius: 8px; background: #fff; color: var(--za-ink); cursor: pointer;
+}
+.za-back-icon:hover { background: var(--za-gray); }
+@media (max-width: 860px) { .za-back-icon { display: inline-flex; } }

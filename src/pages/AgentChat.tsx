@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { isUnlimited } from '../lib/limits';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {  PlayCircle, Send,  ArrowRight,  Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine, ArrowUpRight, Plus, Play } from 'lucide-react';
+import {  PlayCircle, Send,  ArrowRight, ArrowLeft, Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine, ArrowUpRight, Plus, Play } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
 import ZieAdsLogo from '../components/ZieAdsLogo';
 import { 
@@ -12,7 +12,6 @@ import { supabase } from '../lib/supabaseClient';
 import { useCreditStore } from '../lib/creditStore';
 import CreditBadge from '../components/CreditBadge';
 import FeatureGateModal from '../components/FeatureGateModal';
-import V3Layout from '../components/v3/V3Layout';
 import { Button } from '../components/v3/ui';
 import './agent-chat.css';
 import ZieAvatar from '../components/ZieAvatar';
@@ -765,14 +764,23 @@ export default function AgentChat() {
 
   return (
     <>
-      <V3Layout>
-      <div className="za-chat is-embedded">
+      {/* Full screen workspace: the agent gets the whole window, the way back is the first button */}
+      <div className="za-chat is-full">
         {/* Mobile backdrop */}
         {sidebarOpen && <div className="za-backdrop" onClick={() => setSidebarOpen(false)} />}
 
         {/* ─── LEFT SIDEBAR (CONVERSATIONS) ─── */}
         <aside className={`za-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
+          <div className="za-brand">
+            <ZieAdsLogo size={24} />
+            <span className="za-brand-name">zieads</span>
+            <span className="za-brand-pill">AI Agent</span>
+          </div>
+
           <div className="za-side-actions">
+            <Button variant="secondary" icon={<ArrowLeft />} className="za-back-btn" onClick={() => navigate('/analyst')}>
+              Back to dashboard
+            </Button>
             <Button icon={<Plus />}
               className="za-new-btn"
               onClick={() => {
@@ -850,6 +858,9 @@ export default function AgentChat() {
           {/* Header */}
           <header className="za-header">
             <div className="za-header-left">
+              <button className="za-back-icon" onClick={() => navigate('/analyst')} aria-label="Back to dashboard" title="Back to dashboard">
+                <ArrowLeft size={16} />
+              </button>
               <button className="za-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open conversations">
                 <span />
                 <span />
@@ -1071,7 +1082,6 @@ export default function AgentChat() {
           )}
         </main>
       </div>
-      </V3Layout>
 
       {/* Mode Feature Gate Modal */}
       <FeatureGateModal
