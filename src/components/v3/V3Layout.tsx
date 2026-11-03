@@ -26,6 +26,10 @@ import { supabase } from '../../lib/supabaseClient';
 import { useCreditStore } from '../../lib/creditStore';
 import { useDemoMode } from '../../lib/demoStore';
 import CreditBadge from '../CreditBadge';
+import SocialIcon from './SocialIcon';
+import { PLATFORMS, PLATFORM_COUNT } from '../../lib/platforms';
+import { useConnectedAccounts } from '../../lib/connectionsStore';
+import { sampleConnections } from '../../data/sample-data';
 import { ArrowRight } from 'lucide-react';
 import './dash.css';
 
@@ -48,6 +52,14 @@ export default function V3Layout({ children }: Props) {
   // Welcome modal removed
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const liveAccounts = useConnectedAccounts();
+  const [hideProgress, setHideProgress] = useState(() => {
+    try {
+      return localStorage.getItem('zd_hide_platform_progress') === '1';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -181,6 +193,81 @@ export default function V3Layout({ children }: Props) {
     </button>
   );
 
+  // Connected accounts in the sidebar (layout inspired by Buffer style sidebars): who is connected,
+  // the next networks to add, and how many of the 12 are live
+  const accounts = demo.isActive
+    ? sampleConnections.map((c) => ({ platform: c.platform, connected: true, username: c.account_handle, display_name: c.account_handle }))
+    : liveAccounts || [];
+  const connectedIds = new Set(accounts.map((a) => a.platform));
+  const nextUp = PLATFORMS.filter((p) => !connectedIds.has(p.id)).sort((a, b) => (a.status === b.status ? 0 : a.status === 'available' ? -1 : 1)).slice(0, 4);
+  const dismissProgress = () => {
+    setHideProgress(true);
+    try {
+      localStorage.setItem('zd_hide_platform_progress', '1');
+    } catch {
+      /* private mode: hide for this visit only */
+    }
+  };
+  const renderAccounts = () => (
+    <div className="zd-nav-group zd-accts">
+      <div className="zd-accts-head">
+        <span className="zd-nav-label">Accounts</span>
+        <button type="button" className="zd-accts-btn" onClick={() => handleNavClick('/connections')} aria-label="Manage accounts" title="Manage accounts">
+          <SettingsIcon size={14} />
+        </button>
+        <button type="button" className="zd-accts-btn" onClick={() => handleNavClick('/connections')} aria-label="Connect an account" title="Connect an account">
+          <Plus size={14} />
+        </button>
+      </div>
+      {accounts.map((a) => {
+        const name = a.display_name || a.username || PLATFORMS.find((p) => p.id === a.platform)?.name || a.platform;
+        return (
+          <button key={a.platform} type="button" className="zd-acct" onClick={() => handleNavClick('/connections')} title={name}>
+            <span className="zd-acct-av">
+              {a.avatar_url ? <img src={a.avatar_url} alt="" onError={(e) => ((e.target as HTMLElement).style.display = 'none')} /> : <span className="zd-acct-initial">{name.replace(/^@/, '').slice(0, 1).toUpperCase()}</span>}
+              <span className="zd-acct-badge">
+                <SocialIcon platform={a.platform} size={13} />
+              </span>
+            </span>
+            <span className="zd-acct-name">{name}</span>
+          </button>
+        );
+      })}
+      {nextUp.length > 0 && (
+        <>
+          <div className="zd-acct-next-label">{accounts.length ? 'Connect another account' : 'Connect your first account'}</div>
+          <div className="zd-acct-next">
+            {nextUp.map((p) => (
+              <button key={p.id} type="button" className={`zd-acct-tile ${p.status === 'soon' ? 'is-soon' : ''}`} onClick={() => handleNavClick('/connections')} aria-label={p.status === 'soon' ? `${p.name}, coming soon` : `Add ${p.name}`} title={p.status === 'soon' ? `${p.name} (soon)` : `Connect ${p.name}`}>
+                <SocialIcon platform={p.id} size={22} />
+              </button>
+            ))}
+            <button type="button" className="zd-acct-tile is-more" onClick={() => handleNavClick('/connections')} aria-label="See all networks" title="See all networks">
+              <Plus size={14} />
+            </button>
+          </div>
+        </>
+      )}
+      {!hideProgress && (
+        <div className="zd-acct-progress">
+          <div className="zd-acct-progress-head">
+            <strong>
+              {accounts.length}/{PLATFORM_COUNT} platforms connected
+            </strong>
+            <button type="button" className="zd-accts-btn" onClick={dismissProgress} aria-label="Hide">
+              <X size={13} />
+            </button>
+          </div>
+          <div className="zd-acct-segs" aria-hidden="true">
+            {Array.from({ length: PLATFORM_COUNT }, (_, i) => (
+              <i key={i} className={i < accounts.length ? 'is-on' : ''} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const renderSidebarContent = () => (
     <>
       <div className="zd-brand" onClick={() => handleNavClick('/analyst')}>
@@ -202,6 +289,7 @@ export default function V3Layout({ children }: Props) {
             {g.items.map(navButton)}
           </div>
         ))}
+        {renderAccounts()}
         <div className="zd-nav-group is-bottom">{setupItems.map(navButton)}</div>
       </nav>
 

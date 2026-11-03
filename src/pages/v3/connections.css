@@ -146,3 +146,7 @@
 .zcn-warn svg { color: var(--zd-warn); flex-shrink: 0; margin-top: 2px; }
 .zcn-banner { color: var(--zd-ink) !important; }
 .zcn-link { border: none; background: none; padding: 0; font: inherit; color: var(--zd-ink); text-decoration: underline; cursor: pointer; }
+
+/* Networks that are not wired up yet: same card, quieter */
+.zcn-card.is-soon .zcn-brand { opacity: 0.55; }
+.zcn-card.is-soon .zcn-name { color: var(--zd-ink-3); }

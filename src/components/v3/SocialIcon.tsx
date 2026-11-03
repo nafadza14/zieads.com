@@ -32,6 +32,13 @@ const KEY: Record<string, string> = {
   google_ads: 'googleads',
   twitter: 'x',
   x: 'x',
+  threads: 'threads',
+  youtube: 'youtube',
+  pinterest: 'pinterest',
+  bluesky: 'bluesky',
+  mastodon: 'mastodon',
+  reddit: 'reddit',
+  tumblr: 'tumblr',
 };
 
 export default function SocialIcon({ platform, size = 20, style, variant = 'tile' }: SocialIconProps) {

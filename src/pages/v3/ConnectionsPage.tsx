@@ -13,17 +13,15 @@ import SocialIcon from '../../components/v3/SocialIcon';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections } from '../../data/sample-data';
 import { api, authHeaders } from '../../lib/api';
+import { PLATFORMS } from '../../lib/platforms';
+import { refreshConnections } from '../../lib/connectionsStore';
 import './connections.css';
 
-type OrganicId = 'instagram' | 'facebook' | 'tiktok' | 'linkedin';
+type OrganicId = string;
 type AdsId = 'meta_ads' | 'google_ads' | 'tiktok_ads';
 
-const ORGANIC: Array<{ id: OrganicId; name: string; icon: string; what: string; tokenDays?: number }> = [
-  { id: 'instagram', name: 'Instagram', icon: 'instagram', what: 'Professional account: posts, Reels, insights, comments', tokenDays: 60 },
-  { id: 'facebook', name: 'Facebook', icon: 'facebook', what: 'Pages: posts, insights, comments' },
-  { id: 'tiktok', name: 'TikTok', icon: 'tiktok', what: 'Profile stats and videos, upload to your TikTok inbox' },
-  { id: 'linkedin', name: 'LinkedIn', icon: 'linkedin', what: 'Your profile: text posts. Company Pages after LinkedIn review', tokenDays: 60 },
-];
+// The 12 networks, in the order they come live (src/lib/platforms.ts). Soon ones show a Soon label.
+const ORGANIC = PLATFORMS.map((p) => ({ ...p, icon: p.id }));
 
 const ADS: Array<{ id: AdsId; name: string; icon: string }> = [
   { id: 'meta_ads', name: 'Meta Ads', icon: 'meta' },
@@ -31,7 +29,7 @@ const ADS: Array<{ id: AdsId; name: string; icon: string }> = [
   { id: 'tiktok_ads', name: 'TikTok Ads', icon: 'tiktok' },
 ];
 
-const COMING_SOON = ['Threads', 'YouTube', 'X', 'Bluesky', 'Pinterest', 'LinkedIn Ads', 'Google Business Profile'];
+const COMING_SOON = ['LinkedIn Ads', 'Google Business Profile'];
 
 const ERROR_TEXT: Record<string, string> = {
   denied: 'You cancelled the connection. Nothing was changed.',
@@ -100,6 +98,7 @@ export default function ConnectionsPage() {
       (Array.isArray(list) ? list : []).forEach((c) => (map[c.platform] = c));
       setConns(map);
       setAds(adsStatus.platforms || {});
+      refreshConnections();
     } catch (e: any) {
       setBanner({ tone: 'bad', text: `Could not load connections: ${e.message}` });
     } finally {
@@ -201,6 +200,29 @@ export default function ConnectionsPage() {
   const liveCount = useMemo(() => ORGANIC.filter((o) => conns[o.id]?.connected).length, [conns]);
 
   const renderOrganic = (o: (typeof ORGANIC)[number]) => {
+    if (o.status === 'soon') {
+      return (
+        <Card key={o.id} className="zcn-card is-soon">
+          <div className="zcn-head">
+            <span className="zcn-brand">
+              <SocialIcon platform={o.icon} size={26} />
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div className="zcn-name">{o.name}</div>
+              <div className="zcn-type">{o.what}</div>
+            </div>
+            <span className="zcn-status">
+              <Pill tone="neutral">Soon</Pill>
+            </span>
+          </div>
+          <div className="zcn-foot">
+            <Button variant="secondary" full disabled>
+              Soon
+            </Button>
+          </div>
+        </Card>
+      );
+    }
     const c = conns[o.id];
     const on = !!c?.connected;
     const status = c?.status || 'live';
@@ -362,7 +384,7 @@ export default function ConnectionsPage() {
               <div className="zcn-group-head">
                 <h2>Organic social media</h2>
                 <span className="zd-eyebrow">
-                  {liveCount} of {ORGANIC.length} connected
+                  {liveCount} of {ORGANIC.length} connected · {ORGANIC.filter((o) => o.status === 'soon').length} coming soon
                 </span>
               </div>
               <div className="zd-grid-2">{ORGANIC.map(renderOrganic)}</div>
