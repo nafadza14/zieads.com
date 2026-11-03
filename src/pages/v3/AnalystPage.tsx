@@ -300,8 +300,8 @@ export default function AnalystPage() {
       <PageHeader
         number="01"
         label="AI Analyst"
-        title="Here is what Zie saw."
-        subtitle={`Every connected account, watched around the clock. Showing the ${p.long} compared with the ${p.long.replace('last ', 'previous ')}.`}
+        title="AI Analyst"
+        subtitle={`${p.long.charAt(0).toUpperCase()}${p.long.slice(1)} vs the ${p.long.replace('last ', 'previous ')}`}
         actions={
           <>
             <SegTabs size="sm" tabs={PERIODS.map((x) => ({ id: x.id, label: x.label }))} value={period} onChange={(v) => setPeriod(v as Period)} />

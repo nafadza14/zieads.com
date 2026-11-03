@@ -1152,3 +1152,10 @@
 .za-mode-pack-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .za-mode-pack-head h3 { margin: 0; font-size: 16px; font-weight: 650; color: #111; }
 .za-mode-pack-head span { flex: 1; min-width: 220px; font-size: 13px; color: #717171; }
+
+/* v4: the agent lives inside the main app shell. The conversation list is a second column. */
+.za-chat.is-embedded { height: 100%; flex: 1; min-height: 0; background: #fff; }
+.za-chat.is-embedded .za-sidebar { width: 248px; background: #fff; }
+.za-chat.is-embedded .za-side-actions { padding-top: 16px; }
+.za-chat.is-embedded .za-main { background: #fff; }
+.za-chat.is-embedded .za-greeting { font-size: clamp(24px, 2.6vw, 32px); max-width: 640px; margin-left: auto; margin-right: auto; }

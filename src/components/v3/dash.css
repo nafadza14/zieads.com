@@ -83,7 +83,8 @@
 .zd-main textarea,
 .zd-main select { transition: border-color 0.25s, box-shadow 0.25s; }
 .zd-main ::selection { background: rgba(242, 101, 34, 0.18); }
-.zd-num, .zd-mono { font-family: var(--zd-mono); font-variant-numeric: tabular-nums; }
+.zd-mono { font-family: var(--zd-mono); font-variant-numeric: tabular-nums; }
+.zd-num { font-variant-numeric: tabular-nums; }
 
 /* ── Keyframes ── */
 @keyframes zdFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -418,3 +419,80 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   v4 refresh: same language as the landing page.
+   White sidebar with grouped navigation (Buffer, Metricool, Vista Social pattern),
+   a calm grey canvas, white cards, a compact one line page header and less text.
+   ═══════════════════════════════════════════════════════ */
+.zd-shell { --zd-canvas: #f6f6f5; --zd-radius: 16px; --zd-ink-2: #3d3d3d; --zd-ink-3: #6f6f6f; --zd-ink-4: #a3a3a3; }
+
+/* Sidebar */
+.zd-sidebar { width: 236px; background: #fff; }
+.zd-brand { padding: 18px 18px 14px; }
+.zd-brand-name { font-size: 17px; }
+.zd-tagline, .zd-brand-pill { display: none; }
+.zd-side-cta { padding: 0 14px 10px; }
+.zd-create { width: 100%; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 10px; background: var(--zd-ink); color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background 0.2s, box-shadow 0.25s, transform 0.25s var(--zd-ease); }
+.zd-create:hover { background: #000; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14); }
+.zd-nav { display: flex; flex-direction: column; padding: 4px 10px 10px; }
+.zd-nav-group { display: flex; flex-direction: column; gap: 1px; padding: 6px 0; }
+.zd-nav-group + .zd-nav-group { border-top: 1px solid #f1f1f0; }
+.zd-nav-group.is-bottom { margin-top: auto; border-top: 1px solid #f1f1f0; }
+.zd-nav-label { padding: 6px 10px 4px; font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--zd-ink-4); }
+.zd-nav-item { padding: 8px 10px; margin: 0; border-radius: 9px; font-size: 13.5px; animation: none; color: var(--zd-ink-2); }
+.zd-nav-item:hover { background: var(--zd-canvas); transform: none; }
+.zd-nav-item:hover svg { transform: none; }
+.zd-nav-item.is-active { background: var(--zd-canvas); box-shadow: none; font-weight: 600; }
+.zd-nav-new { display: none; }
+.zd-side-foot { padding: 12px 14px 14px; }
+.zd-avatar { width: 30px; height: 30px; font-size: 11px; background: var(--zd-accent); }
+.zd-credits { margin-top: 10px; }
+.zd-foot-actions { margin-top: 10px; }
+
+/* Canvas */
+.zd-main { background: var(--zd-canvas); }
+
+/* Page header: one compact bar with the page name, one short line and the actions */
+.zd-header { padding: 18px clamp(16px, 3vw, 32px); background: var(--zd-canvas); backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: none; }
+.zd-header-row { align-items: center; }
+.zd-title { font-size: 22px; line-height: 1.2; font-weight: 650; letter-spacing: -0.025em !important; }
+.zd-subtitle { margin-top: 3px; font-size: 13px; line-height: 1.5; color: var(--zd-ink-3); max-width: 720px; animation: none; }
+.zd-header-actions { animation: none; gap: 8px; }
+.zd-body-inner { max-width: 1240px; padding: 4px clamp(16px, 3vw, 32px) 48px; gap: 16px; }
+
+/* Cards: white on the grey canvas, thin border, no lift */
+.zd-card { border-radius: var(--zd-radius); border-color: #ebebea; box-shadow: 0 1px 2px rgba(17, 17, 17, 0.03); padding: 18px; }
+.zd-card.is-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(17, 17, 17, 0.06); border-color: #e2e2e0; }
+.zd-card-title { margin-bottom: 14px; align-items: center; }
+.zd-card-title h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+.zd-card-title p { font-size: 12.5px; }
+.zd-icon-dot { width: 30px; height: 30px; border-radius: 9px; background: var(--zd-canvas); color: var(--zd-ink); }
+.zd-card.is-hover:hover .zd-icon-dot { transform: none; }
+.zd-card-soft { background: var(--zd-canvas); }
+
+/* KPI tiles: small label, big number, quiet hint */
+.zd-stat { padding: 16px 18px; }
+.zd-stat-top { margin-bottom: 10px; }
+.zd-stat-icon { border-radius: 9px; background: var(--zd-canvas); }
+.zd-stat:hover .zd-stat-icon { transform: none; }
+.zd-stat-value { font-size: 28px; font-weight: 650; }
+.zd-eyebrow { font-weight: 500; letter-spacing: 0.02em; text-transform: none; font-size: 12px; color: var(--zd-ink-3); }
+
+/* Tabs and chips: white segmented control on grey, like the landing pricing toggle */
+.zd-seg { background: #ecebe9; border-radius: 10px; padding: 3px; }
+.zd-seg-indicator { top: 3px; bottom: 3px; left: 3px; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.1); }
+.zd-seg-btn { padding: 6px 14px; font-size: 12.5px; color: var(--zd-ink-3); }
+.zd-seg-btn.is-active { color: var(--zd-ink); }
+.zd-chip { padding: 5px 12px; font-size: 12.5px; border-radius: 8px; }
+.zd-chip:hover:not(:disabled) { transform: none; border-color: #d5d5d3; }
+
+/* Empty state: plain card, no floating blobs */
+.zd-empty { border-style: solid; border-color: #ebebea; padding: 40px 24px; }
+.zd-aura { display: none; }
+.zd-empty-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--zd-canvas); color: var(--zd-ink); animation: none; }
+.zd-empty h3 { font-size: 16px; }
+.zd-empty p { font-size: 13.5px; color: var(--zd-ink-3); }
+
+.zd-demo-bar { background: #fff; border-bottom: 1px solid var(--zd-line); }
+@media (max-width: 860px) { .zd-topbar { background: #fff; } .zd-header { padding: 14px 16px; } }

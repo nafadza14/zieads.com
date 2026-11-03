@@ -19,7 +19,7 @@
 .zcn-group-head h2 { margin: 0; font-size: 16px; font-weight: 650; color: var(--zd-ink); }
 
 .zcn-card { display: flex; flex-direction: column; gap: 16px; height: 100%; }
-.zcn-card.is-on { border-color: rgba(34, 197, 94, 0.28); }
+.zcn-card.is-on { }
 .zcn-card.is-flash { animation: zcnFlash 1.8s var(--zd-ease) 1; }
 
 .zcn-head { display: flex; align-items: center; gap: 12px; min-width: 0; }

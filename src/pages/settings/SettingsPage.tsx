@@ -35,16 +35,16 @@ const NAV: Array<{ id: SettingsSection | 'connections'; label: string; icon: Rea
 ];
 
 const TITLES: Record<SettingsSection, [string, string]> = {
-  account: ['Your account', 'Login details for this ZieAds account.'],
-  'brand-profile': ['Brand profile', 'What Zie knows about your business. Every draft, reply and briefing uses it.'],
-  brands: ['Brands', 'One brand is one business with all of its channels. Plans are priced per brand.'],
-  team: ['Team and roles', 'Invite the people who help you run this brand.'],
-  billing: ['Plan and billing', 'Your plan, what it includes, and how to change or cancel it.'],
-  notifications: ['Briefing and alerts', 'When Zie sends your briefing and what counts as worth an alert.'],
-  activity: ['Activity log', 'Every action taken in your account, by you, by Zie or through MCP.'],
-  api: ['API and MCP', 'Connect Claude, ChatGPT or Cursor to ZieAds with a key that only reaches this brand.'],
-  automations: ['Scheduled agents', 'Recurring jobs Zie runs for you, like a Monday review that drafts the week. Everything it makes waits for your approval.'],
-  privacy: ['Data and privacy', 'Export everything ZieAds keeps about you, or delete your account.'],
+  account: ['Account', 'Your login details'],
+  'brand-profile': ['Brand profile', 'What Zie knows about your business'],
+  brands: ['Brands', 'Plans are priced per brand'],
+  team: ['Team and roles', 'People who help run this brand'],
+  billing: ['Plan and billing', 'Your plan and what it includes'],
+  notifications: ['Briefing and alerts', 'When Zie briefs you and what it alerts on'],
+  activity: ['Activity log', 'Every action by you, Zie or MCP'],
+  api: ['API and MCP', 'Connect Claude, ChatGPT or Cursor'],
+  automations: ['Scheduled agents', 'Recurring jobs Zie runs for you. Results wait for your approval.'],
+  privacy: ['Data and privacy', 'Export your data or delete your account'],
 };
 
 const VALID = new Set<string>(['account', 'brand-profile', 'brands', 'team', 'billing', 'notifications', 'activity', 'api', 'automations', 'privacy']);

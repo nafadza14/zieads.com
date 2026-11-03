@@ -166,8 +166,8 @@ export default function AnalyticsPage() {
       <PageHeader
         number="05"
         label="Analytics"
-        title="Performance across every channel."
-        subtitle="Organic results from your connected accounts and paid results from your ads imports, side by side."
+        title="Analytics"
+        subtitle="Organic and paid results"
         actions={
           <>
             <Button variant="secondary" size="sm" icon={<Download size={14} />} loading={exporting === 'posts'} onClick={() => exportCsv('posts')} disabled={demo.isActive || !o?.posts?.length}>

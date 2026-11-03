@@ -19,7 +19,7 @@ import {
   Menu,
   X,
   AlertCircle,
-  Search, BotMessageSquare } from 'lucide-react';
+  Search, BotMessageSquare, Plus } from 'lucide-react';
 import ZIcon from '../icons/ZIcon';
 import ZieAvatar from '../ZieAvatar';
 import { supabase } from '../../lib/supabaseClient';
@@ -121,17 +121,36 @@ export default function V3Layout({ children }: Props) {
 
   const currentPath = location.pathname;
 
-  const v3Items = [
-    { k: '/analyst', l: 'AI Analyst', icon: <ZIcon name="ai-analyst" size={15} /> },
-    { k: '/agent', l: 'AI Agent', icon: <BotMessageSquare size={15} /> },
-    { k: '/composer', l: 'Composer', icon: <PenTool size={15} /> },
-    { k: '/calendar', l: 'Calendar', icon: <Calendar size={15} /> },
-    { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={15} /> },
-    { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} /> },
-    { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} /> },
-    { k: '/connections', l: 'Connections', icon: <Link2 size={15} /> },
-    { k: '/settings', l: 'Settings', icon: <SettingsIcon size={15} /> },
+  // Grouped like Buffer and Metricool: overview, publish, engage, analyze, then setup at the bottom
+  const navGroups: Array<{ label?: string; items: Array<{ k: string; l: string; icon: ReactNode }> }> = [
+    {
+      items: [
+        { k: '/analyst', l: 'AI Analyst', icon: <ZIcon name="ai-analyst" size={16} /> },
+        { k: '/agent', l: 'AI Agent', icon: <BotMessageSquare size={16} /> },
+      ],
+    },
+    {
+      label: 'Publish',
+      items: [
+        { k: '/composer', l: 'Composer', icon: <PenTool size={16} /> },
+        { k: '/calendar', l: 'Calendar', icon: <Calendar size={16} /> },
+      ],
+    },
+    { label: 'Engage', items: [{ k: '/inbox', l: 'Inbox', icon: <Inbox size={16} /> }] },
+    {
+      label: 'Analyze',
+      items: [
+        { k: '/analytics', l: 'Analytics', icon: <BarChart3 size={16} /> },
+        { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={16} /> },
+      ],
+    },
   ];
+  const setupItems = [
+    { k: '/connections', l: 'Connections', icon: <Link2 size={16} /> },
+    { k: '/settings', l: 'Settings', icon: <SettingsIcon size={16} /> },
+  ];
+  const v3Items = [...navGroups.flatMap((g) => g.items), ...setupItems];
+  void v3Items;
 
   // V0.2 features hidden for V0.3 release (do not delete)
   const v2HiddenItems = [
@@ -154,35 +173,36 @@ export default function V3Layout({ children }: Props) {
 
   const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : 'U';
 
+  const isActive = (k: string) => currentPath === k || (k === '/settings' && currentPath.startsWith('/settings/'));
+  const navButton = (n: { k: string; l: string; icon: ReactNode }) => (
+    <button key={n.k} className={`zd-nav-item ${isActive(n.k) ? 'is-active' : ''}`} onClick={() => handleNavClick(n.k)} aria-current={isActive(n.k) ? 'page' : undefined}>
+      {n.icon}
+      <span>{n.l}</span>
+    </button>
+  );
+
   const renderSidebarContent = () => (
     <>
       <div className="zd-brand" onClick={() => handleNavClick('/analyst')}>
         <ZieAdsLogo size={26} />
         <span className="zd-brand-name">zieads</span>
-        <span className="zd-brand-pill">v0.3</span>
       </div>
-      <div className="zd-tagline">Schedule, analyze, act.</div>
 
-      <nav className="zd-nav">
-        <div className="zd-nav-label">Main menu</div>
-        {v3Items.map((n, i) => {
-          const isActive =
-            currentPath === n.k ||
-            (n.k === '/settings' && currentPath.startsWith('/settings/')) ||
-            (currentPath === '/clients' && n.k.includes('tab=') && location.search.includes(n.k.split('=')[1]));
-          return (
-            <button
-              key={n.k}
-              className={`zd-nav-item ${isActive ? 'is-active' : ''}`}
-              style={{ animationDelay: `${i * 35}ms` }}
-              onClick={() => handleNavClick(n.k)}
-            >
-              {n.icon}
-              <span>{n.l}</span>
-              {n.k === '/agent' && <span className="zd-nav-new">AI</span>}
-            </button>
-          );
-        })}
+      <div className="zd-side-cta">
+        <button type="button" className="zd-create" onClick={() => handleNavClick('/composer')}>
+          <Plus size={16} />
+          Create post
+        </button>
+      </div>
+
+      <nav className="zd-nav" aria-label="Main">
+        {navGroups.map((g, gi) => (
+          <div className="zd-nav-group" key={gi}>
+            {g.label && <div className="zd-nav-label">{g.label}</div>}
+            {g.items.map(navButton)}
+          </div>
+        ))}
+        <div className="zd-nav-group is-bottom">{setupItems.map(navButton)}</div>
       </nav>
 
       <div className="zd-side-foot">
@@ -190,7 +210,9 @@ export default function V3Layout({ children }: Props) {
           <div className="zd-avatar">{initials}</div>
           <div className="zd-user-text">
             <div className="zd-user-email">{userEmail || 'User'}</div>
-            <div className="zd-user-plan">{creditStore.plan_display_name || 'Free'} plan</div>
+            <div className="zd-user-plan">
+              {creditStore.plan_display_name || 'Free'} plan
+            </div>
           </div>
         </div>
         <div className="zd-credits">
@@ -200,7 +222,7 @@ export default function V3Layout({ children }: Props) {
         <div className="zd-foot-actions">
           {creditStore.upgrade_available !== false ? (
             <button className="zd-link" onClick={() => navigate('/pricing')}>
-              Upgrade plan <ArrowRight size={12} />
+              Upgrade <ArrowRight size={12} />
             </button>
           ) : (
             <button className="zd-link" onClick={() => navigate('/settings/billing')}>

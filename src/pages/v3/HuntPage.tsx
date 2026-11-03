@@ -631,8 +631,8 @@ export default function HuntPage() {
       <PageHeader
         number="07"
         label="Competitor Hunt"
-        title="See what your rivals post and promote."
-        subtitle="Public ads from the Meta, TikTok and LinkedIn ad libraries and public Instagram and Facebook posts, in their original format. Spend and results are private, so Zie shows public signals only."
+        title="Competitor Hunt"
+        subtitle="Public ads and posts from your competitors"
         actions={
           <>
             {compLimit && compLimit.limit !== -1 && (

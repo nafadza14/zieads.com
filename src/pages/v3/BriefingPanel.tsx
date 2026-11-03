@@ -120,73 +120,9 @@ export function BriefingPanel({ briefing, sample = false, compiling = false, onC
         ))}
       </ul>
 
-      {needs.length > 0 && (
-        <section className="zbr-block">
-          <h3>Needs you</h3>
-          <ul className="zbr-needs">
-            {needs.map((n: any) => (
-              <li key={n.title}>
-                <span className="zbr-dot is-bad" aria-hidden="true" />
-                <div>
-                  <strong>{n.title}</strong>
-                  {n.detail && <small>{n.detail}</small>}
-                </div>
-                {(n.link || n.prompt) && (
-                  <Button size="sm" variant="secondary" iconRight={<ArrowRight size={14} />} onClick={() => (n.prompt ? navigate('/agent', { state: { prompt: n.prompt } }) : navigate(n.link))}>
-                    {n.cta || 'Open'}
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {(briefing.wins.length > 0 || briefing.concerns.length > 0) && (
-        <div className="zbr-two">
-          <section className="zbr-block">
-            <h3>Wins</h3>
-            {briefing.wins.length ? (
-              <ul className="zbr-list">
-                {briefing.wins.map((w) => (
-                  <li key={w.title}>
-                    <span className="zbr-dot is-good" aria-hidden="true" />
-                    <div>
-                      <strong>
-                        {w.title} {!/%/.test(w.title) && <Change pct={w.delta_pct} />}
-                      </strong>
-                      {w.detail && <small>{w.detail}</small>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="zbr-muted">No big wins this week.</p>
-            )}
-          </section>
-          <section className="zbr-block">
-            <h3>Concerns</h3>
-            {briefing.concerns.length ? (
-              <ul className="zbr-list">
-                {briefing.concerns.map((c) => (
-                  <li key={c.title}>
-                    <span className="zbr-dot is-warn" aria-hidden="true" />
-                    <div>
-                      <strong>
-                        {c.title} {!/%/.test(c.title) && <Change pct={c.delta_pct} />}
-                      </strong>
-                      {c.detail && <small>{c.detail}</small>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="zbr-muted">Nothing worrying moved.</p>
-            )}
-          </section>
-        </div>
-      )}
-
+      {/* Two columns: what to do on the left, what changed on the right, so the eye reads one column at a time */}
+      <div className="zbr-grid">
+        <div className="zbr-col-main">
       <section className="zbr-block">
         <h3>3 actions for today</h3>
         <ol className="zbr-actions">
@@ -244,6 +180,78 @@ export function BriefingPanel({ briefing, sample = false, compiling = false, onC
         </ol>
         {err && <p className="zbr-err">{err}</p>}
       </section>
+
+        </div>
+        <aside className="zbr-col-side">
+      {needs.length > 0 && (
+        <section className="zbr-block">
+          <h3>Needs you</h3>
+          <ul className="zbr-needs">
+            {needs.map((n: any) => (
+              <li key={n.title}>
+                <span className="zbr-dot is-bad" aria-hidden="true" />
+                <div>
+                  <strong>{n.title}</strong>
+                  {n.detail && <small>{n.detail}</small>}
+                </div>
+                {(n.link || n.prompt) && (
+                  <Button size="sm" variant="secondary" iconRight={<ArrowRight size={14} />} onClick={() => (n.prompt ? navigate('/agent', { state: { prompt: n.prompt } }) : navigate(n.link))}>
+                    {n.cta || 'Open'}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {(briefing.wins.length > 0 || briefing.concerns.length > 0) && (
+        <div className="zbr-two is-stack">
+          <section className="zbr-block">
+            <h3>Wins</h3>
+            {briefing.wins.length ? (
+              <ul className="zbr-list">
+                {briefing.wins.map((w) => (
+                  <li key={w.title}>
+                    <span className="zbr-dot is-good" aria-hidden="true" />
+                    <div>
+                      <strong>
+                        {w.title} {!/%/.test(w.title) && <Change pct={w.delta_pct} />}
+                      </strong>
+                      {w.detail && <small>{w.detail}</small>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="zbr-muted">No big wins this week.</p>
+            )}
+          </section>
+          <section className="zbr-block">
+            <h3>Concerns</h3>
+            {briefing.concerns.length ? (
+              <ul className="zbr-list">
+                {briefing.concerns.map((c) => (
+                  <li key={c.title}>
+                    <span className="zbr-dot is-warn" aria-hidden="true" />
+                    <div>
+                      <strong>
+                        {c.title} {!/%/.test(c.title) && <Change pct={c.delta_pct} />}
+                      </strong>
+                      {c.detail && <small>{c.detail}</small>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="zbr-muted">Nothing worrying moved.</p>
+            )}
+          </section>
+        </div>
+      )}
+
+        </aside>
+      </div>
 
       <footer className="zbr-foot">
         <span className="zbr-channels">

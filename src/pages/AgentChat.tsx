@@ -479,36 +479,12 @@ export default function AgentChat() {
   }, []);
 
   useEffect(() => {
+    // Short, social first greetings (spec 12): one line, then the suggestions do the talking
     const greetings = [
-      "Hi {name}, I'm your dedicated AI Agent. Ready to audit your campaigns and grow your ROAS today?",
-      "Hello {name}, your AI Agent is online. Let's optimize your marketing funnel and build winning strategies.",
-      "Greetings {name}! I am your advertising assistant. What campaigns are we improving today?",
-      "Hey {name}, your AI partner here. Let's crush your CPA targets and find new audiences.",
-      "Hi {name}! As your growth agent, I'm ready to diagnose your ads and double your conversion rate.",
-      "Hello {name}, your strategic copilot is ready. Tell me your biggest ad challenge and let's solve it.",
-      "Welcome back, {name}. Your AI Agent is ready to brainstorm high-converting hooks and copy.",
-      "Hey {name}, growth agent reporting for duty. Let's analyze your Meta and TikTok performance.",
-      "Hello {name}! I am your personal ads expert. Let's build Google Search structures that convert.",
-      "Hi {name}, let's audit your budget. I am your agent, here to maximize your daily ad spend return.",
-      "Hey {name}! Ready to spy on competitors? I am your intelligence agent, at your service.",
-      "Hello {name}, let's check your creative fatigue. Your dedicated AI copywriter is ready.",
-      "Hi {name}! Ready for launch? Let's run a campaign readiness check and eliminate risks.",
-      "Hey {name}, let's map your TOFU-MOFU-BOFU funnel. I'm your architect agent.",
-      "Hello {name}, I am your ad performance doctor. Let's diagnose any recent ROAS drops.",
-      "Hi {name}! As your strategic advisor, I'm here to recommend the best custom audience tests.",
-      "Greetings {name}. Your AI Agent is set up. Let's write copy that hooks prospects instantly.",
-      "Hey {name}, let's review your TikTok video hooks. I am your creative optimization agent.",
-      "Hello {name}, ready to scale? I'm your budget allocation specialist. Let's do this.",
-      "Hi {name}! What ad creative shall we optimize today? I'm here to write your briefs.",
-      "Hey {name}, let's audit your landing page CRO. I am your conversion rate agent.",
-      "Hello {name}, your AI assistant is active. Let's align your Google and Meta search keywords.",
-      "Hi {name}, let's review your Meta Ads CPA benchmarks. Your data analyst agent is online.",
-      "Hey {name}! I am your growth strategist. Ready to structure a $10K budget split?",
-      "Hello {name}, let's design high-quality lead magnets. Your lead generation agent is here.",
-      "Hi {name}, let's brainstorm new angles for your SaaS product. I am your creative agent.",
-      "Hey {name}! Let's optimize your Shopify store conversions. Your e-commerce agent is active.",
-      "Hello {name}, let's write 5 viral TikTok video hooks. Your UGC agent is ready.",
-      "Hi {name}, ready to beat your competitors' ad copy? I'm your copywriting agent."
+      'Hi {name}, what should Zie work on today?',
+      'Hi {name}, ask about your posts, comments or competitors.',
+      'Hi {name}, want a plan for next week?',
+      'Hi {name}, which comments should we answer first?',
     ];
     const rawGreeting = greetings[Math.floor(Math.random() * greetings.length)];
     const nameVal = userProfile?.business_name || userEmail.split('@')[0] || 'there';
@@ -789,22 +765,14 @@ export default function AgentChat() {
 
   return (
     <>
-      <div className="za-chat">
+      <V3Layout>
+      <div className="za-chat is-embedded">
         {/* Mobile backdrop */}
         {sidebarOpen && <div className="za-backdrop" onClick={() => setSidebarOpen(false)} />}
 
         {/* ─── LEFT SIDEBAR (CONVERSATIONS) ─── */}
         <aside className={`za-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
-          <div className="za-brand">
-            <ZieAdsLogo size={26} />
-            <span className="za-brand-name">zieads</span>
-            <span className="za-brand-pill">AI Agent</span>
-          </div>
-
           <div className="za-side-actions">
-            <button className="za-ghost-btn" onClick={() => navigate('/analyst')}>
-              <ArrowRight size={14} style={{ transform: 'rotate(180deg)' }} /> Back to dashboard
-            </button>
             <Button icon={<Plus />}
               className="za-new-btn"
               onClick={() => {
@@ -981,7 +949,7 @@ export default function AgentChat() {
                       </div>
                       <WordReveal key={randomGreeting} text={randomGreeting} className="za-greeting" />
                       <p className="za-sub za-fade-in" style={{ animationDelay: '350ms' }}>
-                        Ask a question or give it a task. The agent pulls your connected account data, runs several checks at once and can save drafts to your calendar.
+                        Ask a question or give it a task. Anything Zie drafts waits for your approval.
                       </p>
 
                       <div className="za-suggest-grid">
@@ -1103,6 +1071,7 @@ export default function AgentChat() {
           )}
         </main>
       </div>
+      </V3Layout>
 
       {/* Mode Feature Gate Modal */}
       <FeatureGateModal

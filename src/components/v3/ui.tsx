@@ -34,16 +34,16 @@ export function WordReveal({ text, className = '', as = 'h1' }: { text: string; 
   );
 }
 
-/* ── Page header: numbered badge + headline + actions ── */
+/* ── Page header: page name, one short line, actions. Kept compact so the work starts above the fold. ── */
 export function PageHeader({
-  number,
-  label,
   title,
   subtitle,
   actions,
   children,
 }: {
+  /** @deprecated kept for older call sites, no longer shown */
   number?: string;
+  /** @deprecated kept for older call sites, no longer shown */
   label?: string;
   title: string;
   subtitle?: ReactNode;
@@ -54,13 +54,7 @@ export function PageHeader({
     <header className="zd-header">
       <div className="zd-header-row">
         <div className="zd-header-text">
-          {label && (
-            <div className="zd-badge-row">
-              {number && <span className="zd-badge-num">{number}</span>}
-              <span className="zd-badge-label">{label}</span>
-            </div>
-          )}
-          <WordReveal key={title} text={title} className="zd-title" />
+          <h1 className="zd-title">{title}</h1>
           {subtitle && <p className="zd-subtitle">{subtitle}</p>}
         </div>
         {actions && <div className="zd-header-actions">{actions}</div>}

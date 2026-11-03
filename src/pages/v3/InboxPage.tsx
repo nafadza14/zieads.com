@@ -571,8 +571,8 @@ export default function InboxPage() {
       <PageHeader
         number="06"
         label="Inbox"
-        title="Every comment, one calm inbox."
-        subtitle="Read, sort and reply to social comments from all your connected channels in one place."
+        title="Inbox"
+        subtitle="Comments from Instagram and Facebook, most urgent first"
         actions={
           /* Show refresh whenever the user has an IG connection (either the backend
              flag OR the /connections list, whichever is authoritative). */

@@ -817,8 +817,8 @@ export default function ComposerPage() {
       <PageHeader
         number="03"
         label="Composer"
-        title="Write once, post everywhere."
-        subtitle="Draft a post, tailor it per platform, attach media and publish now or on your schedule."
+        title="Composer"
+        subtitle="Write once, tailor per network, publish or schedule"
         actions={
           <>
             <Button variant="secondary" size="sm" icon={<Upload size={14} />} onClick={() => setBulkOpen(true)}>

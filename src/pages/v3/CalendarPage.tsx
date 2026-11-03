@@ -555,8 +555,8 @@ export default function CalendarPage() {
       <PageHeader
         number="04"
         label="Calendar"
-        title="Content calendar"
-        subtitle="Plan, review and coordinate every scheduled and published post in one view."
+        title="Calendar"
+        subtitle="Drafts, scheduled and published posts"
         actions={
           <Button icon={<Plus />} onClick={() => navigate('/composer')}>Create post</Button>
         }

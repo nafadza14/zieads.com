@@ -225,3 +225,17 @@
 .zck-list li.is-done button { color: var(--zd-ink-3); cursor: default; }
 .zck-list li.is-done svg { color: var(--zd-good); }
 @media (max-width: 760px) { .zbr-two { grid-template-columns: 1fr; } .zbr-actions li { flex-wrap: wrap; } .zbr-action-btns { width: 100%; justify-content: flex-start; } }
+
+/* v4: briefing in two columns, quieter rows */
+.zbr-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; margin-top: 4px; }
+.zbr-col-side { display: flex; flex-direction: column; padding-left: 20px; border-left: 1px solid var(--zd-line); }
+.zbr-two.is-stack { grid-template-columns: 1fr; gap: 0; }
+.zbr-headline { font-size: 18px; }
+.zbr-summary { font-size: 13.5px; color: var(--zd-ink-3); }
+.zbr-actions li { border-color: #ebebea; }
+.zbr-action-body small { font-size: 12.5px; }
+.zbr-needs li { padding: 9px 10px; }
+@media (max-width: 1000px) { .zbr-grid { grid-template-columns: 1fr; } .zbr-col-side { padding-left: 0; border-left: none; } }
+/* Checklist: one compact row */
+.zck-list { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.zck-list button { padding: 8px 10px; font-size: 12.5px; border-radius: 10px; }

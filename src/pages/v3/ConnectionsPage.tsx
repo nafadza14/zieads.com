@@ -300,7 +300,7 @@ export default function ConnectionsPage() {
           </span>
           <div style={{ minWidth: 0 }}>
             <div className="zcn-name">{a.name}</div>
-            <div className="zcn-type">Read-only reporting. ZieAds never changes campaigns or spends budget.</div>
+            <div className="zcn-type">Read only</div>
           </div>
           <span className="zcn-status">
             <Pill tone={s.imported_rows ? 'good' : 'neutral'}>{s.imported_rows ? 'Manual import' : 'Not connected'}</Pill>
@@ -329,7 +329,7 @@ export default function ConnectionsPage() {
 
   return (
     <V3Layout>
-      <PageHeader number="08" label="Connections" title="Connect the accounts Zie watches." subtitle="Official platform connections only. You can disconnect any channel at any time, and the data it brought in is deleted with it." />
+      <PageHeader number="08" label="Connections" title="Connections" subtitle="Official connections only. Disconnecting deletes that data." />
       <PageBody>
         {banner && (
           <div className={`zcn-banner tone-${banner.tone}`} role="status">
@@ -371,7 +371,7 @@ export default function ConnectionsPage() {
             <section>
               <div className="zcn-group-head">
                 <h2>Paid ads, read only</h2>
-                <span className="zd-eyebrow">Manual import until platform approval</span>
+                <span className="zd-eyebrow">Read only. ZieAds never changes campaigns or budgets.</span>
               </div>
               <div className="zd-grid-3">{ADS.map(renderAds)}</div>
             </section>
