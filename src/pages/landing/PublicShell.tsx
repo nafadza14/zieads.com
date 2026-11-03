@@ -1,9 +1,8 @@
 /* Navbar + footer for public pages outside the landing page (data deletion, comparison pages). */
 import { ReactNode, useEffect } from 'react';
-import './landing-v2.css';
-import './navbar.css';
-import Navbar from './sections/Navbar';
-import Footer from './sections/Footer';
+import './lx/lx.css';
+import LxNav from './lx/LxNav';
+import LxFooter from './lx/LxFooter';
 
 export default function PublicShell({ children, title, description }: { children: ReactNode; title: string; description?: string }) {
   useEffect(() => {
@@ -20,10 +19,10 @@ export default function PublicShell({ children, title, description }: { children
     window.scrollTo(0, 0);
   }, [title, description]);
   return (
-    <div className="landing-page">
-      <Navbar />
+    <div className="lx">
+      <LxNav />
       <main className="ps-main">{children}</main>
-      <Footer />
+      <LxFooter />
       <style>{`
         .ps-main { max-width: 880px; margin: 0 auto; padding: 120px 20px 72px; color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         .ps-main h1 { font-size: clamp(30px, 4vw, 44px); line-height: 1.1; letter-spacing: -0.03em; font-weight: 700; margin: 0 0 14px; }
