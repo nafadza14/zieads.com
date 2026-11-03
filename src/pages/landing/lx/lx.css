@@ -292,3 +292,7 @@
 .lx-cmp thead .is-us { color: var(--lx-orange); background: #fff1e8; }
 .lx-cmp-note { margin: 12px 0 0; font-size: 12px; color: var(--lx-faint); text-align: center; }
 .lx section[id], .lx [id='audit'] { scroll-margin-top: 64px; }
+/* Product cards in a row share one height; each screen fills its card from the top left */
+.lx-feat-cards { align-items: stretch; }
+.lx-shot-card .lx-shot { flex: 1; display: flex; min-height: 240px; }
+.lx-shot-card .lx-shot img { aspect-ratio: auto; height: 100%; min-height: 240px; flex: 1; }
