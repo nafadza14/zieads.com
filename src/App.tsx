@@ -10,7 +10,6 @@ import ClientDashboard from './pages/ClientDashboard';
 import PricingPage from './pages/PricingPage';
 import SkillReport from './pages/SkillReport';
 import AgentChat from './pages/AgentChat';
-import BusinessProfile from './pages/BusinessProfile';
 import ConnectionsPage from './pages/v3/ConnectionsPage';
 import AnalystPage from './pages/v3/AnalystPage';
 import ComposerPage from './pages/v3/ComposerPage';
@@ -22,6 +21,10 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
 import SuperadminLogin from './pages/superadmin/SuperadminLogin';
 import SuperadminDashboard from './pages/superadmin/SuperadminDashboard';
+import SettingsPage from './pages/settings/SettingsPage';
+import DataDeletionPage from './pages/DataDeletionPage';
+import VsPage from './pages/VsPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { supabase } from './lib/supabaseClient';
 import { CreditProvider } from './lib/creditStore';
 
@@ -65,6 +68,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/hunt': 'Competitor Hunt',
   '/connections': 'Connections',
   '/settings': 'Settings',
+  '/data-deletion': 'Data deletion',
   '/clients': 'Dashboard',
   '/scan-result': 'Website scan',
   '/audit/progress': 'Running audit',
@@ -73,10 +77,21 @@ const PAGE_TITLES: Record<string, string> = {
 function TabTitle() {
   const { pathname } = useLocation();
   useEffect(() => {
-    const page = PAGE_TITLES[pathname];
-    document.title = page ? `${page} | ZieAds` : 'ZieAds | AI Marketing Agent for Social Media Scheduling, Analytics and Ads';
+    const page = PAGE_TITLES[pathname] || (pathname.startsWith('/settings') ? 'Settings' : undefined);
+    if (pathname.startsWith('/vs/')) return; // comparison pages set their own title
+    document.title = page ? `${page} | ZieAds` : 'ZieAds | Your AI social media manager';
   }, [pathname]);
   return null;
+}
+
+/** A crash on one page must not stick after the user navigates away */
+function RouteBoundary({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary area="routes" key={pathname}>
+      {children}
+    </ErrorBoundary>
+  );
 }
 
 export default function App() {
@@ -104,6 +119,7 @@ export default function App() {
   return (
     <Router>
       <TabTitle />
+      <RouteBoundary>
       <Routes>
         <Route path="/" element={<LandingPage onScanComplete={setScanData} />} />
         <Route path="/pricing" element={<PricingPage />} />
@@ -124,7 +140,12 @@ export default function App() {
         <Route path="/clients" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
         <Route path="/skill-report/:skillName" element={<ProtectedRoute><SkillReport /></ProtectedRoute>} />
         <Route path="/agent" element={<ProtectedRoute><AgentChat /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><BusinessProfile /></ProtectedRoute>} />
+        {/* Business Profile moved into Settings (spec P0-1) */}
+        <Route path="/profile" element={<Navigate to="/settings/brand-profile" replace />} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/:section" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/data-deletion" element={<DataDeletionPage />} />
+        <Route path="/vs/:slug" element={<VsPage />} />
         <Route path="/connections" element={<ProtectedRoute><ConnectionsPage /></ProtectedRoute>} />
         <Route path="/analyst" element={<ProtectedRoute><AnalystPage /></ProtectedRoute>} />
         <Route path="/composer" element={<ProtectedRoute><ComposerPage /></ProtectedRoute>} />
@@ -132,7 +153,7 @@ export default function App() {
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
         <Route path="/hunt" element={<ProtectedRoute><HuntPage /></ProtectedRoute>} />
-        <Route path="/tools" element={<Navigate to="/clients" replace />} />
+        <Route path="/tools" element={<Navigate to="/settings" replace />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
         <Route path="/privacy.html" element={<Navigate to="/privacy-policy" replace />} />
@@ -143,6 +164,7 @@ export default function App() {
         <Route path="/superadmin/login" element={<SuperadminLogin />} />
         <Route path="/superadmin" element={<SuperadminDashboard />} />
       </Routes>
+      </RouteBoundary>
     </Router>
   );
 }

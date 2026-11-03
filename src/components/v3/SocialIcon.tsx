@@ -36,7 +36,7 @@ const KEY: Record<string, string> = {
 
 export default function SocialIcon({ platform, size = 20, style, variant = 'tile' }: SocialIconProps) {
   const gid = useId().replace(/:/g, '');
-  const key = KEY[platform.toLowerCase()];
+  const key = KEY[String(platform || '').toLowerCase()];
   const mark = key ? BRAND_MARKS[key] : undefined;
   const base: React.CSSProperties = { flexShrink: 0, display: 'inline-block', verticalAlign: 'middle', ...style };
 

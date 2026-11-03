@@ -675,3 +675,19 @@
 .zco-draft-actions { display: flex; align-items: center; gap: 8px; }
 .zco-draft-delete { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #b91c1c; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .zco-draft-delete:hover { background: #fef2f2; }
+
+/* Checks and TikTok settings (spec 7.4, 9.2) */
+.zco-check-ok { margin: 0; font-size: 13.5px; color: var(--zd-ink-2); }
+.zco-issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.zco-issues li { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; line-height: 1.45; color: var(--zd-ink); }
+.zco-issue-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; transform: translateY(-1px); background: var(--zd-warn); }
+.zco-issues li.is-error .zco-issue-dot { background: var(--zd-bad); }
+.zco-issue-level { margin-left: auto; flex-shrink: 0; font-size: 11.5px; color: var(--zd-ink-3); border: 1px solid var(--zd-line); border-radius: 999px; padding: 1px 8px; }
+.zco-tiktok .zd-label { display: block; margin-bottom: 6px; }
+.zco-tt-toggles { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 14px 0 6px; }
+.zco-tt-toggle { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0; font-size: 13.5px; line-height: 1.45; color: var(--zd-ink); cursor: pointer; }
+.zco-tt-toggle input { margin-top: 3px; accent-color: var(--zd-accent); }
+.zco-tt-toggle.is-disabled { color: var(--zd-ink-3); cursor: not-allowed; }
+.zco-tt-sub { margin-left: 24px; }
+.zco-tt-note { margin: 10px 0 0; font-size: 12.5px; color: var(--zd-ink-3); line-height: 1.5; }
+.zco-picon { border: 1px solid var(--zd-line); }

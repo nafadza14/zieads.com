@@ -1,7 +1,7 @@
 /*
   Competitor Hunt: see what rivals post and pay to promote, live.
   Pick a competitor and get its real ads (Meta, TikTok, LinkedIn ad libraries) and
-  organic posts (Instagram, Facebook, TikTok, LinkedIn) in their original format.
+  public organic posts (Instagram, Facebook) in their original format.
 */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -44,9 +44,10 @@ const SOURCES: { id: string; label: string; icon: string; kind: 'ad' | 'organic'
   { id: 'linkedin_ads', label: 'LinkedIn ads', icon: 'linkedin', kind: 'ad' },
   { id: 'instagram', label: 'Instagram', icon: 'instagram', kind: 'organic' },
   { id: 'facebook', label: 'Facebook', icon: 'facebook', kind: 'organic' },
-  { id: 'tiktok', label: 'TikTok', icon: 'tiktok', kind: 'organic' },
-  { id: 'linkedin', label: 'LinkedIn', icon: 'linkedin', kind: 'organic' },
 ];
+// TikTok and LinkedIn organic posts of other brands have no official source, so Hunt does not claim them.
+// The TikTok profile still shows through TikTok's own embed.
+const HIDDEN_SOURCES = new Set(['tiktok', 'linkedin']);
 const CREATIVE_CENTER = 'https://ads.tiktok.com/business/creativecenter/inspiration/topads/pc/en';
 
 const ago = (iso?: string | null) => {
@@ -395,6 +396,8 @@ export default function HuntPage() {
   const demo = useDemoMode();
   const navigate = useNavigate();
   const [competitors, setCompetitors] = useState<any[]>([]);
+  // Plan limit for tracked competitors (spec 11): -1 is unlimited
+  const [compLimit, setCompLimit] = useState<{ limit: number; plan: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [feed, setFeed] = useState<any>(null);
@@ -421,6 +424,17 @@ export default function HuntPage() {
     const token = data?.session?.access_token;
     return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   };
+
+  useEffect(() => {
+    if (demo.isActive) return;
+    (async () => {
+      try {
+        const r = await fetch('/api/settings', { headers: await headers() }).then((x) => x.json());
+        if (r?.limits) setCompLimit({ limit: r.limits.competitorsPerBrand, plan: r.plan });
+      } catch { /* limit badge is optional */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demo.isActive]);
 
   const loadCompetitors = useCallback(async () => {
     if (demo.isActive) {
@@ -581,7 +595,8 @@ export default function HuntPage() {
   const comp = competitors.find((c) => c.id === selectedId) || null;
   const fc = feed?.competitor || comp;
   const status: Record<string, any> = fc?.content_sync_status || {};
-  const items: any[] = feed?.items || [];
+  const atLimit = !!compLimit && compLimit.limit !== -1 && competitors.length >= compLimit.limit;
+  const items: any[] = (feed?.items || []).filter((i: any) => !HIDDEN_SOURCES.has(i.source));
 
   const visible = useMemo(() => {
     let list = items.filter((i) => (kind === 'all' || i.kind === kind) && (!source || i.source === source));
@@ -617,11 +632,24 @@ export default function HuntPage() {
         number="07"
         label="Competitor Hunt"
         title="See what your rivals post and promote."
-        subtitle="Live ads from the Meta, TikTok and LinkedIn ad libraries plus organic posts from Instagram, Facebook, TikTok and LinkedIn, in their original format."
+        subtitle="Public ads from the Meta, TikTok and LinkedIn ad libraries and public Instagram and Facebook posts, in their original format. Spend and results are private, so Zie shows public signals only."
         actions={
-          <Button variant={showForm ? 'secondary' : 'primary'} icon={showForm ? <X /> : <Plus />} onClick={() => setShowForm((v) => !v)}>
-            {showForm ? 'Close' : 'Track competitor'}
-          </Button>
+          <>
+            {compLimit && compLimit.limit !== -1 && (
+              <span className="zhu-limit" title={`Your ${compLimit.plan} plan tracks up to ${compLimit.limit} competitors`}>
+                {competitors.length} of {compLimit.limit} tracked
+              </span>
+            )}
+            {atLimit && !showForm ? (
+              <Button variant="secondary" onClick={() => navigate('/pricing')}>
+                Upgrade to track more
+              </Button>
+            ) : (
+              <Button variant={showForm ? 'secondary' : 'primary'} icon={showForm ? <X /> : <Plus />} onClick={() => setShowForm((v) => !v)}>
+                {showForm ? 'Close' : 'Track competitor'}
+              </Button>
+            )}
+          </>
         }
       />
 

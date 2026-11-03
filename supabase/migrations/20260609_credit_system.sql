@@ -60,14 +60,14 @@ CREATE POLICY "credit_transactions_self" ON credit_transactions
 
 -- ── 4. Trigger: auto-provision credits & plan on new user ────
 -- When a user signs up (row inserted into auth.users), create their free-tier records.
-CREATE OR REPLACE FUNCTION handle_new_user_credits()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+CREATE OR REPLACE FUNCTION public.handle_new_user_credits()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  INSERT INTO user_plan (user_id, plan_id, billing_anchor_day)
+  INSERT INTO public.user_plan (user_id, plan_id, billing_anchor_day)
   VALUES (NEW.id, 'free', 0)
   ON CONFLICT (user_id) DO NOTHING;
 
-  INSERT INTO user_credits (user_id, ai_chat_daily_remaining, skill_run_monthly_remaining)
+  INSERT INTO public.user_credits (user_id, ai_chat_daily_remaining, skill_run_monthly_remaining)
   VALUES (NEW.id, 5, 10)
   ON CONFLICT (user_id) DO NOTHING;
 

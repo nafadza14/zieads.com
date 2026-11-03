@@ -7,7 +7,7 @@ import { PHOTOS } from '../images';
 
 export default function WhoForSection() {
   return (
-    <Section id="who-its-for" number="09" label="Who It's For" tone="white">
+    <Section id="who-its-for" number="08" label="Who It's For" tone="white">
       <AnimatedHeading text="Built for founders, freelancers and marketing teams." />
 
       <div className="zx-grid-3">

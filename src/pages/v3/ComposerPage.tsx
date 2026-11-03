@@ -28,13 +28,8 @@ import {
   Check,
   X,
   Upload,
-  Instagram,
-  Linkedin,
-  Facebook,
-  Youtube,
-  Twitter,
-  Music2,
   Globe,
+  Music2,
   Eye,
   MessageCircle,
   
@@ -52,6 +47,10 @@ import {
   Play,
 } from 'lucide-react';
 import ZIcon from '../../components/icons/ZIcon';
+import SocialIcon from '../../components/v3/SocialIcon';
+import BulkUploadModal from '../../components/v3/BulkUploadModal';
+import { validatePost, hasErrors, Issue, ValidatePlatform, RULES } from '../../lib/postValidation';
+import { api } from '../../lib/api';
 import {
   PlatformFormat,
   defaultFormatFor,
@@ -64,12 +63,12 @@ import './composer.css';
 
 /* Platform brand marks (brand colors are allowed). */
 const PLATFORM_META: Record<string, { icon: ReactNode; color: string; name: string }> = {
-  instagram: { icon: <Instagram />, color: '#E1306C', name: 'Instagram' },
-  tiktok: { icon: <Music2 />, color: '#111111', name: 'TikTok' },
-  linkedin: { icon: <Linkedin />, color: '#0A66C2', name: 'LinkedIn' },
-  x: { icon: <Twitter />, color: '#111111', name: 'X' },
-  facebook: { icon: <Facebook />, color: '#1877F2', name: 'Facebook' },
-  youtube: { icon: <Youtube />, color: '#FF0000', name: 'YouTube' },
+  instagram: { icon: <SocialIcon platform="instagram" size={16} />, color: '#ffffff', name: 'Instagram' },
+  tiktok: { icon: <SocialIcon platform="tiktok" size={16} />, color: '#ffffff', name: 'TikTok' },
+  linkedin: { icon: <SocialIcon platform="linkedin" size={16} />, color: '#ffffff', name: 'LinkedIn' },
+  facebook: { icon: <SocialIcon platform="facebook" size={16} />, color: '#ffffff', name: 'Facebook' },
+  x: { icon: <Globe />, color: '#ffffff', name: 'X' },
+  youtube: { icon: <Globe />, color: '#ffffff', name: 'YouTube' },
 };
 const platformMeta = (p?: string) =>
   (p && PLATFORM_META[p]) || { icon: <Globe />, color: '#505050', name: p ? p.charAt(0).toUpperCase() + p.slice(1) : 'Post' };
@@ -430,6 +429,7 @@ function PlatformPreview({
 
 export default function ComposerPage() {
   const navigate = useNavigate();
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const draftId = searchParams.get('draft');
   // A draft made by the AI Agent (or saved earlier) that the user is reviewing here
@@ -447,7 +447,11 @@ export default function ComposerPage() {
   const [mediaAttachments, setMediaAttachments] = useState<any[]>([]); // items selected from library
   const [firstComment, setFirstComment] = useState('');
   const [publishMethod, setPublishMethod] = useState<'direct_api' | 'manual_reminder'>('direct_api');
-  const [scheduleType, setScheduleType] = useState<'now' | 'schedule' | 'queue'>('now');
+  const [scheduleType, setScheduleType] = useState<'now' | 'schedule' | 'queue' | 'review' | 'draft'>('now');
+  const [submitResults, setSubmitResults] = useState<Array<{ platform: string; status: string; reason?: string; permalink?: string }> | null>(null);
+  // TikTok posting screen (spec 9.2 audit rules): no default privacy, interactions off by default
+  const [tiktokOpts, setTiktokOpts] = useState<{ privacy: string; comment: boolean; duet: boolean; stitch: boolean; commercial: boolean; yourBrand: boolean; branded: boolean; musicConsent: boolean }>({ privacy: '', comment: false, duet: false, stitch: false, commercial: false, yourBrand: false, branded: false, musicConsent: false });
+  const [tiktokCreator, setTiktokCreator] = useState<{ nickname?: string; privacy_options?: string[]; comment_disabled?: boolean; duet_disabled?: boolean; stitch_disabled?: boolean; max_video_post_duration_sec?: number; source?: string } | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   const [customOverrides, setCustomOverrides] = useState<Record<string, string>>({}); // accountId -> customized content
@@ -679,90 +683,98 @@ export default function ComposerPage() {
 
   const isInheriting = activeTab !== 'universal' && customOverrides[activeTab] === undefined;
 
+  /* Pre-publish checks per selected account (spec 7.4) */
+  const textFor = (id: string) => (customOverrides[id] !== undefined ? customOverrides[id] : contentText);
+  const issuesByAccount: Record<string, Issue[]> = {};
+  for (const id of selectedAccounts) {
+    const conn = connections.find((c) => c.id === id);
+    const platform = conn?.platform as ValidatePlatform;
+    if (!platform || !RULES[platform]) continue;
+    const list = validatePost(platform, {
+      caption: textFor(id),
+      media: mediaAttachments.map((m) => ({ url: m.file_url, mime: m.mime_type })),
+      firstComment: RULES[platform].firstComment ? firstComment : undefined,
+    }, { creatorMaxVideoSec: platform === 'tiktok' ? tiktokCreator?.max_video_post_duration_sec : undefined });
+    if (platform === 'tiktok' && scheduleType !== 'draft') {
+      if (!tiktokOpts.privacy) list.push({ level: 'error', code: 'tiktok_privacy', message: 'Choose who can view the TikTok video.' });
+      if (tiktokOpts.commercial && !tiktokOpts.yourBrand && !tiktokOpts.branded) list.push({ level: 'error', code: 'tiktok_disclosure', message: 'Pick Your brand, Branded content or both, or switch off commercial content.' });
+      if (!tiktokOpts.musicConsent) list.push({ level: 'error', code: 'tiktok_music', message: "Confirm TikTok's Music Usage Confirmation." });
+    }
+    if (list.length) issuesByAccount[id] = list;
+  }
+  const blockingIssues = scheduleType !== 'draft' && Object.values(issuesByAccount).some(hasErrors);
+  const hasTikTok = selectedAccounts.some((id) => connections.find((c) => c.id === id)?.platform === 'tiktok');
+
+  // TikTok creator info: nickname, allowed privacy levels and interaction settings
+  useEffect(() => {
+    if (!hasTikTok || tiktokCreator || demo.isActive) return;
+    api('/api/v3/tiktok/creator-info')
+      .then((j) => setTiktokCreator(j.creator || {}))
+      .catch(() => setTiktokCreator({}));
+  }, [hasTikTok, tiktokCreator, demo.isActive]);
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (demo.isActive) {
       setComposerError("Demo mode: publishing is disabled.");
       return;
     }
-
     if (selectedAccounts.length === 0) {
-      setComposerError("Please select at least one social media account to post to.");
+      setComposerError("Select at least one account to post to.");
       return;
     }
-
-    const selectedConn = connections.find(c => selectedAccounts.includes(c.id));
-    const hasSupportedPlatform = selectedConn?.platform === 'instagram' || selectedConn?.platform === 'tiktok';
-    if (!hasSupportedPlatform) {
-      setComposerError("ZieAds v0.3 currently supports publishing to connected Instagram and TikTok accounts only.");
+    if (blockingIssues) {
+      setComposerError("Fix the problems listed under Checks before posting.");
       return;
     }
-
-    if (!contentText.trim() && mediaAttachments.length === 0) {
-      setComposerError("Please add some content or attach an image/video.");
+    if (scheduleType === 'schedule' && (!scheduleDate || !scheduleTime)) {
+      setComposerError("Pick a date and time.");
       return;
     }
 
     setSubmitting(true);
     setComposerError(null);
-
+    setSubmitResults(null);
     try {
-      const media_ids = mediaAttachments.map(m => m.id);
-      const hashtags = contentText.match(/#\w+/g)?.map(h => h.slice(1)) || [];
-      const headers = await getAuthHeaders();
-      let res;
-
-      if (scheduleType === 'now') {
-        res = await fetch('/api/v3/posts/publish-now', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            platform: selectedConn.platform,
-            caption: contentText,
-            media_ids,
-            hashtags,
-            media_attachments: mediaAttachments
-          })
-        });
+      const targets = selectedAccounts.map((id) => {
+        const conn = connections.find((c) => c.id === id);
+        const platform = conn?.platform;
+        const opts: Record<string, unknown> = {};
+        if (publishMethod === 'manual_reminder') opts.manual = true;
+        if (platform === 'tiktok') Object.assign(opts, { tiktok: tiktokOpts });
+        return {
+          account_id: id,
+          platform,
+          caption: textFor(id),
+          first_comment: platform && RULES[platform as ValidatePlatform]?.firstComment ? firstComment : undefined,
+          platform_options: opts,
+        };
+      });
+      const j = await api('/api/v3/posts/submit', {
+        body: {
+          targets,
+          caption: contentText,
+          media_ids: mediaAttachments.map((m) => m.id),
+          media_attachments: mediaAttachments,
+          mode: scheduleType,
+          scheduled_for: scheduleType === 'schedule' ? new Date(`${scheduleDate}T${scheduleTime}`).toISOString() : undefined,
+        },
+      });
+      if (editingDraft) {
+        // The new post replaces the draft it came from
+        await api(`/api/v3/posts/${editingDraft.id}`, { method: 'DELETE' }).catch(() => null);
+      }
+      const results = (j.posts || []).map((p: any) => ({ platform: p.platform, status: p.status, reason: p.result?.reason, permalink: p.result?.permalink }));
+      setSubmitResults(results);
+      const failed = results.filter((r: any) => r.status === 'failed');
+      if (failed.length) {
+        setComposerError(failed.map((f: any) => `${platformMeta(f.platform).name}: ${f.reason}`).join(' '));
       } else {
-        if (!scheduleDate || !scheduleTime) {
-          throw new Error("Please specify date and time for scheduling.");
-        }
-        const scheduled_for = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
-        
-        res = await fetch('/api/v3/posts/schedule', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            platform: selectedConn.platform,
-            caption: contentText,
-            media_ids,
-            hashtags,
-            scheduled_for,
-            media_attachments: mediaAttachments
-          })
-        });
-      }
-
-      const j = await res.json();
-      if (!res.ok) {
-        throw new Error(j.message || j.error || "Failed to submit post.");
-      }
-
-      if (j.success) {
-        if (editingDraft) {
-          // The scheduled or published post replaces the draft it came from
-          await fetch(`/api/v3/posts/${editingDraft.id}`, { method: 'DELETE', headers }).catch(() => null);
-        }
         setComposerSuccess(true);
-        setTimeout(() => {
-          navigate('/calendar');
-        }, 1500);
-      } else {
-        throw new Error(j.error || "Failed to submit post.");
+        if (!results.some((r: any) => r.status === 'needs_action')) setTimeout(() => navigate('/calendar'), 1800);
       }
     } catch (err: any) {
-      setComposerError(err.message || "An unexpected error occurred.");
+      setComposerError(err.message || "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
@@ -790,12 +802,14 @@ export default function ComposerPage() {
   const ringOffset = ringC * (1 - Math.min(100, percentage) / 100);
   const ctaLabel = demo.isActive
     ? 'Demo mode: cannot publish'
-    : scheduleType === 'now' ? 'Publish now' : 'Queue post';
+    : { now: 'Publish now', queue: 'Add to queue', schedule: 'Schedule post', review: 'Send for review', draft: 'Save draft' }[scheduleType];
 
-  const scheduleOptions: { id: 'now' | 'queue' | 'schedule'; label: string; icon: ReactNode }[] = [
+  const scheduleOptions: { id: 'now' | 'queue' | 'schedule' | 'review' | 'draft'; label: string; icon: ReactNode }[] = [
     { id: 'now', label: 'Publish now', icon: <ZIcon name="publish" /> },
     { id: 'queue', label: 'Add to queue (Autopilot)', icon: <Layers /> },
     { id: 'schedule', label: 'Schedule a custom time', icon: <CalendarIcon /> },
+    { id: 'review', label: 'Send for review (approval)', icon: <Eye /> },
+    { id: 'draft', label: 'Save as draft', icon: <PenLine /> },
   ];
 
   return (
@@ -805,9 +819,25 @@ export default function ComposerPage() {
         label="Composer"
         title="Write once, post everywhere."
         subtitle="Draft a post, tailor it per platform, attach media and publish now or on your schedule."
-        actions={<GhostButton onClick={() => navigate('/calendar')}>Open calendar</GhostButton>}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" icon={<Upload size={14} />} onClick={() => setBulkOpen(true)}>
+              Bulk upload
+            </Button>
+            <GhostButton onClick={() => navigate('/calendar')}>Open calendar</GhostButton>
+          </>
+        }
       />
 
+      {bulkOpen && (
+        <BulkUploadModal
+          onClose={() => setBulkOpen(false)}
+          onDone={(n) => {
+            setBulkOpen(false);
+            navigate('/calendar', { state: { notice: `${n} drafts added. Review and approve them on the calendar.` } });
+          }}
+        />
+      )}
       <PageBody>
         {editingDraft && (
           <div className="zco-draft-banner" role="status">
@@ -832,8 +862,16 @@ export default function ComposerPage() {
           <div className="zco-toast tone-good" role="status">
             <CheckCircle size={16} />
             <div style={{ flex: 1 }}>
-              Post successfully scheduled. Redirecting to the content calendar.
-              <div className="zco-toast-bar" />
+              {submitResults && submitResults.some((r) => r.status === 'needs_action')
+                ? submitResults.filter((r) => r.status === 'needs_action').map((r) => `${platformMeta(r.platform).name}: ${r.reason}`).join(' ')
+                : scheduleType === 'now'
+                  ? 'Published. Opening your calendar.'
+                  : scheduleType === 'draft'
+                    ? 'Draft saved to your calendar.'
+                    : scheduleType === 'review'
+                      ? 'Sent for review. Approve it on the calendar when it is ready.'
+                      : 'Scheduled. Opening your calendar.'}
+              {!submitResults?.some((r) => r.status === 'needs_action') && <div className="zco-toast-bar" />}
             </div>
           </div>
         )}
@@ -1005,11 +1043,11 @@ export default function ComposerPage() {
               </div>
             </div>
 
-            {/* First comment panel for IG */}
-            {hasInstagram && (
+            {/* First comment: Instagram, Facebook and LinkedIn support it */}
+            {selectedAccounts.some((id) => ['instagram', 'facebook', 'linkedin'].includes(connections.find((c) => c.id === id)?.platform)) && (
               <Card className="zd-fade-up">
-                <CardTitle icon={<MessageCircle />} sub="Ideal for campaign hashtags so the caption stays clean.">
-                  Instagram first comment
+                <CardTitle icon={<MessageCircle />} sub="Posted as the first comment on Instagram, Facebook and LinkedIn. Good for hashtags or a link.">
+                  First comment
                 </CardTitle>
                 <textarea
                   className="zd-textarea zco-first"
@@ -1017,6 +1055,95 @@ export default function ComposerPage() {
                   onChange={e => setFirstComment(e.target.value)}
                   placeholder="e.g. #marketing #strategy #saas"
                 />
+              </Card>
+            )}
+            {/* Checks before posting (spec 7.4) */}
+            {selectedAccounts.length > 0 && (
+              <Card className="zco-checks">
+                <CardTitle icon={<CheckCircle />} sub="Every selected account is checked against its platform rules.">
+                  Checks
+                </CardTitle>
+                {Object.keys(issuesByAccount).length === 0 ? (
+                  <p className="zco-check-ok">All good for {selectedAccounts.length} account{selectedAccounts.length > 1 ? 's' : ''}.</p>
+                ) : (
+                  <ul className="zco-issues">
+                    {Object.entries(issuesByAccount).flatMap(([id, list]) =>
+                      list.map((i) => (
+                        <li key={id + i.code} className={`is-${i.level}`}>
+                          <span className="zco-issue-dot" aria-hidden="true" />
+                          <strong>{platformMeta(connections.find((c) => c.id === id)?.platform).name}</strong> {i.message}
+                          <span className="zco-issue-level">{i.level === 'error' ? 'Must fix' : 'Note'}</span>
+                        </li>
+                      )),
+                    )}
+                  </ul>
+                )}
+              </Card>
+            )}
+
+            {/* TikTok posting screen, built to TikTok's Direct Post audit rules */}
+            {hasTikTok && (
+              <Card className="zco-tiktok">
+                <CardTitle icon={<SocialIcon platform="tiktok" size={16} />} sub={tiktokCreator?.nickname ? `Posting as ${tiktokCreator.nickname}` : 'Posting to your TikTok account'}>
+                  TikTok settings
+                </CardTitle>
+                <label className="zd-label" htmlFor="zco-tt-privacy">Who can view this video</label>
+                <select id="zco-tt-privacy" className="zd-select zco-field" value={tiktokOpts.privacy} onChange={(e) => setTiktokOpts({ ...tiktokOpts, privacy: e.target.value })}>
+                  <option value="" disabled>Choose a privacy level</option>
+                  {(tiktokCreator?.privacy_options?.length ? tiktokCreator.privacy_options : ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY']).map((p) => (
+                    <option key={p} value={p}>
+                      {{ PUBLIC_TO_EVERYONE: 'Everyone', MUTUAL_FOLLOW_FRIENDS: 'Friends', FOLLOWER_OF_CREATOR: 'Followers', SELF_ONLY: 'Only me' }[p] || p}
+                    </option>
+                  ))}
+                </select>
+                <div className="zco-tt-toggles">
+                  {(['comment', 'duet', 'stitch'] as const).map((k) => {
+                    const disabled = !!(tiktokCreator as any)?.[`${k}_disabled`];
+                    return (
+                      <label key={k} className={`zco-tt-toggle ${disabled ? 'is-disabled' : ''}`}>
+                        <input type="checkbox" checked={!disabled && tiktokOpts[k]} disabled={disabled} onChange={(e) => setTiktokOpts({ ...tiktokOpts, [k]: e.target.checked })} />
+                        Allow {k === 'comment' ? 'comments' : k === 'duet' ? 'Duet' : 'Stitch'}
+                        {disabled && <small> (off in your TikTok settings)</small>}
+                      </label>
+                    );
+                  })}
+                </div>
+                <label className="zco-tt-toggle">
+                  <input type="checkbox" checked={tiktokOpts.commercial} onChange={(e) => setTiktokOpts({ ...tiktokOpts, commercial: e.target.checked, yourBrand: false, branded: false })} />
+                  This video promotes a brand, product or service
+                </label>
+                {tiktokOpts.commercial && (
+                  <div className="zco-tt-sub">
+                    <label className="zco-tt-toggle">
+                      <input type="checkbox" checked={tiktokOpts.yourBrand} onChange={(e) => setTiktokOpts({ ...tiktokOpts, yourBrand: e.target.checked })} />
+                      Your brand: you are promoting yourself or your own business. Labelled Promotional content.
+                    </label>
+                    <label className="zco-tt-toggle">
+                      <input type="checkbox" checked={tiktokOpts.branded} onChange={(e) => setTiktokOpts({ ...tiktokOpts, branded: e.target.checked, privacy: e.target.checked && tiktokOpts.privacy === 'SELF_ONLY' ? '' : tiktokOpts.privacy })} />
+                      Branded content: you are paid or rewarded by a third party. Labelled Paid partnership.
+                    </label>
+                  </div>
+                )}
+                <label className="zco-tt-toggle">
+                  <input type="checkbox" checked={tiktokOpts.musicConsent} onChange={(e) => setTiktokOpts({ ...tiktokOpts, musicConsent: e.target.checked })} />
+                  <span>
+                    By posting, you agree to TikTok's{' '}
+                    <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">
+                      Music Usage Confirmation
+                    </a>
+                    {tiktokOpts.branded && (
+                      <>
+                        {' '}and{' '}
+                        <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer">
+                          Branded Content Policy
+                        </a>
+                      </>
+                    )}
+                    .
+                  </span>
+                </label>
+                {tiktokCreator?.max_video_post_duration_sec && <p className="zco-tt-note">Your account can post videos up to {tiktokCreator.max_video_post_duration_sec} seconds.</p>}
+                <p className="zco-tt-note">Until TikTok approves direct posting, ZieAds sends the video to your TikTok inbox and you finish the post in the TikTok app.</p>
               </Card>
             )}
           </div>
@@ -1127,8 +1254,8 @@ export default function ComposerPage() {
                   value={publishMethod}
                   onChange={e => setPublishMethod(e.target.value as any)}
                 >
-                  <option value="direct_api">Direct API auto-publish</option>
-                  <option value="manual_reminder">Mobile push notification reminder</option>
+                  <option value="direct_api">Publish automatically (official API)</option>
+                  <option value="manual_reminder">Remind me to post it myself</option>
                 </select>
               </div>
             </Card>

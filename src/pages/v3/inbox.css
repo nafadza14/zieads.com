@@ -304,3 +304,9 @@
 /* Suggested replies drafted by the AI Agent */
 .zin-ai-draft { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px; background: #fff1e8; color: #c2410c; font-size: 11px; font-weight: 600; }
 .zin-ai-draft.is-inline { margin-left: 8px; vertical-align: 1px; }
+
+/* Spec 7.6: thread actions and errors */
+.zin-thread-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.zin-action-err { margin: 0; padding: 8px clamp(16px, 3vw, 32px); font-size: 12.5px; color: var(--zd-ink); background: #fff; border-bottom: 1px solid var(--zd-line); }
+.zin-composer-top { gap: 8px; flex-wrap: wrap; }
+@media (max-width: 767px) { .zin-thread-actions { width: 100%; justify-content: flex-start; } }

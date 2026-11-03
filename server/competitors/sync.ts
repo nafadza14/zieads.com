@@ -72,6 +72,9 @@ export async function syncCompetitorContent(userId: string, competitorId: string
   const now = new Date().toISOString();
   const provider = providerConfigured();
   const per = Math.max(10000, budgetMs - 8000);
+  // TikTok and LinkedIn have no official API for another brand's organic posts, so they are off unless explicitly enabled
+  const extraOrganic = process.env.COMPETITOR_TIKTOK_LINKEDIN_ORGANIC === 'true';
+  const OFF = 'No official source for this platform';
   const jobs: { source: Source; run: () => Promise<ContentItem[]>; skip?: string }[] = [
     {
       source: 'meta_ads',
@@ -89,7 +92,7 @@ export async function syncCompetitorContent(userId: string, competitorId: string
       skip: !comp.instagram_username ? 'Add the Instagram handle' : !provider && !discoveryConfigured() ? 'No data source configured' : undefined,
     },
     { source: 'facebook', run: () => facebookPosts(comp.facebook_url), skip: !comp.facebook_url ? 'Add the Facebook page' : !provider ? 'No data provider configured' : undefined },
-    { source: 'tiktok', run: () => tiktokVideos(comp.tiktok_username), skip: !comp.tiktok_username ? 'Add the TikTok handle' : !provider ? 'No data provider configured' : undefined },
+    { source: 'tiktok', run: () => tiktokVideos(comp.tiktok_username), skip: !extraOrganic ? OFF : !comp.tiktok_username ? 'Add the TikTok handle' : !provider ? 'No data provider configured' : undefined },
     { source: 'tiktok_ads', run: () => tiktokAds(comp.name) },
     { source: 'linkedin_ads', run: () => linkedinAds(comp.name), skip: !provider ? 'No data provider configured' : undefined },
     {
@@ -99,7 +102,7 @@ export async function syncCompetitorContent(userId: string, competitorId: string
         if (r.logo && !comp.logo_url) await supabaseAdmin.from('competitors').update({ logo_url: r.logo }).eq('id', comp.id);
         return r.items;
       },
-      skip: !comp.linkedin_url ? 'Add the LinkedIn company page' : !provider ? 'No data provider configured' : undefined,
+      skip: !extraOrganic ? OFF : !comp.linkedin_url ? 'Add the LinkedIn company page' : !provider ? 'No data provider configured' : undefined,
     },
   ];
 

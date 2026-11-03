@@ -18,7 +18,7 @@ export default function ConsolidationSection() {
   const navigate = useNavigate();
 
   return (
-    <Section id="all-in-one" number="06" label="All in One" tone="gray">
+    <Section id="all-in-one" number="06" label="All in One" tone="white">
       <div className="zx-split zx-split-media-left">
         <Collage
           photo={PHOTOS.consolidation}

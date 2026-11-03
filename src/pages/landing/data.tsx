@@ -291,35 +291,39 @@ export interface FaqItem {
 export const faqItems: FaqItem[] = [
   {
     q: 'What is ZieAds?',
-    a: 'ZieAds is an AI marketing agent for founders, freelancers and agencies. It connects to your social media accounts and ad performance data, sends you a daily briefing, schedules posts, analyzes results, tracks competitors and recommends your next move. You approve what goes live and the agent handles the execution.',
+    a: 'ZieAds is an AI social media manager for founders, freelancers and small agencies. It schedules posts, answers comments, tracks analytics and competitors for Instagram, Facebook, TikTok and LinkedIn, and sends you a briefing every morning with what to do next. You approve, then the agent does the work.',
   },
   {
-    q: 'Does the AI agent post or spend money on its own?',
-    a: 'No. The agent drafts, schedules and recommends, but nothing publishes and no budget is spent without your approval. You stay in control of anything that goes public or costs money. Once you approve, the agent takes care of the rest.',
+    q: 'Does the AI agent post, reply or spend money on its own?',
+    a: 'No. Every post, reply and recommendation waits for your approval, and ZieAds never spends ad budget. Every action is recorded in your activity log so you can see who did what and when.',
   },
   {
-    q: 'Do I need to connect my ad accounts to start?',
-    a: 'No. The free website audit only needs a URL. For daily briefings you connect your social media accounts and upload ad performance data from Meta Ads, Google Ads or TikTok Ads. ZieAds never needs write access to your ad spend.',
+    q: 'How does ZieAds read my ads?',
+    a: 'Connect Meta, Google and TikTok Ads with read-only access. ZieAds never changes your campaigns or spends budget. While each platform reviews our read-only access, you can bring results in with a Manual import (CSV) using our template.',
   },
   {
-    q: 'Which social media platforms does ZieAds support?',
-    a: 'Scheduling, analytics and the unified inbox support Instagram, TikTok, LinkedIn and Facebook. For paid performance you can upload data from Meta Ads, Google Ads and TikTok Ads. More integrations are on the roadmap.',
+    q: 'Which platforms does ZieAds support today?',
+    a: 'Scheduling and analytics: Instagram, Facebook Pages, TikTok and LinkedIn. Inbox: Instagram and Facebook comments, with TikTok and LinkedIn coming soon. Competitor tracking: Instagram, Threads and the Meta Ad Library (ads that ran in the EU and UK). Threads, YouTube, X, Bluesky and Pinterest are on the roadmap.',
   },
   {
     q: 'Is there a free plan?',
-    a: 'Yes. The Free plan includes a website audit with a readiness score across six dimensions and your top three critical gaps. No credit card is required to sign up.',
+    a: 'Yes, and it is a real product: one brand, a weekly briefing, 20 scheduled posts a month, the Instagram and Facebook inbox with AI reply drafts, 30 days of analytics and 3 competitors. No credit card needed.',
   },
   {
-    q: 'Does ZieAds work if I have never run paid ads before?',
-    a: 'Yes. The audit shows whether your website, tracking and offer are ready before you spend anything. Many users run ZieAds specifically to fix their setup before the first campaign, so their first budget is not wasted.',
+    q: 'What is the ZieAds MCP server?',
+    a: 'MCP lets AI assistants such as Claude, ChatGPT and Cursor use your ZieAds data and tools. Create a key for one brand in Settings, add it to your assistant, and ask for your briefing, a posting plan or reply drafts. Anything that would publish or reply becomes a pending approval in ZieAds.',
   },
   {
-    q: 'How is ZieAds different from Buffer, Hootsuite or an analytics dashboard?',
-    a: 'Schedulers tell you when a post goes out and dashboards show you charts. Neither tells you what your numbers mean or what to do next. ZieAds reads your data in the context of your brand and gives you a clear decision, not just another report.',
+    q: 'How is my data kept safe?',
+    a: 'ZieAds only uses official platform APIs. Access tokens are encrypted, every account is isolated, and you can disconnect a platform or delete your whole account at any time from Settings. Disconnecting deletes what ZieAds stored from that platform. Read the Privacy Policy and the Data Deletion page for the details.',
   },
   {
-    q: 'Can I use ZieAds for multiple brands or clients?',
-    a: 'Yes. The Pro plan covers up to three accounts with white label PDF reports. The Agency plan includes unlimited briefings, ten team seats and client portals for every brand you manage.',
+    q: 'How is ZieAds different from Metricool or Vista Social?',
+    a: 'Metricool and Vista Social show you charts and give you an AI chat or agents on higher plans. ZieAds sends a briefing every morning with the actions it recommends, prepares the drafts, and executes after you approve. The agent is included in every plan, and ads are read together with organic results.',
+  },
+  {
+    q: 'Can I use ZieAds for several brands or clients?',
+    a: 'Yes. Pricing is per brand: every channel of one business counts as one brand. Pro covers 3 brands and 3 team seats, Agency covers 10 brands and 10 seats, with more brands at $15 each.',
   },
 ];
 
@@ -333,32 +337,32 @@ export const dailyBriefingCards: BriefingCard[] = [
   {
     Icon: Activity,
     name: 'Daily Diagnosis',
-    desc: 'A five minute summary of what moved across your accounts overnight, ranked by impact so you know exactly where to focus first.',
+    desc: 'What moved across your accounts overnight, ranked by impact, with three actions for today you approve in one click.',
   },
   {
-    Icon: TrendingDown,
-    name: 'ROAS Drop Analysis',
-    desc: 'When return on ad spend falls, the agent ranks the most likely causes by probability and shows you the evidence behind each one.',
+    Icon: Rocket,
+    name: 'Needs you',
+    desc: 'Buying questions waiting for a reply, failed posts and accounts that need reconnecting, at the top of the briefing.',
   },
   {
     Icon: EyeOff,
-    name: 'Creative Fatigue Alerts',
-    desc: 'Spot tired ads and stale content formats before performance drops, with fresh hooks based on what already works for your audience.',
+    name: 'Format Fatigue Alerts',
+    desc: 'Spot content formats that are wearing out before reach drops, with fresh angles based on your own past winners.',
   },
   {
     Icon: Sliders,
     name: 'Smart Scheduling',
-    desc: 'Plan and queue posts for Instagram, TikTok, LinkedIn and Facebook at the times your own audience is most active.',
+    desc: 'Plan and queue posts for Instagram, Facebook, TikTok and LinkedIn at the times your own audience is most active.',
   },
   {
     Icon: Radar,
     name: 'Competitor Hunt',
-    desc: 'Track competitor accounts, see what they publish and where they grow, then find the content gaps you can win.',
+    desc: 'Track competitors on Instagram and Threads and their Meta Ad Library ads, then find the content gaps you can win.',
   },
   {
-    Icon: Rocket,
-    name: 'Unified Inbox',
-    desc: 'Reply to comments from every connected account in one inbox, sorted by sentiment and priority so warm leads never slip away.',
+    Icon: TrendingDown,
+    name: 'Ads, read only',
+    desc: 'Meta, Google and TikTok Ads results explained next to organic. ZieAds never changes campaigns or spends budget.',
   },
 ];
 
@@ -440,39 +444,9 @@ export interface Testimonial {
   visual: 'hours' | 'posts' | 'reporting';
 }
 
-/* PLACEHOLDER TESTIMONIALS: replace with real customer quotes after launch */
-export const testimonials: Testimonial[] = [
-  {
-    quote:
-      'I used to spend Sunday nights planning posts and guessing what to boost. Now the briefing is waiting when I wake up. Five minutes of reading and I know exactly what to do. I got my weekends back.',
-    name: 'Agnes Angelina',
-    role: 'Founder, DTC skincare brand',
-    avatar: '/testimonial-agnes.jpg',
-    photo: PHOTOS.storySkincare,
-    result: '6 hours saved every week',
-    visual: 'hours',
-  },
-  {
-    quote:
-      'The agent flagged that my best Reel format was going stale two weeks before I would have noticed. It suggested three new angles based on my own past winners. Two of them became my top posts that month.',
-    name: 'Andreas L Lino',
-    role: 'Solo founder, 2 person team',
-    avatar: '/testimonial-andreas.jpg',
-    photo: PHOTOS.storyCreator,
-    result: '2 of 3 new angles became top posts',
-    visual: 'posts',
-  },
-  {
-    quote:
-      'I manage marketing for six clients. Each one gets its own briefing and tracking. What used to take a full Monday of jumping between dashboards now takes about an hour.',
-    name: 'Lucas Keneth',
-    role: 'Freelance marketing consultant',
-    avatar: '/testimonial-lucas.jpg',
-    photo: PHOTOS.storyConsultant,
-    result: 'Monday reporting cut from 8 hours to 1',
-    visual: 'reporting',
-  },
-];
+/* Customer stories: only real customers with written permission (spec P0-3).
+   Empty until the first ones are signed off; the section hides itself while empty. */
+export const testimonials: Testimonial[] = [];
 
 export interface Persona {
   Icon: LucideIcon;
@@ -488,18 +462,18 @@ export const personas: Persona[] = [
   {
     Icon: Briefcase,
     title: 'Founders and small businesses',
-    headline: 'Get a marketing analyst without hiring one.',
-    body: 'ZieAds monitors your social media and ads, sends a daily briefing and tells you exactly what to do next. Analyst level insight for a fraction of the cost of a full time hire.',
-    features: ['Free website audit, no signup', 'Daily briefing across every channel', 'Scheduling and analytics in one place'],
+    headline: 'A social media manager without the hire.',
+    body: 'ZieAds watches your accounts, inbox and competitors, sends a briefing every morning and prepares the posts and replies for you to approve.',
+    features: ['Briefing with 3 actions for today', 'Scheduling and inbox in one place', 'Free plan you can actually run on'],
     plan_suggestion: 'Start free and upgrade when it pays for itself.',
     visual: 'founder',
   },
   {
     Icon: UserCheck,
     title: 'Freelancers and consultants',
-    headline: 'Walk into every client call already knowing what is wrong.',
-    body: 'Audit any client website before the first meeting. Arrive with a readiness score, a prioritized gap list and an action plan, then let the agent watch their accounts between calls.',
-    features: ['Audit any URL in minutes', 'White label PDF reports', 'Separate briefings for each client'],
+    headline: 'Walk into every client call already knowing what changed.',
+    body: 'Each client is its own brand with its own briefing, calendar and inbox. Audit a prospect website before the first meeting, then let the agent watch their accounts between calls.',
+    features: ['Up to 3 brands on Pro', 'Weekly client report in one click', 'Free website audit for prospects'],
     plan_suggestion: 'Pro is built for client work.',
     visual: 'freelancer',
   },
@@ -507,8 +481,8 @@ export const personas: Persona[] = [
     Icon: Users,
     title: 'Agencies and marketing teams',
     headline: 'Run every brand and channel from one workspace.',
-    body: 'Track every account, client and platform with an AI agent that never takes a day off. Get aggregate reporting, team seats and a dedicated briefing for each brand you manage.',
-    features: ['Unlimited audits', 'White label reports with your logo', 'Team seats and client portals'],
+    body: 'A briefing per brand, team roles, and an agent that never takes a day off. Approvals stay with the people who own each brand.',
+    features: ['10 brands and 10 team seats', 'Roles for admins, editors and viewers', 'Activity log for every action'],
     plan_suggestion: 'The Agency plan grows with your roster.',
     visual: 'agency',
   },
@@ -525,41 +499,25 @@ export interface PricingPlan {
   highlight: boolean;
 }
 
-/*
-  FOUNDER FLAG: PRICING DISCREPANCY
-  - Landing Page 0.2: Free / Starter $29 / Pro $79 / Agency $199
-  - Spec 0.3: Free / Solo $29 / Pro $89 / Studio $229
-  Using 0.2 prices as currently canonical, pending Stripe config review.
-*/
+/* Pricing per brand (spec section 11). Every AI feature is included, no hidden add-ons. */
 export const pricingPlans: PricingPlan[] = [
   {
     id: 'free',
     tier: 'Free',
-    tagline: 'See what the agent finds on day one.',
+    tagline: 'A real product for one brand.',
     price: '$0',
     period: 'forever',
-    features: [
-      'Free website audit on any URL',
-      'Readiness score across 6 dimensions',
-      'Top 3 critical gaps with fixes',
-      'No credit card required',
-    ],
+    features: ['1 brand, weekly briefing', '20 scheduled posts a month', 'Instagram and Facebook inbox with AI drafts', '30 days of analytics, 3 competitors', 'Guardian checks and MCP (small quota)'],
     cta: 'Start for free',
     highlight: false,
   },
   {
     id: 'starter',
     tier: 'Starter',
-    tagline: 'Your daily AI marketing briefing.',
+    tagline: 'Your daily AI social media manager.',
     price: '$29',
     period: '/month',
-    features: [
-      'Daily agent briefing for 1 account',
-      '10 deep dive audits per month',
-      'All 15 AI skill commands',
-      'Social media post scheduling',
-      'Unified notifications inbox',
-    ],
+    features: ['1 brand, daily briefing', 'Unlimited scheduled posts', 'Full inbox with AI reply drafts', '12 months of analytics, 10 competitors', 'All Social Analyst modes, basic ads report', '3 scheduled agents, scheduled PDF reports'],
     cta: 'Choose Starter',
     highlight: false,
   },
@@ -569,13 +527,7 @@ export const pricingPlans: PricingPlan[] = [
     tagline: 'For growing brands and client work.',
     price: '$79',
     period: '/month',
-    features: [
-      'Daily agent briefings for 3 accounts',
-      '40 deep dive audits per month',
-      'White label client PDF reports',
-      'Unified inbox with sentiment sorting',
-      'Competitor watch lists',
-    ],
+    features: ['3 brands, 3 team seats', 'Unlimited analytics history, 50 competitors', 'Every Ads Analyst mode', '20 scheduled agents', 'Saved replies and DMs as platforms approve them'],
     cta: 'Go Pro',
     highlight: true,
   },
@@ -585,13 +537,7 @@ export const pricingPlans: PricingPlan[] = [
     tagline: 'For agencies and marketing teams.',
     price: '$199',
     period: '/month',
-    features: [
-      'Unlimited agent briefings',
-      'Unlimited deep dive audits',
-      'Agency branded white label PDFs',
-      '10 team seats and client portals',
-      'Aggregate performance briefs',
-    ],
+    features: ['10 brands, then $15 per brand', '10 team seats with roles', '100 competitors per brand', 'Unlimited scheduled agents', 'Unlimited website audits'],
     cta: 'Choose Agency',
     highlight: false,
   },

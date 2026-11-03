@@ -286,3 +286,86 @@ export const sampleBestPostingTimes = [
   { day: "Thursday", time: "02:00 PM", confidence: 0.88 },
   { day: "Wednesday", time: "09:00 AM", confidence: 0.82 }
 ];
+
+/* Sample briefing in the answer-first shape (spec 7.2), shown with a "Sample data" label
+   before any account is connected and in demo mode. */
+export const sampleBriefingV2 = {
+  version: 2,
+  date: new Date().toISOString().slice(0, 10),
+  headline: '4 comments waiting for a reply.',
+  summary: [
+    '4 comments wait for a reply, 2 of them ask about price or stock.',
+    'Interactions up 31% this week, led by the cold brew Reel.',
+    'Reach on single images is down 28%, carousels and Reels carry the account.',
+    '6 of 6 scheduled posts went out on time this week.',
+  ],
+  needs_you: [
+    { title: '4 comments waiting for a reply', detail: '2 ask about price, stock or ordering.', link: '/inbox' },
+    { title: 'LinkedIn access ends in 5 days', detail: 'Reconnect now so nothing stops.', link: '/connections' },
+  ],
+  wins: [
+    { title: 'Interactions up 31%', metric: 'Interactions', delta_pct: 31, detail: '2,140 this week vs 1,630 the week before.' },
+    { title: '+148 followers', metric: 'Followers', delta_pct: 1.2, detail: '12,400 in total.' },
+  ],
+  concerns: [{ title: 'Reach on single images down 28%', metric: 'Reach', delta_pct: -28, detail: 'Carousels and Reels hold up.' }],
+  actions: [
+    { rank: 1, title: 'Answer 2 buying questions', why: 'People asking about price or stock buy when they get a fast answer.', kind: 'reply_comments', prompt: 'Triage my open comments and draft replies, buying signals first.', evidence: [{ label: 'Waiting', value: 4 }] },
+    { rank: 2, title: 'Plan this week with more Reels', why: 'Your Reels average 3 times the interactions of single images.', kind: 'agent_prompt', prompt: 'Plan my posts for next week.', evidence: [{ label: 'Best post', value: '640 interactions' }] },
+    { rank: 3, title: 'Check what competitors posted this week', why: 'Spot topics and formats they win with that you have not tried.', kind: 'agent_prompt', prompt: 'Find the content gaps between me and my competitors.', evidence: [] },
+  ],
+  channels: [
+    { platform: 'instagram', handle: '@acme_coffee', status: 'live' },
+    { platform: 'facebook', handle: 'Acme Coffee Co', status: 'live' },
+    { platform: 'linkedin', handle: 'Acme Coffee Co', status: 'live' },
+  ],
+  reliability: { due: 6, published: 6, on_time: 6, failed: 0, on_time_rate: 1 },
+};
+
+/* Analytics page sample (demo mode), same shape as GET /api/v3/analytics/report */
+const sampleDays = Array.from({ length: 30 }, (_, i) => {
+  const d = new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10);
+  const wave = Math.round(60 + 40 * Math.sin(i / 3) + (i % 7 === 5 ? 90 : 0));
+  return { date: d, followers: 23500 + i * 7, reach: 900 + wave * 6, interactions: wave, posts: i % 2 };
+});
+export const sampleAnalyticsReport = {
+  days: 30,
+  organic: {
+    totals: { followers: 23710, followers_net: 203, reach: 41200, interactions: 2380, interactions_change_pct: 12.4, posts: 15, posts_previous: 12, engagement_rate: 5.78 },
+    per_network: [
+      { platform: 'instagram', handle: 'glowbeauty', status: 'live', followers: 18400, followers_net: 171, reach: 33100, posts: 10, interactions: 1950, interactions_change_pct: 15.1, engagement_rate: 5.89 },
+      { platform: 'facebook', handle: 'Glow Beauty', status: 'live', followers: 5310, followers_net: 32, reach: 8100, posts: 5, interactions: 430, interactions_change_pct: -3.2, engagement_rate: 5.31 },
+    ],
+    series: sampleDays,
+    posts: sampleOrganicPosts.slice(0, 8).map((p: any, i: number) => ({
+      id: p.id,
+      platform: p.platforms?.[0]?.platform || 'instagram',
+      caption: p.title,
+      format: 'post',
+      posted_at: p.start,
+      url: null,
+      thumb: null,
+      likes: p.likes || 120 - i * 9,
+      comments: p.comments || 14 - i,
+      shares: 3,
+      saves: 6,
+      reach: 2400 - i * 150,
+      views: null,
+      interactions: (p.likes || 120 - i * 9) + (p.comments || 14 - i) + 9,
+      engagement_rate: 5.2,
+    })),
+  },
+  paid: {
+    days: 30,
+    has_data: true,
+    source: 'csv_import',
+    totals: { spend: 1240, impressions: 182000, clicks: 3120, conversions: 96, revenue: 4380, ctr: 0.0171, cpc: 0.4, cpa: 12.92, roas: 3.53 },
+    previous: { spend: 1100, impressions: 160000, clicks: 2800, conversions: 80, revenue: 3600, ctr: 0.0175, cpc: 0.39, cpa: 13.75, roas: 3.27 },
+    by_platform: {},
+    top_campaigns: [
+      { platform: 'meta', campaign: 'Serum launch', spend: 820, impressions: 120000, clicks: 2100, conversions: 70, revenue: 3300, ctr: 0.0175, cpc: 0.39, cpa: 11.7, roas: 4.02 },
+      { platform: 'google', campaign: 'Brand search', spend: 420, impressions: 62000, clicks: 1020, conversions: 26, revenue: 1080, ctr: 0.0165, cpc: 0.41, cpa: 16.2, roas: 2.57 },
+    ],
+    daily: sampleDays.map((d) => ({ date: d.date, spend: 30 + (d.interactions % 25), revenue: 100 + d.interactions, clicks: 90, impressions: 6000, conversions: 3 })),
+  },
+  combined: { organic_reach: 41200, paid_impressions: 182000, organic_interactions: 2380, paid_clicks: 3120, posts: 15, spend: 1240, conversions: 96, revenue: 4380, roas: 3.53 },
+};

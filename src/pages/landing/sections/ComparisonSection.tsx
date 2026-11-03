@@ -1,5 +1,6 @@
 import { Check, ShieldCheck } from 'lucide-react';
-import { comparisonRows } from '../data';
+import { Link } from 'react-router-dom';
+import { COMPARE_COLUMNS, COMPARE_ROWS } from '../compare';
 import { AnimatedHeading, Reveal, Section } from '../ui';
 import { ApprovalVisual } from '../visuals';
 import { Collage } from '../collage';
@@ -7,14 +8,12 @@ import { PHOTOS } from '../images';
 
 export default function ComparisonSection() {
   return (
-    <Section id="comparison" number="07" label="Comparison" tone="white">
+    <Section id="comparison" number="07" label="Comparison" tone="gray">
       <div className="zx-head-row">
-        <AnimatedHeading text="ZieAds vs ChatGPT, agencies and doing it yourself." />
+        <AnimatedHeading text="ZieAds vs Metricool, Vista Social, ChatGPT and an agency." />
         <Reveal delay={120} className="zx-head-aside">
           <p className="zx-body">
-            ChatGPT is a great brainstorming partner. But it starts from zero in every chat, cannot see your accounts and
-            forgets what you posted last week. ZieAds connects to your data, remembers your history and works every
-            morning without a prompt.
+            Metricool and Vista Social are strong suites. ChatGPT is a good brainstorming partner. ZieAds is the one that reads your accounts every morning, tells you what to do and prepares the work for your approval.
           </p>
         </Reveal>
       </div>
@@ -25,25 +24,30 @@ export default function ComparisonSection() {
             <thead>
               <tr>
                 <th scope="col"></th>
-                <th scope="col" className="is-hl">ZieAds AI Agent</th>
-                <th scope="col">ChatGPT</th>
-                <th scope="col">Hiring an agency</th>
-                <th scope="col">Doing it yourself</th>
+                {COMPARE_COLUMNS.map((c) => (
+                  <th key={c.key} scope="col" className={c.key === 'zieads' ? 'is-hl' : ''}>
+                    {c.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {comparisonRows.map((row) => (
+              {COMPARE_ROWS.map((row) => (
                 <tr key={row.criteria}>
                   <th scope="row">{row.criteria}</th>
-                  <td className="is-hl">{row.zieads}</td>
-                  <td>{row.chatgpt}</td>
-                  <td>{row.agency}</td>
-                  <td>{row.manual}</td>
+                  {COMPARE_COLUMNS.map((c) => (
+                    <td key={c.key} className={c.key === 'zieads' ? 'is-hl' : ''}>
+                      {row.values[c.key]}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="zx-table-note">
+          Other products checked on their public pricing pages in November 2026. Read the full comparisons: <Link to="/vs/metricool">vs Metricool</Link>, <Link to="/vs/vista-social">vs Vista Social</Link>, <Link to="/vs/hootsuite">vs Hootsuite</Link>.
+        </p>
       </Reveal>
 
       <div className="zx-split zx-split-media-left zx-split-tight">
@@ -77,7 +81,7 @@ export default function ComparisonSection() {
               <span className="zx-promise-check">
                 <Check size={13} />
               </span>
-              Never spends ad budget on its own
+              Never spends ad budget or changes your campaigns
             </li>
             <li>
               <span className="zx-promise-check">

@@ -4,6 +4,8 @@ import { ResultVisual } from '../visuals';
 import { Collage } from '../collage';
 
 export default function TestimonialsSection() {
+  // Only real customers with written permission (spec P0-3). Hidden while there are none.
+  if (!testimonials.length) return null;
   return (
     <Section id="stories" number="08" label="Customer Stories" tone="gray">
       <AnimatedHeading text="How founders and marketers use their AI marketing agent." />

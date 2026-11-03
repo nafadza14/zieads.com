@@ -1,8 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { Check, Clock, Shield } from 'lucide-react';
 import SocialIcon from '../../../components/v3/SocialIcon';
 import { Photo } from '../collage';
 import { PHOTOS } from '../images';
-import { AnimatedHeading, Reveal, TextRollButton, scrollToId, useInView } from '../ui';
+import { AnimatedHeading, Reveal, TextRollButton, useInView } from '../ui';
 
 const FLOATERS = [
   { p: 'instagram', top: '14%', left: '74%', d: '0s' },
@@ -13,6 +14,7 @@ const FLOATERS = [
 ];
 
 export default function FinalCtaSection() {
+  const navigate = useNavigate();
   const { ref, inView } = useInView<HTMLDivElement>(0.2);
 
   return (
@@ -37,24 +39,24 @@ export default function FinalCtaSection() {
           </div>
 
           <div className="zx-final-inner">
-            <AnimatedHeading text="Meet your AI marketing agent. Get your first briefing tomorrow." className="zx-final-title" />
+            <AnimatedHeading text="Meet Zie, your AI social media manager. Your first briefing comes right after you connect." className="zx-final-title" />
             <Reveal delay={120}>
               <p className="zx-final-sub">
-                Start with a free website audit. No signup and no credit card. Connect your accounts when you are ready and
-                wake up to your first daily briefing.
+                Start free with no credit card. Connect Instagram or Facebook, and Zie reads the last 30 days and briefs you in
+                minutes. After that, every morning.
               </p>
             </Reveal>
             <Reveal delay={220} className="zx-final-actions">
-              <TextRollButton text="Start free" onClick={() => scrollToId('free-audit-try')} />
+              <TextRollButton text="Start free" onClick={() => navigate('/sign-up')} />
               <div className="zx-final-trust">
                 <span>
-                  <Shield size={14} /> No ad account access to start
+                  <Shield size={14} /> Official platform connections only
                 </span>
                 <span>
-                  <Check size={14} /> No card for the free audit
+                  <Check size={14} /> No credit card
                 </span>
                 <span>
-                  <Clock size={14} /> First briefing within 24 hours
+                  <Clock size={14} /> First briefing minutes after you connect
                 </span>
               </div>
             </Reveal>

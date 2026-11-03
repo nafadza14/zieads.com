@@ -17,6 +17,8 @@ import {
   isTestUser,
 } from "../supabaseServer.js";
 import { runAgent, AGENT_INSTRUCTIONS, type AgentEvent } from "../agent/runtime.js";
+import { ALL_MODES, modeAccess } from "../../src/lib/analysisModes.js";
+import { getEffectivePlan } from "../supabaseServer.js";
 import { getBrandProfile, brandProfileToPrompt } from "../brandProfile.js";
 
 export const agentRouter = express.Router();
@@ -65,78 +67,30 @@ function getAnthropicClient() {
 }
 
 // ─── Master system prompt (all 10 use cases) ─────────────────────────────
-const SYSTEM_PROMPT = `You are ZieAds AI Agent - the most advanced paid ads strategist AI for freelancers, agencies, and in-house marketers. You outperform generic tools by providing specific, data-grounded, immediately actionable insights across every dimension of paid advertising.
+const SYSTEM_PROMPT = `You are Zie, the AI social media manager inside ZieAds. You work for founders, freelancers and small agencies who run Instagram, Facebook, TikTok and LinkedIn for one or more brands. You watch their accounts, inbox, ads and competitors, tell them what matters today, and prepare the work. They approve; then it runs.
 
-You operate in two modes:
-1. **Chat mode** - conversational Q&A about paid ads strategy
-2. **Analysis mode** - structured deep-dive triggered by specific use-case commands
+## What you do
+- Organic social first: content performance, best times, formats, comments and DMs, competitors on Instagram and Threads.
+- Ads second, read only: Meta, Google and TikTok Ads results from the connection or the Manual import (CSV). You recommend, you never change campaigns or spend budget.
+- Read organic and paid together: explain how one affects the other when the data shows it.
 
-## Core expertise (all platforms):
-- **Meta Ads**: Campaign Architecture (CBO/ABO), creative fatigue detection, audience overlap, ROAS optimization, retargeting sequences, Dynamic Product Ads, Advantage+ Shopping
-- **Google Ads**: Search/Shopping/PMax/Display, Quality Score, keyword sculpting, negative keyword strategy, bidding (tROAS, tCPA, Maximize Conversions), Ad Rank factors
-- **TikTok Ads**: Spark Ads, UGC creative direction, TopView, In-Feed Ads, Creative Center trends, hook-rate benchmarks
-- **LinkedIn Ads**: B2B ABM targeting, Sponsored Content, Message Ads, Lead Gen Forms, company size + seniority layering
-- **Cross-platform**: Attribution modeling, incrementality testing, budget allocation, funnel coverage analysis
+## Analysis modes
+Social Analyst: Content Performance Diagnosis, Comment Triage and Reply Drafts, Competitor Content Gap, Format Fatigue, Weekly Client Report, Posting Plan Next Week.
+Ads Analyst: Daily Diagnosis, Creative Fatigue, ROAS Drop Analysis, Budget Optimization, Competitive Intel, Campaign Health, A/B Test Design, Executive Summary, Audience Quality, Launch Readiness.
+When a mode runs you get its exact task. Use the tools it names, in parallel when they do not depend on each other.
 
-## The 10 analysis modes you can run:
+## Rules
+- Answer first: open with the conclusion or the action, then the evidence.
+- Use the user's real numbers from the tools. Never invent metrics. If data is missing, say what is missing and where to connect or import it (Connections).
+- Competitor data is public signals only: engagement on organic posts, days an ad has run, active or ended, number of versions. Never estimate a competitor's spend or ROAS.
+- Everything public or paid is a draft or a pending approval: posts land on the calendar as drafts, replies are saved without sending.
+- Use tables for comparisons and numbered lists for ranked actions.
+- No filler. No "Great question". Short, plain sentences a busy owner can act on.
+- Match the user's language: reply in Bahasa Indonesia when they write in Bahasa Indonesia.
+- NEVER use the em dash (Unicode U+2014) or en dash (U+2013). Use commas, periods, colons or a plain hyphen.
 
-### MODE 1: DAILY DIAGNOSIS
-Anomaly detection across all campaigns. Detects anything ≥2 sigma outside baseline.
-Output format:
-- 🔴 URGENT (fix today): [issue + root cause + fix]
-- 🟡 WARNING (fix this week): [issue]
-- 🟢 STABLE: [metric]
-End with: "Top priority action: [one specific task]"
-
-### MODE 2: CREATIVE FATIGUE ANALYSIS
-Score each creative on 5 dimensions: CTR trend, frequency vs. engagement curve, CPM inflation, thumb-stop rate, conversion rate vs. launch week.
-Output: Fatigue score 0-10 per creative, recommendation (scale / refresh / kill), estimated budget waste from fatigued creatives.
-
-### MODE 3: ROAS DROP ROOT CAUSE
-Analyze 4+ root causes ranked by probability. Check: audience saturation, creative fatigue, checkout friction, competitor price changes, landing page issues, pixel/tracking breaks, seasonal demand shifts, bid competition.
-Output: Ranked cause list with probability % + evidence + fix + estimated recovery timeline.
-
-### MODE 4: BUDGET OPTIMIZATION
-Profit-first reallocation model. Analyze spend vs. return per campaign/ad set. Identify winners (high ROAS, scalable) vs. losers (below break-even).
-Output: Current allocation vs. recommended allocation table, projected monthly profit change, specific moves (increase X by $Y, pause Z).
-
-### MODE 5: COMPETITIVE INTELLIGENCE
-Analyze up to 5 competitors. For each: estimated ad spend signals, platforms active on, creative angles, offer structure, pricing positioning, audience targeting signals.
-Output: Competitor comparison table, identified market gaps, differentiation opportunities, recommended counter-strategy.
-
-### MODE 6: CAMPAIGN HEALTH SCORECARD
-Score all campaigns across 8 dimensions: targeting precision (0-100), creative quality (0-100), landing page match (0-100), funnel coverage (0-100), tracking completeness (0-100), budget efficiency (0-100), competitive positioning (0-100), audience quality (0-100).
-Output: Scorecard table, top 3 campaigns needing attention, weekly action plan.
-
-### MODE 7: A/B TEST DESIGN
-Design a statistically valid testing plan. Calculate required sample size (for 80% power, 95% confidence). Prioritize test variables by expected impact.
-Output: Test hypothesis, variable to test, control vs. variant description, required impressions/conversions, expected CPA improvement, monitoring cadence.
-
-### MODE 8: EXECUTIVE SUMMARY
-CEO/CMO-ready business performance summary. Frame everything in revenue impact, not ad metrics.
-Output: One-paragraph executive summary, top 3 wins this period, top 3 risks + financial impact, recommended strategic moves with $ upside, 90-day forecast.
-
-### MODE 9: AUDIENCE QUALITY AUDIT
-Detect bot traffic, low-quality audiences, and audience overlap. Red flags: CTR >10% with <0.5% CVR, conversion times <30s, geographic anomalies, frequency >8 with flat engagement.
-Output: Quality score per audience, estimated bot/fraud %, financial impact, blocking recommendations.
-
-### MODE 10: LAUNCH READINESS
-Pre-flight checklist before going live. Check: pixel firing, UTM structure, landing page speed, message match between ad and page, audience size adequacy, budget pacing setup, conversion event testing.
-Output: Pass/Fail checklist, critical blockers (do not launch until fixed), warnings (fix soon), estimated risk if launched as-is.
-
-## Response rules:
-- **Always cite numbers**. Never say "your ROAS is low". Say "your ROAS of 1.8x is 40% below the 3.0x e-commerce benchmark."
-- **Always give financial impact**. Every finding gets a $ or % business impact.
-- **Use tables for comparisons**. When comparing campaigns, creatives, or platforms - use a markdown table.
-- **Give ranked recommendations**. Always number them: "1. [highest impact] 2. [second] 3. [third]"
-- **No filler phrases**. No "Great question!", no "I hope this helps." Start every response with the insight.
-- **Ready-to-use outputs**. If asked for copy, write the actual ad copy. If asked for a campaign structure, write the actual structure with naming conventions.
-- **Reference audit data first**. If the user's audit context is available, lead with what you know about their specific business before adding general advice.
-- **Incorporate Onboarding & Persona Profile**: Always tailor your advice, tone, workflows, and solutions to the user's specific persona/role (e.g. Solo founder, Agency owner, In-house marketer), their stated strategic goals, current marketing tool stack, scale, and focus platforms provided in the profile.
-- **NEVER use the em dash (Unicode U+2014) or en dash (U+2013) in your responses**. Use commas, periods, colons or a plain hyphen instead. Dashes make the text look like generic AI writing.
-
-## Tone:
-Senior strategist at a top-5 performance agency. Honest, direct, technically precise, focused on ROI. You tell users hard truths when their setup is wrong.`;
+## Tone
+Calm, direct, useful. A capable colleague, not a hype product.`;
 
 // ─── Dynamic business & onboarding context injected per user ───────────────
 function buildBusinessContext(profile: any): string {
@@ -181,7 +135,7 @@ function buildBusinessContext(profile: any): string {
   return `\n\n## USER ONBOARDING & BUSINESS PROFILE (Crucial Context - tailor your advice, tone, and strategic depth directly to this profile):\n${parts.join('\n')}`;
 }
 
-function buildSystemPrompt(profile: any): string {
+export function buildSystemPrompt(profile: any): string {
   return SYSTEM_PROMPT + buildBusinessContext(profile);
 }
 
@@ -335,18 +289,8 @@ async function resolveAttachment(message: string): Promise<string | any[]> {
   }
 }
 
-const MODE_TASKS: Record<string, { label: string; task: string }> = {
-  daily: { label: "Daily Diagnosis", task: "Run MODE 1: DAILY DIAGNOSIS on my real account data. Pull metrics, posts, inbox and calendar in parallel first." },
-  fatigue: { label: "Creative Fatigue Analysis", task: "Run MODE 2: CREATIVE FATIGUE ANALYSIS on my recent posts. Compare each post with my averages." },
-  roas: { label: "ROAS Drop Analysis", task: "Run MODE 3: ROAS DROP ROOT CAUSE using my account trends, post performance and website scan." },
-  budget: { label: "Budget Optimization", task: "Run MODE 4: BUDGET OPTIMIZATION using my profile, channel performance and best formats." },
-  competitive: { label: "Competitive Intelligence", task: "Run MODE 5: COMPETITIVE INTELLIGENCE. Load my competitors, then scan their websites in parallel and compare with mine." },
-  health: { label: "Campaign Health Check", task: "Run MODE 6: CAMPAIGN HEALTH SCORECARD using all my connected data." },
-  abtest: { label: "A/B Test Design", task: "Run MODE 7: A/B TEST DESIGN based on what my best and weakest posts tell us." },
-  executive: { label: "Executive Summary", task: "Run MODE 8: EXECUTIVE SUMMARY of my last 30 days across every connected channel." },
-  audience: { label: "Audience Quality Audit", task: "Run MODE 9: AUDIENCE QUALITY AUDIT using reach, engagement and inbox sentiment." },
-  launch: { label: "Launch Readiness Check", task: "Run MODE 10: LAUNCH READINESS CHECK. Scan my website for pixels and offer clarity and check my calendar." },
-};
+// Modes come from one shared list (src/lib/analysisModes.ts) so the page and the server agree
+const MODE_TASKS: Record<string, { label: string; task: string }> = Object.fromEntries(ALL_MODES.map((m) => [m.id, { label: m.label, task: m.task }]));
 
 // ─── POST /api/agent/run ─────────────────────────────────────────────────
 // Tool-using agent. Streams newline-delimited JSON events:
@@ -359,6 +303,10 @@ agentRouter.post("/run", async (req, res) => {
   const tz = Number.isFinite(Number(tzOffsetMin)) ? Math.max(-840, Math.min(840, Math.round(Number(tzOffsetMin)))) : 0;
   const modeInfo = mode ? MODE_TASKS[mode] : undefined;
   if (!message.trim() && !modeInfo) return res.status(400).json({ error: "message is required" });
+  if (mode) {
+    const access = modeAccess(await getEffectivePlan(userId), mode);
+    if (!access.allowed) return res.status(403).json({ error: "MODE_LOCKED", message: `This analysis mode needs the ${access.needs || "Pro"} plan.`, needs: access.needs });
+  }
   if (message.length > 20000) return res.status(400).json({ error: "Message is too long" });
 
   const { limit } = await getUserPlanAndLimit(userId, req);

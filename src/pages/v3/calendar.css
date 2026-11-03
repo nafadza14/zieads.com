@@ -153,7 +153,7 @@
 .zca-agenda-row:hover .zca-agenda-add { opacity: 1; transform: rotate(90deg); }
 
 /* Feed preview */
-.zca-feed-card { position: sticky; top: 0; }
+.zca-feed-card { }
 @media (max-width: 1100px) { .zca-feed-card { position: static; } }
 .zca-feed-toggle { margin-bottom: 12px; }
 .zca-feed-cap { margin-bottom: 8px; font-size: 11.5px; color: var(--zd-ink-3); }
@@ -219,10 +219,52 @@
 
 /* Drafts from the AI Agent: dashed chip, review note, approve action */
 .zca-chip.is-draft { border-style: dashed !important; border-color: #f5b48a !important; background: #fffaf6 !important; }
-.zca-chip.is-draft .zca-chip-status { background: #f59e0b !important; }
+.zca-chip.is-draft .zca-chip-status { }
 .zca-draft-note { display: flex; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #fff7f1; border: 1px solid #ffd9c2; font-size: 13px; line-height: 1.5; color: #3d2a1f; }
 .zca-draft-note svg { color: #f26522; flex-shrink: 0; margin-top: 2px; }
 .zca-draft-actions { display: flex; align-items: center; gap: 8px; }
 .zca-btn-approve { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: none; border-radius: 8px; background: #f26522; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.3s; }
 .zca-btn-approve:hover:not(:disabled) { background: #e05a1a; transform: translateY(-1px); }
 .zca-btn-approve:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Spec 7.5: filters, week view, drag and drop, best times, unscheduled drafts */
+.zca-chip-status.tone-warn { color: var(--zd-warn); }
+.zca-chip-status.tone-neutral { color: var(--zd-ink-4); }
+.zca-filters { display: flex; flex-direction: column; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--zd-line); }
+.zca-filter-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.zca-notice { color: var(--zd-ink); display: flex; align-items: center; gap: 8px; margin: 12px 20px 0; padding: 10px 12px; border: 1px solid var(--zd-line); border-radius: 10px; font-size: 13px; background: #fff; }
+.zca-notice span { flex: 1; }
+.zca-notice.tone-good > svg:first-child { color: var(--zd-good); }
+.zca-notice.tone-bad > svg:first-child { color: var(--zd-bad); }
+.zca-cell.is-drop, .zca-week-col.is-drop { background: #fff7f2; box-shadow: inset 0 0 0 2px var(--zd-accent); }
+.zca-chip[draggable="true"] { cursor: grab; }
+.zca-chip.is-dragging { opacity: 0.45; }
+.zca-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-height: 440px; }
+.zca-week-col { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px; border-right: 1px solid var(--zd-line); min-width: 0; transition: background 0.2s var(--zd-ease); }
+.zca-week-col:last-child { border-right: none; }
+.zca-week-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--zd-ink-3); }
+.zca-week-head strong { font-size: 18px; color: var(--zd-ink); font-weight: 650; }
+.zca-week-col.is-today .zca-week-head strong { color: var(--zd-accent); }
+.zca-week-items { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.zca-week-items .zca-chip { width: 100%; }
+.zca-best-slot { display: inline-flex; align-items: center; gap: 4px; border: 1px dashed var(--zd-line-2, #d9d9d9); background: transparent; border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 12px; font-weight: 600; color: var(--zd-ink-2); cursor: pointer; }
+.zca-best-slot span { font-weight: 400; color: var(--zd-ink-4); }
+.zca-best-slot:hover { border-color: var(--zd-accent); color: var(--zd-ink); }
+@media (max-width: 900px) {
+  .zca-week { grid-template-columns: 1fr; min-height: 0; }
+  .zca-week-col { border-right: none; border-bottom: 1px solid var(--zd-line); }
+}
+.zca-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.zca-tray { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.zca-best { display: flex; flex-direction: column; gap: 8px; }
+.zca-best-head { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.zca-best-head small { color: var(--zd-ink-3); font-size: 12px; line-height: 1.45; }
+.zca-best-slots { display: flex; gap: 6px; flex-wrap: wrap; }
+.zca-best-time { border: 1px solid var(--zd-line); border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.zca-permalink { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; border: 1px solid var(--zd-line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; }
+.zca-first-comment p { margin: 4px 0 0; font-size: 13px; color: var(--zd-ink-2); white-space: pre-wrap; }
+.zca-draft-actions { flex-wrap: wrap; justify-content: flex-end; }
+.zca-week-items .zca-chip { flex-wrap: wrap; row-gap: 2px; padding: 6px 8px; font-size: 12px; border-radius: 10px; }
+.zca-week-items .zca-chip-dot { display: none; }
+.zca-week-items .zca-chip-title { flex-basis: 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.35; color: var(--zd-ink-2); }
+.zca-week-items .zca-chip-status { margin-left: auto; }

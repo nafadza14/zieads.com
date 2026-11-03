@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { isUnlimited } from '../lib/limits';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {  PlayCircle, Send,  ArrowRight,  Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine, ArrowUpRight, Plus, Play } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
@@ -16,6 +17,7 @@ import { Button } from '../components/v3/ui';
 import './agent-chat.css';
 import ZieAvatar from '../components/ZieAvatar';
 import ArtifactDeck, { type AgentArtifact } from './agent/ArtifactCards';
+import { ALL_MODES, SOCIAL_MODES, ADS_MODES, modeAccess, type PlanName } from '../lib/analysisModes';
 
 const P = '#F26522'; // Orange accent (matches landing page)
 const G = '#6B7A89'; // Muted editorial text
@@ -98,111 +100,28 @@ interface Conversation {
   updated_at: string;
 }
 
-// ─── Use-case modes ───────────────────────────────────────────────────────────
-const USE_CASES = [
-  {
-    id: 'daily',
-    icon: <UilSearchAlt size={22} />,
-    label: 'Daily Diagnosis',
-    shortDesc: '5 min · urgent issues only',
-    color: '#dc2626',
-    bg: '#fef2f2',
-    border: '#fecaca',
-    prompt: 'Run a daily diagnosis on my campaigns. Flag anything urgent, warn me about developing issues, and confirm what\'s stable. End with my #1 priority action for today.',
-  },
-  {
-    id: 'fatigue',
-    icon: <UilBedDouble size={22} />,
-    label: 'Creative Fatigue',
-    shortDesc: '10 min · score each creative',
-    color: '#f59e0b',
-    bg: '#fffbeb',
-    border: '#fde68a',
-    prompt: 'Analyze my creatives for fatigue. Score each one, estimate budget waste from tired ads, and tell me what to refresh or kill.',
-  },
-  {
-    id: 'roas',
-    icon: <UilChartDown size={22} />,
-    label: 'ROAS Drop Analysis',
-    shortDesc: '8 min · 4+ root causes ranked',
-    color: '#ef4444',
-    bg: '#fef2f2',
-    border: '#fecaca',
-    prompt: 'My ROAS dropped. Diagnose the 4 most likely root causes ranked by probability, give me evidence for each, and tell me which one to fix first.',
-  },
-  {
-    id: 'budget',
-    icon: <UilMoneyBill size={22} />,
-    label: 'Budget Optimization',
-    shortDesc: '7 min · profit-first reallocation',
-    color: '#10b981',
-    bg: '#f0fdf4',
-    border: '#a7f3d0',
-    prompt: 'Run a budget optimization analysis. Show me current vs. recommended allocation, which campaigns to scale vs. pause, and projected monthly profit change.',
-  },
-  {
-    id: 'competitive',
-    icon: <UilEye size={22} />,
-    label: 'Competitive Intel',
-    shortDesc: '12 min · 5 competitors mapped',
-    color: '#8b5cf6',
-    bg: '#f5f3ff',
-    border: '#ddd6fe',
-    prompt: 'Analyze my top 5 competitors\' ad strategies. Map their platforms, creative angles, offers, and positioning. Show me gaps I can exploit.',
-  },
-  {
-    id: 'health',
-    icon: <UilMedicalSquare size={22} />,
-    label: 'Campaign Health',
-    shortDesc: '15 min · 8-dimension scorecard',
-    color: '#3b82f6',
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-    prompt: 'Run a full campaign health scorecard. Score every campaign across 8 dimensions. Flag the 3 that need the most attention and give me a weekly action plan.',
-  },
-  {
-    id: 'abtest',
-    icon: <UilFlask size={22} />,
-    label: 'A/B Test Design',
-    shortDesc: '10 min · statistically valid plan',
-    color: '#06b6d4',
-    bg: '#ecfeff',
-    border: '#a5f3fc',
-    prompt: 'Design a statistically valid A/B test for my highest-leverage variable. Calculate required sample size, write the hypothesis, and set monitoring checkpoints.',
-  },
-  {
-    id: 'executive',
-    icon: <UilAnalysis size={22} />,
-    label: 'Executive Summary',
-    shortDesc: '20 min · CEO-ready report',
-    color: '#1e293b',
-    bg: '#f8fafc',
-    border: '#e2e8f0',
-    prompt: 'Write a CEO/CMO-ready executive summary of my ads performance. Frame everything in revenue impact. Include wins, risks with $ impact, and a 90-day forecast.',
-  },
-  {
-    id: 'audience',
-    icon: <UilCrosshairs size={22} />,
-    label: 'Audience Quality',
-    shortDesc: '12 min · fraud + overlap detection',
-    color: '#e8457a',
-    bg: '#fdf2f8',
-    border: '#f9a8d4',
-    prompt: 'Audit my audience quality. Detect bot traffic signals, audience overlap, and low-quality segments. Quantify the financial impact and tell me what to block.',
-  },
-  {
-    id: 'launch',
-    icon: <UilRocket size={22} />,
-    label: 'Launch Readiness',
-    shortDesc: '8 min · pre-flight checklist',
-    color: '#7B2FBE',
-    bg: '#f5f3ff',
-    border: '#ddd6fe',
-    prompt: 'Run a launch readiness check on my campaign setup. Give me a pass/fail checklist, flag any critical blockers, and estimate risk if I launch with current issues.',
-  },
-] as const;
+// ─── Analysis modes: Social Analyst and Ads Analyst (src/lib/analysisModes.ts) ──
+const MODE_ICONS: Record<string, React.ReactNode> = {
+  content: <TrendingUp size={22} />,
+  triage: <MessageCircle size={22} />,
+  gap: <Crosshair size={22} />,
+  format: <BarChart3 size={22} />,
+  weekly: <FileText size={22} />,
+  plan: <CalendarDays size={22} />,
+  daily: <UilSearchAlt size={22} />,
+  fatigue: <UilBedDouble size={22} />,
+  roas: <UilChartDown size={22} />,
+  budget: <UilMoneyBill size={22} />,
+  competitive: <UilEye size={22} />,
+  health: <UilMedicalSquare size={22} />,
+  abtest: <UilFlask size={22} />,
+  executive: <UilAnalysis size={22} />,
+  audience: <UilCrosshairs size={22} />,
+  launch: <UilRocket size={22} />,
+};
+const USE_CASES = ALL_MODES.map((m) => ({ ...m, icon: MODE_ICONS[m.id], shortDesc: m.short }));
 
-type UseCaseId = typeof USE_CASES[number]['id'];
+type UseCaseId = string;
 
 // ─── Suggested questions grouped by category ─────────────────────────────────
 const DYNAMIC_SUGGESTIONS = [
@@ -300,7 +219,18 @@ export default function AgentChat() {
   const [userEmail, setUserEmail] = useState('');
   const [activeTab, setActiveTab] = useState<'chat' | 'modes'>('chat');
   const [runningMode, setRunningMode] = useState<UseCaseId | null>(null);
-  const [additionalData, setAdditionalData] = useState('');
+  const [adsStatus, setAdsStatus] = useState<any | null>(null);
+  useEffect(() => {
+    if (activeTab !== 'modes' || adsStatus) return;
+    supabase.auth.getSession().then(async ({ data }) => {
+      const token = data?.session?.access_token;
+      if (!token) return;
+      const r = await fetch('/api/v3/ads/summary?days=30', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null);
+      if (r?.ok) setAdsStatus(await r.json());
+      else setAdsStatus({ has_data: false });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -809,14 +739,13 @@ export default function AgentChat() {
     setLoading(true);
 
     const modeInfo = USE_CASES.find(u => u.id === modeId)!;
-    // Use the campaign data pasted in the Analysis Modes tab, falling back to the chat input
-    const analysisContext = (additionalData.trim() || input.trim());
+    // Modes read connected and imported data through tools; only a typed note from the chat box is passed along
+    const analysisContext = input.trim();
     setInput('');
-    setAdditionalData('');
 
     setMessages(prev => [...prev, {
       role: 'user',
-      content: `${modeInfo.label} initiated...${analysisContext ? `\n\nContext: ${analysisContext}` : ''}`,
+      content: `${modeInfo.label}${analysisContext ? `\n\nNote: ${analysisContext}` : ''}`,
       isAnalysis: true,
       analysisMode: modeId,
     }]);
@@ -840,20 +769,22 @@ export default function AgentChat() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  const isAtLimit = usage.used >= usage.limit;
+  const unlimitedChat = isUnlimited(usage.limit);
+  const isAtLimit = !unlimitedChat && usage.used >= usage.limit;
   const creditStore = useCreditStore();
   const [modeGateModal, setModeGateModal] = useState<{ open: boolean; modeName: string; requiredPlan: 'starter' | 'pro' | 'agency' }>({ open: false, modeName: '', requiredPlan: 'pro' });
 
   const handleModeClick = (modeId: string, modeLabel: string) => {
-    if (creditStore.isModeLocked(modeId)) {
-      setModeGateModal({ open: true, modeName: modeLabel, requiredPlan: 'pro' });
+    const access = modeAccess((creditStore.plan_id || 'free') as PlanName, modeId);
+    if (!access.allowed) {
+      setModeGateModal({ open: true, modeName: modeLabel, requiredPlan: (access.needs as any) || 'pro' });
       return;
     }
     runAnalysis(modeId as any);
   };
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const usagePct = usage.limit > 0 ? Math.min(100, Math.round((usage.used / usage.limit) * 100)) : 0;
+  const usagePct = !unlimitedChat && usage.limit > 0 ? Math.min(100, Math.round((usage.used / usage.limit) * 100)) : 0;
   const suggestions = getTailoredSuggestions();
 
   return (
@@ -871,7 +802,7 @@ export default function AgentChat() {
           </div>
 
           <div className="za-side-actions">
-            <button className="za-ghost-btn" onClick={() => navigate('/clients')}>
+            <button className="za-ghost-btn" onClick={() => navigate('/analyst')}>
               <ArrowRight size={14} style={{ transform: 'rotate(180deg)' }} /> Back to dashboard
             </button>
             <Button icon={<Plus />}
@@ -927,7 +858,7 @@ export default function AgentChat() {
             <div className="za-usage-row">
               <span>Messages this month</span>
               <span className="za-mono">
-                {usage.used}/{usage.limit}
+                {unlimitedChat ? `${usage.used} used, unlimited` : `${usage.used}/${usage.limit}`}
               </span>
             </div>
             <div className="za-usage-track">
@@ -988,40 +919,52 @@ export default function AgentChat() {
             <div className="za-scroll" key="modes">
               <div className="za-modes-wrap">
                 <div className="za-badge-row za-fade-in">
-                  <span className="za-badge-num">10</span>
-                  <span className="za-badge-label">Deep analysis modes</span>
+                  <span className="za-badge-num">{ALL_MODES.length}</span>
+                  <span className="za-badge-label">Analysis modes</span>
                 </div>
-                <WordReveal text="Run a structured diagnosis in one click." className="za-h2" />
+                <WordReveal text="Run a structured analysis in one click." className="za-h2" />
                 <p className="za-sub za-fade-in" style={{ animationDelay: '200ms' }}>
-                  Each mode runs a focused analysis on your audit data and brand profile. Paste campaign metrics below for
-                  extra precision.
+                  Each mode reads your connected accounts, inbox, competitors and ads data, then answers with numbers and next steps. Anything public lands as a draft for you to approve.
                 </p>
 
-                <div className="za-glass za-context-card za-fade-in" style={{ animationDelay: '260ms' }}>
-                  <label className="za-eyebrow" htmlFor="za-context">
-                    Optional campaign data
-                  </label>
-                  <textarea
-                    id="za-context"
-                    value={additionalData}
-                    onChange={(e) => setAdditionalData(e.target.value)}
-                    placeholder="e.g. Meta spend $400/day, ROAS 2.1, CTR 1.2%, creative fatigue on variant A"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="za-modes-grid">
-                  {USE_CASES.map((uc, i) => (
-                    <UseCaseCard
-                      key={uc.id}
-                      index={i}
-                      useCase={uc}
-                      isRunning={runningMode === uc.id && loading}
-                      isDisabled={loading || isAtLimit}
-                      onRun={() => handleModeClick(uc.id, uc.label)}
-                    />
-                  ))}
-                </div>
+                {(['social', 'ads'] as const).map((pack) => {
+                  const list = pack === 'social' ? SOCIAL_MODES : ADS_MODES;
+                  const plan = (creditStore.plan_id || 'free') as PlanName;
+                  return (
+                    <section key={pack} className="za-mode-pack">
+                      <div className="za-mode-pack-head">
+                        <h3>{pack === 'social' ? 'Social Analyst' : 'Ads Analyst'}</h3>
+                        <span>
+                          {pack === 'social'
+                            ? 'Organic posts, comments and competitors. Included in every plan.'
+                            : adsStatus === null
+                              ? 'Reads your ads data from Connections.'
+                              : adsStatus.has_data
+                                ? `Reading ${adsStatus.source === 'api' ? 'your connected ads accounts' : 'your Manual import'}: spend ${adsStatus.totals.spend.toLocaleString(undefined, { maximumFractionDigits: 0 })} in the last 30 days.`
+                                : 'No ads data yet. Import a CSV in Connections while read-only access is in review.'}
+                        </span>
+                        {pack === 'ads' && adsStatus && !adsStatus.has_data && (
+                          <Button size="sm" variant="secondary" onClick={() => navigate('/connections')}>
+                            Open Connections
+                          </Button>
+                        )}
+                      </div>
+                      <div className="za-modes-grid">
+                        {USE_CASES.filter((u) => list.some((m) => m.id === u.id)).map((uc, i) => (
+                          <UseCaseCard
+                            key={uc.id}
+                            index={i}
+                            useCase={uc}
+                            locked={!modeAccess(plan, uc.id).allowed}
+                            isRunning={runningMode === uc.id && loading}
+                            isDisabled={loading || isAtLimit}
+                            onRun={() => handleModeClick(uc.id, uc.label)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1166,7 +1109,7 @@ export default function AgentChat() {
         isOpen={modeGateModal.open}
         onClose={() => setModeGateModal((m) => ({ ...m, open: false }))}
         featureName={modeGateModal.modeName}
-        featureDescription={`${modeGateModal.modeName} is available on Pro and above. Unlock every AI analysis mode with Pro.`}
+        featureDescription={`${modeGateModal.modeName} is part of the ${modeGateModal.requiredPlan === 'starter' ? 'Starter' : 'Pro'} plan and above.`}
         requiredPlan={modeGateModal.requiredPlan}
         featureType="mode"
       />
@@ -1201,8 +1144,9 @@ function WordReveal({ text, className = '' }: { text: string; className?: string
 }
 
 // ─── Use-case card ────────────────────────────────────────────────────────────
-function UseCaseCard({ useCase, isRunning, isDisabled, onRun, index }: {
+function UseCaseCard({ useCase, isRunning, isDisabled, onRun, index, locked = false }: {
   useCase: typeof USE_CASES[number];
+  locked?: boolean;
   isRunning: boolean;
   isDisabled: boolean;
   onRun: () => void;
@@ -1216,9 +1160,9 @@ function UseCaseCard({ useCase, isRunning, isDisabled, onRun, index }: {
       </div>
       <div className="za-mode-label">{useCase.label}</div>
       <div className="za-mode-meta">{useCase.shortDesc}</div>
-      <p className="za-mode-desc">{useCase.prompt.slice(0, 110)}...</p>
+      <p className="za-mode-desc">{useCase.prompt}</p>
       <Button variant="soft" size="sm" className="za-mode-go" onClick={onRun} disabled={isDisabled} loading={isRunning} icon={<Play />}>
-        {isRunning ? 'Running analysis' : 'Run analysis'}
+        {isRunning ? 'Running analysis' : locked ? 'Upgrade to run' : 'Run analysis'}
       </Button>
     </div>
   );

@@ -8,13 +8,13 @@ export default function PricingSection() {
   const navigate = useNavigate();
 
   return (
-    <Section id="pricing" number="10" label="Pricing" tone="gray">
+    <Section id="pricing" number="09" label="Pricing" tone="gray">
       <div className="zx-head-row">
-        <AnimatedHeading text="Simple pricing for AI marketing automation." />
+        <AnimatedHeading text="Priced per brand. Every AI feature included." />
         <Reveal delay={120} className="zx-head-aside">
           <p className="zx-body">
-            Start free with no credit card. Upgrade when the agent has earned it. Every paid plan includes daily
-            briefings, scheduling and the AI agent.
+            One brand is one business with all of its channels. Start free with no credit card. We remind you 7 days
+            before every renewal and you can cancel in one click.
           </p>
         </Reveal>
       </div>
@@ -48,10 +48,10 @@ export default function PricingSection() {
 
       <div className="zx-split zx-split-media-right zx-split-tight zx-roi">
         <Reveal className="zx-split-copy">
-          <h3 className="zx-h3-lg">A marketing analyst costs around $4,000 a month.</h3>
+          <h3 className="zx-h3-lg">A social media hire costs thousands a month.</h3>
           <p className="zx-body">
-            ZieAds starts free and paid plans start at $29 per month. Catch one wasted budget decision, flag one
-            fatiguing campaign or save one Sunday of planning, and it has paid for itself for the year.
+            ZieAds starts free and paid plans start at $29 per brand. Catch one unanswered buying question, one failed post
+            or save one Sunday of planning, and it has paid for itself.
           </p>
           <TextRollButton text="Run a free audit" onClick={() => scrollToId('free-audit-try')} />
         </Reveal>

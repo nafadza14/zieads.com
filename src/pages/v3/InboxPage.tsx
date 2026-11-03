@@ -24,9 +24,27 @@ import {
   Clock,
   ArrowLeft,
   RefreshCw,
-  CornerDownRight, Link2 } from 'lucide-react';
+  CornerDownRight, Link2, EyeOff, Eye, Trash2 } from 'lucide-react';
 import ZIcon from '../../components/icons/ZIcon';
 import './inbox.css';
+
+export const VIEW_LABELS: Record<string, string> = {
+  needs_reply: 'Needs reply',
+  buying: 'Buying signals',
+  complaints: 'Complaints',
+  questions: 'Questions',
+  all: 'All',
+  hidden: 'Hidden',
+  archived: 'Archived',
+};
+
+const INTENT: Record<string, { label: string; tone: 'good' | 'bad' | 'warn' | 'neutral' | 'accent' }> = {
+  buying_signal: { label: 'Buying signal', tone: 'accent' },
+  complaint: { label: 'Complaint', tone: 'bad' },
+  question: { label: 'Question', tone: 'warn' },
+  praise: { label: 'Praise', tone: 'good' },
+  spam: { label: 'Likely spam', tone: 'neutral' },
+};
 
 export default function InboxPage() {
   const navigate = useNavigate();
@@ -35,14 +53,21 @@ export default function InboxPage() {
   const [selectedComment, setSelectedComment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Filters State
-  const [sentimentFilter, setSentimentFilter] = useState<string>('');
-  const [archivedFilter, setArchivedFilter] = useState<boolean>(false);
+  // Filters State (spec 7.6): work queue first, buying signals and complaints sorted on top
+  const [searchParams] = useSearchParams();
+  const initialView = searchParams.get('filter') || searchParams.get('view') || 'needs_reply';
+  const [view, setView] = useState<string>(VIEW_LABELS[initialView] ? initialView : 'needs_reply');
+  const [platformFilter, setPlatformFilter] = useState<string>('');
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const archivedFilter = view === 'archived';
 
   // Reply Form State
   const [replyText, setReplyText] = useState('');
   // Deep link from the AI Agent: /inbox?comment=<id>
-  const [searchParams] = useSearchParams();
   const focusId = searchParams.get('comment');
   const hasAiDraft = (c: any) => !!c && c.status !== 'replied' && !!c.reply_text;
 
@@ -87,6 +112,8 @@ export default function InboxPage() {
       : { 'Content-Type': 'application/json' };
   };
 
+  const listUrl = () => `/api/v3/inbox/comments?view=${view}${platformFilter ? `&platform=${platformFilter}` : ''}`;
+
   const loadMetadata = async () => {
     if (demo.isActive) {
       setConnections(sampleConnections);
@@ -112,10 +139,8 @@ export default function InboxPage() {
     
     if (demo.isActive) {
       let filtered = [...sampleCommentsInbox];
-      if (sentimentFilter) {
-        filtered = filtered.filter(c => c.sentiment === sentimentFilter);
-      }
       filtered = filtered.filter(c => c.is_archived === archivedFilter);
+      if (platformFilter) filtered = filtered.filter(c => c.platform === platformFilter);
       setComments(filtered);
       if (filtered.length > 0) {
         const stillMatches = filtered.find(c => c.id === selectedComment?.id);
@@ -129,15 +154,12 @@ export default function InboxPage() {
 
     try {
       const headers = await getAuthHeaders();
-      const statusVal = archivedFilter ? 'archived' : 'unread,read,replied';
-      let url = `/api/v3/inbox/comments?status=${statusVal}`;
-      if (sentimentFilter) {
-        url += `&sentiment=${sentimentFilter}`;
-      }
-      const res = await fetch(url, { headers });
+      const res = await fetch(listUrl(), { headers });
       const j = await res.json();
       if (j.success) {
         setComments(j.data);
+        setCounts(j.counts || {});
+        setConnectedPlatforms(j.platforms || []);
         setSummary(j.summary || {
           total_unread: 0,
           total_positive: 0,
@@ -150,7 +172,7 @@ export default function InboxPage() {
         // Prefer the backend's authoritative connection state; fall back to /connections
         // metadata only if the field is missing (older server without this fix).
         if (typeof j.has_instagram_connection === 'boolean') {
-          setHasInstagramConnection(j.has_instagram_connection);
+          setHasInstagramConnection(j.has_instagram_connection || !!j.has_facebook_connection);
           setInstagramAccountType(j.instagram_account_type || null);
         }
 
@@ -178,9 +200,6 @@ export default function InboxPage() {
     // new arrives. Any Instagram-side gating is handled quietly (list stays as-is).
     try {
       const headers = await getAuthHeaders();
-      
-      // SILENT DUMMY INJECTION FOR VIDEO
-      await fetch('/api/v3/inbox/inject-dummy-noufresh', { method: 'POST', headers }).catch(() => null);
 
       const res = await fetch('/api/v3/inbox/refresh', { method: 'POST', headers });
       const j = await res.json().catch(() => ({}));
@@ -220,15 +239,11 @@ export default function InboxPage() {
     const interval = setInterval(async () => {
       try {
         const headers = await getAuthHeaders();
-        const statusVal = archivedFilter ? 'archived' : 'unread,read,replied';
-        let url = `/api/v3/inbox/comments?status=${statusVal}`;
-        if (sentimentFilter) {
-          url += `&sentiment=${sentimentFilter}`;
-        }
-        const res = await fetch(url, { headers });
+        const res = await fetch(listUrl(), { headers });
         const j = await res.json();
         if (j.success) {
           setComments(j.data);
+          setCounts(j.counts || {});
           setSummary(j.summary);
           setLastSyncedAt(j.last_synced_at);
           setSyncInProgress(!!j.sync_in_progress);
@@ -243,7 +258,7 @@ export default function InboxPage() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [syncInProgress, sentimentFilter, archivedFilter, demo.isActive]);
+  }, [syncInProgress, view, platformFilter, demo.isActive]);
 
   // Auto-start sync if the user has an Instagram connection but no successful sync yet.
   // Runs at most once per mount (guarded by `autoSyncAttempted`) to avoid retry-storming
@@ -272,7 +287,8 @@ export default function InboxPage() {
 
   useEffect(() => {
     fetchComments();
-  }, [sentimentFilter, archivedFilter, demo.isActive]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, platformFilter, demo.isActive]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -385,6 +401,46 @@ export default function InboxPage() {
   };
 
 
+  const updateLocal = (id: string, patch: any) => {
+    setComments((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    setSelectedComment((c: any) => (c?.id === id ? { ...c, ...patch } : c));
+  };
+
+  const removeLocal = (id: string) => {
+    setComments((prev) => prev.filter((c) => c.id !== id));
+    setSelectedComment(null);
+    if (isMobile) setMobileView('list');
+  };
+
+  const runAction = async (kind: 'suggest' | 'hide' | 'unhide' | 'delete') => {
+    if (!selectedComment) return;
+    const id = selectedComment.id;
+    setActionError('');
+    if (demo.isActive) {
+      if (kind === 'suggest') { setReplyText('Thanks for asking! We will send you the details by DM.'); return; }
+      return removeLocal(id);
+    }
+    setActionBusy(kind);
+    try {
+      const headers = await getAuthHeaders();
+      const path = kind === 'unhide' ? 'hide' : kind;
+      const res = await fetch(`/api/v3/inbox/comments/${id}/${path}`, { method: 'POST', headers, body: JSON.stringify(kind === 'unhide' ? { hidden: false } : {}) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.message || j.error || 'That did not work');
+      if (kind === 'suggest') {
+        setReplyText(j.text);
+        updateLocal(id, { reply_text: j.text });
+      } else if (kind === 'delete' || (kind === 'hide' && view !== 'hidden') || (kind === 'unhide' && view === 'hidden')) {
+        removeLocal(id);
+      }
+    } catch (e: any) {
+      setActionError(e.message);
+    } finally {
+      setActionBusy(null);
+      setConfirmDelete(false);
+    }
+  };
+
   const getSentimentTone = (sentiment: string): 'good' | 'bad' | 'neutral' => {
     const s = sentiment?.toLowerCase();
     if (s === 'positive') return 'good';
@@ -426,7 +482,7 @@ export default function InboxPage() {
         <EmptyState
           icon={<AlertCircle size={22} />}
           title="No accounts connected yet"
-          body="Connect an Instagram account to start receiving comments."
+          body="Connect Instagram or Facebook. Zie sorts buying questions and complaints to the top so you answer those first."
           action={<Button icon={<Link2 />} onClick={() => navigate('/connections')}>Connect accounts</Button>}
         />
       );
@@ -440,7 +496,7 @@ export default function InboxPage() {
             title="Syncing your comments"
             body={
               <>
-                We are fetching your Instagram activity. Check back in a few minutes or hit refresh.
+                We are fetching your comments. Check back in a few minutes or hit refresh.
                 <span style={{ display: 'block', marginTop: 14 }}>
                   <LoadingState text="Pulling the latest comments" inline />
                 </span>
@@ -462,16 +518,16 @@ export default function InboxPage() {
     return (
       <EmptyState
         icon={<Inbox size={22} />}
-        title="No comments match this filter"
-        body="Try another sentiment or turn off Archived."
+        title={view === 'needs_reply' ? 'Nothing waits for a reply' : 'No comments here'}
+        body={view === 'needs_reply' ? 'Every comment has an answer. Zie checks again every few minutes.' : 'Try another view.'}
         action={
           <GhostButton
             onClick={() => {
-              setSentimentFilter('');
-              setArchivedFilter(false);
+              setView('all');
+              setPlatformFilter('');
             }}
           >
-            Reset filters
+            Show all comments
           </GhostButton>
         }
       />
@@ -505,12 +561,8 @@ export default function InboxPage() {
   const refreshBusy = refreshing || syncInProgress || cooldownSeconds > 0;
   const showRefresh = (hasInstagramConnection === true || connections.some(c => c.platform === 'instagram')) && !demo.isActive;
 
-  const sentimentOptions = [
-    { k: '', l: 'All', count: null as number | null, tone: 'neutral' },
-    { k: 'positive', l: 'Positive', count: summary.total_positive as number, tone: 'good' },
-    { k: 'neutral', l: 'Neutral', count: summary.total_neutral as number, tone: 'neutral' },
-    { k: 'negative', l: 'Negative', count: summary.total_negative as number, tone: 'bad' },
-  ];
+  const mainViews = ['needs_reply', 'buying', 'complaints', 'questions', 'all'];
+  void summary;
 
   const unreadCount = comments.filter(c => c.status === 'unread').length;
 
@@ -547,29 +599,35 @@ export default function InboxPage() {
           <aside className="zin-list-pane">
             <div className="zin-filters">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span className="zd-eyebrow">Sentiment</span>
+                <span className="zd-eyebrow">Show</span>
                 {unreadCount > 0 && <Pill tone="accent">{unreadCount} unread</Pill>}
               </div>
-              <div className="zin-chip-row">
-                {sentimentOptions.map(opt => (
+              <div className="zin-chip-row" role="tablist" aria-label="Inbox view">
+                {mainViews.map((k) => (
                   <button
-                    key={opt.k}
+                    key={k}
                     type="button"
-                    className={`zd-chip ${sentimentFilter === opt.k ? 'is-active' : ''}`}
-                    onClick={() => setSentimentFilter(opt.k)}
+                    role="tab"
+                    aria-selected={view === k}
+                    className={`zd-chip ${view === k ? 'is-active' : ''}`}
+                    onClick={() => setView(k)}
                   >
-                    {opt.l}
-                    {opt.count !== null && opt.count > 0 && (
-                      <span className={`zin-chip-count tone-${opt.tone}`}>{opt.count}</span>
-                    )}
+                    {VIEW_LABELS[k]}
+                    {k !== 'all' && (counts[k] || 0) > 0 && <span className="zin-chip-count">{counts[k]}</span>}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  className={`zd-chip is-accent ${archivedFilter ? 'is-active' : ''}`}
-                  onClick={() => setArchivedFilter(!archivedFilter)}
-                  aria-pressed={archivedFilter}
-                >
+              </div>
+              <div className="zin-chip-row">
+                {connectedPlatforms.length > 1 &&
+                  ['', ...connectedPlatforms].map((p) => (
+                    <button key={p || 'all'} type="button" className={`zd-chip ${platformFilter === p ? 'is-active' : ''}`} onClick={() => setPlatformFilter(p)} aria-pressed={platformFilter === p}>
+                      {p ? <SocialIcon platform={p} size={13} /> : null} {p ? (p === 'facebook' ? 'Facebook' : 'Instagram') : 'All channels'}
+                    </button>
+                  ))}
+                <button type="button" className={`zd-chip ${view === 'hidden' ? 'is-active' : ''}`} onClick={() => setView(view === 'hidden' ? 'needs_reply' : 'hidden')} aria-pressed={view === 'hidden'}>
+                  <EyeOff size={13} /> Hidden
+                </button>
+                <button type="button" className={`zd-chip ${view === 'archived' ? 'is-active' : ''}`} onClick={() => setView(view === 'archived' ? 'needs_reply' : 'archived')} aria-pressed={view === 'archived'}>
                   <Archive size={13} /> Archived
                 </button>
               </div>
@@ -610,7 +668,7 @@ export default function InboxPage() {
                         <p className="zin-snippet">{textVal}</p>
                         <div className="zin-item-meta">
                           {isUnread && <span className="zin-unread" title="Unread" />}
-                          <Pill tone={getSentimentTone(c.sentiment)}>{c.sentiment || 'neutral'}</Pill>
+                          {INTENT[c.intent] ? <Pill tone={INTENT[c.intent].tone}>{INTENT[c.intent].label}</Pill> : <Pill tone={getSentimentTone(c.sentiment)}>{c.sentiment || 'neutral'}</Pill>}
                           {hasAiDraft(c) && (
                             <span className="zin-ai-draft">
                               <ZIcon name="ai-draft" size={11} /> AI draft
@@ -651,16 +709,43 @@ export default function InboxPage() {
                   <div className="zin-thread-who">
                     <div className="zin-thread-name">{selectedComment.author_username || selectedComment.commenter_handle}</div>
                     <div className="zin-thread-sub">
+                      {INTENT[selectedComment.intent] && <Pill tone={INTENT[selectedComment.intent].tone}>{INTENT[selectedComment.intent].label}</Pill>}
                       <Pill tone={getSentimentTone(selectedComment.sentiment)}>{selectedComment.sentiment || 'neutral'}</Pill>
                       {selectedComment.platform && (
                         <span style={{ textTransform: 'capitalize' }}>{selectedComment.platform}</span>
                       )}
                     </div>
                   </div>
-                  <GhostButton className="zin-archive" onClick={() => handleArchive(selectedComment.id)}>
-                    <Archive /> Archive
-                  </GhostButton>
+                  <div className="zin-thread-actions">
+                    {selectedComment.status === 'hidden' ? (
+                      <Button size="sm" variant="ghost" icon={<Eye size={14} />} loading={actionBusy === 'unhide'} onClick={() => runAction('unhide')}>
+                        Unhide
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="ghost" icon={<EyeOff size={14} />} loading={actionBusy === 'hide'} onClick={() => runAction('hide')} aria-label="Hide on the platform">
+                        Hide
+                      </Button>
+                    )}
+                    {confirmDelete ? (
+                      <>
+                        <Button size="sm" variant="danger" loading={actionBusy === 'delete'} onClick={() => runAction('delete')}>
+                          Delete for everyone
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => setConfirmDelete(true)} aria-label="Delete comment">
+                        Delete
+                      </Button>
+                    )}
+                    <GhostButton className="zin-archive" onClick={() => handleArchive(selectedComment.id)}>
+                      <Archive /> Archive
+                    </GhostButton>
+                  </div>
                 </div>
+                {actionError && <p className="zin-action-err" role="alert">{actionError}</p>}
 
                 <div className="zin-messages">
                   <div className="zin-messages-inner">
@@ -728,7 +813,13 @@ export default function InboxPage() {
                             </span>
                           )}
                         </span>
-                        {submittingReply && <LoadingState text="Sending" inline />}
+                        {submittingReply ? (
+                          <LoadingState text="Sending" inline />
+                        ) : (
+                          <Button size="sm" variant="soft" icon={<ZIcon name="reply-draft" size={13} />} loading={actionBusy === 'suggest'} onClick={() => runAction('suggest')}>
+                            {replyText ? 'Redraft with Zie' : 'Draft reply'}
+                          </Button>
+                        )}
                       </div>
                       <div className="zin-input-row">
                         <textarea

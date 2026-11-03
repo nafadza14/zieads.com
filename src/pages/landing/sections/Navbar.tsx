@@ -17,7 +17,7 @@ import ZieAdsLogo from '../../../components/ZieAdsLogo';
 const FEATURES = [
   { id: 'free-audit-try', icon: <Search size={18} />, title: 'Free website audit', desc: 'Score your ads readiness in 3 minutes' },
   { id: 'ai-analyst', icon: <ZIcon name="ai-analyst" size={18} />, title: 'AI Analyst', desc: 'A marketing briefing every morning' },
-  { id: 'product-tour', icon: <BotMessageSquare size={18} />, title: 'AI Agent', desc: 'Ask anything, run 10 analysis modes' },
+  { id: 'product-tour', icon: <BotMessageSquare size={18} />, title: 'AI Agent', desc: 'Ask anything, run Social and Ads Analyst modes' },
   { id: 'composer', icon: <PenLine size={18} />, title: 'Composer and Calendar', desc: 'Write once, schedule everywhere' },
   { id: 'analytics', icon: <BarChart3 size={18} />, title: 'Analytics', desc: 'Numbers that explain themselves' },
   { id: 'inbox', icon: <Inbox size={18} />, title: 'Inbox and Competitor Hunt', desc: 'Every comment, every rival, one place' },
@@ -26,12 +26,12 @@ const FEATURES = [
 const LINKS = [
   { id: 'product-tour', label: 'Product tour' },
   { id: 'pricing', label: 'Pricing' },
-  { id: 'stories', label: 'Customers' },
+  { id: 'mcp', label: 'MCP' },
   { id: 'faq', label: 'FAQ' },
 ];
 
 // Sections the scroll spy watches, in page order
-const SPY = ['product-tour', 'free-audit-try', 'ai-analyst', 'composer', 'analytics', 'inbox', 'pricing', 'stories', 'faq'];
+const SPY = ['product-tour', 'ai-analyst', 'composer', 'analytics', 'inbox', 'mcp', 'pricing', 'free-audit-try', 'faq'];
 const FEATURE_IDS = new Set(FEATURES.map((f) => f.id).filter((id) => id !== 'product-tour'));
 
 export default function Navbar() {

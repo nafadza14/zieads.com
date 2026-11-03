@@ -82,7 +82,7 @@ export default function OnboardingModal({ pendingPrompt, onConfirm, onClose }: P
         </ol>
 
         <div className="zf-modal-channels">
-          {(['instagram', 'tiktok', 'linkedin', 'facebook', 'x'] as const).map((k) => (
+          {(['instagram', 'facebook', 'tiktok', 'linkedin'] as const).map((k) => (
             <SocialIcon key={k} platform={k} size={22} />
           ))}
           <span>Works with the channels you already use</span>

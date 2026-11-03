@@ -8,19 +8,19 @@ import { PHOTOS, SHOTS } from '../images';
 
 const TILE_SHOTS: Record<string, { src: string; focus: [number, number]; zoom: number }> = {
   'Daily Diagnosis': { src: SHOTS.analyst, focus: [40, 66], zoom: 2 },
-  'ROAS Drop Analysis': { src: SHOTS.agent, focus: [56, 46], zoom: 2.1 },
-  'Creative Fatigue Alerts': { src: SHOTS.analytics, focus: [38, 58], zoom: 2.1 },
+  'Needs you': { src: SHOTS.inbox, focus: [30, 45], zoom: 2.2 },
+  'Format Fatigue Alerts': { src: SHOTS.analytics, focus: [38, 58], zoom: 2.1 },
+  'Ads, read only': { src: SHOTS.agent, focus: [56, 46], zoom: 2.1 },
   'Smart Scheduling': { src: SHOTS.calendar, focus: [40, 48], zoom: 1.7 },
   'Competitor Hunt': { src: SHOTS.hunt, focus: [44, 52], zoom: 1.9 },
-  'Unified Inbox': { src: SHOTS.inbox, focus: [30, 45], zoom: 2.2 },
 };
 
 export default function DailyBriefingSection() {
   const navigate = useNavigate();
 
   return (
-    <Section id="ai-analyst" number="02" label="AI Analyst" tone="gray">
-      <AnimatedHeading text="Your AI marketing analyst sends a daily briefing every morning." />
+    <Section id="ai-analyst" number="01" label="AI Analyst" tone="gray">
+      <AnimatedHeading text="Your AI social media manager briefs you every morning." />
 
       {/* Reference layout: small card, copy + CTA, large card */}
       <div className="zx-trio">
@@ -31,8 +31,8 @@ export default function DailyBriefingSection() {
         <div className="zx-trio-copy">
           <Reveal delay={120}>
             <p className="zx-body">
-              ZieAds reads your social media and ad performance overnight, then tells you what changed, why it matters
-              and what to do next.
+              ZieAds reads your accounts, inbox, competitors and ads overnight, then tells you what changed, why it matters
+              and what to do first. Approve an action and the agent does it.
             </p>
             <p className="zx-body">
               It remembers your history, your best content angles and last week's issues, so every recommendation is

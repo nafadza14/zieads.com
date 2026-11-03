@@ -5,7 +5,8 @@
   Tools always run scoped to `userId`, never to an id supplied by the model.
   Results are compact JSON so the model can reason over real numbers.
 */
-import { supabaseAdmin, getRecentAuditContext, getProfile } from "../supabaseServer.js";
+import { supabaseAdmin, getRecentAuditContext, getProfile, getEffectivePlan } from "../supabaseServer.js";
+import { PLAN_LIMITS } from "../creditConfig.js";
 import { getDecryptedToken } from "../utils/tokenHelper.js";
 import * as igApi from "../utils/instagramApi.js";
 import { scrapeUrl } from "../scraper.js";
@@ -837,7 +838,7 @@ const draftCommentReplies: AgentTool = {
 const addCompetitor: AgentTool = {
   name: "add_competitor",
   label: "Adding a competitor to Hunt",
-  description: "Start tracking a competitor in Competitor Hunt. Only add competitors the user named or clearly asked you to find. Max 25 tracked.",
+  description: "Start tracking a competitor in Competitor Hunt. Only add competitors the user named or clearly asked you to find. The plan sets the limit (Free 3, Starter 10, Pro 50, Agency 100).",
   parameters: {
     type: "object",
     properties: {
@@ -856,7 +857,9 @@ const addCompetitor: AgentTool = {
     url = url.replace(/^http:\/\//i, "https://");
     const handle = input?.instagram_username ? String(input.instagram_username).replace(/^@/, "").trim() : null;
     const { count } = await supabaseAdmin.from("competitors").select("*", { count: "exact", head: true }).eq("user_id", userId);
-    if ((count || 0) >= 25) throw new Error("Competitor limit of 25 reached");
+    const plan = await getEffectivePlan(userId);
+    const limit = PLAN_LIMITS[plan].competitorsPerBrand;
+    if (limit !== -1 && (count || 0) >= limit) throw new Error(`The ${plan} plan tracks up to ${limit} competitors per brand`);
     const { data: dup } = await supabaseAdmin.from("competitors").select("id, name, website_url, instagram_username").eq("user_id", userId).eq("website_url", url).maybeSingle();
     if (dup) return { added: false, already_tracked: true, _artifacts: [{ kind: "competitor", ...dup }] };
     const { data, error } = await supabaseAdmin.from("competitors").insert({ user_id: userId, name, website_url: url, instagram_username: handle }).select("id, name, website_url, instagram_username").single();
@@ -864,6 +867,53 @@ const addCompetitor: AgentTool = {
     return { added: true, competitor: data, _artifacts: [{ kind: "competitor", ...data }] };
   },
   summarize: (r) => (r.added ? `Now tracking ${r.competitor?.name}` : "Already tracked"),
+};
+
+// ─── 17. Ads results, read only (connection or Manual import CSV) ─────────
+const getAdsMetrics: AgentTool = {
+  name: "get_ads_metrics",
+  label: "Reading ads results",
+  description: "Read-only ads results for Meta Ads, Google Ads and TikTok Ads from the user's connection or Manual import (CSV). Returns totals, the previous period for comparison, and rows grouped by campaign, ad set or ad. If has_data is false, tell the user to connect or import ads data in Connections.",
+  parameters: {
+    type: "object",
+    properties: {
+      days: { type: "number", description: "Look back window, 7 to 90. Default 30." },
+      group_by: { type: "string", enum: ["campaign", "ad_set", "ad", "day", "platform"], description: "Default campaign" },
+      platform: { type: "string", enum: ["meta_ads", "google_ads", "tiktok_ads"], description: "Optional filter" },
+    },
+    additionalProperties: false,
+  },
+  async run(input, { userId }) {
+    const days = Math.min(90, Math.max(7, Number(input?.days) || 30));
+    const group = ["campaign", "ad_set", "ad", "day", "platform"].includes(input?.group_by) ? input.group_by : "campaign";
+    let q = supabaseAdmin.from("ad_data").select("platform, campaign_name, ad_set_name, ad_name, date_range_start, spend_usd, impressions, clicks, conversions, revenue_usd, data_source").eq("user_id", userId).gte("date_range_start", isoDaysAgo(days * 2).slice(0, 10)).limit(20000);
+    if (input?.platform) q = q.eq("platform", input.platform);
+    const { data } = await q;
+    const since = isoDaysAgo(days).slice(0, 10);
+    const rows = data || [];
+    const cur = rows.filter((r: any) => r.date_range_start >= since);
+    const prev = rows.filter((r: any) => r.date_range_start < since);
+    const sum = (list: any[]) => {
+      const t = list.reduce((a, r) => ({ spend: a.spend + Number(r.spend_usd || 0), impressions: a.impressions + Number(r.impressions || 0), clicks: a.clicks + Number(r.clicks || 0), conversions: a.conversions + Number(r.conversions || 0), revenue: a.revenue + Number(r.revenue_usd || 0) }), { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 });
+      const d = (x: number, y: number) => (y > 0 ? +(x / y).toFixed(4) : null);
+      return { ...t, spend: +t.spend.toFixed(2), revenue: +t.revenue.toFixed(2), ctr: d(t.clicks, t.impressions), cpc: d(t.spend, t.clicks), cpa: d(t.spend, t.conversions), roas: d(t.revenue, t.spend) };
+    };
+    const key = (r: any) => (group === "day" ? r.date_range_start : group === "platform" ? r.platform : group === "ad" ? `${r.platform} | ${r.campaign_name} | ${r.ad_name || "(no ad name)"}` : group === "ad_set" ? `${r.platform} | ${r.campaign_name} | ${r.ad_set_name || "(no ad set)"}` : `${r.platform} | ${r.campaign_name}`);
+    const groups: Record<string, any[]> = {};
+    for (const r of cur) (groups[key(r)] ||= []).push(r);
+    const grouped = Object.entries(groups).map(([k, list]) => ({ key: k, ...sum(list) })).sort((a, b) => (group === "day" ? (a.key < b.key ? -1 : 1) : b.spend - a.spend)).slice(0, 60);
+    return {
+      has_data: cur.length > 0,
+      source: cur.some((r: any) => r.data_source === "api") ? "api" : cur.length ? "manual_import" : null,
+      days,
+      totals: sum(cur),
+      previous_period: sum(prev),
+      group_by: group,
+      rows: grouped,
+      note: cur.length ? undefined : "No ads data yet. The user can connect read-only ads access or use Manual import (CSV) in Connections.",
+    };
+  },
+  summarize: (r) => (r.has_data ? `${r.rows.length} ${r.group_by} rows, spend ${r.totals.spend}` : "No ads data yet"),
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
@@ -885,6 +935,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   updateDraftPost,
   draftCommentReplies,
   addCompetitor,
+  getAdsMetrics,
 ];
 
 export const TOOL_MAP = new Map(AGENT_TOOLS.map((t) => [t.name, t]));

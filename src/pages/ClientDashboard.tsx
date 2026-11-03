@@ -96,7 +96,6 @@ const PLATFORMS = ['Instagram', 'TikTok', 'LinkedIn', 'Facebook', 'Google Ads', 
 
 import { generatePDF } from '../lib/pdfGenerator';
 import CompareAuditView from '../components/CompareAuditView';
-import BrandSettings from './settings/BrandSettings';
 import IndustryInsights from '../components/IndustryInsights';
 import AdsIntegrationMock from '../components/AdsIntegrationMock';
 import CollaborativeReport from '../components/CollaborativeReport';
@@ -113,13 +112,13 @@ export default function ClientDashboard({ reportData }: Props) {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam) {
-      setSidebarNav(tabParam);
-    } else if (location.state && (location.state as any).defaultTab) {
-      setSidebarNav((location.state as any).defaultTab);
-    } else if (location.pathname === '/clients') {
-      setSidebarNav('settings');
+    const wanted = tabParam || (location.state as any)?.defaultTab || 'home';
+    // Settings moved to /settings (spec P0-1); old links keep working
+    if (wanted === 'settings') {
+      navigate('/settings/brand-profile', { replace: true });
+      return;
     }
+    setSidebarNav(wanted);
   }, [location.state, location.pathname, location.search]);
 
   const [selectedSkill, setSelectedSkill] = useState('audit');
@@ -129,7 +128,7 @@ export default function ClientDashboard({ reportData }: Props) {
   const [skillResult] = useState<any>(null);
   const [userEmail, setUserEmail] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [sidebarNav, setSidebarNav] = useState('settings');
+  const [sidebarNav, setSidebarNav] = useState('home');
   const [latestAudit, setLatestAudit] = useState<any>(null);
   const [recentAudits, setRecentAudits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -912,7 +911,6 @@ export default function ClientDashboard({ reportData }: Props) {
         )}
 
         {/* ══════ SETTINGS VIEW ══════ */}
-        {sidebarNav === 'settings' && <BrandSettings />}
 
         {/* ══════ REFERRALS VIEW ══════ */}
         {sidebarNav === 'referrals' && (

@@ -15,7 +15,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "start": "node server.ts",
-    "collector": "tsx collector/zieads-collector.ts"
+    "collector": "tsx collector/zieads-collector.ts",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

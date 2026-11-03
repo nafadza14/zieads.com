@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import ZieAdsLogo from '../components/ZieAdsLogo';
+import SocialIcon from '../components/v3/SocialIcon';
 import { 
   ArrowRight, 
   ArrowLeft, 
@@ -29,69 +30,6 @@ import {
 
 const ACCENT_BLUE = '#F26522';
 
-// Brand accurate SVG icons for Step 6 Platform focus
-const BrandIcons: Record<string, React.ReactNode> = {
-  instagram: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="url(#ig-grad)" />
-      <rect x="5" y="5" width="14" height="14" rx="4" stroke="white" strokeWidth="2" />
-      <circle cx="12" cy="12" r="3" stroke="white" strokeWidth="2" />
-      <circle cx="16.5" cy="7.5" r="1" fill="white" />
-      <defs>
-        <linearGradient id="ig-grad" x1="0" y1="24" x2="24" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#FED976" />
-          <stop offset="0.25" stopColor="#FEB24C" />
-          <stop offset="0.5" stopColor="#FD8D3C" />
-          <stop offset="0.75" stopColor="#FC4E2A" />
-          <stop offset="1" stopColor="#C90076" />
-        </linearGradient>
-      </defs>
-    </svg>
-  ),
-  tiktok: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="black" />
-      <path d="M16 8.5C14.5 8.5 13.5 7.5 13.5 6H11V15.5C11 17.43 9.43 19 7.5 19C5.57 19 4 17.43 4 15.5C4 13.57 5.57 12 7.5 12C8 12 8.46 12.11 8.88 12.3V9.8C8.44 9.73 8 9.7 7.5 9.7C4.3 9.7 1.7 12.3 1.7 15.5C1.7 18.7 4.3 21.3 7.5 21.3C10.7 21.3 13.3 18.7 13.3 15.5V11C14.5 12 16 12.5 17.5 12.5V10C16.7 10 16 9.3 16 8.5Z" fill="white" />
-    </svg>
-  ),
-  linkedin: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="#0A66C2" />
-      <path d="M19 19H16V14.5C16 13.2 15.5 12.5 14.5 12.5C13.7 12.5 13.2 13 13.2 13.7V19H10.2V10H13.2V11.2C13.6 10.6 14.5 10 15.8 10C17.8 10 19 11.3 19 14V19ZM6.7 8.5C5.7 8.5 5 7.8 5 6.8C5 5.8 5.7 5 6.7 5C7.7 5 8.5 5.8 8.5 6.8C8.5 7.8 7.7 8.5 6.7 8.5ZM5.2 19V10H8.2V19H5.2Z" fill="white" />
-    </svg>
-  ),
-  facebook: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="#1877F2" />
-      <path d="M17.5 12.5H15V19H12V12.5H10V9.8H12V8.2C12 6.2 13.2 5 15.2 5C16.1 5 17 5.1 17.5 5.2V7.5H16.2C15.2 7.5 15 8 15 8.8V9.8H17.5L17.5 12.5Z" fill="white" />
-    </svg>
-  ),
-  twitter: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="#000000" />
-      <path d="M18.2 5H19.8L16.2 9.1L20.5 19H17.2L14.7 15.6L11.7 19H10.1L14 14.4L9.8 5H13.2L15.4 8.3L18.2 5ZM17.6 17.9H18.5L12.7 6H11.7L17.6 17.9Z" fill="white" />
-    </svg>
-  ),
-  youtube: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="#FF0000" />
-      <path d="M19.7 8.4C19.9 9.3 20 10.6 20 12C20 13.4 19.9 14.7 19.7 15.6C19.5 16.5 19 17 18.1 17.2C17.2 17.5 14.8 17.5 12 17.5C9.2 17.5 6.8 17.5 5.9 17.2C5 17 4.5 16.5 4.3 15.6C4.1 14.7 4 13.4 4 12C4 10.6 4.1 9.3 4.3 8.4C4.5 7.5 5 7 5.9 6.8C6.8 6.5 9.2 6.5 12 6.5C14.8 6.5 17.2 6.5 18.1 6.8C19 7 19.5 7.5 19.7 8.4ZM10.5 14.5L15 12L10.5 9.5V14.5Z" fill="white" />
-    </svg>
-  ),
-  threads: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="#000000" />
-      <path d="M16.5 11C16.5 8.5 14.5 6.5 12 6.5C9.5 6.5 7.5 8.5 7.5 11C7.5 13.5 9.5 15.5 12 15.5C13.2 15.5 14.3 15 15 14.2L16.2 15.2C15.2 16.5 13.7 17.3 12 17.3C8.5 17.3 5.7 14.5 5.7 11C5.7 7.5 8.5 4.7 12 4.7C15.5 4.7 18.3 7.5 18.3 11C18.3 13.5 17.5 15.3 16 16.5C14.7 17.5 13.2 17.8 12 17.8C9.5 17.8 7.5 16.8 6.7 15L8 14.2C8.5 15.5 10 16 12 16C13 16 14.2 15.7 15 14.8C16 13.8 16.5 12.5 16.5 11ZM12 8.3C13.5 8.3 14.7 9.5 14.7 11C14.7 12.5 13.5 13.7 12 13.7C10.5 13.7 9.3 12.5 9.3 11C9.3 9.5 10.5 8.3 12 8.3Z" fill="white" />
-    </svg>
-  ),
-  pinterest: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="#BD081C" />
-      <path d="M12 4.7C8 4.7 4.7 8 4.7 12C4.7 15.1 6.6 17.7 9.4 18.7C9.3 18.1 9.3 17.3 9.5 16.6C9.6 15.9 10.6 11.9 10.6 11.9C10.6 11.9 10.3 11.3 10.3 10.3C10.3 8.8 11.2 7.7 12.3 7.7C13.3 7.7 13.8 8.4 13.8 9.3C13.8 10.3 13.2 11.8 12.8 13.3C12.5 14.5 13.4 15.5 14.6 15.5C16.8 15.5 18.5 13.2 18.5 9.9C18.5 7 16.4 5 12.5 5C8 5 4.7 8.3 4.7 12.7C4.7 14.1 5.2 15.6 6 16.5C6.1 16.6 6.1 16.8 6.1 16.9C6 17.3 5.8 18.1 5.8 18.2C5.7 18.4 5.5 18.5 5.3 18.4C4.1 17.9 3.3 16.1 3.3 14.7C3.3 9.7 6.9 5.2 12.8 5.2C17.5 5.2 21.1 8.5 21.1 12.9C21.1 17.6 18.2 21.4 14.1 21.4C12.7 21.4 11.4 20.7 10.9 19.8C10.9 19.8 10.1 23 9.9 23.8C9.5 25.1 8.7 26.8 8.1 27.8C9.3 28.1 10.6 28.3 12 28.3C16.4 28.3 19.7 25 19.7 20.6C19.7 16.2 16.4 12.9 12 12.9" fill="white" />
-    </svg>
-  )
-};
-
 export default function OnboardingWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState<number>(0); // will be initialized dynamically
@@ -107,6 +45,18 @@ export default function OnboardingWizard() {
     accountVolume: null as string | null,
     platformsInFocus: [] as string[],
   });
+
+  // Step 7: brand setup (spec 7.1). The website scan drafts the profile, the user reviews it.
+  const detectedTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta'; } catch { return 'Asia/Jakarta'; } })();
+  const [brand, setBrand] = useState({ name: '', website: '', industry: '', timezone: detectedTz, language: 'English' });
+  const [brandDraft, setBrandDraft] = useState<any>(null);
+  const [scanState, setScanState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
+  const [brandError, setBrandError] = useState('');
+  const timezones: string[] = (() => {
+    const base = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Singapore', 'Asia/Kuala_Lumpur', 'Asia/Bangkok', 'Asia/Manila', 'Asia/Tokyo', 'Australia/Sydney', 'Europe/London', 'Europe/Berlin', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'UTC'];
+    return base.includes(detectedTz) ? base : [detectedTz, ...base];
+  })();
+  const languages = ['English', 'Bahasa Indonesia', 'English and Bahasa Indonesia', 'Malay', 'Thai', 'Vietnamese', 'Spanish'];
 
   // Step 2 configurations
   const roleOptions = [
@@ -144,19 +94,16 @@ export default function OnboardingWizard() {
   const volumeOptions = ["1-3", "4-6", "7-10", "11-20", "21-50", "50+"];
 
   // Step 6 configurations
+  // What each connector really does today (spec 8). Keep these claims honest.
   const platformsActive = [
-    { id: "instagram", name: "Instagram", desc: "Full support: publishing, analytics, briefings" },
-    { id: "tiktok", name: "TikTok", desc: "Full support: publishing, analytics, briefings" },
-    { id: "linkedin", name: "LinkedIn", desc: "Full support: publishing, analytics, briefings" }
+    { id: "instagram", name: "Instagram", desc: "Publishing, insights, comments, briefings" },
+    { id: "facebook", name: "Facebook", desc: "Page publishing, insights, comments, briefings" },
+    { id: "tiktok", name: "TikTok", desc: "Upload to your TikTok inbox, profile stats" },
+    { id: "linkedin", name: "LinkedIn", desc: "Text posts to your profile" }
   ];
 
-  const platformsSoon = [
-    { id: "facebook", name: "Facebook" },
-    { id: "twitter", name: "X (Twitter)" },
-    { id: "youtube", name: "YouTube" },
-    { id: "threads", name: "Threads" },
-    { id: "pinterest", name: "Pinterest" }
-  ];
+  // Coming soon platforms are listed as text, no logos (CLAUDE.md icon rule)
+  const platformsSoon = ["YouTube", "Threads", "Pinterest", "X"];
 
   // Step 7 highlights list
   const capabilityList = [
@@ -167,12 +114,12 @@ export default function OnboardingWizard() {
     },
     {
       title: "Schedule your posts across every platform",
-      body: "Draft once, publish to Instagram, TikTok, and LinkedIn with per-platform tweaks. Nothing goes live without your approval.",
+      body: "Draft once, publish to Instagram, Facebook, TikTok, and LinkedIn with per-platform tweaks. Zie checks every post after it goes out.",
       highlighted: false
     },
     {
       title: "Read your organic and paid performance together",
-      body: "One view. Both sides of your marketing. The agent tells you what the numbers mean.",
+      body: "Organic insights from your connected accounts, plus ads data you import from Meta, Google, or TikTok exports.",
       highlighted: false
     },
     {
@@ -222,6 +169,21 @@ export default function OnboardingWizard() {
             platformsInFocus: prof.platforms_in_focus || [],
           });
         }
+
+        try {
+          const br = await fetch('/api/profile/brand', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json());
+          const existing = br?.data?.identity ? br.data : null;
+          if (existing) {
+            setBrandDraft(existing);
+            setBrand((b) => ({
+              ...b,
+              name: existing.identity.name || '',
+              website: existing.identity.website || '',
+              industry: existing.identity.industry || '',
+              language: existing.identity.languages?.[0] || b.language,
+            }));
+          }
+        } catch { /* brand step starts empty */ }
 
         // Fetch User profile metadata for Greeting Name
         const userRes = await supabase.auth.getUser();
@@ -296,7 +258,7 @@ export default function OnboardingWizard() {
           current_tools: answers.currentTools,
           account_volume: answers.accountVolume,
           platforms_in_focus: answers.platformsInFocus,
-          onboardingStep: 8,
+          onboardingStep: 9,
           hasCompletedOnboarding: true
         };
 
@@ -330,8 +292,81 @@ export default function OnboardingWizard() {
       console.error('Failed to complete onboarding wizard session', e);
     } finally {
       setSavingStep(false);
-      navigate('/analyst');
+      // Connecting is the step that unlocks the first real briefing
+      navigate('/connections', { state: { fromOnboarding: true } });
     }
+  };
+
+  const authToken = async () => (await supabase.auth.getSession()).data?.session?.access_token;
+
+  const scanWebsite = async () => {
+    const url = brand.website.trim();
+    if (!url) { setBrandError('Add your website first.'); return; }
+    setScanState('busy');
+    setBrandError('');
+    try {
+      const token = await authToken();
+      const r = await fetch('/api/profile/brand/autofill', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.data) throw new Error(j.error || 'Could not read that website');
+      setBrandDraft(j.data);
+      const id = j.data.identity || {};
+      setBrand((b) => ({
+        ...b,
+        name: b.name || id.name || '',
+        website: id.website || b.website,
+        industry: b.industry || id.industry || '',
+        language: id.languages?.[0] && languages.includes(id.languages[0]) ? id.languages[0] : b.language,
+      }));
+      setScanState('done');
+    } catch (e: any) {
+      setScanState('error');
+      setBrandError(`${e.message}. You can fill the fields in yourself.`);
+    }
+  };
+
+  const saveBrandAndContinue = async () => {
+    if (!brand.name.trim()) { setBrandError('Add your brand name so Zie knows who it works for.'); return; }
+    setSavingStep(true);
+    setBrandError('');
+    try {
+      const token = await authToken();
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+      const draft = brandDraft || {};
+      const profile = {
+        ...draft,
+        identity: {
+          ...(draft.identity || {}),
+          name: brand.name.trim(),
+          website: brand.website.trim(),
+          industry: brand.industry.trim(),
+          languages: [brand.language],
+        },
+        goals: {
+          ...(draft.goals || {}),
+          role: answers.role || draft.goals?.role,
+          account_volume: answers.accountVolume || draft.goals?.account_volume,
+          goals: answers.goals.length ? answers.goals : draft.goals?.goals,
+          platforms: answers.platformsInFocus.length ? answers.platformsInFocus : draft.goals?.platforms,
+        },
+      };
+      const [b, st] = await Promise.all([
+        fetch('/api/profile/brand', { method: 'POST', headers, body: JSON.stringify({ brand: profile }) }),
+        fetch('/api/settings', { method: 'POST', headers, body: JSON.stringify({ timezone: brand.timezone }) }),
+      ]);
+      if (!b.ok) throw new Error((await b.json().catch(() => ({}))).error || 'Could not save the brand');
+      if (!st.ok) console.warn('Time zone not saved', await st.text());
+    } catch (e: any) {
+      setBrandError(e.message);
+      setSavingStep(false);
+      return;
+    }
+    setSavingStep(false);
+    await handleNextStep(8);
   };
 
   const toggleMultiSelect = (key: 'goals' | 'currentTools' | 'platformsInFocus', value: string) => {
@@ -928,7 +963,7 @@ export default function OnboardingWizard() {
             </div>
 
             {/* Currently Supported Platforms */}
-            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 640 ? '1fr' : 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 640 ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
               {platformsActive.map((opt) => {
                 const isSelected = answers.platformsInFocus.includes(opt.id);
                 return (
@@ -950,7 +985,7 @@ export default function OnboardingWizard() {
                       transition: 'all 0.2s ease-in-out'
                     }}
                   >
-                    <div style={{ marginBottom: 12 }}>{BrandIcons[opt.id]}</div>
+                    <div style={{ marginBottom: 12 }}><SocialIcon platform={opt.id} size={28} /></div>
                     <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: 4 }}>{opt.name}</strong>
                     <span style={{ fontSize: '0.73rem', color: '#64748B', lineHeight: 1.3 }}>{opt.desc}</span>
                     {isSelected && (
@@ -975,33 +1010,10 @@ export default function OnboardingWizard() {
               })}
             </div>
 
-            {/* Coming Soon Platforms */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12, paddingLeft: 4 }}>Coming Soon</div>
-              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 640 ? '1fr 1fr' : 'repeat(5, 1fr)', gap: 12 }}>
-                {platformsSoon.map((opt) => (
-                  <div 
-                    key={opt.id}
-                    style={{
-                      background: '#fff',
-                      border: '1px solid var(--border)',
-                      borderRadius: 10,
-                      padding: '12px 8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      opacity: 0.5,
-                      position: 'relative',
-                      cursor: 'not-allowed'
-                    }}
-                  >
-                    <span style={{ position: 'absolute', top: 4, right: 4, fontSize: '8px', background: '#E2E8F0', padding: '1px 4px', borderRadius: 4, fontWeight: 700 }}>Soon</span>
-                    <div style={{ marginBottom: 6 }}>{BrandIcons[opt.id]}</div>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{opt.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Coming Soon Platforms, text only */}
+            <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#64748B', margin: '0 0 32px' }}>
+              Coming soon: {platformsSoon.join(', ')}
+            </p>
 
             {/* Step Controls */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
@@ -1053,14 +1065,102 @@ export default function OnboardingWizard() {
           </div>
         )}
 
-        {/* ════════════════════ STEP 7: CAPABILITIES PREVIEW ════════════════════ */}
+        {/* ════════════════════ STEP 7: BRAND SETUP ════════════════════ */}
         {step === 7 && (
+          <div className="fade-in-onboarding ob-brand" style={{ maxWidth: 560, width: '100%' }}>
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.02em', margin: '0 0 8px' }}>
+                Tell Zie about your brand
+              </h2>
+              <p style={{ fontSize: '0.95rem', color: '#64748B', margin: 0 }}>
+                Add your website and Zie drafts the rest. You can edit everything later in Settings.
+              </p>
+            </div>
+
+            <div className="ob-card">
+              <label className="ob-field">
+                <span>Website</span>
+                <div className="ob-row">
+                  <input
+                    type="url"
+                    inputMode="url"
+                    placeholder="yourbrand.com"
+                    value={brand.website}
+                    onChange={(e) => setBrand({ ...brand, website: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); scanWebsite(); } }}
+                  />
+                  <button type="button" className="ob-scan" onClick={scanWebsite} disabled={scanState === 'busy'}>
+                    {scanState === 'busy' ? 'Scanning...' : 'Scan website'}
+                  </button>
+                </div>
+                {scanState === 'done' && (
+                  <small className="ob-ok"><Check size={12} /> Draft ready. Check the fields below.</small>
+                )}
+              </label>
+
+              <label className="ob-field">
+                <span>Brand name</span>
+                <input value={brand.name} onChange={(e) => setBrand({ ...brand, name: e.target.value })} placeholder="Your brand" />
+              </label>
+
+              <label className="ob-field">
+                <span>Category</span>
+                <input value={brand.industry} onChange={(e) => setBrand({ ...brand, industry: e.target.value })} placeholder="Coffee shop, skincare, B2B software" />
+              </label>
+
+              <div className="ob-two">
+                <label className="ob-field">
+                  <span>Time zone</span>
+                  <select value={brand.timezone} onChange={(e) => setBrand({ ...brand, timezone: e.target.value })}>
+                    {timezones.map((tz) => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
+                  </select>
+                  <small>Briefings and scheduled posts use this time zone.</small>
+                </label>
+                <label className="ob-field">
+                  <span>Content language</span>
+                  <select value={brand.language} onChange={(e) => setBrand({ ...brand, language: e.target.value })}>
+                    {languages.map((l) => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              {brandDraft?.offer?.summary && (
+                <div className="ob-draft">
+                  <strong>What Zie read from your site</strong>
+                  <p>{brandDraft.offer.summary}</p>
+                  {brandDraft.audience?.description && <p>Audience: {brandDraft.audience.description}</p>}
+                </div>
+              )}
+
+              {brandError && <p className="ob-err" role="alert">{brandError}</p>}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24 }}>
+              <button
+                onClick={() => handleNextStep(6)}
+                style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 24px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+              <button
+                onClick={saveBrandAndContinue}
+                disabled={savingStep}
+                style={{ background: ACCENT_BLUE, border: 'none', padding: '12px 32px', fontSize: '0.9rem', fontWeight: 600, borderRadius: 10, color: 'white', cursor: 'pointer' }}
+              >
+                {savingStep ? 'Saving...' : 'Continue'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════ STEP 8: CAPABILITIES PREVIEW ════════════════════ */}
+        {step === 8 && (
           <div className="fade-in-onboarding" style={{ maxWidth: 960, width: '100%' }}>
             <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: 48, alignItems: 'center' }}>
               
               {/* Left Column: text description */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: ACCENT_BLUE }}>Setup Complete</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: ACCENT_BLUE }}>Last step: connect</span>
                 <h1 style={{ fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, margin: 0 }}>
                   Here's what your agent<br />
                   will do for you.
@@ -1117,7 +1217,7 @@ export default function OnboardingWizard() {
                     boxShadow: '0 4px 14px rgba(30,123,255,0.35)'
                   }}
                 >
-                  {savingStep ? 'Saving...' : 'Get Started'}
+                  {savingStep ? 'Saving...' : 'Connect your accounts'}
                 </button>
               </div>
 
@@ -1197,6 +1297,22 @@ export default function OnboardingWizard() {
             transform: translateY(0) scale(1);
           }
         }
+        .ob-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .ob-field { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+        .ob-field > span { font-weight: 600; color: #1A1A1A; }
+        .ob-field small { color: #64748B; font-size: 0.75rem; }
+        .ob-field input, .ob-field select { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 0.9rem; background: #fff; color: #1A1A1A; min-width: 0; width: 100%; box-sizing: border-box; }
+        .ob-field input:focus, .ob-field select:focus { outline: 2px solid rgba(242,101,34,0.35); outline-offset: 0; border-color: #F26522; }
+        .ob-row { display: flex; gap: 8px; }
+        .ob-scan { flex-shrink: 0; border: 1px solid var(--border); background: #FAF8F5; border-radius: 8px; padding: 0 14px; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: #1A1A1A; }
+        .ob-scan:disabled { opacity: 0.6; cursor: progress; }
+        .ob-ok { display: inline-flex; align-items: center; gap: 4px; }
+        .ob-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 560px) { .ob-two { grid-template-columns: 1fr; } }
+        .ob-draft { background: #FAF8F5; border-radius: 10px; padding: 12px 14px; font-size: 0.82rem; color: #475569; }
+        .ob-draft strong { display: block; color: #1A1A1A; margin-bottom: 4px; }
+        .ob-draft p { margin: 4px 0 0; line-height: 1.45; }
+        .ob-err { margin: 0; color: #B42318; font-size: 0.82rem; }
         .fade-in-onboarding {
           animation: fadeInOnboarding 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }

@@ -334,7 +334,9 @@ export function Button({
   loading = false,
   title,
   full = false,
+  'aria-label': ariaLabel,
 }: {
+  'aria-label'?: string;
   children?: ReactNode;
   onClick?: () => void;
   disabled?: boolean;
@@ -352,6 +354,7 @@ export function Button({
     <button
       type={type}
       title={title}
+      aria-label={ariaLabel}
       className={`zd-btn is-${variant} is-${size} ${full ? 'is-full' : ''} ${loading ? 'is-loading' : ''} ${className}`}
       onClick={onClick}
       disabled={disabled || loading}

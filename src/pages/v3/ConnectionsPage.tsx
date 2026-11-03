@@ -1,602 +1,568 @@
-import { useState, useEffect, useRef } from 'react';
+/*
+  Connections (spec 7.9, P0-2, P0-4).
+  Organic: Instagram, Facebook Pages, TikTok, LinkedIn through each platform's OAuth.
+  Paid ads: read-only API access is in review, so the Manual import (CSV) is the path for now.
+  Every card shows status, last sync, granted permissions and token expiry, with Reconnect and Disconnect.
+*/
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AlertTriangle, CheckCircle, Download, KeyRound, Link2, RefreshCw, Upload } from 'lucide-react';
 import V3Layout from '../../components/v3/V3Layout';
-import {
-  Card,
-  DarkButton,
-  GhostButton,
-  GrowBar,
-  LoadingState,
-  PageBody,
-  PageHeader,
-  Pill,
-  Skeleton,
-  Button,
-} from '../../components/v3/ui';
-import { supabase } from '../../lib/supabaseClient';
+import { Button, Card, LoadingState, PageBody, PageHeader, Pill } from '../../components/v3/ui';
+import SocialIcon from '../../components/v3/SocialIcon';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections } from '../../data/sample-data';
-import SocialIcon from '../../components/v3/SocialIcon';
-import { CheckCircle, Upload, Trash2, AlertTriangle, Link2 } from 'lucide-react';
+import { api, authHeaders } from '../../lib/api';
 import './connections.css';
 
-const PLATFORMS: { id: string; name: string; type: 'organic' | 'ads'; icon: string }[] = [
-  { id: 'instagram', name: 'Instagram', type: 'organic', icon: 'instagram' },
-  { id: 'tiktok', name: 'TikTok', type: 'organic', icon: 'tiktok' },
-  { id: 'linkedin', name: 'LinkedIn', type: 'organic', icon: 'linkedin' },
-  { id: 'meta_ads', name: 'Meta Ads', type: 'ads', icon: 'facebook' },
-  { id: 'google_ads', name: 'Google Ads', type: 'ads', icon: 'google' },
-  { id: 'tiktok_ads', name: 'TikTok Ads', type: 'ads', icon: 'tiktok' },
+type OrganicId = 'instagram' | 'facebook' | 'tiktok' | 'linkedin';
+type AdsId = 'meta_ads' | 'google_ads' | 'tiktok_ads';
+
+const ORGANIC: Array<{ id: OrganicId; name: string; icon: string; what: string; tokenDays?: number }> = [
+  { id: 'instagram', name: 'Instagram', icon: 'instagram', what: 'Professional account: posts, Reels, insights, comments', tokenDays: 60 },
+  { id: 'facebook', name: 'Facebook', icon: 'facebook', what: 'Pages: posts, insights, comments' },
+  { id: 'tiktok', name: 'TikTok', icon: 'tiktok', what: 'Profile stats and videos, upload to your TikTok inbox' },
+  { id: 'linkedin', name: 'LinkedIn', icon: 'linkedin', what: 'Your profile: text posts. Company Pages after LinkedIn review', tokenDays: 60 },
 ];
+
+const ADS: Array<{ id: AdsId; name: string; icon: string }> = [
+  { id: 'meta_ads', name: 'Meta Ads', icon: 'meta' },
+  { id: 'google_ads', name: 'Google Ads', icon: 'googleads' },
+  { id: 'tiktok_ads', name: 'TikTok Ads', icon: 'tiktok' },
+];
+
+const COMING_SOON = ['Threads', 'YouTube', 'X', 'Bluesky', 'Pinterest', 'LinkedIn Ads', 'Google Business Profile'];
+
+const ERROR_TEXT: Record<string, string> = {
+  denied: 'You cancelled the connection. Nothing was changed.',
+  csrf: 'The connection link expired. Try again.',
+  no_pages: 'Your Facebook account does not manage any Page. Create a Page or ask for full control of one, then connect again.',
+  invalid_callback: 'The platform sent an incomplete response. Try again.',
+};
+
+interface Conn {
+  platform: string;
+  connected: boolean;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string;
+  account_type?: string;
+  connected_at?: string;
+  token_expires_at?: string | null;
+  scopes?: string;
+  status?: 'live' | 'needs_reconnect' | 'error' | 'revoked';
+  last_error?: string | null;
+  last_synced_at?: string | null;
+  declined_permissions?: string[];
+  page_count?: number;
+}
+
+const ago = (iso?: string | null) => {
+  if (!iso) return 'not synced yet';
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h} h ago`;
+  return `${Math.round(h / 24)} days ago`;
+};
+
+export function expiryInfo(iso?: string | null): { days: number; level: 'ok' | 'soon' | 'expired' } | null {
+  if (!iso) return null;
+  const days = Math.floor((new Date(iso).getTime() - Date.now()) / 86400000);
+  return { days, level: days < 0 ? 'expired' : days <= 7 ? 'soon' : 'ok' };
+}
 
 export default function ConnectionsPage() {
   const demo = useDemoMode();
-  const [connections, setConnections] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [conns, setConns] = useState<Record<string, Conn>>({});
+  const [ads, setAds] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
-  
-  // Connection Form State
-  const [platformToConnect, setPlatformToConnect] = useState<string | null>(null);
-  const [accountHandle, setAccountHandle] = useState('');
-  const [connecting, setConnecting] = useState(false);
+  const [banner, setBanner] = useState<{ tone: 'good' | 'bad' | 'warn'; text: string; action?: { label: string; to: string } } | null>(null);
+  const fromOnboarding = !!(useLocation().state as any)?.fromOnboarding;
+  const [busy, setBusy] = useState<string | null>(null);
+  const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
+  const [pagePicker, setPagePicker] = useState<{ pages: any[]; selected: string | null } | null>(null);
+  const [importFor, setImportFor] = useState<AdsId | null>(null);
 
-  // CSV Upload State
-  const [uploadPlatform, setUploadPlatform] = useState<string | null>(null);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [uploadingAds, setUploadingAds] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-
-  const getAuthHeaders = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    return token
-      ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-      : { 'Content-Type': 'application/json' };
-  };
-
-  const fetchConnections = async () => {
+  const load = async () => {
     if (demo.isActive) {
-      setConnections(sampleConnections.map(c => ({
-        id: c.id,
-        platform: c.platform,
-        account_handle: c.account_handle,
-        is_demo: true,
-        connected_at: new Date().toISOString()
-      })));
+      const map: Record<string, Conn> = {};
+      sampleConnections.forEach((c) => (map[c.platform] = { platform: c.platform, connected: true, username: c.account_handle, status: 'live', last_synced_at: new Date().toISOString() }));
+      setConns(map);
       setLoading(false);
       return;
     }
-
     try {
-      const headers = await getAuthHeaders();
-      const [realRes, mockRes] = await Promise.all([
-        fetch('/api/auth/connections', { headers }),
-        fetch('/api/v3/connections', { headers })
-      ]);
-
-      const realJ = await realRes.json();
-      const mockJ = await mockRes.json();
-      const mergedList: any[] = [];
-
-      // 1. Add active real OAuth connections
-      if (Array.isArray(realJ)) {
-        realJ.forEach((c: any) => {
-          if (c.connected) {
-            mergedList.push({
-              id: c.platform,
-              platform: c.platform,
-              account_handle: c.username || c.display_name || `@${c.platform}`,
-              connected_at: c.connected_at,
-              is_oauth: true,
-              avatar_url: c.avatar_url,
-              account_type: c.account_type
-            });
-          }
-        });
-      }
-
-      // 2. Add other mock/upload connections
-      if (mockJ.success && Array.isArray(mockJ.data)) {
-        mockJ.data.forEach((c: any) => {
-          const isRealConnected = mergedList.some(r => r.platform === c.platform);
-          if (!isRealConnected) {
-            mergedList.push({
-              ...c,
-              is_oauth: false
-            });
-          }
-        });
-      }
-
-      setConnections(mergedList);
-    } catch (err) {
-      console.error("Failed to fetch connections:", err);
+      const [list, adsStatus] = await Promise.all([api<Conn[]>('/api/auth/connections'), api('/api/v3/ads/status').catch(() => ({ platforms: {} }))]);
+      const map: Record<string, Conn> = {};
+      (Array.isArray(list) ? list : []).forEach((c) => (map[c.platform] = c));
+      setConns(map);
+      setAds(adsStatus.platforms || {});
+    } catch (e: any) {
+      setBanner({ tone: 'bad', text: `Could not load connections: ${e.message}` });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchConnections();
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demo.isActive]);
 
-  // Hook to capture OAuth callback status parameters in the URL
+  // Result of an OAuth round trip comes back as query parameters
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const connected = params.get('connected');
-    const error = params.get('error');
-
+    const p = new URLSearchParams(window.location.search);
+    const connected = p.get('connected');
+    const error = p.get('error');
     if (connected) {
-      alert(`${connected.toUpperCase()} connected successfully!`);
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const name = ORGANIC.find((o) => o.id === connected)?.name || connected;
+      const missing = p.get('missing');
+      setBanner(
+        missing
+          ? { tone: 'warn', text: `${name} is connected, but these permissions were switched off: ${missing.replace(/,/g, ', ')}. Publishing needs them. Reconnect and keep every permission on.` }
+          : { tone: 'good', text: `${name} is connected. Zie is reading it and building your first briefing.`, action: { label: 'See your briefing', to: '/analyst' } }
+      );
+      if (connected === 'facebook' && p.get('choose_page')) openPagePicker();
     } else if (error) {
-      if (error.includes('denied')) {
-        alert(`Connection request was cancelled.`);
-      } else {
-        alert(`Connection failed: ${error.replace(/_/g, ' ')}`);
-      }
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const [platform, ...rest] = error.split('_');
+      const key = rest.join('_');
+      const name = ORGANIC.find((o) => o.id === platform)?.name || platform;
+      setBanner({ tone: 'bad', text: `${name}: ${ERROR_TEXT[key] || `the connection failed (${key.replace(/_/g, ' ')}). Try again or contact support.`}` });
     }
+    if (connected || error) window.history.replaceState({}, document.title, window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleConnect = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (demo.isActive) {
-      alert("Please exit Demo Mode to connect real accounts.");
-      return;
-    }
-    if (!platformToConnect || !accountHandle.trim()) return;
-
-    setConnecting(true);
+  const connect = async (id: OrganicId) => {
+    if (demo.isActive) return setBanner({ tone: 'warn', text: 'Exit demo mode to connect your own accounts.' });
+    setBusy(id);
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/connections', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          platform: platformToConnect,
-          accountHandle: accountHandle.trim(),
-          connectionMethod: 'oauth'
-        })
-      });
-      const j = await res.json();
-      if (j.success) {
-        setAccountHandle('');
-        setPlatformToConnect(null);
-        await fetchConnections();
-      }
-    } catch (err) {
-      alert("Failed to connect account.");
+      const j = await api<{ url: string }>(`/api/auth/${id}/connect`, { body: {} });
+      window.location.href = j.url;
+    } catch (e: any) {
+      setBanner({ tone: 'bad', text: e.message });
+      setBusy(null);
+    }
+  };
+
+  const disconnect = async (id: string) => {
+    setBusy(id);
+    try {
+      await api(`/api/auth/${id}/disconnect`, { body: {} });
+      setConfirmDisconnect(null);
+      setBanner({ tone: 'good', text: `${ORGANIC.find((o) => o.id === id)?.name || id} is disconnected and the data ZieAds stored from it was deleted.` });
+      await load();
+    } catch (e: any) {
+      setBanner({ tone: 'bad', text: e.message });
     } finally {
-      setConnecting(false);
+      setBusy(null);
     }
   };
 
-  const handleDelete = async (conn: any) => {
-    if (demo.isActive) {
-      alert("Cannot disconnect demo accounts.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to disconnect this ${conn.platform} account?`)) return;
+  async function openPagePicker() {
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(
-        conn.is_oauth 
-          ? `/api/auth/${conn.platform}/disconnect` 
-          : `/api/v3/connections/${conn.id}`,
-        {
-          method: conn.is_oauth ? 'POST' : 'DELETE',
-          headers
-        }
-      );
-      const j = await res.json();
-      if (j.success || res.ok) {
-        await fetchConnections();
-      }
-    } catch (err) {
-      alert("Failed to disconnect account.");
+      const j = await api('/api/auth/facebook/pages');
+      setPagePicker({ pages: j.pages || [], selected: j.selected });
+    } catch (e: any) {
+      setBanner({ tone: 'bad', text: e.message });
     }
-  };
+  }
 
-  // Basic CSV Text Parser
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setCsvFile(file);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = evt.target?.result as string;
-      if (!text) return;
-
-      const lines = text.split(/\r?\n/).filter(line => line.trim());
-      if (lines.length === 0) return;
-
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-      setCsvHeaders(headers);
-
-      const rows = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const rowObj: any = {};
-        headers.forEach((header, index) => {
-          rowObj[header] = values[index] || '';
-        });
-        return rowObj;
-      });
-
-      setParsedRows(rows);
-    };
-    reader.readAsText(file);
-  };
-
-  const handleUploadAds = async () => {
-    if (demo.isActive) {
-      alert("CSV Upload is disabled in Demo Mode.");
-      return;
-    }
-    if (!uploadPlatform || parsedRows.length === 0) return;
-
-    setUploadingAds(true);
+  const choosePage = async (pageId: string) => {
+    setBusy('facebook');
     try {
-      // Map columns automatically to expected server properties
-      const mappedRows = parsedRows.map(row => {
-        // Find matching keys regardless of casing/spaces
-        const findKey = (candidates: string[]) => {
-          const key = Object.keys(row).find(k => 
-            candidates.some(c => k.toLowerCase().replace(/\s/g, '') === c.toLowerCase().replace(/\s/g, ''))
-          );
-          return key ? row[key] : null;
-        };
-
-        return {
-          campaign_id: findKey(['campaignid', 'id', 'campaign_id']),
-          campaign_name: findKey(['campaignname', 'campaign', 'campaign_name', 'Campaign']),
-          ad_set_name: findKey(['adsetname', 'adgroup', 'adset', 'Ad Set Name', 'Ad group']),
-          ad_name: findKey(['adname', 'ad', 'Ad Name']),
-          spend: findKey(['spend', 'cost', 'spendusd', 'Amount Spent USD', 'Cost']),
-          revenue: findKey(['revenue', 'revenueusd', 'value', 'Conv value', 'Total Conversion Value']),
-          impressions: findKey(['impressions', 'Impressions']),
-          clicks: findKey(['clicks', 'Clicks']),
-          conversions: findKey(['conversions', 'Conversions']),
-          date: findKey(['date', 'day', 'Reporting Starts'])
-        };
-      });
-
-      const headers = await getAuthHeaders();
-      const res = await fetch('/api/v3/ads/upload', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          platform: uploadPlatform,
-          rows: mappedRows
-        })
-      });
-
-      const j = await res.json();
-      if (j.success) {
-        setUploadSuccess(true);
-        setCsvFile(null);
-        setParsedRows([]);
-        setTimeout(() => {
-          setUploadSuccess(false);
-          setUploadPlatform(null);
-        }, 3000);
-      }
-    } catch (err) {
-      alert("Failed to upload ads data.");
+      const j = await api('/api/auth/facebook/pages/select', { body: { page_id: pageId } });
+      setPagePicker(null);
+      setBanner({ tone: 'good', text: `Zie now manages the Page ${j.page.name}.` });
+      await load();
+    } catch (e: any) {
+      setBanner({ tone: 'bad', text: e.message });
     } finally {
-      setUploadingAds(false);
+      setBusy(null);
     }
   };
 
-  // Presentation only: briefly glow a card when its platform becomes connected.
-  const [flashIds, setFlashIds] = useState<string[]>([]);
-  const prevConnected = useRef<Set<string> | null>(null);
-  useEffect(() => {
-    if (loading) return;
-    const now = new Set(connections.map(c => c.platform));
-    const prev = prevConnected.current;
-    prevConnected.current = now;
-    if (!prev) return;
-    const fresh = [...now].filter(id => !prev.has(id));
-    if (fresh.length === 0) return;
-    setFlashIds(fresh);
-    const t = setTimeout(() => setFlashIds([]), 1900);
-    return () => clearTimeout(t);
-  }, [connections, loading]);
+  const syncFacebook = async () => {
+    setBusy('facebook-sync');
+    try {
+      const r = await api('/api/v3/facebook/sync', { body: {} });
+      setBanner({ tone: 'good', text: `Facebook synced: ${r.posts} posts and ${r.comments} comments checked.` });
+      await load();
+    } catch (e: any) {
+      setBanner({ tone: 'bad', text: e.message });
+    } finally {
+      setBusy(null);
+    }
+  };
 
-  // Presentation only: show a loading pill while the OAuth redirect is starting.
-  const [redirectingId, setRedirectingId] = useState<string | null>(null);
+  const liveCount = useMemo(() => ORGANIC.filter((o) => conns[o.id]?.connected).length, [conns]);
 
-  const connectedCount = PLATFORMS.filter(p => connections.some(c => c.platform === p.id)).length;
-
-  const renderPlatformCard = (id: string, name: string, type: 'organic' | 'ads', icon: any) => {
-    const activeConns = connections.filter(c => c.platform === id);
-    const isConnected = activeConns.length > 0;
-
+  const renderOrganic = (o: (typeof ORGANIC)[number]) => {
+    const c = conns[o.id];
+    const on = !!c?.connected;
+    const status = c?.status || 'live';
+    const exp = expiryInfo(c?.token_expires_at);
+    const needsReconnect = on && (status === 'needs_reconnect' || status === 'revoked' || exp?.level === 'expired');
+    const scopes = (c?.scopes || '').split(/[ ,]+/).filter(Boolean);
     return (
-      <Card
-        key={id}
-        hover
-        glass
-        className={`zcn-card ${isConnected ? 'is-on' : ''} ${flashIds.includes(id) ? 'is-flash' : ''}`}
-      >
+      <Card key={o.id} className={`zcn-card ${on ? 'is-on' : ''}`}>
         <div className="zcn-head">
-          <span className="zcn-brand">{icon}</span>
+          <span className="zcn-brand">
+            <SocialIcon platform={o.icon} size={26} />
+          </span>
           <div style={{ minWidth: 0 }}>
-            <div className="zcn-name">{name}</div>
-            <div className="zcn-type">{type === 'organic' ? 'Organic posts and reach' : 'Paid campaigns'}</div>
+            <div className="zcn-name">{o.name}</div>
+            <div className="zcn-type">{o.what}</div>
           </div>
           <span className="zcn-status">
-            <span className={`zd-live ${isConnected ? '' : 'is-off'}`} />
-            {isConnected ? 'Live' : 'Off'}
+            <Pill tone={!on ? 'neutral' : needsReconnect ? 'bad' : status === 'error' ? 'warn' : 'good'}>{!on ? 'Not connected' : needsReconnect ? 'Needs reconnect' : status === 'error' ? 'Error' : 'Live'}</Pill>
           </span>
         </div>
-
         <div className="zcn-foot">
-          {isConnected ? (
+          {on ? (
             <>
-              <div>
-                <Pill tone="good">
-                  <CheckCircle /> Connected
-                </Pill>
+              <div className="zcn-acct">
+                {c.avatar_url ? <img src={c.avatar_url} alt="" className="zcn-avatar" onError={(e) => ((e.target as HTMLElement).style.display = 'none')} /> : <CheckCircle size={14} className="zcn-check" />}
+                <span className="zcn-acct-handle">{c.display_name || c.username}</span>
+                {c.account_type && <span className="zcn-meta">{c.account_type.toLowerCase()}</span>}
               </div>
-              {activeConns.map(conn => (
-                <div key={conn.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div className="zcn-acct">
-                    {conn.avatar_url ? (
-                      <img
-                        src={conn.avatar_url}
-                        alt={conn.account_handle}
-                        className="zcn-avatar"
-                        onError={(e) => {
-                          // Fallback to check icon on load error
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <CheckCircle size={14} className="zcn-check" />
-                    )}
-                    <span className="zcn-acct-handle">{conn.account_handle}</span>
-                    {conn.account_type && (
-                      <Pill tone={conn.account_type.toLowerCase() === 'personal' ? 'bad' : 'good'}>
-                        {conn.account_type}
-                      </Pill>
-                    )}
-                    <button
-                      type="button"
-                      className="zd-icon-btn zcn-del"
-                      onClick={() => handleDelete(conn)}
-                      title="Disconnect"
-                      aria-label={`Disconnect ${conn.account_handle}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  {conn.platform === 'instagram' && conn.account_type?.toLowerCase() === 'personal' && (
-                    <div className="zcn-warn">
-                      <AlertTriangle size={13} />
-                      <span>
-                        Personal accounts do not support comment syncing. Convert to a Business or Creator account in Instagram settings, then reconnect.
-                      </span>
-                    </div>
-                  )}
+              <dl className="zcn-facts">
+                <dt>Last sync</dt>
+                <dd>{ago(c.last_synced_at)}</dd>
+                <dt>Permissions</dt>
+                <dd title={scopes.join(', ')}>{scopes.length ? `${scopes.length} granted` : 'reported by the platform'}</dd>
+                {exp && (
+                  <>
+                    <dt>Access</dt>
+                    <dd>{exp.level === 'expired' ? 'expired' : `renews in ${exp.days} days`}</dd>
+                  </>
+                )}
+              </dl>
+              {(c.last_error || exp?.level === 'soon' || (c.declined_permissions || []).length > 0 || (o.id === 'instagram' && c.account_type?.toLowerCase() === 'personal')) && (
+                <div className="zcn-warn" role="status">
+                  <AlertTriangle size={13} />
+                  <span>
+                    {c.last_error ||
+                      (exp?.level === 'soon'
+                        ? `Access ends in ${exp.days} days. ZieAds renews it automatically; if that fails you will get a reconnect link.`
+                        : (c.declined_permissions || []).length
+                          ? `Switched off: ${c.declined_permissions!.join(', ')}. Reconnect to turn them on.`
+                          : 'Personal accounts do not share comments or insights. Switch to a Business or Creator account in Instagram, then reconnect.')}
+                  </span>
                 </div>
-              ))}
-              {type === 'ads' && (
-                <GhostButton onClick={() => setUploadPlatform(id)}>
-                  <Upload /> Upload Ads CSV
-                </GhostButton>
               )}
+              <div className="zcn-actions-row">
+                <Button size="sm" variant={needsReconnect ? 'primary' : 'secondary'} icon={<RefreshCw size={14} />} onClick={() => connect(o.id)} loading={busy === o.id}>
+                  Reconnect
+                </Button>
+                {o.id === 'facebook' && (c.page_count || 0) > 1 && (
+                  <Button size="sm" variant="secondary" onClick={openPagePicker}>
+                    Switch Page
+                  </Button>
+                )}
+                {o.id === 'facebook' && (
+                  <Button size="sm" variant="ghost" onClick={syncFacebook} loading={busy === 'facebook-sync'}>
+                    Sync now
+                  </Button>
+                )}
+                {confirmDisconnect === o.id ? (
+                  <Button size="sm" variant="danger" onClick={() => disconnect(o.id)} loading={busy === o.id}>
+                    Confirm disconnect
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmDisconnect(o.id)} disabled={demo.isActive}>
+                    Disconnect
+                  </Button>
+                )}
+              </div>
+              {confirmDisconnect === o.id && <p className="zcn-note">Disconnecting deletes the posts, comments and insights ZieAds stored from {o.name}.</p>}
             </>
-          ) : redirectingId === id ? (
-            <DarkButton loading>Connecting</DarkButton>
           ) : (
-            <Button variant="soft" full icon={<Link2 />}
-              onClick={async () => {
-                if (demo.isActive) {
-                  alert("Please exit Demo Mode to connect real accounts.");
-                  return;
-                }
-                if (id === 'instagram' || id === 'tiktok' || id === 'linkedin') {
-                  const { data: { session } } = await supabase.auth.getSession();
-                  if (!session) {
-                    alert("Please sign in first.");
-                    return;
-                  }
-                  setRedirectingId(id);
-                  window.location.href = `/api/auth/${id}/connect?token=${session.access_token}`;
-                } else {
-                  setPlatformToConnect(id);
-                }
-              }}>{`Connect ${name}`}</Button>
+            <Button variant="soft" full icon={<Link2 />} onClick={() => connect(o.id)} loading={busy === o.id}>
+              Connect {o.name}
+            </Button>
           )}
         </div>
       </Card>
     );
   };
 
-  const renderGroup = (type: 'organic' | 'ads', title: string, sub: string) => {
-    const list = PLATFORMS.filter(p => p.type === type);
-    const on = list.filter(p => connections.some(c => c.platform === p.id)).length;
+  const renderAds = (a: (typeof ADS)[number]) => {
+    const s = ads[a.id] || {};
     return (
-      <section>
-        <div className="zcn-group-head">
-          <h2>{title}</h2>
-          <span className="zd-eyebrow">{sub} · {on} of {list.length} live</span>
+      <Card key={a.id} className="zcn-card">
+        <div className="zcn-head">
+          <span className="zcn-brand">
+            <SocialIcon platform={a.icon} size={26} />
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div className="zcn-name">{a.name}</div>
+            <div className="zcn-type">Read-only reporting. ZieAds never changes campaigns or spends budget.</div>
+          </div>
+          <span className="zcn-status">
+            <Pill tone={s.imported_rows ? 'good' : 'neutral'}>{s.imported_rows ? 'Manual import' : 'Not connected'}</Pill>
+          </span>
         </div>
-        <div className="zd-grid-3">
-          {list.map(p => renderPlatformCard(p.id, p.name, p.type, <SocialIcon platform={p.icon} size={26} />))}
+        <div className="zcn-foot">
+          <dl className="zcn-facts">
+            <dt>API access</dt>
+            <dd>In review with {a.name.split(' ')[0]}</dd>
+            <dt>Imported</dt>
+            <dd>{s.imported_rows ? `${s.imported_rows} rows, ${s.first_date} to ${s.last_date}` : 'nothing yet'}</dd>
+          </dl>
+          <div className="zcn-actions-row">
+            <Button size="sm" variant="soft" icon={<Upload size={14} />} onClick={() => setImportFor(a.id)}>
+              Manual import (CSV)
+            </Button>
+            <a className="zd-btn is-ghost is-sm" href="/api/v3/ads/template" download>
+              <Download size={14} />
+              <span className="zd-btn-text">Template</span>
+            </a>
+          </div>
         </div>
-      </section>
+      </Card>
     );
   };
 
   return (
     <V3Layout>
-      <PageHeader
-        number="08"
-        label="Connections"
-        title="Plug in every channel you run."
-        subtitle="Link your marketing sources to enable daily AI analytics audits."
-      />
-
+      <PageHeader number="08" label="Connections" title="Connect the accounts Zie watches." subtitle="Official platform connections only. You can disconnect any channel at any time, and the data it brought in is deleted with it." />
       <PageBody>
+        {banner && (
+          <div className={`zcn-banner tone-${banner.tone}`} role="status">
+            {banner.tone === 'good' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+            <span>{banner.text}</span>
+            {banner.action && (
+              <Button size="sm" variant="secondary" onClick={() => navigate(banner.action!.to)}>
+                {banner.action.label}
+              </Button>
+            )}
+            <button type="button" className="zd-icon-btn" onClick={() => setBanner(null)} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+        )}
+        {fromOnboarding && !banner && (
+          <div className="zcn-banner tone-good" role="status">
+            <CheckCircle size={16} />
+            <span>Your brand is saved. Connect Instagram or Facebook and Zie builds your first briefing in about a minute.</span>
+            <Button size="sm" variant="ghost" onClick={() => navigate('/analyst')}>
+              Skip for now
+            </Button>
+          </div>
+        )}
         {loading ? (
-          <>
-            <Card>
-              <Skeleton height={12} width="30%" />
-              <div style={{ height: 12 }} />
-              <Skeleton height={28} width="45%" />
-            </Card>
-            <div className="zd-grid-3">
-              {[0, 1, 2].map(i => (
-                <Card key={i}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 18 }}>
-                    <Skeleton height={48} width={48} radius={24} />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <Skeleton height={12} width="60%" />
-                      <Skeleton height={10} width="40%" />
-                    </div>
-                  </div>
-                  <Skeleton height={40} radius={999} />
-                </Card>
-              ))}
-            </div>
-            <LoadingState text="Loading connections" />
-          </>
+          <LoadingState text="Loading connections" />
         ) : (
           <>
-            {/* Summary strip */}
-            <Card glass className="zcn-summary">
-              <div className="zcn-summary-main">
-                <span className="zd-eyebrow">Sources connected</span>
-                <div className="zcn-summary-count">
-                  {connectedCount} of {PLATFORMS.length}
-                  <small>{connectedCount === PLATFORMS.length ? 'all channels live' : connectedCount === 0 ? 'nothing linked yet' : 'channels live'}</small>
-                </div>
-                <GrowBar value={(connectedCount / PLATFORMS.length) * 100} tone={connectedCount > 0 ? 'accent' : 'dark'} />
+            <section>
+              <div className="zcn-group-head">
+                <h2>Organic social media</h2>
+                <span className="zd-eyebrow">
+                  {liveCount} of {ORGANIC.length} connected
+                </span>
               </div>
-              <div className="zcn-summary-icons" aria-hidden="true">
-                {PLATFORMS.map(p => (
-                  <span key={p.id} className={connections.some(c => c.platform === p.id) ? '' : 'is-off'} title={p.name}>
-                    <SocialIcon platform={p.icon} size={16} />
+              <div className="zd-grid-2">{ORGANIC.map(renderOrganic)}</div>
+            </section>
+
+            <section>
+              <div className="zcn-group-head">
+                <h2>Paid ads, read only</h2>
+                <span className="zd-eyebrow">Manual import until platform approval</span>
+              </div>
+              <div className="zd-grid-3">{ADS.map(renderAds)}</div>
+            </section>
+
+            <section>
+              <div className="zcn-group-head">
+                <h2>AI assistants</h2>
+              </div>
+              <Card className="zcn-card zcn-mcp">
+                <div className="zcn-head">
+                  <span className="zcn-brand">
+                    <KeyRound size={22} />
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="zcn-name">ZieAds MCP server</div>
+                    <div className="zcn-type">Use your briefing, calendar, inbox and analytics from Claude, ChatGPT or Cursor. Write actions wait for your approval.</div>
+                  </div>
+                  <span className="zcn-status">
+                    <Button size="sm" variant="secondary" onClick={() => navigate('/settings/api')}>
+                      Set up MCP
+                    </Button>
+                  </span>
+                </div>
+              </Card>
+            </section>
+
+            <section>
+              <div className="zcn-group-head">
+                <h2>Coming soon</h2>
+              </div>
+              <div className="zcn-soon">
+                {COMING_SOON.map((n) => (
+                  <span key={n} className="zcn-soon-item">
+                    {n}
                   </span>
                 ))}
               </div>
-            </Card>
-
-            {renderGroup('organic', 'Organic social media', 'Posts and reach')}
-            {renderGroup('ads', 'Paid advertising platforms', 'Campaign data')}
+            </section>
           </>
         )}
       </PageBody>
 
-      {/* Modal: Connect Account */}
-      {platformToConnect && (
-        <div className="zcn-overlay">
-          <Card glass className="zcn-modal zd-fade-up" padding={26}>
+      {pagePicker && (
+        <div className="zcn-overlay" role="dialog" aria-modal="true" aria-label="Choose a Facebook Page">
+          <Card className="zcn-modal" padding={26}>
             <div className="zcn-modal-head">
-              <span className="zd-icon-dot"><Link2 /></span>
+              <span className="zd-icon-dot">
+                <SocialIcon platform="facebook" size={18} />
+              </span>
               <div>
-                <h3>Connect {platformToConnect.toUpperCase()}</h3>
-                <p>Enter your profile handle to instantly mock-connect this channel.</p>
+                <h3>Which Page should Zie manage?</h3>
+                <p>One brand uses one Page. You can switch later.</p>
               </div>
             </div>
-
-            <form onSubmit={handleConnect} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <div>
-                <label className="zd-label">Account handle</label>
-                <input
-                  className="zd-input"
-                  value={accountHandle}
-                  onChange={e => setAccountHandle(e.target.value)}
-                  placeholder="@my_brand"
-                  required
-                />
-              </div>
-
-              <div className="zcn-actions">
-                <GhostButton onClick={() => { setPlatformToConnect(null); setAccountHandle(''); }}>
-                  Cancel
-                </GhostButton>
-                <DarkButton type="submit" loading={connecting}>
-                  Connect
-                </DarkButton>
-              </div>
-            </form>
+            <div className="zcn-pages">
+              {pagePicker.pages.map((p) => (
+                <button key={p.id} type="button" className={`zcn-page ${p.id === pagePicker.selected ? 'is-selected' : ''}`} onClick={() => choosePage(p.id)} disabled={busy === 'facebook'}>
+                  {p.picture ? <img src={p.picture} alt="" /> : <span className="zcn-page-dot" />}
+                  <span>
+                    <strong>{p.name}</strong>
+                    <small>{p.category || 'Facebook Page'}</small>
+                  </span>
+                  {p.id === pagePicker.selected && <CheckCircle size={16} />}
+                </button>
+              ))}
+            </div>
+            <div className="zcn-actions">
+              <Button variant="ghost" onClick={() => setPagePicker(null)}>
+                Close
+              </Button>
+            </div>
           </Card>
         </div>
       )}
 
-      {/* Modal: CSV Upload */}
-      {uploadPlatform && (
-        <div className="zcn-overlay">
-          <Card glass className="zcn-modal is-wide zd-fade-up" padding={26}>
-            <div className="zcn-modal-head">
-              <span className="zd-icon-dot"><Upload /></span>
-              <div>
-                <h3>Upload ads data: {uploadPlatform.toUpperCase().replace('_', ' ')}</h3>
-                <p>Upload an exported report CSV from your Ads Manager dashboard.</p>
-              </div>
-            </div>
-
-            {uploadSuccess ? (
-              <div className="zcn-success">
-                <span className="zcn-success-icon"><CheckCircle size={28} /></span>
-                <strong>CSV uploaded successfully</strong>
-                <span className="zd-muted" style={{ fontSize: 13 }}>Metrics are now synchronized and visible in briefs.</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div className={`zcn-drop ${csvFile ? 'has-file' : ''}`}>
-                  <span className="zcn-drop-icon"><Upload size={20} /></span>
-                  <span>{csvFile ? csvFile.name : 'Select or drop CSV report file'}</span>
-                  <input type="file" accept=".csv" onChange={handleFileChange} />
-                </div>
-
-                {parsedRows.length > 0 && (
-                  <div className="zd-fade-up">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span className="zd-label" style={{ margin: 0 }}>Parsed file preview</span>
-                      <Pill tone="accent">{parsedRows.length} rows detected</Pill>
-                    </div>
-                    <div className="zcn-table-wrap">
-                      <table className="zcn-table">
-                        <thead>
-                          <tr>
-                            {csvHeaders.slice(0, 5).map(h => <th key={h}>{h}</th>)}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {parsedRows.slice(0, 3).map((row, i) => (
-                            <tr key={i}>
-                              {csvHeaders.slice(0, 5).map(h => <td key={h}>{row[h]}</td>)}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                <div className="zcn-actions">
-                  <GhostButton onClick={() => { setUploadPlatform(null); setCsvFile(null); setParsedRows([]); }}>
-                    Cancel
-                  </GhostButton>
-                  <DarkButton
-                    onClick={handleUploadAds}
-                    disabled={parsedRows.length === 0}
-                    loading={uploadingAds}
-                  >
-                    Save campaigns
-                  </DarkButton>
-                </div>
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
+      {importFor && <AdsImportModal platform={importFor} name={ADS.find((a) => a.id === importFor)!.name} onClose={() => setImportFor(null)} onDone={(n) => { setImportFor(null); setBanner({ tone: 'good', text: `Imported ${n} rows. The Ads Analyst and Analytics now read them.` }); load(); }} />}
     </V3Layout>
+  );
+}
+
+function AdsImportModal({ platform, name, onClose, onDone }: { platform: AdsId; name: string; onClose: () => void; onDone: (n: number) => void }) {
+  const [csv, setCsv] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [preview, setPreview] = useState<any | null>(null);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const readFile = (f: File) => {
+    setFileName(f.name);
+    setErr('');
+    setPreview(null);
+    const r = new FileReader();
+    r.onload = async () => {
+      const text = String(r.result || '');
+      setCsv(text);
+      setBusy(true);
+      try {
+        const res = await fetch('/api/v3/ads/import', { method: 'POST', headers: await authHeaders(), body: JSON.stringify({ platform, csv: text, dry_run: true }) });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || 'Could not read the file');
+        setPreview(j);
+      } catch (e: any) {
+        setErr(e.message);
+      } finally {
+        setBusy(false);
+      }
+    };
+    r.readAsText(f);
+  };
+
+  const save = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      const j = await api('/api/v3/ads/import', { body: { platform, csv } });
+      onDone(j.count);
+    } catch (e: any) {
+      setErr(e.message);
+      setBusy(false);
+    }
+  };
+
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return (
+    <div className="zcn-overlay" role="dialog" aria-modal="true" aria-label={`Manual import for ${name}`}>
+      <Card className="zcn-modal is-wide" padding={26}>
+        <div className="zcn-modal-head">
+          <span className="zd-icon-dot">
+            <Upload size={18} />
+          </span>
+          <div>
+            <h3>Manual import: {name}</h3>
+            <p>
+              Export a daily report from {name} or fill in the <a href="/api/v3/ads/template" download>ZieAds template</a>. Columns: date, campaign, spend, plus impressions, clicks, conversions and revenue if you have them. Importing the same days again replaces them.
+            </p>
+          </div>
+        </div>
+        <label className={`zcn-drop ${fileName ? 'has-file' : ''}`}>
+          <span className="zcn-drop-icon">
+            <Upload size={20} />
+          </span>
+          <span>{fileName || 'Choose a CSV file'}</span>
+          <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} />
+        </label>
+        {busy && !preview && <LoadingState text="Reading the file" inline />}
+        {preview && (
+          <div className="zcn-preview">
+            <p>
+              <strong>{preview.count} rows</strong> ready. Spend {money(preview.totals.spend)}, {preview.totals.clicks.toLocaleString()} clicks, {money(preview.totals.conversions)} conversions, revenue {money(preview.totals.revenue)}.
+            </p>
+            {preview.errors?.length > 0 && (
+              <p className="zcn-note">
+                {preview.errors.length} row{preview.errors.length === 1 ? '' : 's'} skipped, first: line {preview.errors[0].line}, {preview.errors[0].message}
+              </p>
+            )}
+            <div className="zcn-table-wrap">
+              <table className="zcn-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Campaign</th>
+                    <th>Spend</th>
+                    <th>Clicks</th>
+                    <th>Conv.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.preview.map((r: any) => (
+                    <tr key={r.line}>
+                      <td>{r.date}</td>
+                      <td>{r.campaign}</td>
+                      <td>{money(r.spend)}</td>
+                      <td>{r.clicks}</td>
+                      <td>{r.conversions}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        {err && <p className="zcn-note is-error">{err}</p>}
+        <div className="zcn-actions">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={!preview || busy} loading={busy && !!preview}>
+            Import {preview ? `${preview.count} rows` : ''}
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }

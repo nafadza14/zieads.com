@@ -18,6 +18,7 @@ import TestimonialsSection from './landing/sections/TestimonialsSection';
 import WhoForSection from './landing/sections/WhoForSection';
 import PricingSection from './landing/sections/PricingSection';
 import FaqSection from './landing/sections/FaqSection';
+import McpSection from './landing/sections/McpSection';
 import FinalCtaSection from './landing/sections/FinalCtaSection';
 import Footer from './landing/sections/Footer';
 
@@ -41,16 +42,18 @@ export default function LandingPage({ onScanComplete }: Props) {
       <Navbar />
       <Hero />
       <ProductTourSection />
-      <FreeAuditSection onScanComplete={onScanComplete} />
       <DailyBriefingSection />
       <SchedulingSection />
       <AnalyticsSection />
       <InboxWatchSection />
+      <McpSection />
       <ConsolidationSection />
       <ComparisonSection />
       <TestimonialsSection />
       <WhoForSection />
       <PricingSection />
+      {/* Free Website Audit is a secondary lead magnet now (spec 7.12, 12) */}
+      <FreeAuditSection onScanComplete={onScanComplete} />
       <FaqSection />
       <FinalCtaSection />
       <Footer />

@@ -12,7 +12,7 @@ const inboxItems = [
 
 export default function InboxWatchSection() {
   return (
-    <Section id="inbox" number="05" label="Inbox & Competitor Hunt" tone="white">
+    <Section id="inbox" number="04" label="Inbox & Competitor Hunt" tone="white">
       <AnimatedHeading text="One social inbox for every comment, and a radar on every competitor." />
 
       <div className="zx-grid-2 zx-grid-offset">
@@ -33,8 +33,8 @@ export default function InboxWatchSection() {
               <h3>Unified social inbox</h3>
             </div>
             <p>
-              Every comment from Instagram, TikTok, LinkedIn and Facebook in one place, sorted by sentiment. Reply faster,
-              catch buying signals and never lose a warm lead in a pile of notifications.
+              Every Instagram and Facebook comment in one place, buying signals first, with reply drafts in your brand voice.
+              TikTok and LinkedIn comments are coming soon.
             </p>
           </div>
         </Reveal>
@@ -56,8 +56,8 @@ export default function InboxWatchSection() {
               <h3>Competitor Hunt</h3>
             </div>
             <p>
-              Add the brands you compete with and the agent tracks what they post, which content gains traction and where
-              their strategy leaves gaps. Run a competitor audit in minutes, not days.
+              Track competitors on Instagram and Threads, plus their ads from the Meta Ad Library (ads that ran in the EU and
+              UK). See what they post, what gains traction and the gaps you can win. TikTok and LinkedIn are coming soon.
             </p>
           </div>
         </Reveal>

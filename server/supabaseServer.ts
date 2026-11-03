@@ -406,3 +406,18 @@ export async function deductCredits(
   }
 }
 
+
+/**
+ * The plan that gates features for a user. Test accounts (isTestUser) always
+ * get Agency so the whole product can be reviewed without a paid plan.
+ */
+export async function getEffectivePlan(userId: string): Promise<"free" | "starter" | "pro" | "agency"> {
+  try {
+    if (await isTestUser(userId)) return "agency";
+    const { data } = await supabaseAdmin.from("user_plan").select("plan_id").eq("user_id", userId).maybeSingle();
+    const p = data?.plan_id;
+    return p === "starter" || p === "pro" || p === "agency" ? p : "free";
+  } catch {
+    return "free";
+  }
+}

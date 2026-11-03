@@ -1146,3 +1146,9 @@
 
 /* Analysis mode card action (app button) */
 .za-mode-card .za-mode-go { margin-top: auto; align-self: flex-start; }
+
+/* Analysis packs (spec 7.3) */
+.za-mode-pack { margin-top: 26px; }
+.za-mode-pack-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.za-mode-pack-head h3 { margin: 0; font-size: 16px; font-weight: 650; color: #111; }
+.za-mode-pack-head span { flex: 1; min-width: 220px; font-size: 13px; color: #717171; }

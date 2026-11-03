@@ -76,9 +76,9 @@ export function getClaudeClient(): Anthropic {
 export function verifyCronSecret(req: any): boolean {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
-    // If not configured, default to true or warning
-    console.warn("CRON_SECRET environment variable is not configured. Allowing cron execution.");
-    return true;
+    // No secret means nobody may trigger background jobs from outside
+    console.warn("CRON_SECRET is not configured. Refusing cron execution.");
+    return false;
   }
   const authHeader = req.headers.authorization;
   return authHeader === `Bearer ${cronSecret}`;

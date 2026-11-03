@@ -12,7 +12,7 @@ export default function SchedulingSection() {
   const navigate = useNavigate();
 
   return (
-    <Section id="composer" number="03" label="Composer & Calendar" tone="white">
+    <Section id="composer" number="02" label="Composer & Calendar" tone="white">
       <AnimatedHeading text="Create, schedule and publish social media posts from one AI content calendar." />
 
       <div className="zx-split zx-split-media-right">

@@ -2,6 +2,7 @@
  * CreditBadge - compact pill shown in sidebar/navbar
  * Displays remaining credits with colour-coded state and countdown on hover.
  */
+import { isUnlimited } from '../lib/limits';
 import { useState, useEffect } from 'react';
 import { useCreditStore, formatCountdown, getStateColor, CreditState } from '../lib/creditStore';
 import { useNavigate } from 'react-router-dom';
@@ -44,7 +45,8 @@ export default function CreditBadge({ pool = 'ai_chat', compact = false }: Props
 
   const isLow = poolData.state === 'WARNING' || poolData.state === 'NEAR_DEPLETED';
   const isDepleted = poolData.state === 'DEPLETED' || poolData.state === 'RESET_IMMINENT';
-  const remaining = poolData.remaining === -1 ? '∞' : poolData.remaining;
+  const unlimited = isUnlimited(poolData.remaining) || isUnlimited((poolData as any).limit);
+  const remaining = unlimited ? 'Unlimited' : poolData.remaining;
 
   return (
     <div
@@ -83,9 +85,11 @@ export default function CreditBadge({ pool = 'ai_chat', compact = false }: Props
         {compact ? remaining : (
           <>
             {remaining}
-            <span style={{ opacity: 0.7, fontWeight: 400 }}>
-              {pool === 'ai_chat' ? ' / day' : ' / mo'}
-            </span>
+            {!unlimited && (
+              <span style={{ opacity: 0.7, fontWeight: 400 }}>
+                {pool === 'ai_chat' ? ' / day' : ' / mo'}
+              </span>
+            )}
           </>
         )}
       </button>

@@ -98,7 +98,7 @@ export default function FreeAuditSection({ onScanComplete }: Props) {
   };
 
   return (
-    <Section id="free-audit-try" number="01" label="Free Website Audit" tone="white">
+    <Section id="free-audit-try" number="10" label="Free Website Audit" tone="white">
       <AnimatedHeading text="Get a free AI marketing audit of your website in under 3 minutes." />
 
       <div className="zx-split zx-split-media-right">

@@ -5,148 +5,13 @@ import { encrypt } from "../utils/crypto.js";
 import { refreshExpiringTokens } from "../utils/tokenRefresh.js";
 import { syncAll } from "../utils/sync-instagram.js";
 import { syncTikTokInsightsForUser } from "../utils/sync-tiktok.js";
-
-/**
- * Seeds initial demo analytics, post library, and inbox comment data 
- * when a user connects their social channel, making the platform features 
- * (Analytics, Calendar, Composer, Inbox, Competitor Hunt) immediately functional.
- */
-export async function initializeSocialMediaMockData(userId: string, platform: string, accountId: string, accountHandle: string) {
-  try {
-    const mockPosts = [
-      { content: `Loving this new analytics setup on ZieAds! 📊 #socialmedia #business`, likes: 34, comments: 8, reach: 350 },
-      { content: `Tip of the day: consistency beats viral spikes every time. Here's why:`, likes: 98, comments: 19, reach: 950 },
-      { content: `Checking our scheduled content lineup for this week. Super clean.`, likes: 142, comments: 27, reach: 1800 }
-    ];
-
-    for (const post of mockPosts) {
-      const { data: insertedPost } = await supabaseAdmin.from("social_posts").insert({
-        account_id: accountId,
-        user_id: userId,
-        platform,
-        platform_post_id: `post_${platform}_${Math.random().toString(36).slice(2, 9)}`,
-        content_text: post.content,
-        media_type: "text_only",
-        posted_at: new Date(Date.now() - Math.random() * 5 * 24 * 3600 * 1000).toISOString(),
-        raw_metrics: { likes: post.likes, comments: post.comments },
-      }).select().single();
-
-      if (insertedPost) {
-        await supabaseAdmin.from("metric_snapshots").insert({
-          post_id: insertedPost.id,
-          account_id: accountId,
-          user_id: userId,
-          likes: post.likes,
-          comments: post.comments,
-          reach: post.reach,
-          engagement_rate: Number(((post.likes + post.comments) / post.reach).toFixed(4)),
-          captured_at: new Date().toISOString()
-        });
-      }
-    }
-
-    const mockComments = [
-      { handle: "@alex_digital", text: "This tool looks amazing! Is there X integration?", sentiment: "positive" },
-      { handle: "@sarah_k", text: "I have some issues trying to sync my Facebook account. Can you help?", sentiment: "negative" },
-      { handle: "@mike_ads", text: "Thanks for the tips, really useful thread.", sentiment: "neutral" }
-    ];
-
-    for (const c of mockComments) {
-      await supabaseAdmin.from("comments_inbox").insert({
-        user_id: userId,
-        platform,
-        platform_comment_id: `comment_${platform}_${Math.random().toString(36).substring(2,9)}`,
-        platform_media_id: `mock_media_${platform}`,
-        author_username: c.handle,
-        text: c.text,
-        sentiment: c.sentiment,
-        sentiment_confidence: 0.95,
-        status: "unread",
-        posted_at: new Date(Date.now() - Math.random() * 24 * 3600 * 1000).toISOString(),
-        created_at: new Date().toISOString()
-      });
-    }
-
-    // Insert baseline historical metric snapshots
-    await supabaseAdmin.from("metric_snapshots").insert({
-      account_id: accountId,
-      user_id: userId,
-      follower_count_at_capture: 1250,
-      likes: 0,
-      comments: 0,
-      reach: 0,
-      engagement_rate: 0.045,
-      captured_at: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
-    });
-
-    await supabaseAdmin.from("metric_snapshots").insert({
-      account_id: accountId,
-      user_id: userId,
-      follower_count_at_capture: 1380,
-      likes: 274,
-      comments: 54,
-      reach: 3100,
-      engagement_rate: 0.051,
-      captured_at: new Date().toISOString()
-    });
-
-    // Populate account_insights_daily for v0.3 briefings & analytics
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
-      const followers = 1350 + i * 15;
-      await supabaseAdmin.from("account_insights_daily").upsert({
-        user_id: userId,
-        platform,
-        platform_account_id: accountId,
-        snapshot_date: date,
-        followers_count: followers,
-        following_count: 180,
-        media_count: 3 + (7 - i),
-        impressions_daily: 450 + Math.floor(Math.random() * 200),
-        reach_daily: 350 + Math.floor(Math.random() * 150),
-        profile_views_daily: 45 + Math.floor(Math.random() * 20),
-        website_clicks_daily: 5 + Math.floor(Math.random() * 5),
-      }, { onConflict: "user_id,platform,snapshot_date" });
-    }
-
-    // Populate post_insights_cache with corresponding metrics
-    const { data: postsList } = await supabaseAdmin
-      .from("social_posts")
-      .select("*")
-      .eq("account_id", accountId)
-      .eq("user_id", userId);
-
-    if (postsList) {
-      for (const p of postsList) {
-        const metrics = p.raw_metrics || {};
-        const likesVal = Number(metrics.likes || 20);
-        const commentsVal = Number(metrics.comments || 5);
-        const reachVal = likesVal * 10;
-        
-        await supabaseAdmin.from("post_insights_cache").upsert({
-          user_id: userId,
-          platform,
-          platform_media_id: p.platform_post_id,
-          impressions: reachVal + 100,
-          reach: reachVal,
-          engagement: likesVal + commentsVal,
-          likes: likesVal,
-          comments_count: commentsVal,
-          post_published_at: p.posted_at
-        }, { onConflict: "user_id,platform,platform_media_id" });
-      }
-    }
-    
-    console.log(`[OAuth] Seeded initial dashboard data metrics for user ${userId} / account ${accountId}`);
-  } catch (err) {
-    console.error("[OAuth] Failed to populate initial dashboard metrics:", err);
-  }
-}
-
+import { FACEBOOK_SCOPES, GRAPH_VERSION } from "../utils/facebookApi.js";
+import { handleFacebookCallback, selectFacebookPage, listFacebookPages } from "../facebook/connect.js";
+import { deletePlatformData, handlePlatformDeletion, parseMetaSignedRequest } from "../dataDeletion.js";
+import { logActivity } from "../activity.js";
 
 export const authRouter = Router();
 
-// Middleware to enforce authentication
 async function requireAuth(req: any, res: any, next: any) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -158,219 +23,97 @@ async function requireAuth(req: any, res: any, next: any) {
  * 1. Initiate connection (OAuth Connect)
  * Supports both GET redirects and POST json URL retrieval.
  */
-authRouter.get("/:platform/connect", async (req, res) => {
-  const platform = req.params.platform;
-  const token = req.query.token as string || req.headers.authorization?.replace("Bearer ", "");
-  
-  if (!token) {
-    return res.status(401).json({ error: "Unauthorized: Missing authentication token" });
-  }
+export const CONNECT_PLATFORMS = ["instagram", "facebook", "tiktok", "linkedin"] as const;
+type ConnectPlatform = (typeof CONNECT_PLATFORMS)[number];
 
-  // Verify authentication using Supabase Admin Auth
+const ENV_REQUIRED: Record<ConnectPlatform, string> = {
+  instagram: "INSTAGRAM_APP_ID",
+  facebook: "FACEBOOK_APP_ID",
+  tiktok: "TIKTOK_CLIENT_KEY",
+  linkedin: "LINKEDIN_CLIENT_ID",
+};
+
+/** Builds the platform consent URL and stores the CSRF state. Exported for tests. */
+export function buildAuthUrl(platform: ConnectPlatform, state: string, redirectBase: string, codeChallenge?: string): string {
+  const cb = (p: string) => encodeURIComponent(`${redirectBase}/api/auth/${p}/callback`);
+  if (platform === "instagram") {
+    return `https://www.instagram.com/oauth/authorize?client_id=${process.env.INSTAGRAM_APP_ID}&redirect_uri=${cb("instagram")}&scope=instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
+  }
+  if (platform === "facebook") {
+    // Facebook Login for Business: a config_id bundles the permissions set in the Meta dashboard
+    const configId = process.env.FACEBOOK_LOGIN_CONFIG_ID;
+    const auth = configId ? `config_id=${encodeURIComponent(configId)}` : `scope=${FACEBOOK_SCOPES.join(",")}`;
+    return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?client_id=${process.env.FACEBOOK_APP_ID}&redirect_uri=${cb("facebook")}&state=${state}&response_type=code&${auth}`;
+  }
+  if (platform === "tiktok") {
+    const scopes = process.env.TIKTOK_SCOPES || "user.info.basic,user.info.profile,user.info.stats,video.list";
+    return `https://www.tiktok.com/v2/auth/authorize/?client_key=${process.env.TIKTOK_CLIENT_KEY}&scope=${scopes}&response_type=code&redirect_uri=${cb("tiktok")}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+  }
+  return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${cb("linkedin")}&state=${state}&scope=openid%20profile%20email%20w_member_social`;
+}
+
+async function startConnect(platform: string, userId: string): Promise<{ url?: string; error?: string; status?: number }> {
+  if (!(CONNECT_PLATFORMS as readonly string[]).includes(platform)) return { error: "Invalid connection platform", status: 400 };
+  const p = platform as ConnectPlatform;
+  if (!process.env[ENV_REQUIRED[p]]) return { error: `${ENV_REQUIRED[p]} environment variable is missing on the server.`, status: 500 };
+  const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
+  const state = crypto.randomBytes(16).toString("hex");
+  let codeVerifier: string | undefined;
+  let codeChallenge: string | undefined;
+  if (p === "tiktok") {
+    // PKCE for TikTok
+    codeVerifier = crypto.randomBytes(32).toString("hex");
+    codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
+  }
+  const { error: insertErr } = await supabaseAdmin.from("oauth_states").insert({ state, user_id: userId, platform: p, code_verifier: codeVerifier || null });
+  if (insertErr) {
+    console.error("[OAuth] Database insert failed for oauth_states:", insertErr.message);
+    return { error: "Failed to initialize secure connection handshake", status: 500 };
+  }
+  return { url: buildAuthUrl(p, state, redirectBase, codeChallenge) };
+}
+
+authRouter.get("/:platform/connect", async (req, res) => {
+  const token = (req.query.token as string) || req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ error: "Unauthorized: Missing authentication token" });
   let userId: string | null = null;
   try {
     const { data, error } = await supabaseAdmin.auth.getUser(token);
-    if (!error && data?.user) {
-      userId = data.user.id;
-    }
+    if (!error && data?.user) userId = data.user.id;
   } catch (err) {
     console.error("[OAuth] Connection initiation auth check failed:", err);
   }
-
-  if (!userId) {
-    return res.status(401).json({ error: "Unauthorized: Invalid session" });
-  }
-
-  if (platform !== "instagram" && platform !== "tiktok" && platform !== "linkedin") {
-    return res.status(400).json({ error: "Invalid connection platform" });
-  }
-
-  // Validate presence of required environment variables for the selected platform
-  const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
-  let authUrl = "";
-
-  console.log(`[OAuth] Connect request received for platform "${platform}". Checking runtime configuration...`);
-  console.log(`[OAuth] Redirect base URL: "${redirectBase}"`);
-  console.log(`[OAuth] Supabase URL exists: ${!!(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)}`);
-
-  try {
-    if (platform === "instagram") {
-      const appId = process.env.INSTAGRAM_APP_ID;
-      if (!appId) {
-        throw new Error("INSTAGRAM_APP_ID environment variable is missing on the server.");
-      }
-      console.log(`[OAuth] Instagram App ID is present: "${appId}"`);
-    } else if (platform === "tiktok") {
-      const clientKey = process.env.TIKTOK_CLIENT_KEY;
-      if (!clientKey) {
-        throw new Error("TIKTOK_CLIENT_KEY environment variable is missing on the server.");
-      }
-    } else if (platform === "linkedin") {
-      const clientId = process.env.LINKEDIN_CLIENT_ID;
-      if (!clientId) {
-        throw new Error("LINKEDIN_CLIENT_ID environment variable is missing on the server.");
-      }
-    }
-
-    // Generate secure CSRF state
-    const state = crypto.randomBytes(16).toString("hex");
-    let codeVerifier: string | undefined;
-    let codeChallenge: string | undefined;
-
-    if (platform === "tiktok") {
-      // PKCE for TikTok
-      codeVerifier = crypto.randomBytes(32).toString("hex");
-      codeChallenge = crypto
-        .createHash("sha256")
-        .update(codeVerifier)
-        .digest("base64url");
-    }
-
-    // Save OAuth state in database
-    const { error: insertErr } = await supabaseAdmin.from("oauth_states").insert({
-      state,
-      user_id: userId,
-      platform,
-      code_verifier: codeVerifier || null,
-    });
-
-    if (insertErr) {
-      console.error("[OAuth] Database insert failed for oauth_states:", insertErr.message, insertErr.details || "");
-      return res.status(500).json({ 
-        error: "Failed to initialize secure connection handshake", 
-        details: insertErr.message 
-      });
-    }
-
-    if (platform === "instagram") {
-      authUrl = `https://www.instagram.com/oauth/authorize?client_id=${
-        process.env.INSTAGRAM_APP_ID
-      }&redirect_uri=${encodeURIComponent(
-        `${redirectBase}/api/auth/instagram/callback`
-      )}&scope=instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
-    } else if (platform === "tiktok") {
-      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic,user.info.profile,user.info.stats,video.list";
-      authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
-        process.env.TIKTOK_CLIENT_KEY
-      }&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(
-        `${redirectBase}/api/auth/tiktok/callback`
-      )}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
-    } else if (platform === "linkedin") {
-      authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${
-        process.env.LINKEDIN_CLIENT_ID
-      }&redirect_uri=${encodeURIComponent(
-        `${redirectBase}/api/auth/linkedin/callback`
-      )}&state=${state}&scope=openid%20profile%20email%20w_member_social`;
-    }
-
-    // Since it's a GET redirect, send user directly to the platform
-    console.log(`[OAuth] Redirecting user to authorization URL: ${authUrl}`);
-    return res.redirect(authUrl);
-  } catch (err: any) {
-    console.error("[OAuth] Connection initiation error (GET):", err);
-    return res.status(500).json({ 
-      error: "Failed to initialize secure connection handshake", 
-      details: err.message 
-    });
-  }
+  if (!userId) return res.status(401).json({ error: "Unauthorized: Invalid session" });
+  const r = await startConnect(req.params.platform, userId);
+  if (!r.url) return res.status(r.status || 500).json({ error: r.error });
+  return res.redirect(r.url);
 });
 
 authRouter.post("/:platform/connect", requireAuth, async (req: any, res) => {
-  const platform = req.params.platform;
-  const userId = req.userId;
-
-  if (platform !== "instagram" && platform !== "tiktok" && platform !== "linkedin") {
-    return res.status(400).json({ error: "Invalid platform" });
-  }
-
-  // Validate presence of required environment variables for the selected platform
-  const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
-  let authUrl = "";
-
-  console.log(`[OAuth] Connect request (POST) received for platform "${platform}". Checking runtime configuration...`);
-  console.log(`[OAuth] Redirect base URL: "${redirectBase}"`);
-  console.log(`[OAuth] Supabase URL exists: ${!!(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)}`);
-
-  try {
-    if (platform === "instagram") {
-      const appId = process.env.INSTAGRAM_APP_ID;
-      if (!appId) {
-        throw new Error("INSTAGRAM_APP_ID environment variable is missing on the server.");
-      }
-      console.log(`[OAuth] Instagram App ID is present: "${appId}"`);
-    } else if (platform === "tiktok") {
-      const clientKey = process.env.TIKTOK_CLIENT_KEY;
-      if (!clientKey) {
-        throw new Error("TIKTOK_CLIENT_KEY environment variable is missing on the server.");
-      }
-    } else if (platform === "linkedin") {
-      const clientId = process.env.LINKEDIN_CLIENT_ID;
-      if (!clientId) {
-        throw new Error("LINKEDIN_CLIENT_ID environment variable is missing on the server.");
-      }
-    }
-
-    const state = crypto.randomBytes(16).toString("hex");
-    let codeVerifier: string | undefined;
-    let codeChallenge: string | undefined;
-
-    if (platform === "tiktok") {
-      codeVerifier = crypto.randomBytes(32).toString("hex");
-      codeChallenge = crypto
-        .createHash("sha256")
-        .update(codeVerifier)
-        .digest("base64url");
-    }
-
-    const { error: insertErr } = await supabaseAdmin.from("oauth_states").insert({
-      state,
-      user_id: userId,
-      platform,
-      code_verifier: codeVerifier || null,
-    });
-
-    if (insertErr) {
-      console.error("[OAuth] Database insert failed for oauth_states (POST):", insertErr.message, insertErr.details || "");
-      return res.status(500).json({ 
-        error: "Failed to initialize secure connection handshake", 
-        details: insertErr.message 
-      });
-    }
-
-    if (platform === "instagram") {
-      authUrl = `https://www.instagram.com/oauth/authorize?client_id=${
-        process.env.INSTAGRAM_APP_ID
-      }&redirect_uri=${encodeURIComponent(
-        `${redirectBase}/api/auth/instagram/callback`
-      )}&scope=instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_insights,instagram_business_content_publish&response_type=code&state=${state}`;
-    } else if (platform === "tiktok") {
-      const scopes = process.env.TIKTOK_SCOPES || "user.info.basic,user.info.profile,user.info.stats,video.list";
-      authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${
-        process.env.TIKTOK_CLIENT_KEY
-      }&scope=${scopes}&response_type=code&redirect_uri=${encodeURIComponent(
-        `${redirectBase}/api/auth/tiktok/callback`
-      )}&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
-    } else if (platform === "linkedin") {
-      authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${
-        process.env.LINKEDIN_CLIENT_ID
-      }&redirect_uri=${encodeURIComponent(
-        `${redirectBase}/api/auth/linkedin/callback`
-      )}&state=${state}&scope=openid%20profile%20email%20w_member_social`;
-    }
-
-    return res.json({ url: authUrl });
-  } catch (err: any) {
-    console.error("[OAuth] Connection initiation error (POST):", err);
-    return res.status(500).json({ 
-      error: "Failed to initialize secure connection handshake", 
-      details: err.message 
-    });
-  }
+  const r = await startConnect(req.params.platform, req.userId);
+  if (!r.url) return res.status(r.status || 500).json({ error: r.error });
+  return res.json({ url: r.url });
 });
 
 /**
  * 2. OAuth Callback Handlers
  */
+
+// Facebook Pages (spec P0-2)
+authRouter.get("/facebook/callback", handleFacebookCallback);
+
+authRouter.get("/facebook/pages", requireAuth, async (req: any, res) => {
+  res.json({ success: true, ...(await listFacebookPages(req.userId)) });
+});
+
+authRouter.post("/facebook/pages/select", requireAuth, async (req: any, res) => {
+  try {
+    const page = await selectFacebookPage(req.userId, String(req.body?.page_id || ""));
+    res.json({ success: true, page });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
 
 // A. Instagram Callback
 authRouter.get("/instagram/callback", async (req, res) => {
@@ -809,7 +552,6 @@ authRouter.get("/linkedin/callback", async (req, res) => {
         .eq("account_id", connData[0].id);
 
       if (!count || count === 0) {
-        await initializeSocialMediaMockData(stateData.user_id, "linkedin", connData[0].id, `@${platformUsername}`);
       }
     }
 
@@ -891,92 +633,43 @@ authRouter.post("/instagram/deauthorize", async (req, res) => {
   }
 });
 
-// Meta Instagram Data Deletion Webhook
-authRouter.post("/instagram/data-deletion", async (req, res) => {
-  const signedRequest = req.body.signed_request;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET;
-
-  if (!signedRequest || !appSecret) {
-    return res.status(400).json({ error: "Missing signed_request" });
-  }
-
+// Meta data deletion callback (spec P0-5). One handler serves the Facebook app and the
+// Instagram app: the signed_request is verified with whichever app secret matches.
+async function metaDeletion(req: any, res: any) {
+  const signed = req.body?.signed_request;
+  const secrets = [process.env.FACEBOOK_APP_SECRET, process.env.INSTAGRAM_APP_SECRET].filter(Boolean) as string[];
+  if (!signed || !secrets.length) return res.status(400).json({ error: "Missing signed_request" });
+  const data = secrets.map((sec) => parseMetaSignedRequest(signed, sec)).find(Boolean);
+  if (!data?.user_id) return res.status(400).json({ error: "Invalid signature or missing user_id" });
   try {
-    const data = decodeMetaSignedRequest(signedRequest, appSecret);
-    if (!data || !data.user_id) {
-      return res.status(400).json({ error: "Invalid signature or missing user_id" });
-    }
-
-    const platformUserId = data.user_id;
-    const confirmationCode = crypto.randomUUID();
-
-    // Update connection status
-    await supabaseAdmin
-      .from("social_connections")
-      .update({
-        is_active: false,
-        access_token: "DATA_DELETED",
-        refresh_token: null,
-        metadata: { deletion_confirmation_code: confirmationCode, deletion_requested_at: new Date().toISOString() },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("platform", "instagram")
-      .eq("platform_user_id", String(platformUserId));
-
-    console.log(`[Webhook] Instagram deletion queue requested for platform user ${platformUserId}. Confirmation code: ${confirmationCode}`);
-
-    const redirectBase = process.env.OAUTH_REDIRECT_BASE_URL || "https://app.zieads.com";
-    return res.json({
-      url: `${redirectBase}/api/auth/instagram/data-deletion/status?id=${confirmationCode}`,
-      confirmation_code: confirmationCode,
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    const { confirmationCode } = await handlePlatformDeletion("meta", String(data.user_id));
+    const base = process.env.OAUTH_REDIRECT_BASE_URL || "https://zieads.com";
+    return res.json({ url: `${base}/data-deletion?code=${confirmationCode}`, confirmation_code: confirmationCode });
+  } catch (e: any) {
+    console.error("[deletion] meta callback failed:", e.message);
+    return res.status(500).json({ error: "Deletion failed, please email privacy@zieads.com" });
   }
+}
+authRouter.post("/meta/data-deletion", metaDeletion);
+authRouter.post("/facebook/data-deletion", metaDeletion);
+authRouter.post("/instagram/data-deletion", metaDeletion);
+
+// Old status links from before the shared handler keep working
+authRouter.get("/instagram/data-deletion/status", (req, res) => {
+  const base = process.env.OAUTH_REDIRECT_BASE_URL || "https://zieads.com";
+  res.redirect(`${base}/data-deletion?code=${encodeURIComponent(String(req.query.id || ""))}`);
 });
 
-// Meta Data Deletion Status Endpoint
-authRouter.get("/instagram/data-deletion/status", async (req, res) => {
-  const confirmationCode = req.query.id;
-  if (!confirmationCode) {
-    return res.status(400).send("Missing confirmation ID parameter.");
-  }
-
-  try {
-    // Check if any connections match the confirmation code
-    const { data } = await supabaseAdmin
-      .from("social_connections")
-      .select("platform, updated_at")
-      .eq("platform", "instagram")
-      .contains("metadata", { deletion_confirmation_code: confirmationCode })
-      .single();
-
-    if (!data) {
-      return res.status(404).send("Deletion request not found or expired.");
-    }
-
-    return res.send(`
-      <html>
-        <head>
-          <title>Data Deletion Status</title>
-          <style>
-            body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #f8fafc; color: #1e293b; }
-            .box { max-width: 480px; margin: 0 auto; padding: 30px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-            h1 { color: #10b981; font-size: 1.5rem; margin-bottom: 12px; }
-            p { font-size: 0.95rem; line-height: 1.5; color: #64748b; }
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <h1>Data Deletion Completed</h1>
-            <p>Your Instagram connection details have been fully disconnected and queued for cleanup.</p>
-            <p style="font-size: 0.8rem; margin-top: 20px;">Request ID: <strong>${confirmationCode}</strong></p>
-          </div>
-        </body>
-      </html>
-    `);
-  } catch {
-    return res.status(500).send("Internal server error checking status.");
-  }
+// Facebook deauthorize: the person removed ZieAds from their Facebook apps
+authRouter.post("/facebook/deauthorize", async (req: any, res) => {
+  const data = parseMetaSignedRequest(req.body?.signed_request, process.env.FACEBOOK_APP_SECRET || "");
+  if (!data?.user_id) return res.status(400).json({ error: "Invalid signature" });
+  await supabaseAdmin
+    .from("social_connections")
+    .update({ is_active: false, status: "revoked", access_token: "DEAUTHORIZED_BY_PLATFORM", updated_at: new Date().toISOString() })
+    .eq("platform", "facebook")
+    .contains("metadata", { fb_user_id: String(data.user_id) });
+  return res.status(200).send("OK");
 });
 
 // TikTok Webhooks for Deauthorization and Deletion (stubs returning 200 OK)
@@ -985,13 +678,12 @@ authRouter.post("/tiktok/deauthorize", async (req, res) => {
   return res.status(200).send("OK");
 });
 
-authRouter.post("/tiktok/data-deletion", async (req, res) => {
-  const confirmationCode = crypto.randomUUID();
-  console.log("[Webhook] TikTok data deletion triggered.", req.body);
-  return res.json({
-    confirmation_code: confirmationCode,
-    status: "completed"
-  });
+authRouter.post("/tiktok/data-deletion", async (req: any, res) => {
+  // TikTok sends the open_id of the user who removed ZieAds
+  const openId = req.body?.user_openid || req.body?.open_id || req.body?.content?.user_openid;
+  if (!openId) return res.status(200).json({ status: "ignored" });
+  const { confirmationCode } = await handlePlatformDeletion("tiktok", String(openId));
+  return res.json({ confirmation_code: confirmationCode, status: "completed" });
 });
 
 // LinkedIn Webhooks for Deauthorization (stub returning 200 OK)
@@ -1001,41 +693,18 @@ authRouter.post("/linkedin/deauthorize", async (req, res) => {
 });
 
 /**
- * 4. Manual Disconnect
+ * 4. Manual Disconnect: revoke the token and delete what ZieAds stored from that platform
  */
 authRouter.post("/:platform/disconnect", requireAuth, async (req: any, res) => {
   const platform = req.params.platform;
   const userId = req.userId;
-
-  if (platform !== "instagram" && platform !== "tiktok" && platform !== "linkedin") {
+  if (!(CONNECT_PLATFORMS as readonly string[]).includes(platform)) {
     return res.status(400).json({ error: "Invalid platform parameter" });
   }
-
   try {
-    const { error: dbErr } = await supabaseAdmin
-      .from("social_connections")
-      .update({
-        is_active: false,
-        access_token: "MANUALLY_DISCONNECTED",
-        refresh_token: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
-      .eq("platform", platform);
-
-    // Also delete any mock connections in connected_accounts to prevent it requiring two clicks to fully disconnect
-    await supabaseAdmin
-      .from("connected_accounts")
-      .delete()
-      .eq("user_id", userId)
-      .eq("platform", platform);
-
-    if (dbErr) {
-      console.error(`[OAuth] Disconnect DB failure for ${platform}:`, dbErr.message);
-      return res.status(500).json({ error: "Failed to disconnect account in database" });
-    }
-
-    return res.json({ success: true, platform });
+    const deleted = await deletePlatformData(userId, platform);
+    await logActivity(userId, "user", "connection.disconnected", "platform", platform, { deleted });
+    return res.json({ success: true, platform, deleted });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -1050,7 +719,7 @@ authRouter.get("/connections", requireAuth, async (req: any, res) => {
   try {
     const { data, error: dbErr } = await supabaseAdmin
       .from("social_connections")
-      .select("platform, platform_username, platform_display_name, platform_avatar_url, platform_account_type, connected_at, token_expires_at, scopes_granted")
+      .select("platform, platform_username, platform_display_name, platform_avatar_url, platform_account_type, connected_at, token_expires_at, scopes_granted, status, last_error_message, last_synced_at, last_refreshed_at, metadata")
       .eq("user_id", userId)
       .eq("is_active", true);
 
@@ -1060,14 +729,15 @@ authRouter.get("/connections", requireAuth, async (req: any, res) => {
     }
 
     // Map rows to clean schema structure
-    const statusMap = {
+    const statusMap: Record<string, any> = {
       instagram: { connected: false },
+      facebook: { connected: false },
       tiktok: { connected: false },
       linkedin: { connected: false },
     };
 
     data?.forEach((row: any) => {
-      const p = row.platform as "instagram" | "tiktok" | "linkedin";
+      const p = row.platform as string;
       if (statusMap[p]) {
         statusMap[p] = {
           connected: true,
@@ -1078,6 +748,11 @@ authRouter.get("/connections", requireAuth, async (req: any, res) => {
           connected_at: row.connected_at,
           token_expires_at: row.token_expires_at,
           scopes: row.scopes_granted || "",
+          status: row.status || "live",
+          last_error: row.last_error_message || null,
+          last_synced_at: row.last_synced_at || row.last_refreshed_at || null,
+          declined_permissions: row.metadata?.declined_permissions || [],
+          page_count: Array.isArray(row.metadata?.pages) ? row.metadata.pages.length : undefined,
         } as any;
       }
     });

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TextRollButton } from '../ui';
 import { Shader, Swirl, ChromaFlow, FlutedGlass, FilmGrain } from 'shaders/react';
-import { rotatingPhrases, rotatingPlaceholders } from '../data';
-import { usePrefersReducedMotion, useRotatingIndex, useRotatingPhrase } from '../hooks';
+import { rotatingPlaceholders } from '../data';
+import { useRotatingIndex } from '../hooks';
 import OnboardingModal from './OnboardingModal';
 import ZieAvatar from '../../../components/ZieAvatar';
 import SocialIcon from '../../../components/v3/SocialIcon';
@@ -86,12 +86,6 @@ export default function Hero() {
   const [pendingPrompt, setPendingPrompt] = useState('');
 
   const placeholderIndex = useRotatingIndex(rotatingPlaceholders.length, 3200);
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const { index: phraseIndex, phase: animationPhase } = useRotatingPhrase(
-    rotatingPhrases.length, 4500, 400, !prefersReducedMotion,
-  );
-  const currentPhrase = rotatingPhrases[phraseIndex];
-  const phraseWords = currentPhrase.split(' ');
 
   const handleHeroChatSend = (promptText?: string) => {
     const fallback = rotatingPlaceholders[placeholderIndex]
@@ -118,37 +112,16 @@ export default function Hero() {
             ZieAds AI Agent
           </p>
 
-          {/* Headline */}
+          {/* Headline (spec 12): positioning as an AI social media manager */}
           <h1 className="hero-title">
-            <span>The AI Marketing Agent that</span>
+            <span>Your AI social media manager.</span>
             <span className="hero-highlight-pill rotating-container">
-              {prefersReducedMotion ? (
-                <span>runs your social media.</span>
-              ) : (
-                <span
-                  className={`inline-flex flex-nowrap justify-center transition-all duration-300 ${
-                    animationPhase === 'exit'
-                      ? 'opacity-0 translate-y-[-10px] blur-sm'
-                      : 'opacity-100 translate-y-0 blur-0'
-                  }`}
-                  style={{ columnGap: '0.28em' }}
-                >
-                  {phraseWords.map((word, wIdx) => (
-                    <span
-                      key={`${phraseIndex}-${wIdx}`}
-                      className="inline-block opacity-0 translate-y-[8px] animate-word-reveal"
-                      style={{
-                        animationDelay: `${wIdx * 0.15}s`,
-                        animationFillMode: 'forwards',
-                      }}
-                    >
-                      {word}
-                    </span>
-                  ))}
-                </span>
-              )}
+              <span>Briefs you every morning, executes when you approve.</span>
             </span>
           </h1>
+          <p className="hero-sub">
+            Scheduling, inbox, analytics and competitors for Instagram, Facebook, TikTok and LinkedIn, with an agent that tells you what to do next.
+          </p>
 
           {/* CTA Row */}
           <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5">
@@ -161,8 +134,7 @@ export default function Hero() {
             {/* Partner Badge */}
             <div className="inline-flex items-center gap-2 bg-white rounded-[4px] px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 cursor-default">
               <ZieAvatar size={26} ring={false} />
-              <span className="text-[13px] sm:text-[14px] font-medium text-gray-900" style={{ fontFamily: 'inherit' }}>AI Marketing Agent</span>
-              <span className="text-[10px] sm:text-[11px] bg-gray-900 text-white px-1.5 sm:px-2 py-0.5 rounded font-medium">Featured</span>
+              <span className="text-[13px] sm:text-[14px] font-medium text-gray-900" style={{ fontFamily: 'inherit' }}>Meet Zie, your agent</span>
             </div>
           </div>
 
@@ -215,14 +187,14 @@ export default function Hero() {
           {/* Trust Strip */}
           <div className="hero-one-dash">
             <span className="hero-one-dash-stack" aria-hidden="true">
-              {(['instagram', 'tiktok', 'linkedin', 'facebook', 'x'] as const).map((k, i) => (
+              {(['instagram', 'facebook', 'tiktok', 'linkedin'] as const).map((k, i) => (
                 <span key={k} style={{ zIndex: 5 - i, animationDelay: `${0.6 + i * 0.08}s` }}>
                   <SocialIcon platform={k} size={22} />
                 </span>
               ))}
             </span>
             <span className="hero-one-dash-text">
-              <strong>All your social accounts, one dashboard.</strong> Post, reply and track every channel from ZieAds.
+              <strong>Instagram, Facebook, TikTok and LinkedIn in one dashboard.</strong> Threads, YouTube and more are coming soon.
             </span>
           </div>
 

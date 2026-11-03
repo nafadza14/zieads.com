@@ -352,8 +352,8 @@
 /* Chips (toggleable filters, platform selectors) */
 .zd-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--zd-line); background: #fff; border-radius: 999px; padding: 6px 13px; font-size: 13px; font-weight: 500; color: var(--zd-ink-2); cursor: pointer; transition: border-color 0.25s, color 0.25s, background 0.25s, transform 0.3s var(--zd-ease); }
 .zd-chip:hover:not(:disabled) { border-color: var(--zd-ink); color: var(--zd-ink); transform: translateY(-1px); }
-.zd-chip.is-active { background: var(--zd-ink); border-color: var(--zd-ink); color: #fff; }
-.zd-chip.is-accent.is-active { background: var(--zd-accent); border-color: var(--zd-accent); }
+.zd-chip.is-active, .zd-chip.is-active:hover:not(:disabled) { background: var(--zd-ink); border-color: var(--zd-ink); color: #fff; }
+.zd-chip.is-accent.is-active, .zd-chip.is-accent.is-active:hover:not(:disabled) { background: var(--zd-accent); border-color: var(--zd-accent); }
 
 /* Orb */
 .zd-orb { position: relative; flex-shrink: 0; display: inline-flex; border-radius: 50%; padding: 2px; background: conic-gradient(from 0deg, #f26522, #ffb38a, #ffffff, #f26522); }

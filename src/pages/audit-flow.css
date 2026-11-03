@@ -272,3 +272,6 @@
   .zf-rise, .zf-fade, .zf-modal, .zf-steps li, .zf-bubble-user, .zf-bubble-agent { animation: none !important; }
   .zf-orb.is-active, .zf-orb.is-active .zf-orb-core, .zf-overall-fill::after, .zf-shimmer, .zf-lock { animation: none !important; }
 }
+.zf-next { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.zf-next h3 { margin: 0 0 4px; font-size: 18px; font-weight: 650; }
+.zf-next p { margin: 0; max-width: 520px; font-size: 14px; line-height: 1.55; color: #505050; }

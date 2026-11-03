@@ -130,7 +130,7 @@ export default function V3Layout({ children }: Props) {
     { k: '/inbox', l: 'Inbox', icon: <Inbox size={15} /> },
     { k: '/hunt', l: 'Competitor Hunt', icon: <Target size={15} /> },
     { k: '/connections', l: 'Connections', icon: <Link2 size={15} /> },
-    { k: '/clients?tab=settings', l: 'Settings', icon: <SettingsIcon size={15} /> },
+    { k: '/settings', l: 'Settings', icon: <SettingsIcon size={15} /> },
   ];
 
   // V0.2 features hidden for V0.3 release (do not delete)
@@ -168,6 +168,7 @@ export default function V3Layout({ children }: Props) {
         {v3Items.map((n, i) => {
           const isActive =
             currentPath === n.k ||
+            (n.k === '/settings' && currentPath.startsWith('/settings/')) ||
             (currentPath === '/clients' && n.k.includes('tab=') && location.search.includes(n.k.split('=')[1]));
           return (
             <button
@@ -197,9 +198,15 @@ export default function V3Layout({ children }: Props) {
           <CreditBadge pool="skill_run" />
         </div>
         <div className="zd-foot-actions">
-          <button className="zd-link" onClick={() => navigate('/pricing')}>
-            Upgrade plan <ArrowRight size={12} />
-          </button>
+          {creditStore.upgrade_available !== false ? (
+            <button className="zd-link" onClick={() => navigate('/pricing')}>
+              Upgrade plan <ArrowRight size={12} />
+            </button>
+          ) : (
+            <button className="zd-link" onClick={() => navigate('/settings/billing')}>
+              Your plan <ArrowRight size={12} />
+            </button>
+          )}
           <button className="zd-link zd-link-muted" onClick={handleSignOut}>
             Sign out
           </button>

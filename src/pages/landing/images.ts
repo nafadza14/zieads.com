@@ -21,6 +21,8 @@ export const SHOTS = {
   inbox: '/landing/shots/inbox.webp',
   hunt: '/landing/shots/hunt.webp',
   connections: '/landing/shots/connections.webp',
+  guardian: '/landing/shots/guardian.webp',
+  mcp: '/landing/shots/mcp.webp',
 };
 
 export const PHOTOS = {

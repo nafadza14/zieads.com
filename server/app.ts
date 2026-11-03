@@ -28,6 +28,16 @@ import { creditsRouter } from "./routes/api-credits.js";
 import { superadminRouter } from "./routes/api-superadmin.js";
 import { apiV3Router } from "./routes/api-v3.js";
 import { authRouter } from "./routes/api-auth.js";
+import { settingsRouter } from "./routes/api-settings.js";
+import { postsRouter } from "./routes/api-posts.js";
+import { jobsRouter } from "./routes/api-jobs.js";
+import { adsRouter } from "./routes/api-ads.js";
+import { tasksRouter } from "./routes/api-tasks.js";
+import { briefingRouter } from "./routes/api-briefing.js";
+import { inboxRouter } from "./routes/api-inbox.js";
+import { analyticsRouter } from "./routes/api-analytics.js";
+import { mcpRouter } from "./routes/api-mcp.js";
+import { scheduledAgentsRouter } from "./routes/api-scheduled-agents.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
 import { deepStripDashes } from "./utils/noEmDash.js";
@@ -36,11 +46,14 @@ import { autofillBrandProfile, brandCompleteness, getBrandProfile, saveBrandProf
 const app = express();
 app.use(
   express.json({
+    limit: "6mb",
     verify: (req: any, _res, buf) => {
       req.rawBody = buf.toString('utf-8');
     },
   })
 );
+// Meta and TikTok deletion callbacks post signed_request as a form body
+app.use(express.urlencoded({ extended: false }));
 
 // ─── Writing rule: no em dash anywhere in ZieAds ────────
 // Every JSON response is cleaned on the way out, so AI text, stored data and
@@ -80,8 +93,8 @@ async function enrichContextFromProfile(
 // ─── CORS ─────────────────────────────────────────────
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-superadmin-session-token");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-superadmin-session-token, Mcp-Session-Id, MCP-Protocol-Version");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
@@ -102,10 +115,23 @@ app.use("/api/agent", agentRouter);
 app.use("/api/superadmin/v1", superadminRouter);
 
 // ─── ZieAds v0.3 Analyst Layer API ─────────────────────
+// Newer routers first: they replace older handlers with the same path
+app.use("/api/v3", jobsRouter);
+app.use("/api/v3", postsRouter);
+app.use("/api/v3", adsRouter);
+app.use("/api/v3", tasksRouter);
+app.use("/api/v3", briefingRouter);
+app.use("/api/v3", inboxRouter);
+app.use("/api/v3", analyticsRouter);
+app.use("/api/v3", scheduledAgentsRouter);
+app.use("/api", mcpRouter);
 app.use("/api/v3", apiV3Router);
 
 // ─── Social Media Platform Connections API ─────────────
 app.use("/api/auth", authRouter);
+
+// ─── Settings, team, data export and deletion, client error reports ─
+app.use("/api", settingsRouter);
 
 // ─── Health Check ──────────────────────────────────────
 app.get("/api/health", (_req, res) => {

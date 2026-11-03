@@ -10,6 +10,7 @@ import ZieAvatar from '../../components/ZieAvatar';
 import SocialIcon from '../../components/v3/SocialIcon';
 import { Button } from '../../components/v3/ui';
 import './brand-settings.css';
+import { fillEmpty, txt } from '../../lib/brandMerge';
 
 type Product = { name?: string; price?: string; note?: string };
 export interface Brand {
@@ -17,7 +18,7 @@ export interface Brand {
   offer: { summary?: string; products?: Product[]; price_range?: string; usp?: string };
   audience: { description?: string; age_range?: string; gender?: string; interests?: string; pain_points?: string };
   voice: { tones?: string[]; emoji?: 'none' | 'some' | 'lots'; formality?: 'casual' | 'balanced' | 'formal'; words_use?: string; words_avoid?: string; sample_post?: string };
-  goals: { primary_goal?: string; goals?: string[]; monthly_budget?: string; platforms?: string[]; posting_frequency?: string; role?: string; account_volume?: string };
+  goals: { primary_goal?: string; goals?: string[]; monthly_budget?: string; platforms?: string[]; posting_frequency?: string; role?: string; account_volume?: string; main_platform?: string; social_goals?: string[]; topics_avoid?: string; timezone?: string };
   competitors: string[];
   rules?: string;
 }
@@ -30,6 +31,9 @@ const TONES = ['Friendly', 'Professional', 'Playful', 'Bold', 'Luxurious', 'Educ
 const AGES = ['13-17', '18-24', '25-34', '35-44', '45-54', '55+'];
 const GENDERS = ['Mostly women', 'Mostly men', 'Everyone'];
 const GOALS = ['Grow followers', 'Get more sales', 'Get more leads', 'Build brand awareness', 'Engage the community', 'Launch a product', 'Improve ad results'];
+// Organic social goals (spec 7.11): what the social accounts themselves are for
+const SOCIAL_GOALS = ['Awareness', 'Leads', 'Sales through DM', 'Community'];
+const MAIN_PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'Threads'];
 const BUDGETS = ['No ads yet', 'Under $1K', '$1K to $5K', '$5K to $20K', 'Over $20K'];
 const FREQ = ['A few times a month', '1-2 times a week', '3-5 times a week', 'Every day'];
 const CHANNELS = [
@@ -37,7 +41,6 @@ const CHANNELS = [
   { k: 'tiktok', l: 'TikTok' },
   { k: 'linkedin', l: 'LinkedIn' },
   { k: 'facebook', l: 'Facebook' },
-  { k: 'x', l: 'X' },
   { k: 'meta_ads', l: 'Meta Ads' },
   { k: 'google_ads', l: 'Google Ads' },
 ];
@@ -56,18 +59,6 @@ async function authHeaders() {
   const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
   return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-}
-
-/** Merge a draft into the form without wiping what the user already typed */
-function fillEmpty<T>(current: T, incoming: any): T {
-  if (incoming === undefined || incoming === null) return current;
-  if (Array.isArray(current)) return (current.length ? current : incoming) as T;
-  if (typeof current === 'object' && current) {
-    const out: any = { ...current };
-    for (const k of Object.keys(incoming)) out[k] = fillEmpty((current as any)[k] ?? (Array.isArray(incoming[k]) ? [] : typeof incoming[k] === 'object' ? {} : ''), incoming[k]);
-    return out;
-  }
-  return (current === '' || current === undefined ? incoming : current) as T;
 }
 
 function completeness(b: Brand) {
@@ -219,11 +210,17 @@ export default function BrandSettings() {
   const summary = useMemo(() => {
     const parts: string[] = [];
     const name = brand.identity.name || 'your brand';
-    if (brand.identity.industry || brand.offer.summary) parts.push(`${name} ${brand.offer.summary ? `sells ${brand.offer.summary.replace(/\.$/, '').toLowerCase()}` : `is in ${brand.identity.industry?.toLowerCase()}`}.`);
-    if (brand.audience.description) parts.push(`Zie writes for ${brand.audience.description.replace(/\.$/, '').toLowerCase()}.`);
-    if (brand.voice.tones?.length) parts.push(`Tone: ${brand.voice.tones.join(', ').toLowerCase()}${brand.voice.emoji ? `, ${brand.voice.emoji === 'none' ? 'no' : brand.voice.emoji} emoji` : ''}.`);
-    if (brand.goals.primary_goal) parts.push(`Every plan aims to ${brand.goals.primary_goal.toLowerCase()}.`);
-    if (brand.identity.languages?.length) parts.push(`Content in ${brand.identity.languages.join(' and ')}.`);
+    const offer = txt(brand.offer.summary);
+    const industry = txt(brand.identity.industry);
+    const audience = txt(brand.audience.description);
+    const goal = txt(brand.goals.primary_goal);
+    const tones = Array.isArray(brand.voice.tones) ? brand.voice.tones : [];
+    const langs = Array.isArray(brand.identity.languages) ? brand.identity.languages : [];
+    if (industry || offer) parts.push(`${txt(name) || 'your brand'} ${offer ? `sells ${offer.replace(/\.$/, '').toLowerCase()}` : `is in ${industry.toLowerCase()}`}.`);
+    if (audience) parts.push(`Zie writes for ${audience.replace(/\.$/, '').toLowerCase()}.`);
+    if (tones.length) parts.push(`Tone: ${tones.join(', ').toLowerCase()}${brand.voice.emoji ? `, ${brand.voice.emoji === 'none' ? 'no' : brand.voice.emoji} emoji` : ''}.`);
+    if (goal) parts.push(`Every plan aims to ${goal.toLowerCase()}.`);
+    if (langs.length) parts.push(`Content in ${langs.join(' and ')}.`);
     return parts.join(' ');
   }, [brand]);
 
@@ -419,6 +416,14 @@ export default function BrandSettings() {
             <Field label="Main goal right now">
               <Chips options={GOALS} value={brand.goals.primary_goal} multi={false} onChange={(v) => set('goals', { primary_goal: v })} />
             </Field>
+            <div className="bs-row">
+              <Field label="Main social platform" hint="Where most of your customers find you.">
+                <Chips options={MAIN_PLATFORMS} value={brand.goals.main_platform} multi={false} onChange={(v) => set('goals', { main_platform: v })} />
+              </Field>
+              <Field label="What your social accounts are for" hint="Pick all that apply.">
+                <Chips options={SOCIAL_GOALS} value={brand.goals.social_goals} onChange={(v: string[]) => set('goals', { social_goals: v })} />
+              </Field>
+            </div>
             <Field label="Channels you focus on">
               <div className="bs-chips">
                 {CHANNELS.map((c) => {
@@ -459,6 +464,9 @@ export default function BrandSettings() {
                 <p>Lines Zie must never cross, and who you compete with.</p>
               </div>
             </header>
+            <Field label="Topics to avoid" hint="Zie never drafts posts or replies about these.">
+              <input className="bs-input" value={brand.goals.topics_avoid || ''} onChange={(e) => set('goals', { topics_avoid: e.target.value })} placeholder="Politics, competitor prices, medical claims" />
+            </Field>
             <Field label="Brand rules" hint="For example claims you cannot make, topics to avoid, how to handle complaints.">
               <textarea className="bs-input" rows={3} value={brand.rules || ''} onChange={(e) => set('rules', e.target.value as any)} placeholder="Never promise medical results. Move complaints to DM. Always mention BPOM when asked about safety." />
             </Field>

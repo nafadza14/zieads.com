@@ -892,9 +892,9 @@ export function PlatformStrip() {
     { p: 'tiktok', l: 'TikTok' },
     { p: 'linkedin', l: 'LinkedIn' },
     { p: 'facebook', l: 'Facebook' },
-    { p: 'meta_ads', l: 'Meta Ads' },
-    { p: 'google_ads', l: 'Google Ads' },
-    { p: 'tiktok_ads', l: 'TikTok Ads' },
+    { p: 'meta_ads', l: 'Meta Ads reports' },
+    { p: 'google_ads', l: 'Google Ads reports' },
+    { p: 'tiktok_ads', l: 'TikTok Ads reports' },
   ];
   return (
     <div className="zv-platforms" aria-label="Works with">

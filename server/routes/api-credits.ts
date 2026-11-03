@@ -408,6 +408,30 @@ creditsRouter.post('/checkout', async (req, res) => {
   }
 });
 
+// ─── Billing portal: manage card, invoices, cancel in one click ──────────────
+creditsRouter.post('/billing-portal', async (req, res) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const { data: plan } = await supabaseAdmin.from('user_plan').select('plan_id, stripe_customer_id').eq('user_id', userId).maybeSingle();
+  if (!plan?.stripe_customer_id) {
+    return res.status(404).json({ error: 'No paid subscription found for this account.', code: 'NO_SUBSCRIPTION' });
+  }
+  if (!process.env.DODO_PAYMENTS_SECRET_KEY) return res.status(500).json({ error: 'Billing is not configured.' });
+  try {
+    const isLive = process.env.DODO_PAYMENTS_SECRET_KEY?.startsWith('sk_live_') || process.env.DODO_PAYMENTS_ENVIRONMENT === 'live';
+    const baseUrl = isLive ? 'https://live.dodopayments.com' : 'https://test.dodopayments.com';
+    const r = await fetch(`${baseUrl}/customers/${encodeURIComponent(plan.stripe_customer_id)}/customer-portal/session`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.DODO_PAYMENTS_SECRET_KEY}`, 'Content-Type': 'application/json' },
+    });
+    const j: any = await r.json().catch(() => ({}));
+    if (!r.ok || !j.link) return res.status(502).json({ error: j.message || 'Could not open the billing portal.' });
+    return res.json({ url: j.link });
+  } catch (e: any) {
+    return res.status(502).json({ error: e.message });
+  }
+});
+
 // ─── Dodo Payments Webhook ────────────────────────────────────────────────────
 
 function verifyDodoSignature(
@@ -521,6 +545,8 @@ creditsRouter.post('/webhook/dodo', async (req, res) => {
         .update({
           plan_id: planId,
           stripe_subscription_id: eventData.subscription_id,
+          // Dodo customer id, used to open the billing portal (cancel in one click)
+          ...(eventData.customer?.customer_id ? { stripe_customer_id: eventData.customer.customer_id } : {}),
           billing_anchor_day: eventData.next_billing_date
             ? new Date(eventData.next_billing_date).getUTCDate()
             : new Date().getUTCDate(),

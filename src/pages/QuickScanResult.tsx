@@ -186,6 +186,15 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
           </div>
         </section>
 
+        {/* Next step (spec 7.12): the audit leads into the daily briefing */}
+        <section className="zf-card zf-rise zf-next">
+          <div>
+            <h3>Get your first daily briefing</h3>
+            <p>Connect Instagram and Facebook and Zie reads the last 30 days, then tells you every morning what changed and what to do first.</p>
+          </div>
+          <TextRollButton text="Connect Instagram and Facebook" onClick={() => navigate('/sign-up', { state: { next: '/connections' } })} />
+        </section>
+
         {/* Locked teaser */}
         <section className="zf-card zf-unlock zf-rise">
           <div className="zf-unlock-ghosts" aria-hidden="true">

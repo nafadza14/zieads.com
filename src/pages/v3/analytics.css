@@ -1,0 +1,38 @@
+/* Analytics (spec 7.7) */
+.zax-controls { display: flex; flex-direction: column; gap: 10px; }
+.zax-filter-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.zax-filter-row .zd-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+.zax-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.zax-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .zax-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .zax-grid-2 { grid-template-columns: minmax(0, 1fr); } }
+.zax-metric { display: flex; flex-direction: column; gap: 6px; }
+.zax-metric-value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--zd-ink); font-variant-numeric: tabular-nums; }
+.zax-metric-value.is-missing { font-size: 15px; font-weight: 500; color: var(--zd-ink-4); padding: 6px 0; }
+.zax-metric-sub { font-size: 12px; color: var(--zd-ink-3); }
+.zax-muted { margin: 0; font-size: 12.5px; color: var(--zd-ink-3); }
+.zax-error { margin: 0; font-size: 13px; color: var(--zd-ink); border: 1px solid var(--zd-line); border-radius: 10px; padding: 10px 12px; background: #fff; }
+.zax-link { border: none; background: none; padding: 0; font: inherit; color: var(--zd-ink); text-decoration: underline; cursor: pointer; }
+.zax-na { color: var(--zd-ink-4); }
+.zax-chart { margin: 0; }
+.zax-chart-wrap { position: relative; height: 160px; }
+.zax-chart svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.zax-axis { stroke: var(--zd-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.zax-bar { fill: var(--zd-accent); opacity: 0.85; transition: opacity 0.15s; }
+.zax-bar.is-hover { opacity: 1; }
+.zax-tip { position: absolute; top: -6px; transform: translate(-50%, -100%); background: var(--zd-ink); color: #fff; border-radius: 8px; padding: 5px 8px; font-size: 12px; display: flex; flex-direction: column; align-items: center; white-space: nowrap; pointer-events: none; }
+.zax-tip span { color: rgba(255, 255, 255, 0.7); font-size: 11px; }
+.zax-axis-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11.5px; color: var(--zd-ink-4); }
+.zax-table-wrap { overflow-x: auto; margin: 0 -4px; }
+.zax-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.zax-table th { text-align: left; font-weight: 600; font-size: 11.5px; color: var(--zd-ink-3); padding: 8px 10px; border-bottom: 1px solid var(--zd-line); white-space: nowrap; }
+.zax-table td { padding: 10px; border-bottom: 1px solid var(--zd-line); white-space: nowrap; color: var(--zd-ink); }
+.zax-table tr:last-child td { border-bottom: none; }
+.zax-net { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.zax-net small { font-weight: 400; color: var(--zd-ink-3); }
+.zax-post { display: flex; align-items: center; gap: 8px; max-width: 360px; }
+.zax-post a, .zax-post span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--zd-ink); }
+.zax-compare { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.zax-compare li { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--zd-line); border-radius: 10px; padding: 12px; font-size: 12.5px; color: var(--zd-ink-3); }
+.zax-compare strong { font-size: 18px; color: var(--zd-ink); }
+.zax-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.zd-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

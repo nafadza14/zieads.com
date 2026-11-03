@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3,  Calendar, Check, Inbox, Link2, PenLine, Radar, BotMessageSquare } from 'lucide-react';
+import { BarChart3, Calendar, Check, Inbox, Link2, PenLine, Radar, BotMessageSquare, ShieldCheck, KeyRound } from 'lucide-react';
 import ZIcon from '../../../components/icons/ZIcon';
 import ZieAvatar from '../../../components/ZieAvatar';
 import SocialIcon from '../../../components/v3/SocialIcon';
@@ -24,8 +24,8 @@ const TOUR = [
     label: 'AI Agent',
     icon: <BotMessageSquare size={15} />,
     title: 'Ask anything about your marketing.',
-    desc: 'Chat with an agent that already knows your brand, or run one of ten deep analysis modes in a single click.',
-    points: ['ROAS drops diagnosed with evidence', 'Hooks, captions and ad copy on demand', 'Budget splits across Meta, Google and TikTok'],
+    desc: 'Chat with an agent that already knows your brand, or run a Social Analyst or Ads Analyst mode in one click.',
+    points: ['Content and comment analysis from your real data', 'Captions and a week of drafts in your brand voice', 'Ads results read together with organic'],
     shot: SHOTS.agent,
     url: 'app.zieads.com/agent',
   },
@@ -45,7 +45,7 @@ const TOUR = [
     icon: <Calendar size={15} />,
     title: 'Your whole content plan at a glance.',
     desc: 'Every scheduled and published post on one calendar, with a visual feed preview so your grid always looks right.',
-    points: ['Month and agenda views', 'Scheduled, published and failed states', 'Feed preview before you post'],
+    points: ['Month, week and agenda views', 'Drag to reschedule, filter by platform and status', 'Feed preview before you post'],
     shot: SHOTS.calendar,
     url: 'app.zieads.com/calendar',
   },
@@ -64,8 +64,8 @@ const TOUR = [
     label: 'Inbox',
     icon: <Inbox size={15} />,
     title: 'Every comment, one calm inbox.',
-    desc: 'Comments from all your channels in one place, sorted by sentiment, with replies sent right from ZieAds.',
-    points: ['Positive, neutral and negative filters', 'Reply without switching apps', 'Archive what is handled'],
+    desc: 'Instagram and Facebook comments in one place, buying signals first, with AI reply drafts you send in one click.',
+    points: ['Buying signal, question and complaint labels', 'Reply drafts in your brand voice', 'TikTok and LinkedIn comments coming soon'],
     shot: SHOTS.inbox,
     url: 'app.zieads.com/inbox',
   },
@@ -74,18 +74,38 @@ const TOUR = [
     label: 'Competitor Hunt',
     icon: <Radar size={15} />,
     title: 'Know every move your rivals make.',
-    desc: 'Track competitor websites and accounts, run audits on them and see where their strategy leaves gaps for you.',
-    points: ['Score every competitor', 'Audit on demand', 'Gaps turned into ideas'],
+    desc: 'Track competitors on Instagram and Threads, plus their ads from the Meta Ad Library (EU and UK), and see the gaps you can win.',
+    points: ['Posting frequency and engagement', 'Ads from the Meta Ad Library', 'Content gaps turned into ideas'],
     shot: SHOTS.hunt,
     url: 'app.zieads.com/hunt',
+  },
+  {
+    id: 'guardian',
+    label: 'Guardian',
+    icon: <ShieldCheck size={15} />,
+    title: 'No post fails without you knowing.',
+    desc: 'A background agent checks that every scheduled post really went out, retries when a platform has a hiccup and warns you before access expires.',
+    points: ['Retries a failed post 3 times, then tells you why', 'Warns 7 days and 1 day before access expires', 'Comments waiting too long go to Needs you'],
+    shot: SHOTS.guardian,
+    url: 'app.zieads.com/analyst',
+  },
+  {
+    id: 'mcp',
+    label: 'MCP',
+    icon: <KeyRound size={15} />,
+    title: 'One MCP for your whole social stack.',
+    desc: 'Use your briefing, calendar, inbox, analytics, competitors and ads from Claude, ChatGPT or Cursor. Every write waits for your approval in ZieAds.',
+    points: ['A key per brand, never one key for everything', 'Drafts and replies land as pending approvals', 'Included in every plan'],
+    shot: SHOTS.mcp,
+    url: 'app.zieads.com/settings/api',
   },
   {
     id: 'connections',
     label: 'Connections',
     icon: <Link2 size={15} />,
     title: 'Plug in every channel you run.',
-    desc: 'Connect Instagram, TikTok, LinkedIn and Facebook in a few clicks, then add Meta, Google and TikTok Ads data.',
-    points: ['Secure OAuth connections', 'Ads data via CSV upload', 'See what is live at a glance'],
+    desc: 'Connect Instagram, Facebook, TikTok and LinkedIn through their official logins. Ads come in read only.',
+    points: ['Official platform connections', 'Read-only ads, never changes campaigns', 'Status, last sync and access expiry per channel'],
     shot: SHOTS.connections,
     url: 'app.zieads.com/connections',
   },
@@ -174,9 +194,9 @@ export default function ProductTourSection() {
               <Chip>
                 <span className="zc-icons">
                   <SocialIcon platform="instagram" size={22} />
+                  <SocialIcon platform="facebook" size={22} />
                   <SocialIcon platform="tiktok" size={22} />
                   <SocialIcon platform="linkedin" size={22} />
-                  <SocialIcon platform="facebook" size={22} />
                 </span>
                 <span>4 channels synced</span>
               </Chip>

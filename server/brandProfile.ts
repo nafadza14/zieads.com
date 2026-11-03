@@ -16,7 +16,7 @@ export interface BrandProfile {
   offer?: { summary?: string; products?: Array<{ name?: string; price?: string; note?: string }>; price_range?: string; usp?: string };
   audience?: { description?: string; age_range?: string; gender?: string; interests?: string; pain_points?: string };
   voice?: { tones?: string[]; emoji?: "none" | "some" | "lots"; formality?: "casual" | "balanced" | "formal"; words_use?: string; words_avoid?: string; sample_post?: string };
-  goals?: { primary_goal?: string; goals?: string[]; monthly_budget?: string; platforms?: string[]; posting_frequency?: string; role?: string; account_volume?: string };
+  goals?: { primary_goal?: string; goals?: string[]; monthly_budget?: string; platforms?: string[]; posting_frequency?: string; role?: string; account_volume?: string; main_platform?: string; social_goals?: string[]; topics_avoid?: string };
   competitors?: string[];
   rules?: string;
   updated_at?: string;
@@ -69,6 +69,9 @@ export function sanitizeBrandProfile(input: any): BrandProfile {
       posting_frequency: clip(i.goals?.posting_frequency, 80),
       role: clip(i.goals?.role, 80),
       account_volume: clip(i.goals?.account_volume, 40),
+      main_platform: clip(i.goals?.main_platform, 40),
+      social_goals: clipList(i.goals?.social_goals, 6, 40),
+      topics_avoid: clip(i.goals?.topics_avoid, 400),
     },
     competitors: clipList(i.competitors, 10, 160),
     rules: clip(i.rules, 1200),
@@ -178,6 +181,9 @@ export function brandProfileToPrompt(p: BrandProfile | null): string {
   add("Posting frequency", p.goals?.posting_frequency);
   add("User role", p.goals?.role);
   add("Accounts managed", p.goals?.account_volume);
+  add("Main social platform", p.goals?.main_platform);
+  add("What the social accounts are for", p.goals?.social_goals);
+  add("Topics to never post or reply about", p.goals?.topics_avoid);
   add("Competitors", p.competitors);
   if (p.rules) L.push(`- Brand rules Zie must always follow: ${p.rules}`);
   if (!L.length) return "";

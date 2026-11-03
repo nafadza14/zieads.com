@@ -1,56 +1,46 @@
-import { useNavigate } from 'react-router-dom';
-import { ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import ZieAdsLogo from '../../../components/ZieAdsLogo';
 
+/* Shared footer for every public page: landing, legal, data deletion, comparison pages.
+   Privacy, Terms and Data Deletion must be one click away everywhere (spec P0-5). */
 export default function Footer() {
-  const navigate = useNavigate();
-  const scrollToHero = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-
   return (
     <footer className="footer">
       <div className="footer-inner footer-grid-layout">
         <div className="footer-col footer-brand-col">
-          <div className="footer-brand" onClick={scrollToHero}>
+          <Link to="/" className="footer-brand" aria-label="ZieAds home">
             <ZieAdsLogo size={32} />
             <span className="brand-name">zieads</span>
-          </div>
-          <p className="footer-tagline">The AI marketing agent that runs your social media.</p>
-          <div className="footer-social-links">
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X">
-              <ExternalLink size={16} /> Twitter/X
-            </a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-              <ExternalLink size={16} /> LinkedIn
-            </a>
-            <a href="https://producthunt.com" target="_blank" rel="noopener noreferrer" aria-label="Product Hunt">
-              <ExternalLink size={16} /> Product Hunt
-            </a>
-          </div>
+          </Link>
+          <p className="footer-tagline">Your AI social media manager. Briefs you every morning, executes when you approve.</p>
         </div>
         <div className="footer-col">
           <h4 className="footer-col-title">Product</h4>
-          <a href="#free-audit-try">Free Scan Audit</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/clients'); }}>Agency Plan</a>
+          <a href="/#product-tour">Product tour</a>
+          <a href="/#pricing">Pricing</a>
+          <a href="/#mcp">MCP server</a>
+          <a href="/#free-audit-try">Free website audit</a>
         </div>
         <div className="footer-col">
-          <h4 className="footer-col-title">Resources</h4>
-          <a href="#pricing">Paid Ads Readiness Guide</a>
-          <a href="#free-audit-try">Platform Comparison</a>
-          <a href="#faq">FAQ</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Blog</a>
+          <h4 className="footer-col-title">Compare</h4>
+          <Link to="/vs/metricool">ZieAds vs Metricool</Link>
+          <Link to="/vs/vista-social">ZieAds vs Vista Social</Link>
+          <Link to="/vs/hootsuite">ZieAds vs Hootsuite</Link>
+          <a href="/#faq">FAQ</a>
         </div>
         <div className="footer-col">
           <h4 className="footer-col-title">Legal</h4>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/privacy-policy'); }}>Privacy Policy</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms of Service</a>
+          <Link to="/privacy-policy">Privacy Policy</Link>
+          <Link to="/terms">Terms of Service</Link>
+          <Link to="/data-deletion">Data Deletion</Link>
+          <a href="mailto:privacy@zieads.com">privacy@zieads.com</a>
         </div>
       </div>
       <div className="footer-bottom-bar">
         <p className="footer-copy">© 2026 ZieAds. All rights reserved.</p>
         <p className="footer-trust-note">
-          ZieAds does not access, store, or transmit your ad account credentials. Audits are based on publicly visible
-          page data only.
+          ZieAds connects with read-only access via official platform APIs and never changes your campaigns. Nothing is published, replied to or spent without
+          your approval.
         </p>
       </div>
     </footer>

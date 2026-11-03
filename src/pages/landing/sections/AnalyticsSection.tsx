@@ -6,7 +6,7 @@ import { PHOTOS, SHOTS } from '../images';
 
 export default function AnalyticsSection() {
   return (
-    <Section id="analytics" number="04" label="Social Media Analytics" tone="gray">
+    <Section id="analytics" number="03" label="Social Media Analytics" tone="gray">
       <div className="zx-head-row">
         <AnimatedHeading text="Social media analytics that explain what your numbers mean." />
         <Reveal delay={120} className="zx-head-aside">

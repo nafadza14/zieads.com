@@ -14,7 +14,9 @@ import { useNavigate } from 'react-router-dom';
 import V3Layout from '../../components/v3/V3Layout';
 import { supabase } from '../../lib/supabaseClient';
 import { useDemoMode } from '../../lib/demoStore';
-import { sampleDailyBriefing } from '../../data/sample-data';
+import { sampleBriefingV2 } from '../../data/sample-data';
+import { BriefingPanel, ActivationChecklist } from './BriefingPanel';
+import { api } from '../../lib/api';
 import { sampleOverview, type Period } from '../../data/sample-overview';
 import { Button, Card, CardTitle, CountUp, EmptyState, PageBody, PageHeader, Pill, SegTabs, Skeleton } from '../../components/v3/ui';
 import SocialIcon from '../../components/v3/SocialIcon';
@@ -150,6 +152,15 @@ export default function AnalystPage() {
   const [compiling, setCompiling] = useState(false);
   const [note, setNote] = useState('');
   const autoSynced = useRef(false);
+  const autoCompiled = useRef(false);
+  const [checklist, setChecklist] = useState<{ items: any[]; visible: boolean } | null>(null);
+
+  useEffect(() => {
+    if (demo.isActive) return;
+    api('/api/v3/onboarding/checklist')
+      .then((j) => setChecklist({ items: j.items, visible: j.visible }))
+      .catch(() => null);
+  }, [demo.isActive]);
 
   const headers = async () => {
     const { data: s } = await supabase.auth.getSession();
@@ -161,7 +172,7 @@ export default function AnalystPage() {
     async (p: Period) => {
       if (demo.isActive) {
         setData(sampleOverview(p));
-        setBriefing(sampleDailyBriefing);
+        setBriefing(sampleBriefingV2);
         setLoading(false);
         return;
       }
@@ -172,7 +183,7 @@ export default function AnalystPage() {
         if (j.success) setData(j.data);
         if (br) {
           const bj = await br.json();
-          if (bj.success) setBriefing(bj.data);
+          if (bj.success && bj.data?.version === 2) setBriefing(bj.data);
         }
       } catch (e) {
         console.error('[Analyst] load failed', e);
@@ -220,6 +231,14 @@ export default function AnalystPage() {
     }
   }, [data, demo.isActive, sync]);
 
+  // The first briefing arrives right after connecting, not tomorrow morning (spec 7.1)
+  useEffect(() => {
+    if (autoCompiled.current || demo.isActive || loading || briefing || !data?.monitoring?.channels?.length) return;
+    autoCompiled.current = true;
+    compile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, briefing, loading, demo.isActive]);
+
   // Keep the screen live while it is open
   useEffect(() => {
     const t = window.setInterval(() => load(period), 5 * 60 * 1000);
@@ -233,7 +252,7 @@ export default function AnalystPage() {
     }
     setCompiling(true);
     try {
-      const res = await fetch('/api/v3/analyst/briefing', { method: 'POST', headers: await headers() });
+      const res = await fetch('/api/v3/analyst/briefing', { method: 'POST', headers: await headers(), body: JSON.stringify({ force: !!briefing }) });
       const j = await res.json();
       if (j.success && j.data) setBriefing(j.data);
       else setNote(j.error || 'The briefing could not be compiled right now.');
@@ -247,11 +266,15 @@ export default function AnalystPage() {
   const askZie = (prompt: string) => navigate('/agent', { state: { prompt } });
 
   const p = PERIODS.find((x) => x.id === period)!;
-  const k = data?.kpis;
-  const channels: any[] = data?.monitoring?.channels || [];
-  const hasChannels = channels.length > 0;
-  const series: any[] = data?.series || [];
-  const sentiment = data?.comments?.sentiment || { positive: 0, neutral: 0, negative: 0 };
+  const realChannels: any[] = data?.monitoring?.channels || [];
+  const hasChannels = realChannels.length > 0;
+  // Before anything is connected the page shows labelled sample data with one CTA (spec 7.1)
+  const showSample = !loading && !hasChannels && !demo.isActive;
+  const view = showSample ? sampleOverview(period) : data;
+  const k = view?.kpis;
+  const channels: any[] = view?.monitoring?.channels || [];
+  const series: any[] = view?.series || [];
+  const sentiment = view?.comments?.sentiment || { positive: 0, neutral: 0, negative: 0 };
   const sentTotal = sentiment.positive + sentiment.neutral + sentiment.negative;
   const nextCheck = useMemo(() => {
     const last = data?.monitoring?.last_sync_at ? new Date(data.monitoring.last_sync_at).getTime() : 0;
@@ -268,7 +291,7 @@ export default function AnalystPage() {
         { key: 'followers', icon: <UserPlus />, label: 'Follower change', value: k.followers.net, signed: true, hint: `${compact(k.followers.value)} total` , deltaRaw: k.followers.change_pct },
         { key: 'reach', icon: <Eye />, label: 'Reach', value: k.reach.value, delta: k.reach.change_pct, compact: true },
         { key: 'interactions', icon: <Heart />, label: 'Interactions', value: k.interactions.value, delta: k.interactions.change_pct, spark: series.map((s) => s.interactions), compact: true, hint: k.engagement_rate.value !== null ? `${k.engagement_rate.value}% engagement rate` : undefined },
-        { key: 'posts', icon: <CalendarDays />, label: 'Posts published', value: k.posts.value, delta: k.posts.change_pct, hint: data.publishing?.upcoming ? `${data.publishing.upcoming} scheduled ahead` : 'Nothing scheduled ahead' },
+        { key: 'posts', icon: <CalendarDays />, label: 'Posts published', value: k.posts.value, delta: k.posts.change_pct, hint: view.publishing?.upcoming ? `${view.publishing.upcoming} scheduled ahead` : 'Nothing scheduled ahead' },
       ]
     : [];
 
@@ -291,7 +314,7 @@ export default function AnalystPage() {
         <section className={`zan-live ${hasChannels ? '' : 'is-off'}`}>
           <ZieAvatar size={44} active={syncing || hasChannels} />
           <div className="zan-live-text">
-            <strong>{hasChannels ? `Zie is watching ${channels.length} ${channels.length === 1 ? 'channel' : 'channels'}` : 'Zie is ready to start watching'}</strong>
+            <strong>{hasChannels ? `Zie is watching ${realChannels.length} ${realChannels.length === 1 ? 'channel' : 'channels'}` : 'Zie is ready to start watching'}</strong>
             <span>
               {hasChannels ? (
                 <>
@@ -303,7 +326,7 @@ export default function AnalystPage() {
             </span>
           </div>
           <div className="zan-live-channels">
-            {channels.map((c) => (
+            {realChannels.map((c) => (
               <span key={c.platform} className={`zan-chan is-${c.status}`} title={`${c.handle || c.platform}: ${c.status}, last sync ${ago(c.last_synced_at)}`}>
                 <SocialIcon platform={c.platform} size={18} />
                 <i />
@@ -320,11 +343,7 @@ export default function AnalystPage() {
                   Compile briefing
                 </Button>
               </>
-            ) : (
-              <Button icon={<Link2 />} onClick={() => navigate('/connections')}>
-                Connect accounts
-              </Button>
-            )}
+            ) : null}
           </div>
           {note && (
             <p className="zan-note" onAnimationEnd={() => setTimeout(() => setNote(''), 3000)}>
@@ -342,17 +361,40 @@ export default function AnalystPage() {
               </Card>
             ))}
           </div>
-        ) : !hasChannels && !demo.isActive ? (
-          <Card>
-            <EmptyState
-              icon={<BarChart3 size={22} />}
-              title="Your analyst starts the moment you connect"
-              body="Zie checks your comments, followers, reach and posts every few minutes and tells you what changed in the last 24 hours, 3 days, 7 days and 30 days."
-              action={<Button icon={<Link2 />} onClick={() => navigate('/connections')}>Connect accounts</Button>}
-            />
-          </Card>
         ) : (
           <>
+            {showSample && (
+              <div className="zan-sample" role="status">
+                <div>
+                  <Pill>Sample data</Pill> <strong>This is what Zie shows once your accounts are connected.</strong>
+                  <br />
+                  <span>Connect Instagram or Facebook and your first briefing is ready in a few minutes.</span>
+                </div>
+                <Button icon={<Link2 />} onClick={() => navigate('/connections')}>
+                  Connect Instagram or Facebook
+                </Button>
+              </div>
+            )}
+
+            {checklist?.visible && !showSample && (
+              <ActivationChecklist
+                items={checklist.items}
+                onDismiss={() => {
+                  setChecklist({ ...checklist, visible: false });
+                  api('/api/v3/onboarding/checklist', { body: { dismiss: true } }).catch(() => null);
+                }}
+              />
+            )}
+
+            {/* Answer first: the briefing opens the page (spec 7.2) */}
+            <BriefingPanel
+              briefing={showSample ? (sampleBriefingV2 as any) : briefing}
+              sample={showSample || demo.isActive}
+              compiling={compiling}
+              onCompile={showSample ? undefined : compile}
+              liveNeeds={!showSample && !demo.isActive ? (data?.todo || []).map((t: any) => ({ title: t.title, detail: t.detail, link: t.link, prompt: t.prompt, cta: t.cta })) : undefined}
+            />
+
             {/* KPI tiles */}
             <section className="zan-kpis" aria-label={`Key numbers for the ${p.long}`}>
               {kpiTiles.map((t: any, i) => (
@@ -383,41 +425,14 @@ export default function AnalystPage() {
             </section>
 
             <div className="zan-grid">
-              {/* Needs you now */}
-              <Card className="zan-todo">
-                <CardTitle icon={<AlertTriangle />} sub="Things only you can decide">
-                  Needs you now
-                </CardTitle>
-                {data?.todo?.length ? (
-                  <ul className="zan-todo-list">
-                    {data.todo.map((t: any, i: number) => (
-                      <li key={t.key} className={`is-${t.severity}`} style={{ animationDelay: `${i * 60}ms` }}>
-                        <span className="zan-todo-ico">{SEV_ICON[t.severity] || SEV_ICON.info}</span>
-                        <div>
-                          <strong>{t.title}</strong>
-                          <small>{t.detail}</small>
-                        </div>
-                        <Button size="sm" variant={t.prompt ? 'soft' : 'secondary'} icon={t.prompt ? <ZIcon name="reply-draft" /> : undefined} onClick={() => (t.prompt ? askZie(t.prompt) : navigate(t.link))}>
-                          {t.cta}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="zan-clear">
-                    <CheckCircle2 size={16} /> All clear. Nothing is waiting for you right now.
-                  </p>
-                )}
-              </Card>
-
               {/* What changed */}
               <Card className="zan-feed">
                 <CardTitle icon={<TrendingUp />} sub={`Everything Zie noticed in the ${p.long}`}>
                   What changed
                 </CardTitle>
-                {data?.events?.length ? (
+                {view?.events?.length ? (
                   <ol className="zan-timeline">
-                    {data.events.slice(0, 8).map((e: any, i: number) => (
+                    {view.events.slice(0, 8).map((e: any, i: number) => (
                       <li key={i} className={`is-${e.severity}`}>
                         <span className="zan-tl-dot">{SEV_ICON[e.severity]}</span>
                         <div className="zan-tl-body">
@@ -437,13 +452,51 @@ export default function AnalystPage() {
                   <p className="zan-clear">Quiet period. No new comments, posts or changes yet.</p>
                 )}
               </Card>
+              {/* Content */}
+              <Card>
+                <CardTitle icon={<BarChart3 />} sub={`Ranked by interactions, ${p.long}`} action={<Button size="sm" variant="ghost" onClick={() => navigate('/analytics')}>Analytics</Button>}>
+                  What is working
+                </CardTitle>
+                {view?.content?.top?.length ? (
+                  <ol className="zan-top">
+                    {view.content.top.map((post: any, i: number) => (
+                      <li key={post.id}>
+                        <span className="zan-top-rank">{i + 1}</span>
+                        <SocialIcon platform={post.platform} size={18} />
+                        <div>
+                          <strong>{post.caption || 'Untitled post'}</strong>
+                          <small>
+                            <span className="zan-fmt">{String(post.format).replace(/_/g, ' ').toLowerCase()}</span> · {ago(post.posted_at)}
+                          </small>
+                        </div>
+                        <span className="zan-top-num">
+                          <b>{compact(post.interactions)}</b>
+                          <small>interactions</small>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="zan-clear">No posts in this period yet.</p>
+                )}
+                {view?.content?.by_format?.length > 1 && (
+                  <div className="zan-formats">
+                    {view.content.by_format.map((f: any) => (
+                      <span key={f.format}>
+                        <span className="zan-fmt">{String(f.format).replace(/_/g, ' ').toLowerCase()}</span> <b>{f.avg_interactions}</b> avg
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
             </div>
 
             {/* Comment monitor */}
             <Card className="zan-comments">
               <CardTitle
                 icon={<MessageCircle />}
-                sub={`${k?.comments.value ?? 0} comments in the ${p.long}, ${data?.comments?.questions ?? 0} questions`}
+                sub={`${k?.comments.value ?? 0} comments in the ${p.long}, ${view?.comments?.questions ?? 0} questions`}
                 action={
                   <Button size="sm" variant="soft" icon={<ZIcon name="analyze" />} onClick={() => askZie(`Analyze my comments from the ${p.long}: group them into themes, flag complaints and buying questions, and draft replies for the ones that need an answer`)}>
                     Analyze with Zie
@@ -473,11 +526,11 @@ export default function AnalystPage() {
                     <span><i className="is-neutral" /> {sentiment.neutral} neutral</span>
                     <span><i className="is-negative" /> {sentiment.negative} negative</span>
                   </div>
-                  {data?.comments?.themes?.length > 0 && (
+                  {view?.comments?.themes?.length > 0 && (
                     <>
                       <span className="zan-eyebrow">People keep mentioning</span>
                       <div className="zan-themes">
-                        {data.comments.themes.map((t: any) => (
+                        {view.comments.themes.map((t: any) => (
                           <span key={t.word}>
                             {t.word} <b>{t.count}</b>
                           </span>
@@ -488,10 +541,10 @@ export default function AnalystPage() {
                 </div>
               </div>
 
-              {data?.comments?.waiting?.length > 0 && (
+              {view?.comments?.waiting?.length > 0 && (
                 <div className="zan-waiting">
                   <span className="zan-eyebrow">Waiting longest</span>
-                  {data.comments.waiting.slice(0, 4).map((c: any) => (
+                  {view.comments.waiting.slice(0, 4).map((c: any) => (
                     <button key={c.id} type="button" className="zan-wait" onClick={() => navigate(`/inbox?comment=${c.id}`)}>
                       <SocialIcon platform={c.platform} size={16} />
                       <span className="zan-wait-who">@{c.from}</span>
@@ -505,82 +558,6 @@ export default function AnalystPage() {
                 </div>
               )}
             </Card>
-
-            <div className="zan-grid">
-              {/* Content */}
-              <Card>
-                <CardTitle icon={<BarChart3 />} sub={`Ranked by interactions, ${p.long}`} action={<Button size="sm" variant="ghost" onClick={() => navigate('/analytics')}>Analytics</Button>}>
-                  What is working
-                </CardTitle>
-                {data?.content?.top?.length ? (
-                  <ol className="zan-top">
-                    {data.content.top.map((post: any, i: number) => (
-                      <li key={post.id}>
-                        <span className="zan-top-rank">{i + 1}</span>
-                        <SocialIcon platform={post.platform} size={18} />
-                        <div>
-                          <strong>{post.caption || 'Untitled post'}</strong>
-                          <small>
-                            <span className="zan-fmt">{String(post.format).replace(/_/g, ' ').toLowerCase()}</span> · {ago(post.posted_at)}
-                          </small>
-                        </div>
-                        <span className="zan-top-num">
-                          <b>{compact(post.interactions)}</b>
-                          <small>interactions</small>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="zan-clear">No posts in this period yet.</p>
-                )}
-                {data?.content?.by_format?.length > 1 && (
-                  <div className="zan-formats">
-                    {data.content.by_format.map((f: any) => (
-                      <span key={f.format}>
-                        <span className="zan-fmt">{String(f.format).replace(/_/g, ' ').toLowerCase()}</span> <b>{f.avg_interactions}</b> avg
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </Card>
-
-              {/* Briefing */}
-              <Card className="zan-brief">
-                <CardTitle icon={<ZIcon name="briefing" />} sub={briefing?.briefing_date ? `Compiled for ${briefing.briefing_date}` : 'Your daily summary from Zie'}>
-                  Zie's briefing
-                </CardTitle>
-                {briefing ? (
-                  <>
-                    <p className="zan-brief-head">{briefing.headline && briefing.headline !== "Today's ZieAds Briefing" ? briefing.headline : briefing.summary}</p>
-                    {briefing.headline && briefing.summary && briefing.headline !== briefing.summary && <p className="zan-brief-sum">{briefing.summary}</p>}
-                    {briefing.today_actions?.length > 0 && (
-                      <ul className="zan-actions">
-                        {briefing.today_actions.slice(0, 3).map((a: any, i: number) => (
-                          <li key={i}>
-                            <span className="zan-action-n">{i + 1}</span>
-                            <div>
-                              <strong>{a.action}</strong>
-                              {a.reasoning && <small>{a.reasoning}</small>}
-                            </div>
-                            <Button size="sm" variant="ghost" iconRight={<ArrowRight />} onClick={() => askZie(`Help me do this now: ${a.action}`)}>
-                              Do it
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                ) : (
-                  <div className="zan-brief-empty">
-                    <p>No briefing for today yet. Zie compiles one every morning; you can also compile it now.</p>
-                    <Button variant="soft" size="sm" icon={<ZIcon name="briefing" />} loading={compiling} onClick={compile}>
-                      Compile briefing
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            </div>
 
             {/* Ask Zie about this period */}
             <section className="zan-ask">
