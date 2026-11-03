@@ -36,9 +36,9 @@ import { tasksRouter } from "./routes/api-tasks.js";
 import { briefingRouter } from "./routes/api-briefing.js";
 import { inboxRouter } from "./routes/api-inbox.js";
 import { analyticsRouter } from "./routes/api-analytics.js";
-import { mcpRouter } from "./routes/api-mcp.js";
+import { mcpRouter, mcpGet, mcpPost } from "./routes/api-mcp.js";
 import { oauthRouter, publicOrigin } from "./routes/api-oauth.js";
-import { restRouter } from "./routes/api-rest.js";
+import { restNotFound, restRouter } from "./routes/api-rest.js";
 import { scheduledAgentsRouter } from "./routes/api-scheduled-agents.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
 import { supabaseAdmin } from "./supabaseServer.js";
@@ -103,10 +103,9 @@ app.use((req, res, next) => {
 });
 
 // ─── Public Webhook API ────────────────────────────────
-// zieads.com/api is the REST API product page. On Vercel the bare /api path lands on this
-// function, so a browser asking for HTML gets the app shell and the SPA renders the page.
-app.get(["/api", "/api/"], async (req, res, next) => {
-  if (!req.accepts("html") || req.path.length > 5) return next();
+// zieads.com/api and zieads.com/mcp are both a product page and a server address.
+// Browsers asking for HTML get the app shell (the SPA renders the page); API and MCP clients get JSON.
+async function appShell(req: any, res: any, next: any) {
   try {
     const r = await fetch(`${publicOrigin(req)}/index.html`);
     if (!r.ok) return next();
@@ -116,12 +115,22 @@ app.get(["/api", "/api/"], async (req, res, next) => {
   } catch {
     next();
   }
+}
+const wantsPage = (req: any) => req.accepts(["html", "json", "text/event-stream"]) === "html";
+app.get(["/api", "/api/"], (req, res, next) => (wantsPage(req) ? appShell(req, res, next) : res.json({ name: "ZieAds REST API", docs: "https://www.zieads.com/docs/api", base_url: `${publicOrigin(req)}/api` })));
+app.post("/mcp", mcpPost);
+app.get("/mcp", (req, res, next) => (wantsPage(req) ? appShell(req, res, next) : mcpGet(req, res)));
+app.delete("/mcp", (_req, res) => {
+  res.setHeader("Allow", "POST");
+  res.status(405).end();
 });
 
 // OAuth for MCP connectors (well-known metadata, register, token) and the REST API v1
 app.use(oauthRouter);
+app.use("/api", restRouter);
 app.use("/v1", restRouter);
 app.use("/v1", publicApiRouter);
+app.use("/v1", restNotFound);
 
 // ─── Credits API ───────────────────────────────────────
 app.use("/api/v1/credits", creditsRouter);

@@ -2,7 +2,7 @@
   OAuth 2.1 for the ZieAds MCP server, so Claude (claude.ai, Desktop, mobile), ChatGPT
   and other connectors can connect with a "Sign in with ZieAds" screen instead of a pasted key.
   Follows the MCP authorization spec (2025-06-18):
-    GET  /.well-known/oauth-protected-resource[/api/mcp]   resource metadata (RFC 9728)
+    GET  /.well-known/oauth-protected-resource[/mcp|/api/mcp]   resource metadata (RFC 9728)
     GET  /.well-known/oauth-authorization-server[/...]     server metadata (RFC 8414)
     GET  /.well-known/openid-configuration                 same document, for clients that look there
     POST /api/oauth/register                               dynamic client registration (RFC 7591)
@@ -34,7 +34,9 @@ export function publicOrigin(req: any): string {
   return `${proto}://${host}`;
 }
 
-export const resourceMetadataUrl = (req: any) => `${publicOrigin(req)}/.well-known/oauth-protected-resource/api/mcp`;
+/** The MCP server answers at /mcp (the public address) and at /api/mcp (kept for old configs) */
+export const mcpPathOf = (req: any) => (String(req.originalUrl || req.url || "").includes("/api/mcp") ? "/api/mcp" : "/mcp");
+export const resourceMetadataUrl = (req: any) => `${publicOrigin(req)}/.well-known/oauth-protected-resource${mcpPathOf(req)}`;
 
 const sha = (s: string) => crypto.createHash("sha256").update(s).digest();
 const b64url = (b: Buffer) => b.toString("base64url");
@@ -63,7 +65,7 @@ function validRedirect(u: string): boolean {
 function resourceDoc(req: any) {
   const o = publicOrigin(req);
   return {
-    resource: `${o}/api/mcp`,
+    resource: `${o}${mcpPathOf(req)}`,
     authorization_servers: [o],
     scopes_supported: SCOPES,
     bearer_methods_supported: ["header"],
@@ -98,12 +100,12 @@ const json = (res: any, status: number, body: any) => {
 };
 const oauthError = (res: any, status: number, error: string, description: string) => json(res, status, { error, error_description: description });
 
-oauthRouter.get(["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/api/mcp"], (req, res) => {
+oauthRouter.get(["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp", "/.well-known/oauth-protected-resource/api/mcp"], (req, res) => {
   res.setHeader("Cache-Control", "public, max-age=3600");
   res.json(resourceDoc(req));
 });
 oauthRouter.get(
-  ["/.well-known/oauth-authorization-server", "/.well-known/oauth-authorization-server/api/mcp", "/.well-known/openid-configuration", "/.well-known/openid-configuration/api/mcp"],
+  ["/.well-known/oauth-authorization-server", "/.well-known/oauth-authorization-server/mcp", "/.well-known/oauth-authorization-server/api/mcp", "/.well-known/openid-configuration", "/.well-known/openid-configuration/mcp", "/.well-known/openid-configuration/api/mcp"],
   (req, res) => {
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.json(serverDoc(req));

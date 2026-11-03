@@ -403,7 +403,7 @@ export function ApiPage() {
             {ENDPOINTS.map(([m, p, d, href]) => (
               <a key={m + p} href={href} className="dv-ep">
                 <span className={`dv-method is-${m.toLowerCase()}`}>{m}</span>
-                <code>/v1{p}</code>
+                <code>/api{p}</code>
                 <span className="dv-ep-desc">{d}</span>
               </a>
             ))}
@@ -456,7 +456,7 @@ export function ApiPage() {
 
         <FinalCta
           title="Make your first call in two minutes."
-          sub="Create a key in Settings, then call /v1/me."
+          sub="Create a key in Settings, then call /api/me."
           primary={[signedIn ? 'Get an API key' : 'Start for free', signedIn ? '/settings/api' : '/sign-up']}
           secondary={['Read the quickstart', '/docs/quickstart']}
         />

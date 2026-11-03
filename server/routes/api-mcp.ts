@@ -1,5 +1,6 @@
 /*
-  MCP endpoint and key management (spec 10). Mounted at /api.
+  MCP endpoint and key management (spec 10). Mounted at /api. The public server address is
+  https://www.zieads.com/mcp (app.ts routes POST /mcp to mcpPost); /api/mcp keeps working.
   POST /mcp                       Streamable HTTP, JSON responses (stateless)
   GET  /mcp                       405: this server does not open SSE streams
   GET  /mcp/keys                  list keys (never the secret)
@@ -33,7 +34,7 @@ const cleanScopes = (v: any) => {
 };
 const cleanAuto = (v: any) => (Array.isArray(v) ? [...new Set(v.filter((x: any) => (AUTO_APPROVABLE as readonly string[]).includes(x)))] : []);
 
-mcpRouter.post("/mcp", async (req: any, res) => {
+export async function mcpPost(req: any, res: any) {
   const key = await authenticate(req.headers.authorization);
   if (!key) {
     // resource_metadata tells OAuth clients (Claude, ChatGPT) where to start "Sign in with ZieAds"
@@ -60,12 +61,14 @@ mcpRouter.post("/mcp", async (req: any, res) => {
   // Only notifications or responses: 202 with no body, per the transport spec
   if (!out.length) return res.status(202).end();
   res.status(200).json(Array.isArray(body) ? out : out[0]);
-});
+}
+mcpRouter.post("/mcp", mcpPost);
 
-mcpRouter.get("/mcp", (_req, res) => {
+export function mcpGet(_req: any, res: any) {
   res.setHeader("Allow", "POST");
   res.status(405).json({ error: "This MCP server answers POST requests with JSON. Point your MCP client at this URL." });
-});
+}
+mcpRouter.get("/mcp", mcpGet);
 mcpRouter.delete("/mcp", (_req, res) => {
   res.setHeader("Allow", "POST");
   res.status(405).end();

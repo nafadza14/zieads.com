@@ -494,7 +494,7 @@ export const DOCS: DocPage[] = [
         <Table
           head={['Endpoint', 'URL']}
           rows={[
-            ['Protected resource metadata', <C>{APP_ORIGIN}/.well-known/oauth-protected-resource/api/mcp</C>],
+            ['Protected resource metadata', <C>{APP_ORIGIN}/.well-known/oauth-protected-resource/mcp</C>],
             ['Authorization server metadata', <C>{APP_ORIGIN}/.well-known/oauth-authorization-server</C>],
             ['Registration (RFC 7591)', <C>{APP_ORIGIN}/api/oauth/register</C>],
             ['Authorization', <C>{APP_ORIGIN}/oauth/authorize</C>],
@@ -637,11 +637,11 @@ export const DOCS: DocPage[] = [
     body: () => (
       <>
         <H2>Get the key and usage</H2>
-        <Endpoint method="GET" path="/v1/me" scope="read" />
+        <Endpoint method="GET" path="/api/me" scope="read" />
         {sample('/me')}
         {resp({ data: { key: { id: 'a3c1...', name: 'Zapier', kind: 'key', scopes: ['read', 'draft'], auto_approve: [] }, plan: 'pro', usage: { day: '2026-11-03', used: 42, limit: 5000 } } })}
         <H2>List connected accounts</H2>
-        <Endpoint method="GET" path="/v1/accounts" scope="read" />
+        <Endpoint method="GET" path="/api/accounts" scope="read" />
         {sample('/accounts')}
         {resp({ data: { accounts: [{ id: '6b1f...', platform: 'instagram', handle: '@kopikita', connected_at: '2026-10-02T09:12:00Z' }, { id: '91d0...', platform: 'facebook', handle: 'Kopi Kita', connected_at: '2026-10-02T09:13:00Z' }] } })}
       </>
@@ -655,7 +655,7 @@ export const DOCS: DocPage[] = [
     keywords: 'daily briefing morning summary actions',
     body: () => (
       <>
-        <Endpoint method="GET" path="/v1/briefing" scope="read" />
+        <Endpoint method="GET" path="/api/briefing" scope="read" />
         <P>Returns the latest briefing. Free plans get a weekly briefing, paid plans a daily one.</P>
         {sample('/briefing')}
         {resp({
@@ -684,7 +684,7 @@ export const DOCS: DocPage[] = [
     body: () => (
       <>
         <H2>Organic and paid results</H2>
-        <Endpoint method="GET" path="/v1/analytics" scope="read" />
+        <Endpoint method="GET" path="/api/analytics" scope="read" />
         <Params
           title="Query"
           items={[
@@ -701,7 +701,7 @@ export const DOCS: DocPage[] = [
           },
         })}
         <H2>Ads summary</H2>
-        <Endpoint method="GET" path="/v1/ads/summary" scope="read" />
+        <Endpoint method="GET" path="/api/ads/summary" scope="read" />
         <Params title="Query" items={[{ name: 'days', type: 'integer 1-365', desc: 'Default 30.' }]} />
         {sample('/ads/summary?days=30')}
         {resp({ data: { days: 30, has_data: true, source: 'api', totals: { spend: 1240.5, clicks: 3920, conversions: 118, revenue: 4980, roas: 4.01 }, by_platform: [], top_campaigns: [] } })}
@@ -717,7 +717,7 @@ export const DOCS: DocPage[] = [
     body: () => (
       <>
         <H2>List posts</H2>
-        <Endpoint method="GET" path="/v1/posts" scope="read" />
+        <Endpoint method="GET" path="/api/posts" scope="read" />
         <Params
           title="Query"
           items={[
@@ -729,7 +729,7 @@ export const DOCS: DocPage[] = [
         {sample('/posts?status=scheduled')}
         {resp({ data: { posts: [{ id: 'f2a9...', platform: 'instagram', caption: 'Behind the scenes at the roastery', status: 'scheduled', scheduled_for: '2026-11-06T12:30:00Z', published_at: null }] } })}
         <H2>Draft a post</H2>
-        <Endpoint method="POST" path="/v1/posts" scope="draft" />
+        <Endpoint method="POST" path="/api/posts" scope="draft" />
         <Params
           title="Body"
           items={[
@@ -755,7 +755,7 @@ export const DOCS: DocPage[] = [
     body: () => (
       <>
         <H2>List comments</H2>
-        <Endpoint method="GET" path="/v1/comments" scope="read" />
+        <Endpoint method="GET" path="/api/comments" scope="read" />
         <Params
           title="Query"
           items={[
@@ -766,7 +766,7 @@ export const DOCS: DocPage[] = [
         {sample('/comments?view=buying')}
         {resp({ data: { comments: [{ id: '5d21...', platform: 'instagram', author_username: 'dinda.rahma', text: 'Kak serumnya masih ready? Harga yang 30ml berapa ya?', intent: 'buying_signal', sentiment: 'neutral', status: 'unread', posted_at: '2026-11-03T02:14:00Z' }] } })}
         <H2>Draft a reply</H2>
-        <Endpoint method="POST" path="/v1/comments/:id/reply" scope="draft" />
+        <Endpoint method="POST" path="/api/comments/:id/reply" scope="draft" />
         <Params title="Body" items={[{ name: 'text', type: 'string, max 2200', required: true, desc: 'Reply text.' }]} />
         {sample('/comments/5d21.../reply', 'POST', { text: 'Masih ready kak! Yang 30ml Rp149.000, cek link di bio ya.' })}
         {resp({ data: { task_id: '7a10...', status: 'pending_approval', message: 'Waiting for approval in ZieAds (AI Analyst or the approvals list).' } }, '201')}
@@ -782,11 +782,11 @@ export const DOCS: DocPage[] = [
     body: () => (
       <>
         <H2>List competitors</H2>
-        <Endpoint method="GET" path="/v1/competitors" scope="read" />
+        <Endpoint method="GET" path="/api/competitors" scope="read" />
         {sample('/competitors')}
         {resp({ data: { competitors: [{ id: 'c1...', name: 'Kopi Senja', website_url: 'https://kopisenja.id', instagram_username: 'kopisenja', content_stats: { ads_active: 6, posts: 120 } }] } })}
         <H2>Track a competitor</H2>
-        <Endpoint method="POST" path="/v1/competitors" scope="draft" />
+        <Endpoint method="POST" path="/api/competitors" scope="draft" />
         <Params
           title="Body"
           items={[
@@ -810,11 +810,11 @@ export const DOCS: DocPage[] = [
     body: () => (
       <>
         <H2>Account health</H2>
-        <Endpoint method="GET" path="/v1/guardian" scope="read" />
+        <Endpoint method="GET" path="/api/guardian" scope="read" />
         {sample('/guardian')}
         {resp({ data: { connections: [{ platform: 'facebook', platform_username: 'Kopi Kita', status: 'live', token_expires_at: '2026-11-09T00:00:00Z' }], problem_posts: [], reliability: { due: 14, published: 14, on_time: 14, failed: 0, on_time_rate: 100 } } })}
         <H2>Waiting for approval</H2>
-        <Endpoint method="GET" path="/v1/actions" scope="read" />
+        <Endpoint method="GET" path="/api/actions" scope="read" />
         {sample('/actions')}
         {resp({ data: { actions: [{ id: '0c7e...', kind: 'schedule_post', title: 'Schedule a instagram post from Zapier', created_by: 'mcp', created_at: '2026-11-03T07:20:00Z' }] } })}
       </>
@@ -845,7 +845,7 @@ export const DOCS: DocPage[] = [
         <H2>n8n</H2>
         <P>Add an HTTP Request node. Authentication: Generic, Header Auth, name Authorization, value Bearer plus your key. For an AI Agent node, use the MCP Client Tool instead, see <A to="/docs/mcp/other-clients">other clients</A>.</P>
         <H2>Recipe: draft a post from a Google Sheet row</H2>
-        <Code title="Body for POST /v1/posts" code={JSON.stringify({ platform: 'instagram', caption: '{{caption column}}', scheduled_for: '{{date column}}', media_url: '{{image url column}}' }, null, 2)} />
+        <Code title="Body for POST /api/posts" code={JSON.stringify({ platform: 'instagram', caption: '{{caption column}}', scheduled_for: '{{date column}}', media_url: '{{image url column}}' }, null, 2)} />
         <P>Each row becomes a draft on your calendar. Approve them in ZieAds, or let the key auto approve schedule_post.</P>
       </>
     ),
@@ -883,6 +883,8 @@ export const DOCS: DocPage[] = [
     keywords: 'changelog versions release notes',
     body: () => (
       <>
+        <H2 id="2026-11-05">November 5, 2026</H2>
+        <Ul items={[<>New short addresses: MCP at <C>{MCP_URL}</C> and the REST API at <C>{REST_BASE}</C>.</>, 'The old /api/mcp and /v1 addresses keep working, so existing setups need no change.']} />
         <H2 id="2026-11-04">November 4, 2026</H2>
         <Ul
           items={['Sign in with ZieAds (OAuth 2.1) for Claude, ChatGPT, Cursor, Claude Code and VS Code.', 'REST API v1 with 13 endpoints.', 'New list_accounts tool.', 'One daily limit shared by API and MCP.']}
