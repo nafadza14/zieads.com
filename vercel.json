@@ -40,6 +40,10 @@
       "destination": "/api"
     },
     {
+      "source": "/oauth/bluesky/(.*)",
+      "destination": "/api"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

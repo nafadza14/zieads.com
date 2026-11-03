@@ -11,8 +11,9 @@
    11. Pinterest                trial access first, then a standard access review
    12. Tumblr, 13. X, 14. Reddit  not wired up yet (low demand, paid API, commercial approval)
   status 'available': the connect flow and publisher exist. 'soon': shown with a Soon label.
-  connect 'oauth' opens the network's sign in screen; 'form' asks for the fields below first
-  (Mastodon asks for the server, then signs in there).
+  Every available network connects in one click, like Meta: 'oauth' opens the network's sign in screen,
+  'oauth_form' asks one thing first (Bluesky handle, Mastodon server) then signs in there, and
+  'telegram_bot' links through the ZieAds bot. Manual fields stay as a fallback only.
 */
 export type PlatformStatus = 'available' | 'soon';
 
@@ -31,9 +32,14 @@ export interface Platform {
   what: string;
   status: PlatformStatus;
   tokenDays?: number;
-  connect?: 'oauth' | 'form' | 'oauth_form';
+  connect?: 'oauth' | 'form' | 'oauth_form' | 'telegram_bot';
   fields?: ConnectField[];
   howTo?: string;
+  /** Manual fallback (own bot token, webhook URL, app password) behind a small link in the connect window */
+  manualFields?: ConnectField[];
+  manualHowTo?: string;
+  manualLabel?: string;
+  suggestions?: string[];
 }
 
 export const PLATFORMS: Platform[] = [
@@ -45,9 +51,10 @@ export const PLATFORMS: Platform[] = [
     name: 'Telegram',
     what: 'Posts to a channel or group, with photos and videos',
     status: 'available',
-    connect: 'form',
-    howTo: 'Add the ZieAds bot (or your own bot from @BotFather) to your channel as an admin that can post messages.',
-    fields: [
+    connect: 'telegram_bot',
+    manualLabel: 'Use your own bot instead',
+    manualHowTo: 'Add your bot from @BotFather to the channel as an admin that can post messages, then enter both here.',
+    manualFields: [
       { key: 'chat', label: 'Channel or group', placeholder: '@yourchannel or -1001234567890' },
       { key: 'bot_token', label: 'Your bot token', placeholder: '123456789:AA...', type: 'password', optional: true, help: 'Leave empty to use the ZieAds bot.' },
     ],
@@ -55,20 +62,24 @@ export const PLATFORMS: Platform[] = [
   {
     id: 'discord',
     name: 'Discord',
-    what: 'Posts to a channel through a webhook, with images',
+    what: 'Posts to a channel with images',
     status: 'available',
-    connect: 'form',
-    howTo: 'In Discord open the channel settings, then Integrations, Webhooks, New Webhook, and copy its URL.',
-    fields: [{ key: 'webhook_url', label: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/...', type: 'url' }],
+    connect: 'oauth',
+    manualLabel: 'Paste a webhook URL instead',
+    manualHowTo: 'In Discord open the channel settings, then Integrations, Webhooks, New Webhook, and copy its URL.',
+    manualFields: [{ key: 'webhook_url', label: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/...', type: 'url' }],
   },
   {
     id: 'bluesky',
     name: 'Bluesky',
     what: 'Posts with up to 4 images, links and hashtags',
     status: 'available',
-    connect: 'form',
-    howTo: 'Create an app password in Bluesky: Settings, Privacy and security, App passwords. Never use your main password.',
-    fields: [
+    connect: 'oauth_form',
+    howTo: 'Enter your handle. Bluesky opens its own sign in page, no password is shared with ZieAds.',
+    fields: [{ key: 'handle', label: 'Your handle', placeholder: 'you.bsky.social' }],
+    manualLabel: 'Use an app password instead',
+    manualHowTo: 'Create an app password in Bluesky: Settings, Privacy and security, App passwords. Never use your main password.',
+    manualFields: [
       { key: 'handle', label: 'Handle', placeholder: 'you.bsky.social' },
       { key: 'app_password', label: 'App password', placeholder: 'xxxx-xxxx-xxxx-xxxx', type: 'password' },
     ],
@@ -79,8 +90,9 @@ export const PLATFORMS: Platform[] = [
     what: 'Posts with up to 4 images or a video, on any server',
     status: 'available',
     connect: 'oauth_form',
-    howTo: 'Enter the server your account is on. ZieAds opens its sign in page.',
+    howTo: 'Pick the server your account is on. ZieAds opens its sign in page.',
     fields: [{ key: 'instance', label: 'Your server', placeholder: 'mastodon.social' }],
+    suggestions: ['mastodon.social', 'mastodon.online', 'mstdn.social', 'mas.to', 'fosstodon.org', 'techhub.social'],
   },
   { id: 'youtube', name: 'YouTube', what: 'Videos and Shorts with title, description and privacy', status: 'available', connect: 'oauth' },
   { id: 'linkedin', name: 'LinkedIn', what: 'Your profile: text posts. Company Pages after LinkedIn review', status: 'available', tokenDays: 60, connect: 'oauth' },

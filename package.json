@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
+    "@atproto/oauth-client-node": "0.5.10",
     "@google/genai": "^1.29.0",
     "@iconscout/react-unicons": "^2.2.5",
     "@supabase/auth-ui-react": "^0.4.7",

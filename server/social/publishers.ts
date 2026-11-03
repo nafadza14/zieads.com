@@ -8,6 +8,7 @@ import { PublishError, NeedsAction } from "../publish/errors.js";
 import { loadConnection, expiringSoon, LoadedConnection, updateMetadata } from "./store.js";
 import { refresh } from "./oauth.js";
 import { bskySession, tg, telegramToken, CredentialError } from "./credentials.js";
+import { blueskySession } from "./bluesky-oauth.js";
 
 const isVideo = (u: string, type?: string) => type === "video" || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(u);
 const mediaOf = (post: any): string[] => (post.media_urls || []).filter(Boolean);
@@ -221,22 +222,39 @@ const BSKY_IMAGE_MAX = 1_000_000;
 
 export async function publishBluesky(post: any) {
   const c = await conn(post, "bluesky", "Bluesky");
-  const service = c.metadata.service || "https://bsky.social";
-  let s;
-  try {
-    s = await bskySession(service, c.metadata.did || c.username, c.token);
-  } catch (e: any) {
-    throw new PublishError(e.message, !(e instanceof CredentialError), e instanceof CredentialError);
+  // Two ways in: Sign in with Bluesky (OAuth with DPoP, the default) or an app password (fallback)
+  let did: string;
+  let handle: string;
+  let call: (path: string, init?: RequestInit) => Promise<Response>;
+  if (c.metadata.auth === "oauth") {
+    try {
+      const session = await blueskySession(c.metadata.did || c.platformUserId);
+      did = session.did;
+      handle = c.metadata.handle || c.username;
+      call = (path, init) => session.fetchHandler(path, init);
+    } catch (e: any) {
+      throw new PublishError(`Bluesky sign in ended (${e.message}). Reconnect Bluesky.`, false, true);
+    }
+  } else {
+    const service = c.metadata.service || "https://bsky.social";
+    let s;
+    try {
+      s = await bskySession(service, c.metadata.did || c.username, c.token);
+    } catch (e: any) {
+      throw new PublishError(e.message, !(e instanceof CredentialError), e instanceof CredentialError);
+    }
+    did = s.did;
+    handle = s.handle;
+    call = (path, init = {}) => fetch(`${service}${path}`, { ...init, headers: { ...(init.headers as any), Authorization: `Bearer ${s.accessJwt}` } });
   }
   const text = post.caption || "";
   if (graphemes(text) > 300) throw new PublishError(`Bluesky allows 300 characters; this post has ${graphemes(text)}.`, false);
   const urls = mediaOf(post);
   if (urls.some((u) => isVideo(u, post.media_type))) throw new NeedsAction("Bluesky videos are not automated yet. Post it from the Bluesky app: the text is ready to copy.");
-  const H = { Authorization: `Bearer ${s.accessJwt}` };
   const images: any[] = [];
   for (const u of urls.slice(0, 4)) {
     const { buf, type } = await download(u, BSKY_IMAGE_MAX, "Bluesky");
-    const res = await fetch(`${service}/xrpc/com.atproto.repo.uploadBlob`, { method: "POST", headers: { ...H, "Content-Type": type }, body: buf });
+    const res = await call("/xrpc/com.atproto.repo.uploadBlob", { method: "POST", headers: { "Content-Type": type }, body: buf });
     if (!res.ok) return fail(res, "Bluesky");
     images.push({ alt: "", image: (await res.json()).blob });
   }
@@ -244,11 +262,11 @@ export async function publishBluesky(post: any) {
   const facets = bskyFacets(text);
   if (facets.length) record.facets = facets;
   if (images.length) record.embed = { $type: "app.bsky.embed.images", images };
-  const res = await fetch(`${service}/xrpc/com.atproto.repo.createRecord`, { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ repo: s.did, collection: "app.bsky.feed.post", record }) });
+  const res = await call("/xrpc/com.atproto.repo.createRecord", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ repo: did, collection: "app.bsky.feed.post", record }) });
   if (!res.ok) return fail(res, "Bluesky");
   const j: any = await res.json();
   const rkey = String(j.uri || "").split("/").pop();
-  return { externalId: j.uri, permalink: `https://bsky.app/profile/${s.handle}/post/${rkey}` };
+  return { externalId: j.uri, permalink: `https://bsky.app/profile/${handle}/post/${rkey}` };
 }
 
 /* ── Mastodon ───────────────────────────────────────────── */

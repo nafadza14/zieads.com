@@ -7,19 +7,22 @@
     Pinterest  PINTEREST_APP_ID, PINTEREST_APP_SECRET
     YouTube    GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET       (YouTube Data API v3 enabled)
     Mastodon   none: ZieAds registers itself on each server the first time (mastodon_apps)
+    Discord    DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET     (webhook.incoming: Discord asks which server
+               and channel, then creates the webhook for ZieAds; no bot and no review)
 */
 import { supabaseAdmin } from "../supabaseServer.js";
 import type { SaveInput, LoadedConnection } from "./store.js";
 import { updateTokens } from "./store.js";
 
-export type OAuthPlatform = "threads" | "pinterest" | "youtube" | "mastodon";
-export const OAUTH_PLATFORMS: OAuthPlatform[] = ["threads", "pinterest", "youtube", "mastodon"];
+export type OAuthPlatform = "threads" | "pinterest" | "youtube" | "mastodon" | "discord";
+export const OAUTH_PLATFORMS: OAuthPlatform[] = ["threads", "pinterest", "youtube", "mastodon", "discord"];
 
 export const ENV_NEEDED: Record<OAuthPlatform, string[]> = {
   threads: ["THREADS_APP_ID", "THREADS_APP_SECRET"],
   pinterest: ["PINTEREST_APP_ID", "PINTEREST_APP_SECRET"],
   youtube: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   mastodon: [],
+  discord: ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"],
 };
 
 export const THREADS_SCOPES = ["threads_basic", "threads_content_publish", "threads_manage_replies", "threads_read_replies", "threads_manage_insights"];
@@ -79,6 +82,7 @@ export function authUrl(p: OAuthPlatform, state: string, base: string, extra: { 
     const scope = encodeURIComponent(YOUTUBE_SCOPES.join(" "));
     return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${cb}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&include_granted_scopes=true&state=${state}`;
   }
+  if (p === "discord") return `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=${cb}&response_type=code&scope=webhook.incoming&state=${state}`;
   return `https://${extra.instance}/oauth/authorize?client_id=${encodeURIComponent(extra.clientId || "")}&redirect_uri=${cb}&response_type=code&scope=${encodeURIComponent(MASTODON_SCOPES)}&state=${state}`;
 }
 
@@ -153,6 +157,30 @@ export async function exchange(p: OAuthPlatform, code: string, base: string, met
       expiresInSec: t.expires_in,
       scopes: t.scope || YOUTUBE_SCOPES.join(" "),
       metadata: { subscribers: Number(c.statistics?.subscriberCount) || null },
+    };
+  }
+
+  if (p === "discord") {
+    const t = await asJson(
+      await fetch("https://discord.com/api/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_id: process.env.DISCORD_CLIENT_ID || "", client_secret: process.env.DISCORD_CLIENT_SECRET || "", grant_type: "authorization_code", code, redirect_uri: redirect }),
+      }),
+      "Discord token exchange"
+    );
+    const w = t.webhook;
+    if (!w?.id || !w?.token) throw new Error("Discord did not create the webhook. Pick a channel and try again.");
+    const url = w.url || `https://discord.com/api/webhooks/${w.id}/${w.token}`;
+    return {
+      platformUserId: String(w.id),
+      username: w.name || "ZieAds",
+      displayName: w.name ? `${w.name} (channel ${w.channel_id})` : `Channel ${w.channel_id}`,
+      avatarUrl: w.avatar ? `https://cdn.discordapp.com/avatars/${w.id}/${w.avatar}.png` : "",
+      accountType: "webhook",
+      accessToken: url,
+      scopes: "webhook.incoming",
+      metadata: { guild_id: w.guild_id || null, channel_id: w.channel_id || null, webhook_name: w.name || null, connected_via: "oauth" },
     };
   }
 

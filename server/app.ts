@@ -37,7 +37,8 @@ import { briefingRouter } from "./routes/api-briefing.js";
 import { inboxRouter } from "./routes/api-inbox.js";
 import { analyticsRouter } from "./routes/api-analytics.js";
 import { mcpRouter, mcpGet, mcpPost } from "./routes/api-mcp.js";
-import { socialRouter } from "./routes/api-social.js";
+import { socialRouter, telegramRouter } from "./routes/api-social.js";
+import { blueskyClient, clientMetadata } from "./social/bluesky-oauth.js";
 import { oauthRouter, publicOrigin } from "./routes/api-oauth.js";
 import { restNotFound, restRouter } from "./routes/api-rest.js";
 import { scheduledAgentsRouter } from "./routes/api-scheduled-agents.js";
@@ -159,6 +160,20 @@ app.use("/api", mcpRouter);
 app.use("/api/v3", apiV3Router);
 
 // ─── Social Media Platform Connections API ─────────────
+// Sign in with Bluesky: the client metadata and public keys Bluesky servers fetch
+app.get("/oauth/bluesky/client-metadata.json", (_req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=600");
+  res.json(clientMetadata());
+});
+app.get("/oauth/bluesky/jwks.json", async (_req, res) => {
+  try {
+    res.setHeader("Cache-Control", "public, max-age=600");
+    res.json((await blueskyClient()).jwks);
+  } catch {
+    res.json({ keys: [] });
+  }
+});
+app.use("/api/telegram", telegramRouter);
 // Threads, Pinterest, YouTube, Mastodon, Bluesky, Telegram, Discord first; the original four fall through
 app.use("/api/auth", socialRouter);
 app.use("/api/auth", authRouter);

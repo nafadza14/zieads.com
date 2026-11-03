@@ -8,6 +8,7 @@
 import type { SaveInput } from "./store.js";
 
 export type CredentialPlatform = "bluesky" | "telegram" | "discord";
+// Manual fallbacks: the one click flows are Sign in with Bluesky, the Telegram bot link and Discord OAuth
 export const CREDENTIAL_PLATFORMS: CredentialPlatform[] = ["bluesky", "telegram", "discord"];
 
 export class CredentialError extends Error {}

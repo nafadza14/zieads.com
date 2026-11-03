@@ -6,7 +6,7 @@
 */
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle, Download, KeyRound, Link2, RefreshCw, Upload } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Download, ExternalLink, KeyRound, Link2, RefreshCw, Upload } from 'lucide-react';
 import V3Layout from '../../components/v3/V3Layout';
 import { Button, Card, LoadingState, PageBody, PageHeader, Pill } from '../../components/v3/ui';
 import SocialIcon from '../../components/v3/SocialIcon';
@@ -85,6 +85,8 @@ export default function ConnectionsPage() {
   const [pagePicker, setPagePicker] = useState<{ pages: any[]; selected: string | null } | null>(null);
   const [importFor, setImportFor] = useState<AdsId | null>(null);
   const [formFor, setFormFor] = useState<Platform | null>(null);
+  const [manualFor, setManualFor] = useState<Platform | null>(null);
+  const [tgOpen, setTgOpen] = useState(false);
 
   const load = async () => {
     if (demo.isActive) {
@@ -141,15 +143,21 @@ export default function ConnectionsPage() {
   const connect = async (id: OrganicId) => {
     if (demo.isActive) return setBanner({ tone: 'warn', text: 'Exit demo mode to connect your own accounts.' });
     const def = PLATFORMS.find((p) => p.id === id);
-    // Telegram, Discord, Bluesky and Mastodon ask for a channel, webhook, app password or server first
+    // Telegram links through the ZieAds bot; Bluesky and Mastodon ask for the handle or server, then sign in there
+    if (def?.connect === 'telegram_bot') return setTgOpen(true);
     if (def?.connect === 'form' || def?.connect === 'oauth_form') return setFormFor(def);
     setBusy(id);
     try {
       const j = await api<{ url: string }>(`/api/auth/${id}/connect`, { body: {} });
       window.location.href = j.url;
     } catch (e: any) {
-      setBanner({ tone: 'bad', text: e.message });
       setBusy(null);
+      // Sign in is not set up on this server yet: offer the manual way so the user is not stuck
+      if (def?.manualFields) {
+        setManualFor(def);
+        return;
+      }
+      setBanner({ tone: 'bad', text: e.message });
     }
   };
 
@@ -442,12 +450,36 @@ export default function ConnectionsPage() {
         )}
       </PageBody>
 
-      {formFor && (
+      {tgOpen && (
+        <TelegramConnectModal
+          onClose={() => setTgOpen(false)}
+          onManual={() => {
+            setTgOpen(false);
+            setManualFor(PLATFORMS.find((p) => p.id === 'telegram') || null);
+          }}
+          onDone={(title) => {
+            setTgOpen(false);
+            setBanner({ tone: 'good', text: `Telegram is connected${title ? ` to ${title}` : ''}. It is ready in the Composer.`, action: { label: 'Create a post', to: '/composer' } });
+            load();
+          }}
+        />
+      )}
+
+      {(formFor || manualFor) && (
         <ConnectFormModal
-          platform={formFor}
-          onClose={() => setFormFor(null)}
+          platform={(formFor || manualFor)!}
+          manual={!!manualFor}
+          onManual={() => {
+            setManualFor(formFor);
+            setFormFor(null);
+          }}
+          onClose={() => {
+            setFormFor(null);
+            setManualFor(null);
+          }}
           onDone={(text) => {
             setFormFor(null);
+            setManualFor(null);
             setBanner({ tone: 'good', text, action: { label: 'Create a post', to: '/composer' } });
             load();
           }}
@@ -607,17 +639,19 @@ function AdsImportModal({ platform, name, onClose, onDone }: { platform: AdsId; 
   );
 }
 
-/** Connect form for networks that need a value first (Telegram, Discord, Bluesky, Mastodon) */
-function ConnectFormModal({ platform, onClose, onDone }: { platform: Platform; onClose: () => void; onDone: (text: string) => void }) {
+/** Connect window for networks that need one value first (Bluesky handle, Mastodon server), or the manual fallback */
+function ConnectFormModal({ platform, manual, onManual, onClose, onDone }: { platform: Platform; manual: boolean; onManual: () => void; onClose: () => void; onDone: (text: string) => void }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const fields = manual ? platform.manualFields || [] : platform.fields || [];
+  const signIn = !manual && platform.connect === 'oauth_form';
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setErr('');
     try {
-      if (platform.connect === 'oauth_form') {
+      if (signIn) {
         const j = await api<{ url: string }>(`/api/auth/${platform.id}/connect`, { body: values });
         window.location.href = j.url;
         return;
@@ -639,11 +673,11 @@ function ConnectFormModal({ platform, onClose, onDone }: { platform: Platform; o
             </span>
             <div>
               <h3>Connect {platform.name}</h3>
-              {platform.howTo && <p>{platform.howTo}</p>}
+              {(manual ? platform.manualHowTo : platform.howTo) && <p>{manual ? platform.manualHowTo : platform.howTo}</p>}
             </div>
           </div>
           <div className="zcn-form">
-            {(platform.fields || []).map((f, i) => (
+            {fields.map((f, i) => (
               <label key={f.key} className="zcn-field">
                 <span>
                   {f.label}
@@ -662,6 +696,15 @@ function ConnectFormModal({ platform, onClose, onDone }: { platform: Platform; o
                 {f.help && <small>{f.help}</small>}
               </label>
             ))}
+            {!manual && platform.suggestions && (
+              <div className="zcn-chips" aria-label="Popular servers">
+                {platform.suggestions.map((sv) => (
+                  <button key={sv} type="button" className={`zcn-chip ${values[fields[0]?.key] === sv ? 'is-on' : ''}`} onClick={() => setValues((v) => ({ ...v, [fields[0].key]: sv }))}>
+                    {sv}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {err && (
             <p className="zcn-form-err" role="alert">
@@ -669,14 +712,132 @@ function ConnectFormModal({ platform, onClose, onDone }: { platform: Platform; o
             </p>
           )}
           <div className="zcn-actions">
+            {!manual && platform.manualFields && (
+              <button type="button" className="zcn-alt" onClick={onManual}>
+                {platform.manualLabel || 'Connect manually'}
+              </button>
+            )}
             <Button variant="ghost" type="button" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" loading={busy}>
-              {platform.connect === 'oauth_form' ? 'Continue' : `Connect ${platform.name}`}
+              {signIn ? `Continue to ${platform.name}` : `Connect ${platform.name}`}
             </Button>
           </div>
         </form>
+      </Card>
+    </div>
+  );
+}
+
+/** One click Telegram: open the ZieAds bot, press Start, add it to a chat. The window watches and closes itself. */
+function TelegramConnectModal({ onClose, onManual, onDone }: { onClose: () => void; onManual: () => void; onDone: (title?: string) => void }) {
+  const [link, setLink] = useState<{ code: string; url: string; bot_username: string } | null>(null);
+  const [status, setStatus] = useState<{ status: string; chat_title?: string; error?: string }>({ status: 'loading' });
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    api('/api/auth/telegram/start', { body: {} })
+      .then((j) => {
+        setLink(j);
+        setStatus({ status: 'waiting' });
+      })
+      .catch((e) => setErr(e.message));
+  }, []);
+
+  // Checks every 2 seconds whether Start was pressed and the bot was added
+  useEffect(() => {
+    if (!link) return;
+    let stop = false;
+    const tick = async () => {
+      if (stop) return;
+      try {
+        const s = await api(`/api/auth/telegram/status?code=${encodeURIComponent(link.code)}`);
+        setStatus(s);
+        if (s.status === 'connected') return onDone(s.chat_title);
+        if (s.status === 'expired' || s.status === 'missing') return;
+      } catch {
+        /* keep trying */
+      }
+      setTimeout(tick, 2000);
+    };
+    const t = setTimeout(tick, 2000);
+    return () => {
+      stop = true;
+      clearTimeout(t);
+    };
+  }, [link]);
+
+  const started = status.status === 'started' || status.status === 'connected';
+  const statusText =
+    status.status === 'loading'
+      ? 'Preparing your link...'
+      : status.status === 'waiting'
+        ? 'Waiting for you to press Start...'
+        : status.status === 'started'
+          ? status.error || 'Linked. Waiting for you to add the bot to a channel or group...'
+          : status.status === 'expired'
+            ? 'This link expired. Close and press Connect Telegram again.'
+            : status.status === 'connected'
+              ? 'Connected'
+              : 'Something went wrong. Close and try again.';
+
+  return (
+    <div className="zcn-overlay" role="dialog" aria-modal="true" aria-label="Connect Telegram">
+      <Card className="zcn-modal" padding={26}>
+        <div className="zcn-modal-head">
+          <span className="zd-icon-dot">
+            <SocialIcon platform="telegram" size={18} />
+          </span>
+          <div>
+            <h3>Connect Telegram</h3>
+            <p>Channels and groups, through the ZieAds bot</p>
+          </div>
+        </div>
+        {err ? (
+          <p className="zcn-form-err" role="alert">
+            {err}
+          </p>
+        ) : (
+          <ol className="zcn-tg-steps">
+            <li className={started ? 'is-done' : ''}>
+              <span className="zcn-tg-n">{started ? <CheckCircle size={14} /> : 1}</span>
+              <div>
+                <strong>Open the ZieAds bot in Telegram</strong>
+                <Button size="sm" icon={<ExternalLink size={14} />} disabled={!link} onClick={() => link && window.open(link.url, '_blank', 'noopener')}>
+                  {link ? `Open @${link.bot_username}` : 'Preparing...'}
+                </Button>
+                <small>
+                  Make sure {link ? `@${link.bot_username}` : 'the ZieAds bot'} is the one that opened, then press <b>Start</b>. Bots with similar names are not ZieAds.
+                </small>
+              </div>
+            </li>
+            <li>
+              <span className="zcn-tg-n">2</span>
+              <div>
+                <strong>Add the bot to a channel or group</strong>
+                <small>
+                  In the bot's chat, choose <b>Add to channel</b> or <b>Add to group</b>, then pick the chat. In a channel, allow the bot to post messages. You must be an admin there.
+                </small>
+              </div>
+            </li>
+          </ol>
+        )}
+        <div className="zcn-tg-status" role="status" aria-live="polite">
+          <small>Connected with this code</small>
+          <span>
+            {status.status !== 'connected' && status.status !== 'expired' && !err && <span className="zcn-spin" aria-hidden="true" />}
+            {statusText}
+          </span>
+        </div>
+        <div className="zcn-actions">
+          <button type="button" className="zcn-alt" onClick={onManual}>
+            Use your own bot instead
+          </button>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </div>
       </Card>
     </div>
   );
