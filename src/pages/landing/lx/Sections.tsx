@@ -1,8 +1,10 @@
 /*
   v4 landing page sections. Order: hero, works with, why, product, how it works,
   Guardian band, promises, integrations and MCP, comparison, pricing, free audit, FAQ, final CTA.
-  Copy follows the November 2026 copywriting audit: lead with the outcome (know what to post, answer
-  and fix today), plain words, no internal names above the fold, and only claims the product proves today.
+  Copy follows the November 2026 research on competitor landing pages and paid user reviews: speak to
+  everyone who runs social (brands, creators, marketing teams, freelancers, agencies), lead with the pains
+  paid users name most (no time, posts that fail quietly, proving results, replies that wait, pricing that
+  grows per seat), plain words, only claims the product proves today. Stats are quoted with their source.
   No invented customers, logos, reviews or usage numbers.
 */
 import { FormEvent, useEffect, useState } from 'react';
@@ -26,59 +28,31 @@ import { LxBadge, LxButton, LxCount, LxReveal, goToId } from './kit';
 
 const PLATFORMS = ['instagram', 'facebook', 'tiktok', 'linkedin'] as const;
 
-/* ── Website scan form: the hero, the final CTA and old #audit links all use it ── */
-function useWebsiteScan(onScanComplete?: (data: any) => void) {
+/* ── Email first sign up (the pattern Buffer and Sprout use): the address carries into sign up ── */
+function StartForm({ id, tone = 'light' }: { id: string; tone?: 'light' | 'dark' }) {
   const navigate = useNavigate();
-  const [url, setUrl] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  const submit = async (e: FormEvent) => {
+  const [email, setEmail] = useState('');
+  const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) return;
-    const target = /^https?:\/\//.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
-    setBusy(true);
-    setErr('');
-    try {
-      const resp = await fetch('/api/quick-scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: target }) });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok || !json.data) throw new Error(json.error || 'We could not read that site. Check the address and try again.');
-      onScanComplete?.(json.data);
-      navigate('/scan-result');
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setBusy(false);
-    }
+    navigate('/sign-up', { state: { email: email.trim() } });
   };
-  return { url, setUrl, busy, err, submit };
-}
-
-function ScanForm({ onScanComplete, id, tone = 'light' }: { onScanComplete?: (data: any) => void; id: string; tone?: 'light' | 'dark' }) {
-  const { url, setUrl, busy, err, submit } = useWebsiteScan(onScanComplete);
   return (
-    <>
-      <form className={`lx-scan is-${tone}`} onSubmit={submit}>
-        <label className="lx-sr" htmlFor={id}>
-          Your website
-        </label>
-        <input id={id} className="lx-input" inputMode="url" autoComplete="url" placeholder="yourbrand.com" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <LxButton type="submit" variant={tone === 'dark' ? 'dark' : 'orange'} disabled={busy}>
-          {busy ? 'Reading your site...' : 'Show my first briefing'}
-        </LxButton>
-      </form>
-      {err && (
-        <p className="lx-err" role="alert">
-          {err}
-        </p>
-      )}
-    </>
+    <form className={`lx-scan is-${tone}`} onSubmit={submit}>
+      <label className="lx-sr" htmlFor={id}>
+        Work email
+      </label>
+      <input id={id} className="lx-input" type="email" inputMode="email" autoComplete="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <LxButton type="submit" variant={tone === 'dark' ? 'dark' : 'orange'}>
+        Start free
+      </LxButton>
+    </form>
   );
 }
 
 /* ── Hero ─────────────────────────────────────────────── */
-export function LxHero({ onScanComplete }: { onScanComplete?: (data: any) => void }) {
+export function LxHero() {
   return (
-    <section className="lx-hero" aria-labelledby="lx-hero-title">
+    <section className="lx-hero" id="top" aria-labelledby="lx-hero-title">
       <div className="lx-wrap">
         <LxReveal>
           <span className="lx-hero-pill">
@@ -89,28 +63,28 @@ export function LxHero({ onScanComplete }: { onScanComplete?: (data: any) => voi
                 </span>
               ))}
             </span>
-            For founders and small teams on Instagram, Facebook, TikTok and LinkedIn
+            For brands, creators, marketing teams and agencies
           </span>
           <h1 id="lx-hero-title">
-            Know exactly what to <em>post, answer and fix</em> today.
+            The social media tool that <em>tells you what to do next</em>
           </h1>
-          <p className="lx-hero-sub">Every morning ZieAds checks your accounts and sends 3 things to do today. Tap approve and it schedules the posts, drafts the replies and builds the report.</p>
-          <div className="lx-hero-form" id="audit">
-            <ScanForm onScanComplete={onScanComplete} id="lx-hero-url" />
-            <p className="lx-hero-note">Free · no sign up · we only read your public website</p>
+          <p className="lx-hero-sub">Schedule, reply and report across Instagram, Facebook, TikTok and LinkedIn. Every morning ZieAds turns your numbers into 3 actions, does them when you approve, and checks every post went live.</p>
+          <div className="lx-hero-form">
+            <StartForm id="lx-hero-email" />
+            <p className="lx-hero-note">Free for one brand · No credit card · Cancel anytime</p>
           </div>
           <button type="button" className="lx-hero-link" onClick={() => goToId('features')}>
-            See an example plan
+            Take the tour
           </button>
           <ul className="lx-risk" aria-label="Our promises">
             <li>
               <Check size={13} /> Nothing posts without your yes
             </li>
             <li>
-              <Check size={13} /> One flat price per brand, no credits
+              <Check size={13} /> Priced per brand, not per seat
             </li>
             <li>
-              <Check size={13} /> We check every post went live
+              <Check size={13} /> Every post checked after it goes out
             </li>
           </ul>
         </LxReveal>
@@ -170,7 +144,13 @@ export function LxStrip() {
   );
 }
 
-/* ── Why ──────────────────────────────────────────────── */
+/* ── The problem, in the words paid users use in reviews, with research behind it ── */
+const PAINS = [
+  { stat: '45%', text: 'of marketers say producing quality content consistently is their top challenge', src: 'HubSpot, 2026' },
+  { stat: '69%', text: 'of social teams feel more pressure to prove ROI, and only 37% find it easy', src: 'HubSpot, 2026' },
+  { stat: '24h', text: 'is the longest most people want to wait for a brand to reply', src: 'Sprout Social Index' },
+];
+
 export function LxWhy() {
   return (
     <section className="lx-section lx-why lx-center" aria-labelledby="lx-why">
@@ -178,32 +158,23 @@ export function LxWhy() {
         <LxReveal>
           <LxBadge n="01">The problem</LxBadge>
           <h2 className="lx-h2" id="lx-why">
-            You know you should post every week.
-            <span>Then the week happens.</span>
+            Social media takes more time
+            <span>than it gives back.</span>
           </h2>
           <p className="lx-why-text is-small">
-            Posting slips. Comments asking "how much?" sit for a day. You guess what to post next.{' '}
-            <span className="is-muted">ZieAds fixes the three things that cost you customers: showing up, answering fast, and knowing what works.</span>
+            Ten tabs to post one campaign. A report every Friday. Comments that wait until Monday.{' '}
+            <span className="is-muted">And a scheduler that says a post went out when it did not.</span>
           </p>
         </LxReveal>
         <LxReveal delay={120}>
           <div className="lx-stats">
-            <div className="lx-stat">
-              <strong>
-                <LxCount to={5} prefix="Under " suffix=" min" />
-              </strong>
-              <span>from sign up to your first briefing</span>
-            </div>
-            <div className="lx-stat">
-              <strong>
-                <LxCount to={3} suffix=" actions" />
-              </strong>
-              <span>every morning, each linked to the post or number behind it</span>
-            </div>
-            <div className="lx-stat">
-              <strong>0</strong>
-              <span>posts or replies sent without your approval</span>
-            </div>
+            {PAINS.map((p) => (
+              <div key={p.stat} className="lx-stat">
+                <strong>{p.stat}</strong>
+                <span>{p.text}</span>
+                <small className="lx-stat-src">{p.src}</small>
+              </div>
+            ))}
           </div>
         </LxReveal>
       </div>
@@ -214,23 +185,23 @@ export function LxWhy() {
 /* ── Product: three outcomes, each with the screen that proves it ── */
 const OUTCOMES = [
   {
-    title: 'Show up every week, even when you are busy',
-    body: 'Write once, ZieAds tailors it for each network and posts at the times your audience is online. Your week of posts is planned before Monday starts.',
-    proof: 'Every scheduled post is checked after it goes out, and a failed one is retried up to 3 times.',
+    title: 'Post consistently without living in the calendar',
+    body: 'Write once and ZieAds tailors it for each network, suggests the times your audience is online, and keeps the week planned. Your morning plan tells you what to post next and why.',
+    proof: 'Every post is checked after it goes out. A failed one is retried up to 3 times, then flagged, so it never disappears quietly.',
     img: SHOTS.calendar,
     alt: 'Calendar week view with scheduled, published and drafted posts',
   },
   {
-    title: 'Answer buyers before they go elsewhere',
-    body: 'Comments asking about price, stock or delivery go to the top with a reply drafted in your voice. You read, tap send, done.',
-    proof: 'Buying questions and complaints are labeled, so nothing that can turn into a sale waits until tomorrow.',
+    title: 'Reply to what matters first',
+    body: 'Instagram and Facebook comments in one inbox. Buying questions and complaints rise to the top with a reply drafted in your brand voice. Review, edit, send.',
+    proof: 'Every comment is labeled by intent, so the ones that turn into sales or crises are never buried under emojis.',
     img: SHOTS.inbox,
     alt: 'Inbox with buying questions sorted first and a reply draft',
   },
   {
-    title: 'Know what is working without reading charts',
-    body: 'Every morning: what grew, what dropped, what competitors posted, and how your ads compare. In plain words, with the post or number behind it.',
-    proof: 'Wins, concerns and 3 actions, each one linked to the evidence so you can check it.',
+    title: 'Show results without building reports',
+    body: 'Organic and paid side by side, per network and per post. Every morning: what grew, what dropped and what to do about it, in plain words with the number behind it.',
+    proof: 'Ads are read only. Export any view to CSV, or ask why a number moved and get the answer from your own data.',
     img: SHOTS.analyst,
     alt: 'Morning plan with wins, concerns and three actions',
   },
@@ -243,8 +214,8 @@ export function LxFeatures() {
         <LxReveal>
           <LxBadge n="02">What you get</LxBadge>
           <h2 className="lx-h2" id="lx-feat">
-            Three things that win customers.
-            <span>Done for you every morning.</span>
+            Less time in tools.
+            <span>More time on the work that grows the account.</span>
           </h2>
         </LxReveal>
         <div className="lx-outcomes">
@@ -277,9 +248,9 @@ export function LxFeatures() {
 /* ── How it works ─────────────────────────────────────── */
 export function LxHow() {
   const steps = [
-    { icon: <Globe size={18} />, title: 'Add your website', body: 'ZieAds learns what you sell and how you sound.' },
-    { icon: <Link2 size={18} />, title: 'Connect Instagram and Facebook', body: 'One click through Meta. TikTok and LinkedIn when you are ready.' },
-    { icon: <CheckCircle2 size={18} />, title: 'Approve your 3 actions', body: 'ZieAds posts, replies and confirms each one went live.' },
+    { icon: <Link2 size={18} />, title: 'Connect your accounts', body: 'Instagram and Facebook in one click through Meta, then TikTok and LinkedIn. Official APIs only.' },
+    { icon: <Globe size={18} />, title: 'Get your first plan', body: 'ZieAds reads your recent posts, comments and results, and writes your first morning plan.' },
+    { icon: <CheckCircle2 size={18} />, title: 'Approve and move on', body: 'Approve a post, a reply or a plan. ZieAds does it, confirms it went live and logs every step.' },
   ];
   return (
     <section className="lx-section lx-center" id="how" aria-labelledby="lx-how">
@@ -287,8 +258,8 @@ export function LxHow() {
         <LxReveal>
           <LxBadge n="03">How it works</LxBadge>
           <h2 className="lx-h2" id="lx-how">
-            Five minutes to set up.
-            <span>Five minutes a morning after that.</span>
+            Set up in five minutes.
+            <span>Then a few minutes a morning.</span>
           </h2>
         </LxReveal>
         <div className="lx-steps">
@@ -497,7 +468,7 @@ export function LxCompare() {
             </table>
           </div>
           <p className="lx-cmp-note">
-            Agency cost is a conservative starting point for a small retainer. Comparing tools? See <a href="/vs/metricool">ZieAds vs Metricool</a> and <a href="/vs/vista-social">ZieAds vs Vista Social</a>.
+            Suite price is Sprout Social Standard per user, from its public pricing; agency cost is a conservative retainer. Prices change, so check before you buy. Tool by tool: <a href="/vs/metricool">vs Metricool</a>, <a href="/vs/vista-social">vs Vista Social</a>, <a href="/vs/hootsuite">vs Hootsuite</a>.
           </p>
         </LxReveal>
       </div>
@@ -514,10 +485,10 @@ export function LxPricing() {
         <LxReveal>
           <LxBadge n="07">Pricing</LxBadge>
           <h2 className="lx-h2" id="lx-price">
-            One flat price per brand.
-            <span>No credits to run out.</span>
+            Priced per brand,
+            <span>not per seat.</span>
           </h2>
-          <p className="lx-lead">Free for one brand. Cancel anytime. Every plan checks every post went live and works inside Claude and ChatGPT.</p>
+          <p className="lx-lead">No credits to run out and no add-ons to unlock the basics. Free for one brand, cancel anytime.</p>
         </LxReveal>
         <div className="lx-prices">
           {pricingPlans.map((p, i) => (
@@ -557,80 +528,6 @@ export function LxPricing() {
   );
 }
 
-/* ── Free website audit (secondary lead magnet, spec 7.12) ── */
-export function LxAudit({ onScanComplete }: { onScanComplete: (data: any) => void }) {
-  const navigate = useNavigate();
-  const [url, setUrl] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
-    const target = /^https?:\/\//.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
-    setBusy(true);
-    setErr('');
-    try {
-      const resp = await fetch('/api/quick-scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: target }) });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok || !json.data) throw new Error(json.error || 'The scan did not finish. Check the address and try again.');
-      onScanComplete(json.data);
-      navigate('/scan-result');
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section className="lx-section" id="audit" aria-labelledby="lx-audit">
-      <div className="lx-wrap">
-        <LxReveal>
-          <div className="lx-audit">
-            <div>
-              <LxBadge n="08">Free website audit</LxBadge>
-              <h2 className="lx-h2" id="lx-audit">
-                Not ready to connect?
-                <span>Audit your website first.</span>
-              </h2>
-              <p className="lx-lead">Zie reads your site and scores how ready it is for ads and social traffic, with the gaps to fix first.</p>
-            </div>
-            <div>
-              <form onSubmit={submit}>
-                <label className="lx-sr" htmlFor="lx-audit-url">
-                  Website address
-                </label>
-                <input id="lx-audit-url" className="lx-input" inputMode="url" placeholder="yourbrand.com" value={url} onChange={(e) => setUrl(e.target.value)} />
-                <LxButton type="submit" variant="dark" disabled={busy}>
-                  {busy ? 'Scanning...' : 'Run free audit'}
-                </LxButton>
-              </form>
-              {err && (
-                <p className="lx-err" role="alert">
-                  {err}
-                </p>
-              )}
-              <ul className="lx-audit-points">
-                <li>
-                  <Check size={13} /> About 3 minutes
-                </li>
-                <li>
-                  <Check size={13} /> No sign up needed
-                </li>
-                <li>
-                  <Check size={13} /> Score, gaps and fixes
-                </li>
-              </ul>
-            </div>
-          </div>
-        </LxReveal>
-      </div>
-    </section>
-  );
-}
-
-/* ── FAQ ──────────────────────────────────────────────── */
 export function LxFaq({ n = '08' }: { n?: string }) {
   const [open, setOpen] = useState(0);
   return (
@@ -667,7 +564,7 @@ export function LxFaq({ n = '08' }: { n?: string }) {
 }
 
 /* ── Final CTA ────────────────────────────────────────── */
-export function LxCta({ onScanComplete }: { onScanComplete?: (data: any) => void }) {
+export function LxCta() {
   const navigate = useNavigate();
   return (
     <section className="lx-section" style={{ paddingTop: 0 }} aria-labelledby="lx-cta">
@@ -681,9 +578,9 @@ export function LxCta({ onScanComplete }: { onScanComplete?: (data: any) => void
                 <br />
                 <span>Approve it before your coffee.</span>
               </h2>
-              <p>Start with your website and see your first plan. Free for one brand.</p>
+              <p>Connect Instagram or Facebook and get your first morning plan today. Free for one brand, no credit card.</p>
               <div className="lx-cta-form">
-                <ScanForm onScanComplete={onScanComplete} id="lx-cta-url" tone="dark" />
+                <StartForm id="lx-cta-email" tone="dark" />
               </div>
               <button type="button" className="lx-cta-link" onClick={() => navigate('/pricing')}>
                 See pricing

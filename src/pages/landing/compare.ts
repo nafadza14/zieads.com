@@ -46,31 +46,36 @@ export const COMPARE_ROWS: CompareRow[] = [
   },
 ];
 
-/* Landing table: the real alternatives a small business weighs, not other tools (copy audit, Nov 2026).
+/* Landing table: the alternatives buyers actually weigh (paid user research, Nov 2026).
+   Suite price: Sprout Social Standard, from $199 per user a month on its public pricing page.
    Tool by tool comparisons live on the /vs pages. */
-export type LandingKey = 'zieads' | 'diy' | 'agency' | 'scheduler';
+export type LandingKey = 'zieads' | 'scheduler' | 'suite' | 'agency';
 export const LANDING_COMPARE_COLUMNS: Array<{ key: LandingKey; label: string }> = [
   { key: 'zieads', label: 'ZieAds' },
-  { key: 'diy', label: 'Doing it yourself' },
-  { key: 'agency', label: 'Hiring an agency' },
   { key: 'scheduler', label: 'A scheduler' },
+  { key: 'suite', label: 'An enterprise suite' },
+  { key: 'agency', label: 'Hiring an agency' },
 ];
 export const LANDING_COMPARE_ROWS: Array<{ criteria: string; values: Record<LandingKey, string> }> = [
   {
-    criteria: 'Tells you what to do each morning',
-    values: { zieads: 'Yes, 3 actions with the evidence', diy: 'You decide alone', agency: 'Usually a weekly or monthly report', scheduler: 'No, it posts what you give it' },
+    criteria: 'Tells you what to do next',
+    values: { zieads: 'A morning plan with 3 actions and the evidence', scheduler: 'No, it posts what you give it', suite: 'Dashboards you read yourself', agency: 'A weekly or monthly report' },
   },
   {
-    criteria: 'Answers buyers first',
-    values: { zieads: 'Buying questions on top, reply drafted', diy: 'When you find them', agency: 'Yes, by people', scheduler: 'Comments in one list, if included' },
+    criteria: 'Does the work after you approve',
+    values: { zieads: 'Posts, replies and plans', scheduler: 'Scheduling only', suite: 'Scheduling and replies by your team', agency: 'Yes, by people' },
   },
   {
     criteria: 'Checks every post went live',
-    values: { zieads: 'Yes, retries up to 3 times', diy: 'You check by hand', agency: 'Yes, by people', scheduler: 'Varies by tool' },
+    values: { zieads: 'Yes, retries up to 3 times, then flags it', scheduler: 'Varies by tool', suite: 'Varies by tool', agency: 'By hand' },
   },
   {
-    criteria: 'Monthly cost',
-    values: { zieads: 'Free, paid from $29 per brand', diy: 'Your evenings', agency: 'From $1,500 a month', scheduler: 'Priced per channel or per seat' },
+    criteria: 'Replies sorted by what matters',
+    values: { zieads: 'Buying questions and complaints first', scheduler: 'Comments in one list, if included', suite: 'Yes, with rules you set up', agency: 'Yes, by people' },
+  },
+  {
+    criteria: 'How you pay',
+    values: { zieads: 'Per brand, seats included. Free, paid from $29', scheduler: 'Per channel or per seat', suite: 'From $199 per user a month', agency: 'From $1,500 a month' },
   },
 ];
 

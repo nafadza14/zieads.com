@@ -94,12 +94,12 @@ export default function FeaturesPage() {
         <section className="lx-section lx-center">
           <div className="lx-wrap">
             <h2 className="lx-h2">
-              Start with your website.
-              <span>See your first plan for free.</span>
+              Get your first morning plan today.
+              <span>Free for one brand.</span>
             </h2>
             <div className="lx-hero-ctas" style={{ marginTop: 26 }}>
-              <LxButton variant="orange" onClick={() => navigate('/#audit')}>
-                Show my first briefing
+              <LxButton variant="orange" onClick={() => navigate('/sign-up')}>
+                Start free
               </LxButton>
               <LxButton variant="white" onClick={() => navigate('/pricing')}>
                 See pricing

@@ -12,7 +12,7 @@ export default function LxFooter() {
               <ZieAdsLogo size={28} />
               zieads
             </Link>
-            <p>The social media tool that tells founders and small teams what to post, answer and fix each morning, then does it after they approve.</p>
+            <p>The social media tool that tells you what to do next. Publishing, inbox, analytics and competitors, with a plan every morning.</p>
           </div>
           <div className="lx-foot-col">
             <h4>Product</h4>
@@ -23,7 +23,6 @@ export default function LxFooter() {
             <a href="/api">REST API</a>
             <a href="/docs">Developer docs</a>
             <a href="/#pricing">Pricing</a>
-            <a href="/#audit">Your first plan, free</a>
           </div>
           <div className="lx-foot-col">
             <h4>Compare</h4>

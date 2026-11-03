@@ -15,7 +15,7 @@ export default function LandingPage({ onScanComplete }: Props) {
   // Old anchors (#product-tour, #mcp, #free-audit-try, #audit) still land on the right section; #audit is the hero form
   useEffect(() => {
     if (!location.hash) return;
-    const alias: Record<string, string> = { 'product-tour': 'features', mcp: 'integrations', 'free-audit-try': 'audit', 'ai-analyst': 'features', composer: 'features', analytics: 'features', inbox: 'features' };
+    const alias: Record<string, string> = { 'product-tour': 'features', mcp: 'integrations', 'free-audit-try': 'top', audit: 'top', 'ai-analyst': 'features', composer: 'features', analytics: 'features', inbox: 'features' };
     const raw = location.hash.slice(1);
     const id = alias[raw] || raw;
     const t = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
@@ -23,14 +23,14 @@ export default function LandingPage({ onScanComplete }: Props) {
   }, [location.hash]);
 
   useEffect(() => {
-    document.title = 'ZieAds: Social media tool that tells you what to post today';
+    document.title = 'ZieAds: The social media tool that tells you what to do next';
   }, []);
 
   return (
     <div className="lx">
       <LxNav />
       <main>
-        <LxHero onScanComplete={onScanComplete} />
+        <LxHero />
         <LxStrip />
         <LxWhy />
         <LxFeatures />
@@ -41,7 +41,7 @@ export default function LandingPage({ onScanComplete }: Props) {
         <LxCompare />
         <LxPricing />
         <LxFaq />
-        <LxCta onScanComplete={onScanComplete} />
+        <LxCta />
       </main>
       <LxFooter />
     </div>

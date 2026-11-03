@@ -343,3 +343,6 @@
 .lx-cta-form .lx-scan { border-color: transparent; }
 .lx-cta-form .lx-err { color: #fff; }
 .lx-cta-link { margin-top: 12px; border: none; background: none; padding: 4px 0; font-size: 13.5px; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* Source under each research stat in The problem */
+.lx-stat .lx-stat-src { display: block; margin-top: 6px; font-size: 11.5px; color: var(--lx-faint); }

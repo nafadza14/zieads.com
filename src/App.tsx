@@ -84,7 +84,7 @@ function TabTitle() {
   useEffect(() => {
     const page = PAGE_TITLES[pathname] || (pathname.startsWith('/settings') ? 'Settings' : undefined);
     if (pathname.startsWith('/vs/') || pathname.startsWith('/docs') || pathname.startsWith('/oauth/') || pathname === '/mcp' || pathname === '/api') return; // these pages set their own title
-    document.title = page ? `${page} | ZieAds` : 'ZieAds: Social media tool that tells you what to post today';
+    document.title = page ? `${page} | ZieAds` : 'ZieAds: The social media tool that tells you what to do next';
   }, [pathname]);
   return null;
 }

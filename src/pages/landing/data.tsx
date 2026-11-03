@@ -295,15 +295,19 @@ export const faqItems: FaqItem[] = [
   },
   {
     q: 'What is ZieAds?',
-    a: 'ZieAds tells you what to post, answer and fix each morning, then does it after you approve. It works with Instagram, Facebook, TikTok and LinkedIn.',
+    a: 'A social media tool for publishing, inbox, analytics and competitor tracking that also tells you what to do next. Every morning it turns your numbers into 3 actions and does them after you approve. It works with Instagram, Facebook, TikTok and LinkedIn.',
   },
   {
-    q: 'Will the posts sound like me?',
-    a: 'Yes. ZieAds learns from your website and your best posts, and you can edit every draft before it goes out.',
+    q: 'Who is ZieAds for?',
+    a: 'Anyone who runs social for a brand: in-house marketing teams, founders, creators, freelancers and agencies. Pricing is per brand with seats included, so adding a teammate does not change the bill.',
   },
   {
-    q: 'Do I need to know marketing?',
-    a: 'No. Each action says what to do and why, in plain words.',
+    q: 'Will drafts sound like our brand?',
+    a: 'Yes. ZieAds learns your brand voice from your website, your brand profile and your best posts, and you can edit every draft before it goes out.',
+  },
+  {
+    q: 'How is this different from a dashboard?',
+    a: 'A dashboard shows numbers and leaves the next step to you. ZieAds reads the same numbers and writes the next step: each action says what to do, why, and links to the post or metric behind it.',
   },
   {
     q: 'What happens if a post fails?',

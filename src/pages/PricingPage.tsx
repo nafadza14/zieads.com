@@ -157,10 +157,10 @@ export default function PricingPage() {
             <LxReveal>
               <LxBadge n="01">Pricing</LxBadge>
               <h1 className="lx-h2" id="pr-title">
-                One flat price per brand.
-                <span>Free for your first one.</span>
+                Priced per brand,
+                <span>not per seat.</span>
               </h1>
-              <p className="lx-lead">No credits to run out. Cancel anytime. Every plan checks every post went live and works inside Claude and ChatGPT.</p>
+              <p className="lx-lead">No credits to run out and no add-ons to unlock the basics. Free for one brand, cancel anytime.</p>
               <div className="pr-cycle" role="radiogroup" aria-label="Billing cycle">
                 <button type="button" role="radio" aria-checked={!yearly} className={!yearly ? 'is-on' : ''} onClick={() => setYearly(false)}>
                   Monthly
