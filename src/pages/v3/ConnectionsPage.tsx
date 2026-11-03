@@ -819,6 +819,9 @@ function TelegramConnectModal({ onClose, onManual, onDone }: { onClose: () => vo
                 <small>
                   In the bot's chat, choose <b>Add to channel</b> or <b>Add to group</b>, then pick the chat. In a channel, allow the bot to post messages. You must be an admin there.
                 </small>
+                <small>
+                  Bot already in the chat? In a group, send <b>/connect</b> there. In a channel, remove the bot and add it again.
+                </small>
               </div>
             </li>
           </ol>

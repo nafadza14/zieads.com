@@ -1,6 +1,10 @@
 -- Threads, Pinterest, YouTube, Bluesky, Mastodon, Telegram and Discord connections.
 -- Safe to run more than once. Connections themselves live in social_connections like the others.
 
+-- Connection health columns (also in 20261103_spec_update.sql; repeated so this file works on its own)
+ALTER TABLE public.social_connections ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'live';
+ALTER TABLE public.social_connections ADD COLUMN IF NOT EXISTS last_error_message TEXT;
+
 -- OAuth state can carry extra data (the Mastodon server a user picked)
 ALTER TABLE public.oauth_states ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
