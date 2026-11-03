@@ -479,15 +479,16 @@ export default function AgentChat() {
 
   useEffect(() => {
     // Short, social first greetings (spec 12): one line, then the suggestions do the talking
-    const greetings = [
-      'Hi {name}, what should Zie work on today?',
-      'Hi {name}, ask about your posts, comments or competitors.',
-      'Hi {name}, want a plan for next week?',
-      'Hi {name}, which comments should we answer first?',
-    ];
+    // Greets by first name, then brand; never by a generic email handle like "admin"
+    const h = new Date().getHours();
+    const part = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    const first = String(userProfile?.full_name || userProfile?.first_name || '').trim().split(/\s+/)[0];
+    const handle = userEmail.split('@')[0];
+    const generic = /^(admin|info|hello|hi|contact|support|team|sales|marketing|office|mail)$/i.test(handle);
+    const nameVal = first || userProfile?.business_name || (handle && !generic ? handle : '');
+    const greetings = ['{hi}, what should we get done today?', '{hi}, want a plan for next week?', '{hi}, which comments should we answer first?'];
     const rawGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-    const nameVal = userProfile?.business_name || userEmail.split('@')[0] || 'there';
-    setRandomGreeting(rawGreeting.replace('{name}', nameVal));
+    setRandomGreeting(rawGreeting.replace('{hi}', nameVal ? `${part}, ${nameVal}` : part));
   }, [activeConvId, userProfile, userEmail]);
 
   const toggleListening = () => {
@@ -887,7 +888,7 @@ export default function AgentChat() {
                   onClick={() => setActiveTab(tab)}
                 >
                   {tab === 'chat' ? <UilChat size={14} /> : <UilBolt size={14} />}
-                  <span>{tab === 'chat' ? 'Chat' : 'Analysis modes'}</span>
+                  <span>{tab === 'chat' ? 'Chat' : 'Quick reports'}</span>
                 </button>
               ))}
             </div>
@@ -899,7 +900,7 @@ export default function AgentChat() {
               <div className="za-modes-wrap">
                 <div className="za-badge-row za-fade-in">
                   <span className="za-badge-num">{ALL_MODES.length}</span>
-                  <span className="za-badge-label">Analysis modes</span>
+                  <span className="za-badge-label">Quick reports</span>
                 </div>
                 <WordReveal text="Run a structured analysis in one click." className="za-h2" />
                 <p className="za-sub za-fade-in" style={{ animationDelay: '200ms' }}>

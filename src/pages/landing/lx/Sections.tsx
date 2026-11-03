@@ -1,38 +1,82 @@
 /*
   v4 landing page sections. Order: hero, works with, why, product, how it works,
   Guardian band, promises, integrations and MCP, comparison, pricing, free audit, FAQ, final CTA.
-  Copy follows implementasi-update.md section 12: an AI social media manager that briefs
-  every morning and executes after approval. No invented customers, logos, reviews or usage numbers.
+  Copy follows the November 2026 copywriting audit: lead with the outcome (know what to post, answer
+  and fix today), plain words, no internal names above the fold, and only claims the product proves today.
+  No invented customers, logos, reviews or usage numbers.
 */
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BarChart3,
-  BotMessageSquare,
-  CalendarCheck,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Globe,
   Link2,
-  MessageSquareText,
-  Newspaper,
   Plus,
-  Radar,
 } from 'lucide-react';
 import SocialIcon from '../../../components/v3/SocialIcon';
 import ZieAdsLogo from '../../../components/ZieAdsLogo';
 import ZieAvatar from '../../../components/ZieAvatar';
 import { SHOTS } from '../images';
 import { faqItems, pricingPlans } from '../data';
-import { COMPARE_COLUMNS, COMPARE_ROWS } from '../compare';
+import { LANDING_COMPARE_COLUMNS as COMPARE_COLUMNS, LANDING_COMPARE_ROWS as COMPARE_ROWS } from '../compare';
 import { LxBadge, LxButton, LxCount, LxReveal, goToId } from './kit';
 
 const PLATFORMS = ['instagram', 'facebook', 'tiktok', 'linkedin'] as const;
 
-/* ── Hero ─────────────────────────────────────────────── */
-export function LxHero() {
+/* ── Website scan form: the hero, the final CTA and old #audit links all use it ── */
+function useWebsiteScan(onScanComplete?: (data: any) => void) {
   const navigate = useNavigate();
+  const [url, setUrl] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!url.trim()) return;
+    const target = /^https?:\/\//.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+    setBusy(true);
+    setErr('');
+    try {
+      const resp = await fetch('/api/quick-scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: target }) });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok || !json.data) throw new Error(json.error || 'We could not read that site. Check the address and try again.');
+      onScanComplete?.(json.data);
+      navigate('/scan-result');
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { url, setUrl, busy, err, submit };
+}
+
+function ScanForm({ onScanComplete, id, tone = 'light' }: { onScanComplete?: (data: any) => void; id: string; tone?: 'light' | 'dark' }) {
+  const { url, setUrl, busy, err, submit } = useWebsiteScan(onScanComplete);
+  return (
+    <>
+      <form className={`lx-scan is-${tone}`} onSubmit={submit}>
+        <label className="lx-sr" htmlFor={id}>
+          Your website
+        </label>
+        <input id={id} className="lx-input" inputMode="url" autoComplete="url" placeholder="yourbrand.com" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <LxButton type="submit" variant={tone === 'dark' ? 'dark' : 'orange'} disabled={busy}>
+          {busy ? 'Reading your site...' : 'Show my first briefing'}
+        </LxButton>
+      </form>
+      {err && (
+        <p className="lx-err" role="alert">
+          {err}
+        </p>
+      )}
+    </>
+  );
+}
+
+/* ── Hero ─────────────────────────────────────────────── */
+export function LxHero({ onScanComplete }: { onScanComplete?: (data: any) => void }) {
   return (
     <section className="lx-hero" aria-labelledby="lx-hero-title">
       <div className="lx-wrap">
@@ -45,23 +89,30 @@ export function LxHero() {
                 </span>
               ))}
             </span>
-            AI social media manager for Instagram, Facebook, TikTok and LinkedIn
+            For founders and small teams on Instagram, Facebook, TikTok and LinkedIn
           </span>
           <h1 id="lx-hero-title">
-            Your AI social media manager that <em>briefs you every morning</em>
+            Know exactly what to <em>post, answer and fix</em> today.
           </h1>
-          <p className="lx-hero-sub">
-            Scheduling, inbox, analytics and competitors in one place. Zie tells you what to do next, prepares the work, and executes when you approve.
-          </p>
-          <div className="lx-hero-ctas">
-            <LxButton variant="dark" onClick={() => navigate('/sign-up')}>
-              Start for free
-            </LxButton>
-            <LxButton variant="white" onClick={() => goToId('how')}>
-              See how it works
-            </LxButton>
+          <p className="lx-hero-sub">Every morning ZieAds checks your accounts and sends 3 things to do today. Tap approve and it schedules the posts, drafts the replies and builds the report.</p>
+          <div className="lx-hero-form" id="audit">
+            <ScanForm onScanComplete={onScanComplete} id="lx-hero-url" />
+            <p className="lx-hero-note">Free · no sign up · we only read your public website</p>
           </div>
-          <p className="lx-hero-note">Free plan for one brand. No credit card.</p>
+          <button type="button" className="lx-hero-link" onClick={() => goToId('features')}>
+            See an example plan
+          </button>
+          <ul className="lx-risk" aria-label="Our promises">
+            <li>
+              <Check size={13} /> Nothing posts without your yes
+            </li>
+            <li>
+              <Check size={13} /> One flat price per brand, no credits
+            </li>
+            <li>
+              <Check size={13} /> We check every post went live
+            </li>
+          </ul>
         </LxReveal>
       </div>
       <div className="lx-hero-shot">
@@ -72,7 +123,7 @@ export function LxHero() {
             <i />
             <span>app.zieads.com/analyst</span>
           </div>
-          <img src={SHOTS.home} alt="ZieAds AI Analyst with today's briefing, what needs you, wins, concerns and three actions to approve" width={1600} height={1000} fetchPriority="high" />
+          <img src={SHOTS.home} alt="ZieAds morning plan with what needs you, wins, concerns and three actions to approve" width={1600} height={1000} fetchPriority="high" />
         </div>
       </div>
     </section>
@@ -86,13 +137,16 @@ export function LxStrip() {
     { p: 'facebook', label: 'Facebook' },
     { p: 'tiktok', label: 'TikTok' },
     { p: 'linkedin', label: 'LinkedIn' },
+  ];
+  const ads: Array<{ p: string; label: string }> = [
     { p: 'meta', label: 'Meta Ads' },
     { p: 'google_ads', label: 'Google Ads' },
+    { p: 'tiktok', label: 'TikTok Ads' },
   ];
   return (
     <div className="lx-strip">
       <div className="lx-wrap lx-strip-in">
-        <span className="lx-strip-label">Works with the platforms you already use</span>
+        <span className="lx-strip-label">Works with</span>
         <div className="lx-strip-logos">
           {items.map((i) => (
             <span key={i.p} className="lx-strip-logo">
@@ -101,7 +155,17 @@ export function LxStrip() {
             </span>
           ))}
         </div>
+        <span className="lx-strip-label">Reads results from</span>
+        <div className="lx-strip-logos">
+          {ads.map((i) => (
+            <span key={i.label} className="lx-strip-logo">
+              <SocialIcon platform={i.p} size={20} variant="mark" />
+              {i.label}
+            </span>
+          ))}
+        </div>
       </div>
+      <p className="lx-strip-next">Coming next: X, Bluesky, YouTube, Threads and Pinterest</p>
     </div>
   );
 }
@@ -112,29 +176,29 @@ export function LxWhy() {
     <section className="lx-section lx-why lx-center" aria-labelledby="lx-why">
       <div className="lx-wrap">
         <LxReveal>
-          <LxBadge n="01">Why ZieAds</LxBadge>
-          <p className="lx-why-text" id="lx-why">
-            ZieAds
-            <span className="lx-why-logo" aria-hidden="true">
-              <ZieAdsLogo size={30} />
-            </span>
-            watches your Instagram, Facebook, TikTok and LinkedIn around the clock,{' '}
-            <span className="is-muted">sorts every comment, plans your posts, and tells you each morning the three things worth doing today.</span>
+          <LxBadge n="01">The problem</LxBadge>
+          <h2 className="lx-h2" id="lx-why">
+            You know you should post every week.
+            <span>Then the week happens.</span>
+          </h2>
+          <p className="lx-why-text is-small">
+            Posting slips. Comments asking "how much?" sit for a day. You guess what to post next.{' '}
+            <span className="is-muted">ZieAds fixes the three things that cost you customers: showing up, answering fast, and knowing what works.</span>
           </p>
         </LxReveal>
         <LxReveal delay={120}>
           <div className="lx-stats">
             <div className="lx-stat">
               <strong>
-                <LxCount to={60} suffix=" sec" />
+                <LxCount to={5} prefix="Under " suffix=" min" />
               </strong>
-              <span>to your first briefing after you connect</span>
+              <span>from sign up to your first briefing</span>
             </div>
             <div className="lx-stat">
               <strong>
                 <LxCount to={3} suffix=" actions" />
               </strong>
-              <span>in every briefing, each with its evidence</span>
+              <span>every morning, each linked to the post or number behind it</span>
             </div>
             <div className="lx-stat">
               <strong>0</strong>
@@ -147,14 +211,29 @@ export function LxWhy() {
   );
 }
 
-/* ── Product ──────────────────────────────────────────── */
-const FEATURES = [
-  { icon: <Newspaper size={17} />, title: 'Answer first briefing', body: 'Every morning: what changed, what needs you, and three actions you can approve in one tap.' },
-  { icon: <MessageSquareText size={17} />, title: 'An inbox that sells', body: 'Instagram and Facebook comments in one queue. Buying questions and complaints go to the top, with reply drafts in your voice.' },
-  { icon: <CalendarCheck size={17} />, title: 'Publishing that checks itself', body: 'Write once, tailor per network, schedule or queue. Guardian retries failures and confirms every post went live.' },
-  { icon: <BarChart3 size={17} />, title: 'Organic and paid, side by side', body: 'Followers, reach and post results per network, with your Meta, Google and TikTok ads results next to them.' },
-  { icon: <Radar size={17} />, title: 'Competitor Hunt', body: 'Public ads from the Meta, TikTok and LinkedIn ad libraries and public Instagram and Facebook posts, in their real format.' },
-  { icon: <BotMessageSquare size={17} />, title: 'AI Agent with analyst modes', body: 'Ask in plain words. Social and Ads Analyst modes turn your data into a plan, and drafts land on your calendar.' },
+/* ── Product: three outcomes, each with the screen that proves it ── */
+const OUTCOMES = [
+  {
+    title: 'Show up every week, even when you are busy',
+    body: 'Write once, ZieAds tailors it for each network and posts at the times your audience is online. Your week of posts is planned before Monday starts.',
+    proof: 'Every scheduled post is checked after it goes out, and a failed one is retried up to 3 times.',
+    img: SHOTS.calendar,
+    alt: 'Calendar week view with scheduled, published and drafted posts',
+  },
+  {
+    title: 'Answer buyers before they go elsewhere',
+    body: 'Comments asking about price, stock or delivery go to the top with a reply drafted in your voice. You read, tap send, done.',
+    proof: 'Buying questions and complaints are labeled, so nothing that can turn into a sale waits until tomorrow.',
+    img: SHOTS.inbox,
+    alt: 'Inbox with buying questions sorted first and a reply draft',
+  },
+  {
+    title: 'Know what is working without reading charts',
+    body: 'Every morning: what grew, what dropped, what competitors posted, and how your ads compare. In plain words, with the post or number behind it.',
+    proof: 'Wins, concerns and 3 actions, each one linked to the evidence so you can check it.',
+    img: SHOTS.analyst,
+    alt: 'Morning plan with wins, concerns and three actions',
+  },
 ];
 
 export function LxFeatures() {
@@ -162,61 +241,34 @@ export function LxFeatures() {
     <section className="lx-section is-soft" id="features" aria-labelledby="lx-feat">
       <div className="lx-wrap">
         <LxReveal>
-          <LxBadge n="02">Product</LxBadge>
+          <LxBadge n="02">What you get</LxBadge>
           <h2 className="lx-h2" id="lx-feat">
-            Built for founders who post.
-            <span>Ready for agencies who manage many brands.</span>
+            Three things that win customers.
+            <span>Done for you every morning.</span>
           </h2>
         </LxReveal>
-        <div className="lx-feat-cols">
-          {FEATURES.map((f, i) => (
-            <LxReveal key={f.title} delay={(i % 3) * 80}>
-              <div className="lx-feat">
-                <span className="lx-feat-ic" aria-hidden="true">
-                  {f.icon}
-                </span>
-                <div>
-                  <h3>{f.title}</h3>
-                  <p>{f.body}</p>
+        <div className="lx-outcomes">
+          {OUTCOMES.map((o, i) => (
+            <LxReveal key={o.title} delay={80}>
+              <div className={`lx-outcome ${i % 2 ? 'is-flip' : ''}`}>
+                <div className="lx-outcome-copy">
+                  <span className="lx-outcome-n">0{i + 1}</span>
+                  <h3>{o.title}</h3>
+                  <p>{o.body}</p>
+                  <p className="lx-outcome-proof">
+                    <CheckCircle2 size={15} /> {o.proof}
+                  </p>
+                </div>
+                <div className="lx-card lx-outcome-shot">
+                  <img src={o.img} alt={o.alt} loading="lazy" width={1600} height={1000} />
                 </div>
               </div>
             </LxReveal>
           ))}
         </div>
-        <LxReveal delay={80}>
-          <div className="lx-feat-cards">
-            <div className="lx-card lx-shot-card">
-              <h4>AI Analyst</h4>
-              <p>One read of your morning: wins, concerns, what needs you and the actions behind the numbers.</p>
-              <div className="lx-shot">
-                <img src={SHOTS.analyst} alt="AI Analyst screen with the morning briefing" loading="lazy" width={1600} height={1000} />
-              </div>
-            </div>
-            <div className="lx-card lx-shot-card">
-              <h4>Inbox</h4>
-              <p>Needs reply, buying signals, complaints. Draft, hide or delete without leaving ZieAds.</p>
-              <div className="lx-shot">
-                <img src={SHOTS.inbox} alt="Inbox with buying signals sorted first and an AI reply draft" loading="lazy" width={1600} height={1000} />
-              </div>
-            </div>
-          </div>
-          <div className="lx-feat-cards is-flip">
-            <div className="lx-card lx-shot-card">
-              <h4>Calendar</h4>
-              <p>Month and week views, drag to reschedule, and your best times from your own posts.</p>
-              <div className="lx-shot">
-                <img src={SHOTS.calendar} alt="Calendar week view with scheduled, published and drafted posts" loading="lazy" width={1600} height={1000} />
-              </div>
-            </div>
-            <div className="lx-card lx-shot-card">
-              <h4>Analytics</h4>
-              <p>Organic, Paid and Combined tabs, per network and per post, with CSV export.</p>
-              <div className="lx-shot">
-                <img src={SHOTS.analytics} alt="Analytics with organic results per network and daily charts" loading="lazy" width={1600} height={1000} />
-              </div>
-            </div>
-          </div>
-        </LxReveal>
+        <p className="lx-more">
+          <a href="/features">See every feature</a>
+        </p>
       </div>
     </section>
   );
@@ -225,9 +277,9 @@ export function LxFeatures() {
 /* ── How it works ─────────────────────────────────────── */
 export function LxHow() {
   const steps = [
-    { icon: <Link2 size={18} />, title: 'Connect your accounts', body: 'Instagram and Facebook in one click through Meta, then TikTok and LinkedIn. Official APIs only.' },
-    { icon: <Newspaper size={18} />, title: 'Read your first briefing', body: 'Zie reads your recent posts and comments and writes your first briefing in about a minute.' },
-    { icon: <CheckCircle2 size={18} />, title: 'Approve, Zie executes', body: 'Approve a post, a reply or a plan. Zie publishes, checks it went live, and logs every step.' },
+    { icon: <Globe size={18} />, title: 'Add your website', body: 'ZieAds learns what you sell and how you sound.' },
+    { icon: <Link2 size={18} />, title: 'Connect Instagram and Facebook', body: 'One click through Meta. TikTok and LinkedIn when you are ready.' },
+    { icon: <CheckCircle2 size={18} />, title: 'Approve your 3 actions', body: 'ZieAds posts, replies and confirms each one went live.' },
   ];
   return (
     <section className="lx-section lx-center" id="how" aria-labelledby="lx-how">
@@ -235,8 +287,8 @@ export function LxHow() {
         <LxReveal>
           <LxBadge n="03">How it works</LxBadge>
           <h2 className="lx-h2" id="lx-how">
-            Set up in five minutes.
-            <span>Then Zie does the legwork.</span>
+            Five minutes to set up.
+            <span>Five minutes a morning after that.</span>
           </h2>
         </LxReveal>
         <div className="lx-steps">
@@ -258,31 +310,32 @@ export function LxHow() {
   );
 }
 
-/* ── Guardian band ────────────────────────────────────── */
+/* ── Every post checked (the Guardian band, named by what it does) ── */
 export function LxImpact() {
   return (
     <section className="lx-section" style={{ paddingTop: 0 }} aria-labelledby="lx-impact">
       <div className="lx-wrap" style={{ maxWidth: 1240 }}>
         <div className="lx-impact">
           <LxReveal>
-            <LxBadge n="04">Guardian</LxBadge>
+            <LxBadge n="04">Every post checked</LxBadge>
             <h2 id="lx-impact">
-              Zie watches your accounts.
-              <span>So you can stop refreshing them.</span>
+              Never find out a post failed
+              <span>the next day.</span>
             </h2>
+            <p className="lx-impact-lead">ZieAds checks that every post went live, warns you before an account disconnects, and flags comments waiting too long.</p>
           </LxReveal>
           <div className="lx-impact-nums">
             <div className="lx-impact-num">
               <strong>
-                <LxCount to={24} suffix="/7" />
+                <LxCount to={3} suffix="x" />
               </strong>
-              <span>Tokens, failed posts and unanswered comments, checked around the clock</span>
+              <span>retries for a failed post, then it waits for you at the top of your morning plan</span>
             </div>
             <div className="lx-impact-num">
               <strong>
-                <LxCount to={4} suffix=" in 1" />
+                <LxCount to={24} suffix="/7" />
               </strong>
-              <span>Instagram, Facebook, TikTok and LinkedIn in one calendar and one dashboard</span>
+              <span>checks on your posts, your connections and the comments still waiting</span>
             </div>
           </div>
         </div>
@@ -296,7 +349,7 @@ const PROMISES = [
   { lead: 'Nothing goes live until you say yes.', rest: 'Every post, reply and plan waits for your approval, and every action is written to your activity log.' },
   { lead: 'I read your numbers, not the internet.', rest: 'Each action in your briefing links to the post or metric behind it, so you can check my work.' },
   { lead: 'Official APIs only.', rest: 'No password sharing and no scraping of your accounts. Disconnect a platform or delete your data whenever you like.' },
-  { lead: 'Your ad budget stays yours.', rest: 'I read Meta, Google and TikTok results with read-only access or your CSV import, and never touch a campaign.' },
+  { lead: 'Your ad budget stays yours.', rest: 'I read Meta, Google and TikTok Ads results, read only, and never touch a campaign.' },
 ];
 
 export function LxPromises() {
@@ -330,7 +383,7 @@ export function LxPromises() {
           </div>
           <div className="lx-quote-who">
             <strong>Zie</strong>
-            <span>Your AI analyst inside ZieAds</span>
+            <span>The assistant inside ZieAds</span>
           </div>
           <div className="lx-dots" role="tablist" aria-label="Choose a promise">
             {PROMISES.map((_, k) => (
@@ -362,23 +415,23 @@ export function LxIntegrations() {
         <LxReveal>
           <LxBadge n="05">Integrations</LxBadge>
           <h2 className="lx-h2" id="lx-int">
-            Keep your tools.
-            <span>Connect the workflow.</span>
+            Works with what
+            <span>you already use.</span>
           </h2>
-          <p className="lx-lead">Official connections to the networks you post on, your ads results, and an MCP server so your AI assistant can work with ZieAds too.</p>
+          <p className="lx-lead">Official connections only. No passwords shared, nothing scraped from your accounts.</p>
           <ul className="lx-int-list">
             <li>
-              <Check size={15} /> Instagram and Facebook Pages through Meta login, TikTok and LinkedIn publishing
+              <Check size={15} /> Instagram and Facebook in one click through Meta, plus TikTok and LinkedIn
             </li>
             <li>
-              <Check size={15} /> Meta, Google and TikTok Ads results by CSV import while read-only API access is reviewed
+              <Check size={15} /> Ads, read only: ZieAds never changes your campaigns. Import a CSV today, direct connection comes as each platform approves it
             </li>
             <li>
-              <Check size={15} /> MCP server for Claude, ChatGPT and Cursor. Writes become approvals in ZieAds
+              <Check size={15} /> Use ZieAds inside Claude or ChatGPT. Ask "what should I post this week?" and anything it prepares waits for your approval <small className="lx-tag">MCP</small>
             </li>
           </ul>
           <p className="lx-int-links">
-            <a href="/mcp">About the MCP server</a>
+            <a href="/mcp">ZieAds in Claude and ChatGPT</a>
             <a href="/api">REST API</a>
             <a href="/docs">Docs</a>
           </p>
@@ -443,7 +496,9 @@ export function LxCompare() {
               </tbody>
             </table>
           </div>
-          <p className="lx-cmp-note">From each product's public pages, checked November 2026. Prices change, so check before you buy.</p>
+          <p className="lx-cmp-note">
+            Agency cost is a conservative starting point for a small retainer. Comparing tools? See <a href="/vs/metricool">ZieAds vs Metricool</a> and <a href="/vs/vista-social">ZieAds vs Vista Social</a>.
+          </p>
         </LxReveal>
       </div>
     </section>
@@ -459,10 +514,10 @@ export function LxPricing() {
         <LxReveal>
           <LxBadge n="07">Pricing</LxBadge>
           <h2 className="lx-h2" id="lx-price">
-            Start free.
-            <span>Scale when you're ready.</span>
+            One flat price per brand.
+            <span>No credits to run out.</span>
           </h2>
-          <p className="lx-lead">Priced per brand, billed monthly, cancel anytime. Every plan includes the AI Agent, Guardian and the MCP server.</p>
+          <p className="lx-lead">Free for one brand. Cancel anytime. Every plan checks every post went live and works inside Claude and ChatGPT.</p>
         </LxReveal>
         <div className="lx-prices">
           {pricingPlans.map((p, i) => (
@@ -495,7 +550,7 @@ export function LxPricing() {
           ))}
         </div>
         <p className="lx-price-foot">
-          Need more than 10 brands? Agency adds brands at $15 each. <a href="/pricing" style={{ textDecoration: 'underline' }}>Compare every plan</a>
+          Running several brands? Multi brand workspaces are coming soon. <a href="/pricing" style={{ textDecoration: 'underline' }}>Compare every plan</a>
         </p>
       </div>
     </section>
@@ -576,7 +631,7 @@ export function LxAudit({ onScanComplete }: { onScanComplete: (data: any) => voi
 }
 
 /* ── FAQ ──────────────────────────────────────────────── */
-export function LxFaq({ n = '09' }: { n?: string }) {
+export function LxFaq({ n = '08' }: { n?: string }) {
   const [open, setOpen] = useState(0);
   return (
     <section className="lx-section lx-center" id="faq" aria-labelledby="lx-faq">
@@ -586,7 +641,7 @@ export function LxFaq({ n = '09' }: { n?: string }) {
           <h2 className="lx-h2" id="lx-faq">
             Frequently asked questions
           </h2>
-          <p className="lx-lead">What ZieAds does, what it never does without you, and how your data is kept safe.</p>
+          <p className="lx-lead">What ZieAds does, what it never does without you, and how your data stays safe.</p>
         </LxReveal>
         <div className="lx-faq">
           {faqItems.map((f, i) => {
@@ -612,7 +667,7 @@ export function LxFaq({ n = '09' }: { n?: string }) {
 }
 
 /* ── Final CTA ────────────────────────────────────────── */
-export function LxCta() {
+export function LxCta({ onScanComplete }: { onScanComplete?: (data: any) => void }) {
   const navigate = useNavigate();
   return (
     <section className="lx-section" style={{ paddingTop: 0 }} aria-labelledby="lx-cta">
@@ -620,21 +675,19 @@ export function LxCta() {
         <LxReveal>
           <div className="lx-cta">
             <div className="lx-cta-copy">
-              <LxBadge n="10">Get started</LxBadge>
+              <LxBadge n="09">Get started</LxBadge>
               <h2 id="lx-cta">
                 Wake up to a plan.
                 <br />
                 <span>Approve it before your coffee.</span>
               </h2>
-              <p>Connect Instagram or Facebook and get your first briefing in about a minute. Free for one brand, no credit card.</p>
-              <div className="lx-cta-btns">
-                <LxButton variant="dark" onClick={() => navigate('/sign-up')}>
-                  Start for free
-                </LxButton>
-                <LxButton variant="white" onClick={() => goToId('pricing')}>
-                  See pricing
-                </LxButton>
+              <p>Start with your website and see your first plan. Free for one brand.</p>
+              <div className="lx-cta-form">
+                <ScanForm onScanComplete={onScanComplete} id="lx-cta-url" tone="dark" />
               </div>
+              <button type="button" className="lx-cta-link" onClick={() => navigate('/pricing')}>
+                See pricing
+              </button>
             </div>
             <div className="lx-cta-shot">
               <img src={SHOTS.calendar} alt="ZieAds calendar with the week planned" loading="lazy" width={1600} height={1000} />

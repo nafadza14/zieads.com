@@ -27,6 +27,7 @@ import VsPage from './pages/VsPage';
 import DocsPage from './pages/docs/DocsPage';
 import OAuthConsent from './pages/OAuthConsent';
 import { ApiPage, McpPage } from './pages/dev/DevPages';
+import FeaturesPage from './pages/FeaturesPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { supabase } from './lib/supabaseClient';
 import { CreditProvider } from './lib/creditStore';
@@ -62,6 +63,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/sign-in': 'Log in',
   '/sign-up': 'Sign up',
   '/pricing': 'Pricing',
+  '/features': 'Features',
   '/agent': 'Zie AI Agent',
   '/analyst': 'AI Analyst',
   '/composer': 'Composer',
@@ -82,7 +84,7 @@ function TabTitle() {
   useEffect(() => {
     const page = PAGE_TITLES[pathname] || (pathname.startsWith('/settings') ? 'Settings' : undefined);
     if (pathname.startsWith('/vs/') || pathname.startsWith('/docs') || pathname.startsWith('/oauth/') || pathname === '/mcp' || pathname === '/api') return; // these pages set their own title
-    document.title = page ? `${page} | ZieAds` : 'ZieAds | Your AI social media manager';
+    document.title = page ? `${page} | ZieAds` : 'ZieAds: Social media tool that tells you what to post today';
   }, [pathname]);
   return null;
 }
@@ -164,6 +166,7 @@ export default function App() {
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/docs/*" element={<DocsPage />} />
         <Route path="/oauth/authorize" element={<OAuthConsent />} />
+        <Route path="/features" element={<FeaturesPage />} />
         <Route path="/mcp" element={<McpPage />} />
         <Route path="/api" element={<ApiPage />} />
         <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />

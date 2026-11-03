@@ -28,7 +28,7 @@ const NAV: Array<{ id: SettingsSection | 'connections'; label: string; icon: Rea
   { id: 'billing', label: 'Plan and billing', icon: <CreditCard size={15} /> },
   { id: 'notifications', label: 'Briefing and alerts', icon: <Bell size={15} />, sep: true },
   { id: 'connections', label: 'Connections', icon: <Link2 size={15} /> },
-  { id: 'automations', label: 'Scheduled agents', icon: <CalendarClock size={15} /> },
+  { id: 'automations', label: 'Routines', icon: <CalendarClock size={15} /> },
   { id: 'api', label: 'API and MCP', icon: <KeyRound size={15} /> },
   { id: 'activity', label: 'Activity log', icon: <Activity size={15} /> },
   { id: 'privacy', label: 'Data and privacy', icon: <Shield size={15} /> },
@@ -43,7 +43,7 @@ const TITLES: Record<SettingsSection, [string, string]> = {
   notifications: ['Briefing and alerts', 'When Zie briefs you and what it alerts on'],
   activity: ['Activity log', 'Every action by you, Zie or MCP'],
   api: ['API and MCP', 'Connect Claude, ChatGPT or Cursor'],
-  automations: ['Scheduled agents', 'Recurring jobs Zie runs for you. Results wait for your approval.'],
+  automations: ['Routines', 'For example, every Monday, plan my week. Results wait for your approval.'],
   privacy: ['Data and privacy', 'Export your data or delete your account'],
 };
 
@@ -268,7 +268,7 @@ function BillingPanel({ data }: { data: SettingsData }) {
     ['Scheduled posts', l.postsPerMonth === -1 ? 'Unlimited' : `${l.postsPerMonth} a month`],
     ['Analytics history', l.analyticsHistoryDays === -1 ? 'Unlimited' : l.analyticsHistoryDays >= 365 ? '12 months' : `${l.analyticsHistoryDays} days`],
     ['Competitors per brand', fmtLimit(l.competitorsPerBrand)],
-    ['Scheduled agents', fmtLimit(l.scheduledAgents)],
+    ['Routines', fmtLimit(l.scheduledAgents)],
     ['Ads Analyst', l.adsAnalyst === 'full' ? 'All modes' : l.adsAnalyst === 'basic' ? 'Basic report' : 'Not included'],
     ['Client portal', l.clientPortal ? 'Included' : 'Not included'],
     ['MCP calls a day', fmtLimit(l.mcpDailyCalls)],

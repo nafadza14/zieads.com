@@ -1255,7 +1255,7 @@ export default function ComposerPage() {
                   onChange={e => setPublishMethod(e.target.value as any)}
                 >
                   <option value="direct_api">Publish automatically (official API)</option>
-                  <option value="manual_reminder">Remind me to post it myself</option>
+                  <option value="manual_reminder">Send me a reminder in ZieAds to post it</option>
                 </select>
               </div>
             </Card>

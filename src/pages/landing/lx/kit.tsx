@@ -74,7 +74,7 @@ export const goToId = (id: string) => {
 };
 
 /** Counts up once when it scrolls into view, so the number lands with the section */
-export function LxCount({ to, suffix = '', duration = 1200 }: { to: number; suffix?: string; duration?: number }) {
+export function LxCount({ to, prefix = '', suffix = '', duration = 1200 }: { to: number; prefix?: string; suffix?: string; duration?: number }) {
   const { ref, inView } = useInView<HTMLSpanElement>(0.4);
   const [v, setV] = useState(0);
   useEffect(() => {
@@ -91,7 +91,8 @@ export function LxCount({ to, suffix = '', duration = 1200 }: { to: number; suff
     return () => cancelAnimationFrame(raf);
   }, [inView, to, duration]);
   return (
-    <span ref={ref} aria-label={`${to}${suffix}`}>
+    <span ref={ref} aria-label={`${prefix}${to}${suffix}`}>
+      {prefix}
       {v}
       {suffix}
     </span>

@@ -43,14 +43,14 @@ export default function ScheduledAgentsSettings() {
     }
   };
 
-  if (!state) return err ? <p className="st-msg is-error">{err}</p> : <LoadingState text="Loading scheduled agents" />;
+  if (!state) return err ? <p className="st-msg is-error">{err}</p> : <LoadingState text="Loading routines" />;
   const { agents, limit, plan } = state;
   const full = limit !== -1 && agents.length >= limit;
 
   if (limit === 0) {
     return (
       <div className="st-card">
-        <h3>Scheduled agents start on Starter</h3>
+        <h3>Routines start on Starter</h3>
         <p>Let Zie run recurring jobs for you: a Monday plan that drafts the week, a daily reply sweep, a Friday look at competitors. Nothing it makes goes live without your approval.</p>
         <div className="st-actions">
           <Button onClick={() => navigate('/pricing')}>See plans</Button>
@@ -62,7 +62,7 @@ export default function ScheduledAgentsSettings() {
   return (
     <>
       <div className="st-card">
-        <h3>Your agents</h3>
+        <h3>Your routines</h3>
         <p>
           {agents.length} of {limit === -1 ? 'unlimited' : limit} on the {plan} plan. Times use the time zone in Briefing and alerts.
         </p>
@@ -111,7 +111,7 @@ export default function ScheduledAgentsSettings() {
 
       {!full && (
         <div className="st-card">
-          <h3>New scheduled agent</h3>
+          <h3>New routine</h3>
           <div className="st-templates">
             {TEMPLATES.map((t) => (
               <button key={t.name} type="button" className="zd-chip" onClick={() => setForm({ ...t })}>
@@ -157,7 +157,7 @@ export default function ScheduledAgentsSettings() {
           </div>
           <div className="st-actions">
             <Button loading={busy === 'create'} disabled={!form.name || form.prompt.length < 10} onClick={() => act('create', async () => { await api('/api/v3/scheduled-agents', { body: { ...form, weekday: form.cadence === 'weekly' ? form.weekday ?? 1 : null } }); setForm({ name: '', prompt: '', cadence: 'weekly', run_at: '08:00', weekday: 1 }); })}>
-              Create agent
+              Create routine
             </Button>
           </div>
         </div>

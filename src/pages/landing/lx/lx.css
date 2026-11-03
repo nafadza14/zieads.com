@@ -304,3 +304,42 @@
 /* Links under the integrations list to the MCP, API and docs pages */
 .lx-int-links { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0 0; font-size: 13.5px; font-weight: 600; }
 .lx .lx-int-links a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(242, 101, 34, 0.5); }
+
+/* ── Copy audit, Nov 2026: hero website form, promises row, outcome rows ── */
+.lx-hero-form { max-width: 520px; margin: 28px auto 0; }
+.lx-scan { display: flex; gap: 8px; padding: 6px; border-radius: 14px; background: #fff; border: 1px solid var(--lx-line); box-shadow: 0 10px 30px rgba(17, 17, 17, 0.06); }
+.lx-scan .lx-input { border: none; box-shadow: none; height: 44px; }
+.lx-scan .lx-input:focus { box-shadow: none; }
+.lx-scan:focus-within { border-color: var(--lx-orange); box-shadow: 0 0 0 3px rgba(242, 101, 34, 0.15); }
+.lx-scan .lx-btn { height: 44px; flex-shrink: 0; }
+.lx-hero-form .lx-err { text-align: left; }
+.lx-hero-link { margin-top: 14px; border: none; background: none; padding: 4px; font-size: 13.5px; font-weight: 600; color: var(--lx-ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(242, 101, 34, 0.5); cursor: pointer; }
+.lx-risk { list-style: none; padding: 0; margin: 20px auto 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; font-size: 13px; color: var(--lx-ink-2); }
+.lx-risk li { display: inline-flex; align-items: center; gap: 6px; }
+.lx-risk svg { color: var(--lx-orange); }
+@media (max-width: 520px) { .lx-scan { flex-direction: column; } .lx-scan .lx-btn { width: 100%; } }
+
+.lx-strip-next { text-align: center; margin: 10px 0 0; font-size: 12px; color: var(--lx-faint); }
+.lx-why-text.is-small { font-size: clamp(18px, 2vw, 24px); line-height: 1.45; max-width: 760px; margin: 22px auto 0; }
+
+.lx-outcomes { display: grid; gap: 22px; margin-top: 44px; }
+.lx-outcome { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 40px; align-items: center; padding: 28px; border-radius: 22px; background: #fff; border: 1px solid var(--lx-line); }
+.lx-outcome.is-flip .lx-outcome-copy { order: 2; }
+.lx-outcome-n { font-size: 12px; font-weight: 700; color: var(--lx-orange); }
+.lx-outcome h3 { margin: 8px 0 0; font-size: clamp(22px, 2.2vw, 28px); line-height: 1.18; letter-spacing: -0.03em; font-weight: 620; }
+.lx-outcome p { margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: var(--lx-muted); }
+.lx-outcome .lx-outcome-proof { display: flex; gap: 8px; align-items: flex-start; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--lx-line); font-size: 13.5px; color: var(--lx-ink-2); }
+.lx-outcome-proof svg { flex-shrink: 0; margin-top: 2px; color: var(--lx-orange); }
+.lx-outcome-shot { border-radius: 14px; }
+.lx-outcome-shot img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; }
+.lx-more { margin: 26px 0 0; text-align: center; font-size: 14px; font-weight: 600; }
+.lx .lx-more a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(242, 101, 34, 0.5); }
+@media (max-width: 900px) { .lx-outcome { grid-template-columns: 1fr; gap: 22px; padding: 20px; } .lx-outcome.is-flip .lx-outcome-copy { order: 0; } }
+
+.lx-impact-lead { margin: 14px auto 0; max-width: 560px; font-size: 15px; line-height: 1.6; color: rgba(255, 255, 255, 0.88); }
+.lx-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border: 1px solid var(--lx-line); border-radius: 6px; font-size: 10.5px; font-weight: 600; color: var(--lx-muted); vertical-align: 1px; }
+
+.lx-cta-form { margin-top: 24px; max-width: 460px; }
+.lx-cta-form .lx-scan { border-color: transparent; }
+.lx-cta-form .lx-err { color: #fff; }
+.lx-cta-link { margin-top: 12px; border: none; background: none; padding: 4px 0; font-size: 13.5px; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

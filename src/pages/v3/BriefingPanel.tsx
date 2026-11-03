@@ -101,7 +101,7 @@ export function BriefingPanel({ briefing, sample = false, compiling = false, onC
     <Card className="zbr">
       <CardTitle
         icon={<ZIcon name="briefing" />}
-        sub={sample ? 'Sample data' : `Compiled for ${briefing.date}`}
+        sub={sample ? 'Example plan' : `Compiled for ${briefing.date}`}
         action={
           !sample && onCompile ? (
             <Button size="sm" variant="ghost" loading={compiling} onClick={onCompile}>

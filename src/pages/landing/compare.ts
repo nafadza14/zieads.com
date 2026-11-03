@@ -46,6 +46,34 @@ export const COMPARE_ROWS: CompareRow[] = [
   },
 ];
 
+/* Landing table: the real alternatives a small business weighs, not other tools (copy audit, Nov 2026).
+   Tool by tool comparisons live on the /vs pages. */
+export type LandingKey = 'zieads' | 'diy' | 'agency' | 'scheduler';
+export const LANDING_COMPARE_COLUMNS: Array<{ key: LandingKey; label: string }> = [
+  { key: 'zieads', label: 'ZieAds' },
+  { key: 'diy', label: 'Doing it yourself' },
+  { key: 'agency', label: 'Hiring an agency' },
+  { key: 'scheduler', label: 'A scheduler' },
+];
+export const LANDING_COMPARE_ROWS: Array<{ criteria: string; values: Record<LandingKey, string> }> = [
+  {
+    criteria: 'Tells you what to do each morning',
+    values: { zieads: 'Yes, 3 actions with the evidence', diy: 'You decide alone', agency: 'Usually a weekly or monthly report', scheduler: 'No, it posts what you give it' },
+  },
+  {
+    criteria: 'Answers buyers first',
+    values: { zieads: 'Buying questions on top, reply drafted', diy: 'When you find them', agency: 'Yes, by people', scheduler: 'Comments in one list, if included' },
+  },
+  {
+    criteria: 'Checks every post went live',
+    values: { zieads: 'Yes, retries up to 3 times', diy: 'You check by hand', agency: 'Yes, by people', scheduler: 'Varies by tool' },
+  },
+  {
+    criteria: 'Monthly cost',
+    values: { zieads: 'Free, paid from $29 per brand', diy: 'Your evenings', agency: 'From $1,500 a month', scheduler: 'Priced per channel or per seat' },
+  },
+];
+
 export interface VsPage {
   slug: string;
   name: string;

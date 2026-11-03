@@ -314,14 +314,14 @@ export default function AnalystPage() {
         <section className={`zan-live ${hasChannels ? '' : 'is-off'}`}>
           <ZieAvatar size={44} active={syncing || hasChannels} />
           <div className="zan-live-text">
-            <strong>{hasChannels ? `Zie is watching ${realChannels.length} ${realChannels.length === 1 ? 'channel' : 'channels'}` : 'Zie is ready to start watching'}</strong>
+            <strong>{hasChannels ? `Zie is watching ${realChannels.length} ${realChannels.length === 1 ? 'channel' : 'channels'}` : 'Your first plan is one click away'}</strong>
             <span>
               {hasChannels ? (
                 <>
                   Last check {ago(data?.monitoring?.last_sync_at)} · next check {nextCheck}
                 </>
               ) : (
-                'Connect an account and Zie monitors comments, growth and posts 24/7.'
+                "Connect Instagram or Facebook and see today's 3 actions."
               )}
             </span>
           </div>
@@ -366,7 +366,7 @@ export default function AnalystPage() {
             {showSample && (
               <div className="zan-sample" role="status">
                 <div>
-                  <Pill>Sample data</Pill> <strong>This is what Zie shows once your accounts are connected.</strong>
+                  <Pill>Example plan</Pill> <strong>Yours will look like this after you connect.</strong>
                   <br />
                   <span>Connect Instagram or Facebook and your first briefing is ready in a few minutes.</span>
                 </div>

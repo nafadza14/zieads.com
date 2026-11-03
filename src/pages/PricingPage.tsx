@@ -32,19 +32,19 @@ const GROUPS: { title: string; rows: { label: string; values: [Cell, Cell, Cell,
   {
     title: 'Workspace',
     rows: [
-      { label: 'Brands', values: ['1', '1', '3', '10, then $15 each'] },
-      { label: 'Team seats', values: ['1', '1', '3', '10 with roles'] },
-      { label: 'Client portal', values: [false, false, true, true] },
+      { label: 'Brands', values: ['1', '1', '3, coming soon', '10, coming soon'] },
+      { label: 'Team seats', values: ['1', '1', '3, coming soon', '10 with roles, coming soon'] },
+      { label: 'Client portal', values: [false, false, 'Coming soon', 'Coming soon'] },
     ],
   },
   {
-    title: 'AI Analyst and AI Agent',
+    title: 'Morning plan and assistant',
     rows: [
-      { label: 'Morning briefing', values: ['Weekly', 'Daily', 'Daily', 'Daily'] },
-      { label: 'Social Analyst modes', values: ['2 modes', 'All modes', 'All modes', 'All modes'] },
-      { label: 'Ads Analyst (read only)', values: [false, 'Basic report', 'Every mode', 'Every mode'] },
-      { label: 'Scheduled agents', values: [false, '3', '20', 'Unlimited'] },
-      { label: 'Guardian checks', values: [true, true, true, true] },
+      { label: 'Morning plan', values: ['Weekly', 'Daily', 'Daily', 'Daily'] },
+      { label: 'Quick reports (ask why anything changed)', values: ['2 reports', 'All reports', 'All reports', 'All reports'] },
+      { label: 'Ads report (read only)', values: [false, 'Basic', 'Full', 'Full'] },
+      { label: 'Routines', values: [false, '3', '20', 'Unlimited'] },
+      { label: 'Checks every post went live', values: [true, true, true, true] },
     ],
   },
   {
@@ -62,8 +62,8 @@ const GROUPS: { title: string; rows: { label: string; values: [Cell, Cell, Cell,
     rows: [
       { label: 'Analytics history', values: ['30 days', '12 months', 'Unlimited', 'Unlimited'] },
       { label: 'Competitors per brand', values: ['3', '10', '50', '100'] },
-      { label: 'Scheduled PDF reports', values: [false, 'ZieAds branded', 'White label', 'White label, agency brand'] },
-      { label: 'MCP calls a day', values: ['50', '1,000', '5,000', '20,000'] },
+      { label: 'White label PDF reports', values: [false, false, 'Coming soon', 'Coming soon'] },
+      { label: 'Claude, ChatGPT and API calls a day', values: ['50', '1,000', '5,000', '20,000'] },
     ],
   },
 ];
@@ -157,10 +157,10 @@ export default function PricingPage() {
             <LxReveal>
               <LxBadge n="01">Pricing</LxBadge>
               <h1 className="lx-h2" id="pr-title">
-                Start free.
-                <span>Scale when you're ready.</span>
+                One flat price per brand.
+                <span>Free for your first one.</span>
               </h1>
-              <p className="lx-lead">Priced per brand, cancel anytime. Every plan includes the AI Agent, Guardian and the MCP server.</p>
+              <p className="lx-lead">No credits to run out. Cancel anytime. Every plan checks every post went live and works inside Claude and ChatGPT.</p>
               <div className="pr-cycle" role="radiogroup" aria-label="Billing cycle">
                 <button type="button" role="radio" aria-checked={!yearly} className={!yearly ? 'is-on' : ''} onClick={() => setYearly(false)}>
                   Monthly
@@ -220,7 +220,7 @@ export default function PricingPage() {
               })}
             </div>
             <p className="lx-price-foot">
-              Need more than 10 brands? Agency adds brands at $15 each.{' '}
+              Running several brands? Multi brand workspaces are coming soon.{' '}
               <button type="button" className="pr-link" onClick={() => goToId('compare-plans')}>
                 Compare every plan
               </button>

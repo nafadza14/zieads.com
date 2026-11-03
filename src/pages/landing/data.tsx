@@ -290,28 +290,44 @@ export interface FaqItem {
 
 export const faqItems: FaqItem[] = [
   {
-    q: 'What is ZieAds?',
-    a: 'ZieAds is an AI social media manager for founders, freelancers and small agencies. It schedules posts, answers comments, tracks analytics and competitors for Instagram, Facebook, TikTok and LinkedIn, and sends you a briefing every morning with what to do next. You approve, then the agent does the work.',
-  },
-  {
-    q: 'Does the AI agent post, reply or spend money on its own?',
+    q: 'Does ZieAds post, reply or spend money on its own?',
     a: 'No. Every post, reply and recommendation waits for your approval, and ZieAds never spends ad budget. Every action is recorded in your activity log so you can see who did what and when.',
   },
   {
+    q: 'What is ZieAds?',
+    a: 'ZieAds tells you what to post, answer and fix each morning, then does it after you approve. It works with Instagram, Facebook, TikTok and LinkedIn.',
+  },
+  {
+    q: 'Will the posts sound like me?',
+    a: 'Yes. ZieAds learns from your website and your best posts, and you can edit every draft before it goes out.',
+  },
+  {
+    q: 'Do I need to know marketing?',
+    a: 'No. Each action says what to do and why, in plain words.',
+  },
+  {
+    q: 'What happens if a post fails?',
+    a: 'ZieAds retries it up to 3 times. If it still fails, it waits at the top of your morning plan with the reason, so you never find out the next day by accident.',
+  },
+  {
+    q: 'Are there credits or hidden add-ons?',
+    a: 'No. One price per brand. X support will be an optional add-on when it arrives, because X charges per post.',
+  },
+  {
     q: 'How does ZieAds read my ads?',
-    a: 'Connect Meta, Google and TikTok Ads with read-only access. ZieAds never changes your campaigns or spends budget. While each platform reviews our read-only access, you can bring results in with a Manual import (CSV) using our template.',
+    a: 'Read only. ZieAds never changes your campaigns or spends budget. Today you bring Meta, Google and TikTok Ads results in with a CSV import from our template. Direct connections arrive as each platform approves our read-only access.',
   },
   {
     q: 'Which platforms does ZieAds support today?',
-    a: 'Scheduling and analytics: Instagram, Facebook Pages, TikTok and LinkedIn. Inbox: Instagram and Facebook comments, with TikTok and LinkedIn coming soon. Competitor tracking: Instagram, Threads and the Meta Ad Library (ads that ran in the EU and UK). Threads, YouTube, X, Bluesky and Pinterest are on the roadmap.',
+    a: 'Scheduling and analytics: Instagram, Facebook Pages, TikTok and LinkedIn. Inbox: Instagram and Facebook comments, with TikTok and LinkedIn coming soon. Competitor tracking: Instagram, Threads and the Meta Ad Library (ads that ran in the EU and UK). X, Bluesky, YouTube, Threads publishing and Pinterest are on the roadmap.',
   },
   {
     q: 'Is there a free plan?',
-    a: 'Yes, and it is a real product: one brand, a weekly briefing, 20 scheduled posts a month, the Instagram and Facebook inbox with AI reply drafts, 30 days of analytics and 3 competitors. No credit card needed.',
+    a: 'Yes, and it is a real product: one brand, a weekly plan, 20 scheduled posts a month, the Instagram and Facebook inbox with reply drafts, 30 days of analytics and 3 competitors. No credit card needed.',
   },
   {
-    q: 'What is the ZieAds MCP server?',
-    a: 'MCP lets AI assistants such as Claude, ChatGPT and Cursor use your ZieAds data and tools. Create a key for one brand in Settings, add it to your assistant, and ask for your briefing, a posting plan or reply drafts. Anything that would publish or reply becomes a pending approval in ZieAds.',
+    q: 'Can I use ZieAds from Claude or ChatGPT?',
+    a: 'Yes. Add ZieAds as a connector in Claude or ChatGPT, sign in, and ask for your plan, a week of posts or reply drafts. Anything it prepares waits for your approval in ZieAds. See zieads.com/mcp.',
   },
   {
     q: 'How is my data kept safe?',
@@ -319,11 +335,11 @@ export const faqItems: FaqItem[] = [
   },
   {
     q: 'How is ZieAds different from Metricool or Vista Social?',
-    a: 'Metricool and Vista Social show you charts and give you an AI chat or agents on higher plans. ZieAds sends a briefing every morning with the actions it recommends, prepares the drafts, and executes after you approve. The agent is included in every plan, and ads are read together with organic results.',
+    a: 'They show you charts and leave the next step to you. ZieAds sends 3 actions every morning, prepares the drafts and does the work after you approve, on every plan. The full side by side is on our comparison pages.',
   },
   {
     q: 'Can I use ZieAds for several brands or clients?',
-    a: 'Yes. Pricing is per brand: every channel of one business counts as one brand. Pro covers 3 brands and 3 team seats, Agency covers 10 brands and 10 seats, with more brands at $15 each.',
+    a: 'Pricing is per brand: every channel of one business counts as one brand. Today each workspace runs one brand. Multi brand workspaces for Pro and Agency are coming soon.',
   },
 ];
 
@@ -507,17 +523,17 @@ export const pricingPlans: PricingPlan[] = [
     tagline: 'A real product for one brand.',
     price: '$0',
     period: 'forever',
-    features: ['1 brand, weekly briefing', '20 scheduled posts a month', 'Instagram and Facebook inbox with AI drafts', '30 days of analytics, 3 competitors', 'Guardian checks and MCP (small quota)'],
+    features: ['A weekly plan for one brand', '20 scheduled posts a month', 'Instagram and Facebook inbox with reply drafts', '30 days of analytics, 3 competitors', 'We check every post went live', 'Works inside Claude and ChatGPT'],
     cta: 'Start for free',
     highlight: false,
   },
   {
     id: 'starter',
     tier: 'Starter',
-    tagline: 'Your daily AI social media manager.',
+    tagline: 'A plan in your inbox every morning.',
     price: '$29',
     period: '/month',
-    features: ['1 brand, daily briefing', 'Unlimited scheduled posts', 'Full inbox with AI reply drafts', '12 months of analytics, 10 competitors', 'All Social Analyst modes, basic ads report', '3 scheduled agents, scheduled PDF reports'],
+    features: ['A morning plan every day', 'Unlimited scheduled posts', 'Full inbox with reply drafts', '12 months of analytics, 10 competitors', 'Ask why anything changed, basic ads report', '3 routines, like a plan every Monday'],
     cta: 'Choose Starter',
     highlight: false,
   },
@@ -527,17 +543,17 @@ export const pricingPlans: PricingPlan[] = [
     tagline: 'For growing brands and client work.',
     price: '$79',
     period: '/month',
-    features: ['3 brands, 3 team seats', 'Unlimited analytics history, 50 competitors', 'Every Ads Analyst mode', '20 scheduled agents', 'Saved replies and DMs as platforms approve them'],
+    features: ['3 brands and 3 team seats, coming soon', 'Unlimited analytics history, 50 competitors', 'Full ads report', '20 routines', 'Saved replies, and DMs as platforms approve them'],
     cta: 'Go Pro',
     highlight: true,
   },
   {
     id: 'agency',
     tier: 'Agency',
-    tagline: 'For agencies and marketing teams.',
+    tagline: 'Client reports in minutes. Approvals in one click.',
     price: '$199',
     period: '/month',
-    features: ['10 brands, then $15 per brand', '10 team seats with roles', '100 competitors per brand', 'Unlimited scheduled agents', 'Unlimited website audits'],
+    features: ['10 brands and 10 seats with roles, coming soon', '100 competitors per brand', 'Unlimited routines', 'White label reports, coming soon', 'Unlimited website audits'],
     cta: 'Choose Agency',
     highlight: false,
   },

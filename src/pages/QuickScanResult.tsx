@@ -89,8 +89,8 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
     navigate('/sign-up', { state: { email, from: '/onboarding' } });
   };
 
-  const headline =
-    score >= 65 ? 'Your ads setup is in good shape.' : score >= 50 ? 'Your ads setup has a few gaps.' : 'Your ads setup has gaps worth fixing first.';
+  // Copy audit: the website scan is the visitor's first plan; the readiness score is one part of it
+  const headline = `Your first plan for ${businessName || 'your brand'}`;
 
   return (
     <div className="zf-page">
@@ -116,7 +116,7 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
           <div className="zf-hero-copy">
             <div className="zf-badge-row">
               <span className="zf-badge-num">01</span>
-              <span className="zf-badge-label">Quick scan result</span>
+              <span className="zf-badge-label">From your website</span>
             </div>
             <h1>{headline}</h1>
             <div className="zf-hero-meta">
@@ -127,44 +127,17 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
               {businessType && <span className="zf-pill">{businessType}</span>}
             </div>
             <p>
-              We checked {signalList.length || 'the key'} ads readiness signals on your site. Below are the ones to fix first, ranked by how much they
-              cost you in wasted ad spend.
+              We read your public website and picked the 3 things to fix first. Your readiness score is {score} out of 100. Connect Instagram and Facebook
+              and tomorrow's plan covers your posts and comments too.
             </p>
           </div>
         </section>
 
-        {/* Signals */}
-        {signalList.length > 0 && (
-          <section className="zf-block">
-            <div className="zf-badge-row">
-              <span className="zf-badge-num">02</span>
-              <span className="zf-badge-label">Readiness signals</span>
-            </div>
-            <div className="zf-signals">
-              {signalList.map(([name, signal], i) => {
-                const t = signalTone(signal.score);
-                return (
-                  <div key={name} className={`zf-card zf-signal is-${t} zf-rise`} style={{ animationDelay: `${0.1 + i * 0.06}s` }}>
-                    <span className="zf-signal-ico">
-                      <SignalIcon tone={t} />
-                    </span>
-                    <div>
-                      <h4>{name}</h4>
-                      <p>{signal.status}</p>
-                    </div>
-                    <span className="zf-signal-score">{signal.score}/10</span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
         {/* Findings */}
         <section className="zf-block">
           <div className="zf-badge-row">
-            <span className="zf-badge-num">03</span>
-            <span className="zf-badge-label">Critical findings</span>
+            <span className="zf-badge-num">02</span>
+            <span className="zf-badge-label">Do these first</span>
           </div>
           <div className="zf-findings">
             {findings.slice(0, 3).map((f: any, i: number) => (
@@ -186,11 +159,38 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
           </div>
         </section>
 
+        {/* Signals */}
+        {signalList.length > 0 && (
+          <section className="zf-block">
+            <div className="zf-badge-row">
+              <span className="zf-badge-num">03</span>
+              <span className="zf-badge-label">What we checked</span>
+            </div>
+            <div className="zf-signals">
+              {signalList.map(([name, signal], i) => {
+                const t = signalTone(signal.score);
+                return (
+                  <div key={name} className={`zf-card zf-signal is-${t} zf-rise`} style={{ animationDelay: `${0.1 + i * 0.06}s` }}>
+                    <span className="zf-signal-ico">
+                      <SignalIcon tone={t} />
+                    </span>
+                    <div>
+                      <h4>{name}</h4>
+                      <p>{signal.status}</p>
+                    </div>
+                    <span className="zf-signal-score">{signal.score}/10</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Next step (spec 7.12): the audit leads into the daily briefing */}
         <section className="zf-card zf-rise zf-next">
           <div>
-            <h3>Get your first daily briefing</h3>
-            <p>Connect Instagram and Facebook and Zie reads the last 30 days, then tells you every morning what changed and what to do first.</p>
+            <h3>Get this plan every morning</h3>
+            <p>Connect Instagram and Facebook and ZieAds reads your last 30 days, then sends 3 things to do each morning: what to post, who to answer and what to fix.</p>
           </div>
           <TextRollButton text="Connect Instagram and Facebook" onClick={() => navigate('/sign-up', { state: { next: '/connections' } })} />
         </section>

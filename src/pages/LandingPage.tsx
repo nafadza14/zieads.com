@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import LxNav from './landing/lx/LxNav';
 import LxFooter from './landing/lx/LxFooter';
-import { LxAudit, LxCompare, LxCta, LxFaq, LxFeatures, LxHero, LxHow, LxImpact, LxIntegrations, LxPricing, LxPromises, LxStrip, LxWhy } from './landing/lx/Sections';
+import { LxCompare, LxCta, LxFaq, LxFeatures, LxHero, LxHow, LxImpact, LxIntegrations, LxPricing, LxPromises, LxStrip, LxWhy } from './landing/lx/Sections';
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -12,7 +12,7 @@ interface Props {
 export default function LandingPage({ onScanComplete }: Props) {
   const location = useLocation();
 
-  // Old anchors (#product-tour, #mcp, #free-audit-try) still land on the right section
+  // Old anchors (#product-tour, #mcp, #free-audit-try, #audit) still land on the right section; #audit is the hero form
   useEffect(() => {
     if (!location.hash) return;
     const alias: Record<string, string> = { 'product-tour': 'features', mcp: 'integrations', 'free-audit-try': 'audit', 'ai-analyst': 'features', composer: 'features', analytics: 'features', inbox: 'features' };
@@ -23,14 +23,14 @@ export default function LandingPage({ onScanComplete }: Props) {
   }, [location.hash]);
 
   useEffect(() => {
-    document.title = 'ZieAds: AI social media manager that briefs you every morning';
+    document.title = 'ZieAds: Social media tool that tells you what to post today';
   }, []);
 
   return (
     <div className="lx">
       <LxNav />
       <main>
-        <LxHero />
+        <LxHero onScanComplete={onScanComplete} />
         <LxStrip />
         <LxWhy />
         <LxFeatures />
@@ -40,9 +40,8 @@ export default function LandingPage({ onScanComplete }: Props) {
         <LxIntegrations />
         <LxCompare />
         <LxPricing />
-        <LxAudit onScanComplete={onScanComplete} />
         <LxFaq />
-        <LxCta />
+        <LxCta onScanComplete={onScanComplete} />
       </main>
       <LxFooter />
     </div>
