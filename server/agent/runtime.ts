@@ -267,7 +267,7 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
   if (!apiKey) throw new Error("SUMOPOD_API_KEY not set");
   const endpoint = process.env.AGENT_OPENAI_ENDPOINT || SUMOPOD_CHAT_URL;
   // A custom endpoint uses AGENT_OPENAI_MODEL as given; Sumopod's model is checked against /v1/models
-  let model = process.env.AGENT_OPENAI_ENDPOINT ? process.env.AGENT_OPENAI_MODEL || "MiniMax-M2.7" : await sumopodModel(apiKey);
+  let model = process.env.AGENT_OPENAI_ENDPOINT ? process.env.AGENT_OPENAI_MODEL || "deepseek-v4-flash" : await sumopodModel(apiKey);
   let retriedModel = false;
   const tools = AGENT_TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } }));
   const deadline = Date.now() + (opts.budgetMs ?? 50000);
@@ -305,12 +305,16 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
     }
 
     let rawContent = "";
+    let reasoning = "";
     const calls: Array<{ id: string; name: string; args: string }> = [];
     // Tool calls written as text (MiniMax) never reach the chat
     const gate = new ToolMarkupGate();
     const onDelta = (d: any) => {
       if (!d) return;
-      if (typeof d.reasoning_content === "string") writer.thinking(d.reasoning_content);
+      if (typeof d.reasoning_content === "string") {
+        reasoning += d.reasoning_content;
+        writer.thinking(d.reasoning_content);
+      }
       if (typeof d.content === "string" && d.content) {
         rawContent += d.content;
         const safe = gate.push(d.content);
@@ -374,6 +378,8 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
     messages.push({
       role: "assistant",
       content: rawContent || "",
+      // DeepSeek thinking mode needs its reasoning sent back with the tool results of the same turn
+      ...(reasoning && /deepseek/i.test(model) ? { reasoning_content: reasoning } : {}),
       tool_calls: parsed.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: c.rawArgs } })),
     });
     const results = await runBatch(parsed, round, opts, steps);

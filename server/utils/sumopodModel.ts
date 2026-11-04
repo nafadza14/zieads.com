@@ -1,16 +1,16 @@
 /*
   Which Sumopod model to call. Sumopod renames models now and then (MiniMax-M2.7-highspeed stopped
   existing), so instead of a hard coded name ZieAds asks /v1/models once and picks the best match:
-    1. SUMOPOD_MODEL (or AGENT_OPENAI_MODEL) exactly, when the key has it
-    2. MiniMax-M2.7
-    3. any other MiniMax-M2.7 variant, then any MiniMax model
+    1. SUMOPOD_MODEL (or AGENT_OPENAI_MODEL, default deepseek-v4-flash) exactly, when the key has it
+    2. a model whose id contains that name (for example deepseek/deepseek-v4-flash)
+    3. another DeepSeek model, then MiniMax-M2.7, then any MiniMax model
   The choice is cached for an hour. If the list can not be read, the preferred name is used as is.
 */
 export const SUMOPOD_CHAT_URL = "https://ai.sumopod.com/v1/chat/completions";
 const MODELS_URL = "https://ai.sumopod.com/v1/models";
 const TTL_MS = 60 * 60 * 1000;
 
-export const preferredModel = () => process.env.SUMOPOD_MODEL || process.env.AGENT_OPENAI_MODEL || "MiniMax-M2.7";
+export const preferredModel = () => process.env.SUMOPOD_MODEL || process.env.AGENT_OPENAI_MODEL || "deepseek-v4-flash";
 
 let cache: { model: string; at: number; preferred: string } | null = null;
 
@@ -20,6 +20,9 @@ export function pickModel(ids: string[], preferred = preferredModel()): string {
   const find = (f: (id: string) => boolean) => ids.find((id) => f(lower(id)));
   return (
     find((id) => id === lower(preferred)) ||
+    find((id) => id.endsWith(`/${lower(preferred)}`) || id.includes(lower(preferred))) ||
+    find((id) => id.includes("deepseek-v4")) ||
+    find((id) => id.includes("deepseek")) ||
     find((id) => id === "minimax-m2.7" || id.endsWith("/minimax-m2.7")) ||
     find((id) => id.includes("minimax-m2.7")) ||
     find((id) => id.includes("minimax")) ||

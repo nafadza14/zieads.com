@@ -2,7 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pickModel, sumopodModel, resetModelCache, isInvalidModel } from "../server/utils/sumopodModel.ts";
 
-test("pickModel prefers the configured name, then MiniMax-M2.7, then any MiniMax", () => {
+test("pickModel prefers the configured name, then DeepSeek, then MiniMax", () => {
+  assert.equal(pickModel(["MiniMax-M2.7", "deepseek-v4-flash", "deepseek-v4-pro"], "deepseek-v4-flash"), "deepseek-v4-flash");
+  assert.equal(pickModel(["MiniMax-M2.7", "deepseek/deepseek-v4-flash"], "deepseek-v4-flash"), "deepseek/deepseek-v4-flash");
+  assert.equal(pickModel(["MiniMax-M2.7", "deepseek-v4-pro"], "deepseek-v4-flash"), "deepseek-v4-pro");
+  assert.equal(pickModel(["MiniMax-M2.7", "gpt-4o"], "deepseek-v4-flash"), "MiniMax-M2.7");
   assert.equal(pickModel(["gpt-4o", "MiniMax-M2.7", "MiniMax-M2.7-fast"], "MiniMax-M2.7"), "MiniMax-M2.7");
   assert.equal(pickModel(["gpt-4o", "minimax/MiniMax-M2.7"], "MiniMax-M2.7-highspeed"), "minimax/MiniMax-M2.7");
   assert.equal(pickModel(["gpt-4o", "MiniMax-M2.7-lightning"], "x"), "MiniMax-M2.7-lightning");
@@ -20,9 +24,11 @@ test("sumopodModel reads /v1/models once and caches, falls back when the list fa
     delete process.env.SUMOPOD_MODEL; delete process.env.AGENT_OPENAI_MODEL;
     assert.equal(await sumopodModel("sk-x"), "MiniMax-M2.7");
     assert.equal(await sumopodModel("sk-x"), "MiniMax-M2.7");
+    process.env.SUMOPOD_MODEL = "deepseek-v4-flash";
     assert.equal(calls, 1);
     globalThis.fetch = (async () => { throw new Error("offline"); }) as any;
-    assert.equal(await sumopodModel("sk-x", true), "MiniMax-M2.7");
+    assert.equal(await sumopodModel("sk-x", true), "deepseek-v4-flash");
+    delete process.env.SUMOPOD_MODEL;
   } finally {
     globalThis.fetch = real;
   }
