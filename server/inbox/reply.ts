@@ -7,6 +7,7 @@ import { getFacebookPage } from "../facebook/connect.js";
 import { commentOnPost, explainGraphError } from "../utils/facebookApi.js";
 import { getConnectedInstagram, callInstagramAPI } from "../utils/instagramHelpers.js";
 import { logActivity, Actor } from "../activity.js";
+import { COMMENT_NETWORKS, replyOnNetwork } from "../social/comments.js";
 
 export class ReplyError extends Error {
   status: number;
@@ -43,6 +44,12 @@ export async function sendCommentReply(userId: string, commentId: string, text: 
       result = await callInstagramAPI<{ id: string }>(conn.accessToken, `${comment.platform_comment_id}/replies`, { method: "POST", body: JSON.stringify({ message: reply }) });
     } catch (e: any) {
       throw new ReplyError(`Instagram rejected the reply: ${e.message}`, 502, "reply_failed");
+    }
+  } else if (COMMENT_NETWORKS.includes(comment.platform)) {
+    try {
+      result = await replyOnNetwork(userId, comment, reply);
+    } catch (e: any) {
+      throw new ReplyError(e.message, e.reconnect ? 401 : 502, e.reconnect ? "reconnect_needed" : "reply_failed");
     }
   } else {
     throw new ReplyError(`Replying to ${comment.platform} comments is not available yet.`, 400, "unsupported");

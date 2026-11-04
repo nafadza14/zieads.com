@@ -16,6 +16,7 @@ import {
   PenTool,
   BarChart3,
   Inbox,
+  MessageCircle,
   Menu,
   X,
   AlertCircle,
@@ -148,7 +149,13 @@ export default function V3Layout({ children }: Props) {
         { k: '/calendar', l: 'Calendar', icon: <Calendar size={16} /> },
       ],
     },
-    { label: 'Engage', items: [{ k: '/inbox', l: 'Inbox', icon: <Inbox size={16} /> }] },
+    {
+      label: 'Engage',
+      items: [
+        { k: '/comments', l: 'Comments', icon: <MessageCircle size={16} /> },
+        { k: '/inbox', l: 'Inbox', icon: <Inbox size={16} /> },
+      ],
+    },
     {
       label: 'Analyze',
       items: [

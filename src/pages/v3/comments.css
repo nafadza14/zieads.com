@@ -1,0 +1,220 @@
+/* Comments: posts on the left, the post's comments with inline reply on the right */
+
+.zcm-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  padding: 12px clamp(16px, 3vw, 40px);
+  background: #fff;
+  border-bottom: 1px solid var(--zd-line);
+}
+.zcm-seg { width: 320px; max-width: 100%; }
+.zcm-count {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--zd-gray, #f1f1f0);
+  color: var(--zd-ink-2);
+}
+.zcm-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.zcm-chips .zd-chip { white-space: nowrap; flex-shrink: 0; }
+.zcm-toolbar-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.zcm-sort .zd-select { width: auto; padding: 6px 30px 6px 10px; font-size: 12.5px; border-radius: 8px; }
+.zcm-mode { display: inline-flex; border: 1px solid var(--zd-line); border-radius: 8px; padding: 2px; background: #fff; }
+.zcm-mode button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--zd-ink-3);
+  cursor: pointer;
+}
+.zcm-mode button.is-active { background: var(--zd-ink); color: #fff; }
+
+.zcm-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px clamp(16px, 3vw, 40px) 0;
+  padding: 8px 12px;
+  border: 1px solid var(--zd-line);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--zd-ink);
+}
+.zcm-notice button { margin-left: auto; border: 0; background: none; font-size: 16px; color: var(--zd-ink-3); cursor: pointer; }
+.zcm-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--zd-good); }
+.zcm-notice.tone-bad .zcm-dot { background: var(--zd-bad); }
+
+.zcm-empty-wrap { padding: 32px clamp(16px, 3vw, 40px); }
+
+.zcm-split { flex: 1; min-height: 0; display: flex; overflow: hidden; background: #fff; margin-top: 10px; border-top: 1px solid var(--zd-line); }
+
+/* ── Posts ── */
+.zcm-posts { width: 340px; flex-shrink: 0; overflow-y: auto; background: var(--zd-soft); border-right: 1px solid var(--zd-line); }
+.zcm-split.is-mobile .zcm-posts { width: 100%; border-right: 0; }
+.zcm-pad { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.zcm-post-skel { display: flex; gap: 10px; padding: 10px; background: #fff; border: 1px solid var(--zd-line); border-radius: 10px; }
+.zcm-post-list { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.zcm-post {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--zd-ink);
+}
+.zcm-post:hover { background: #fff; }
+.zcm-post.is-active { background: #fff; border-color: var(--zd-line); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+.zcm-post.is-active .zcm-post-caption { font-weight: 600; }
+
+.zcm-thumb {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--zd-canvas, #f4f4f3);
+  border: 1px solid var(--zd-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--zd-ink-3);
+}
+.zcm-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 7px; }
+.zcm-thumb.is-lg { width: 44px; height: 44px; }
+.zcm-thumb-badge, .zcm-avatar-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--zd-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zcm-post-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.zcm-post-caption { font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.zcm-post-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--zd-ink-3); }
+
+/* ── Comments ── */
+.zcm-detail { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.zcm-detail-head { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--zd-line); flex-shrink: 0; }
+.zcm-detail-text { flex: 1; min-width: 0; }
+.zcm-detail-text p { margin: 2px 0 0; font-size: 13.5px; color: var(--zd-ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.zcm-open { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 500; color: var(--zd-ink-2); white-space: nowrap; text-decoration: none; }
+.zcm-open:hover { color: var(--zd-ink); text-decoration: underline; }
+
+.zcm-thread { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.zcm-split.mode-list .zcm-thread { max-width: 760px; width: 100%; margin: 0 auto; }
+
+.zcm-comment {
+  padding: 14px;
+  border: 1px solid var(--zd-line);
+  border-radius: 12px;
+  background: #fff;
+  /* Purpose: a quiet entrance so new comments read as arriving, not jumping in */
+  animation: zdFadeUp 0.35s var(--zd-ease) both;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.zcm-comment.is-active { border-color: #d5d5d3; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06); }
+.zcm-comment.is-done .zcm-comment-text { color: var(--zd-ink-2); }
+
+.zcm-comment-post {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin-bottom: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: var(--zd-ink-3);
+  cursor: pointer;
+  text-align: left;
+}
+.zcm-comment-post span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zcm-comment-post:hover span { text-decoration: underline; }
+
+.zcm-comment-head { display: flex; align-items: center; gap: 10px; }
+.zcm-avatar {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--zd-canvas, #f4f4f3);
+  border: 1px solid var(--zd-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--zd-ink-2);
+}
+.zcm-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.zcm-comment-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.zcm-comment-who strong { font-size: 13.5px; font-weight: 600; color: var(--zd-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zcm-comment-who span { font-size: 11.5px; color: var(--zd-ink-3); }
+.zcm-comment-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.zcm-comment-text { margin: 10px 0 0 42px; font-size: 14px; line-height: 1.5; color: var(--zd-ink); white-space: pre-wrap; word-break: break-word; }
+
+.zcm-reply-done { margin: 10px 0 0 42px; padding: 10px 12px; border-radius: 8px; background: var(--zd-soft); border: 1px solid var(--zd-line); }
+.zcm-reply-done p { margin: 4px 0 0; font-size: 13px; color: var(--zd-ink-2); white-space: pre-wrap; }
+
+.zcm-reply { margin: 12px 0 0 42px; }
+.zcm-reply textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--zd-line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--zd-ink);
+  background: #fff;
+}
+.zcm-reply-actions { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.zcm-comment > .zcm-reply-actions { margin-left: 42px; }
+.zcm-spacer { flex: 1; }
+
+.zcm-keys { flex-shrink: 0; margin: 0; padding: 8px 20px; border-top: 1px solid var(--zd-line); font-size: 11.5px; color: var(--zd-ink-3); }
+.zcm-keys kbd { display: inline-block; min-width: 18px; padding: 0 4px; margin-right: 2px; border: 1px solid var(--zd-line); border-radius: 4px; background: #fff; font: inherit; font-size: 11px; text-align: center; }
+
+.zcm-unsupported { flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 8px clamp(16px, 3vw, 40px); border-top: 1px solid var(--zd-line); background: #fff; font-size: 12px; color: var(--zd-ink-3); }
+.zcm-unsupported span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Purpose: the sync icon turns while a sync runs so the wait is visible */
+.zcm-spin { animation: zdSpin 1s linear infinite; }
+
+@media (max-width: 860px) {
+  .zcm-seg { width: 100%; }
+  .zcm-chips { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .zcm-toolbar-end { margin-left: 0; width: 100%; justify-content: space-between; }
+  .zcm-detail-head { padding: 10px 12px; gap: 8px; }
+  .zcm-detail-head .zcm-thumb { display: none; }
+  .zcm-keys { display: none; }
+  .zcm-comment-text, .zcm-reply, .zcm-reply-done { margin-left: 0; }
+  .zcm-comment > .zcm-reply-actions { margin-left: 0; }
+  .zcm-thread { padding: 12px; }
+}

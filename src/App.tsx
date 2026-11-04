@@ -16,6 +16,7 @@ import ComposerPage from './pages/v3/ComposerPage';
 import CalendarPage from './pages/v3/CalendarPage';
 import AnalyticsPage from './pages/v3/AnalyticsPage';
 import InboxPage from './pages/v3/InboxPage';
+import CommentsPage from './pages/v3/CommentsPage';
 import HuntPage from './pages/v3/HuntPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
@@ -69,6 +70,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/composer': 'Composer',
   '/calendar': 'Calendar',
   '/analytics': 'Analytics',
+  '/comments': 'Comments',
   '/inbox': 'Inbox',
   '/hunt': 'Competitor Hunt',
   '/connections': 'Connections',
@@ -156,6 +158,7 @@ export default function App() {
         <Route path="/composer" element={<ProtectedRoute><ComposerPage /></ProtectedRoute>} />
         <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/comments" element={<ProtectedRoute><CommentsPage /></ProtectedRoute>} />
         <Route path="/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
         <Route path="/hunt" element={<ProtectedRoute><HuntPage /></ProtectedRoute>} />
         <Route path="/tools" element={<Navigate to="/settings" replace />} />

@@ -11,6 +11,7 @@ import crypto from "crypto";
 import { supabaseAdmin } from "../supabaseServer.js";
 import { tg } from "./credentials.js";
 import { saveConnection } from "./store.js";
+import { ingestTelegramMessage } from "./comments.js";
 
 const CODE_TTL_MS = 30 * 60000;
 
@@ -72,7 +73,6 @@ async function send(chatId: number, text: string, extra: Record<string, unknown>
   await tg(botToken(), "sendMessage", { chat_id: chatId, text, ...extra }).catch(() => undefined);
 }
 
-/** Handles one update from Telegram. Exported for tests. */
 /** Links a chat the bot is in to the ZieAds user who started from ZieAds. Shared by the add and /connect paths. */
 async function connectChat(fromId: number, chat: any, member: { status: string; can_post_messages?: boolean }) {
   const bot = await botInfo();
@@ -131,7 +131,10 @@ export async function handleUpdate(u: any) {
       const member = await tg(botToken(), "getChatMember", { chat_id: msg.chat.id, user_id: bot.id }).catch(() => ({ status: "member" }));
       const linked = await connectChat(msg.from.id, msg.chat, member);
       if (!linked) await send(msg.chat.id, "Open ZieAds, go to Connections, press Connect Telegram and press Start in my chat first. Then send /connect here again.");
+      return;
     }
+    // Any other message: a reply to a post becomes a comment in ZieAds
+    await ingestTelegramMessage(msg, bot.id).catch((e) => console.warn("[telegram] comment ingest failed:", e.message));
     return;
   }
 

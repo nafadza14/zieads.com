@@ -1,3 +1,4 @@
+import { syncNetworkComments } from "../social/comments.js";
 import { Router } from "express";
 import { NO_EM_DASH_RULE } from "../utils/noEmDash.js";
 import { computeOverview, type Period } from "../monitor/overview.js";
@@ -2075,6 +2076,13 @@ apiV3Router.get("/cron/sync-instagram-comments", async (req: any, res: any) => {
       }
       // Spread load between users
       await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Threads, Bluesky, Mastodon and YouTube comments for everyone who connected one of them
+    const { data: others } = await supabaseAdmin.from("social_connections").select("user_id").in("platform", ["threads", "bluesky", "mastodon", "youtube"]).eq("is_active", true);
+    for (const uid of [...new Set((others || []).map((o: any) => o.user_id))]) {
+      const r = await syncNetworkComments(uid).catch(() => ({}));
+      for (const v of Object.values(r) as any[]) totalNewComments += v?.count || 0;
     }
 
     const duration = Date.now() - startTime;

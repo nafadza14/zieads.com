@@ -41,3 +41,13 @@ CREATE TABLE IF NOT EXISTS public.bluesky_oauth_store (
   PRIMARY KEY (kind, key)
 );
 ALTER TABLE public.bluesky_oauth_store ENABLE ROW LEVEL SECURITY;
+
+-- Comments from every network in one table (the Comments page and the Inbox read it)
+ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS intent TEXT;
+ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS priority INT NOT NULL DEFAULT 3;
+ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS reply_draft TEXT;
+ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS ingestion_source TEXT DEFAULT 'cron_polling';
+ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS author_avatar TEXT;
+-- Post context and the ids each network needs to reply (Bluesky uri and cid, Telegram chat, YouTube thread)
+ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS meta JSONB NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS comments_inbox_post ON public.comments_inbox (user_id, platform, platform_media_id);

@@ -27,8 +27,8 @@ export const ENV_NEEDED: Record<OAuthPlatform, string[]> = {
 
 export const THREADS_SCOPES = ["threads_basic", "threads_content_publish", "threads_manage_replies", "threads_read_replies", "threads_manage_insights"];
 export const PINTEREST_SCOPES = ["boards:read", "pins:read", "pins:write", "user_accounts:read"];
-export const YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly"];
-export const MASTODON_SCOPES = "read:accounts write:statuses write:media";
+export const YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly", "https://www.googleapis.com/auth/youtube.force-ssl"];
+export const MASTODON_SCOPES = "read:accounts read:notifications read:statuses write:statuses write:media";
 
 export const callbackUrl = (base: string, p: string) => `${base.replace(/\/$/, "")}/api/auth/${p}/callback`;
 
