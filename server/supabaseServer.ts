@@ -15,20 +15,89 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 // Extract user ID from the Authorization header JWT
-export async function getUserIdFromRequest(
-  req: any
-): Promise<string | null> {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+/*
+  Workspaces: one workspace per brand. Each extra workspace owns its data through a hidden "data user"
+  (an auth user nobody can sign in as), so every existing user_id scoped query stays scoped to the brand.
+  The browser sends X-Workspace-Id; it only counts when the signed in person owns that workspace.
+  Plans, credits and agent usage always belong to the account owner (billingUserOf).
+*/
+const WS_TTL = 60_000;
+const wsCache = new Map<string, { data: string | null; at: number }>();
+const billCache = new Map<string, { owner: string; at: number }>();
 
+async function resolveWorkspaceDataUser(accountId: string, workspaceId: string): Promise<string | null> {
+  const key = `${accountId}:${workspaceId}`;
+  const hit = wsCache.get(key);
+  if (hit && Date.now() - hit.at < WS_TTL) return hit.data;
+  let data: string | null = null;
+  try {
+    const { data: ws } = await supabaseAdmin.from("workspaces").select("data_user_id").eq("id", workspaceId).eq("owner_id", accountId).is("archived_at", null).maybeSingle();
+    data = ws?.data_user_id || null;
+  } catch {
+    data = null;
+  }
+  wsCache.set(key, { data, at: Date.now() });
+  return data;
+}
+
+export function forgetWorkspaceCache() {
+  wsCache.clear();
+  billCache.clear();
+}
+
+/** The account that pays for this data user: the workspace owner, or the user itself */
+export async function billingUserOf(userId: string): Promise<string> {
+  if (!userId) return userId;
+  const hit = billCache.get(userId);
+  if (hit && Date.now() - hit.at < WS_TTL) return hit.owner;
+  let owner = userId;
+  try {
+    const { data } = await supabaseAdmin.from("workspaces").select("owner_id").eq("data_user_id", userId).maybeSingle();
+    if (data?.owner_id) owner = data.owner_id;
+  } catch {
+    /* no workspaces table yet */
+  }
+  billCache.set(userId, { owner, at: Date.now() });
+  return owner;
+}
+
+async function accountUserFromToken(req: any): Promise<string | null> {
+  if (req.zieAccountUserId) return req.zieAccountUserId;
+  const authHeader = req.headers?.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.replace("Bearer ", "");
   try {
     const { data, error } = await supabaseAdmin.auth.getUser(token);
     if (error || !data?.user) return null;
+    // A workspace data user can never sign in, but refuse it here too
+    if (data.user.app_metadata?.kind === "workspace") return null;
+    req.zieAccountUserId = data.user.id;
     return data.user.id;
   } catch {
     return null;
   }
+}
+
+/** The person who is signed in, ignoring the workspace (billing, settings of the account, workspaces) */
+export async function getAccountUserIdFromRequest(req: any): Promise<string | null> {
+  return accountUserFromToken(req);
+}
+
+/** The user id whose data this request works on: the active workspace's data user, or the account */
+export async function getUserIdFromRequest(
+  req: any
+): Promise<string | null> {
+  const account = await accountUserFromToken(req);
+  if (!account) return null;
+  const ws = String(req.headers?.["x-workspace-id"] || req.query?.workspace || "");
+  if (ws && /^[0-9a-f-]{36}$/i.test(ws)) {
+    const data = await resolveWorkspaceDataUser(account, ws);
+    if (data) {
+      req.zieWorkspaceId = ws;
+      return data;
+    }
+  }
+  return account;
 }
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -256,6 +325,7 @@ export async function deleteConversation(conversationId: string, userId: string)
 }
 
 export async function getAgentMessageCount(userId: string): Promise<number> {
+  userId = await billingUserOf(userId);
   const month = new Date().toISOString().slice(0, 7); // "2026-04"
   const { data } = await supabaseAdmin
     .from("agent_usage")
@@ -267,6 +337,7 @@ export async function getAgentMessageCount(userId: string): Promise<number> {
 }
 
 export async function incrementAgentUsage(userId: string): Promise<void> {
+  userId = await billingUserOf(userId);
   const month = new Date().toISOString().slice(0, 7);
   const { error } = await supabaseAdmin.rpc("increment_agent_usage", { p_user_id: userId, p_month: month });
   if (error) {
@@ -366,7 +437,7 @@ export async function isTestUser(reqOrUserId: any): Promise<boolean> {
         userEmail = data?.user?.email;
       }
     } else if (typeof reqOrUserId === 'string') {
-      const { data } = await supabaseAdmin.auth.admin.getUserById(reqOrUserId);
+      const { data } = await supabaseAdmin.auth.admin.getUserById(await billingUserOf(reqOrUserId));
       userEmail = data?.user?.email;
     }
 
@@ -384,6 +455,7 @@ export async function deductCredits(
   operationId: string
 ) {
   try {
+    userId = await billingUserOf(userId);
     const { data: planRes } = await supabaseAdmin
       .from("user_plan")
       .select("plan_id")
@@ -413,6 +485,7 @@ export async function deductCredits(
  */
 export async function getEffectivePlan(userId: string): Promise<"free" | "starter" | "pro" | "agency"> {
   try {
+    userId = await billingUserOf(userId);
     if (await isTestUser(userId)) return "agency";
     const { data } = await supabaseAdmin.from("user_plan").select("plan_id").eq("user_id", userId).maybeSingle();
     const p = data?.plan_id;
@@ -420,4 +493,11 @@ export async function getEffectivePlan(userId: string): Promise<"free" | "starte
   } catch {
     return "free";
   }
+}
+
+/** auth.admin.listUsers without the hidden workspace data users */
+export async function listRealUsers(params?: any): Promise<any> {
+  const r: any = await supabaseAdmin.auth.admin.listUsers(params);
+  if (r?.data?.users) r.data.users = r.data.users.filter((u: any) => u.app_metadata?.kind !== "workspace");
+  return r;
 }

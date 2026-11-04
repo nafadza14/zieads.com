@@ -32,7 +32,7 @@ const GROUPS: { title: string; rows: { label: string; values: [Cell, Cell, Cell,
   {
     title: 'Workspace',
     rows: [
-      { label: 'Brands', values: ['1', '1', '3, coming soon', '10, coming soon'] },
+      { label: 'Brands (one workspace each)', values: ['1', '1', '3', '10'] },
       { label: 'Team seats', values: ['1', '1', '3, coming soon', '10 with roles, coming soon'] },
       { label: 'Client portal', values: [false, false, 'Coming soon', 'Coming soon'] },
     ],
@@ -220,7 +220,7 @@ export default function PricingPage() {
               })}
             </div>
             <p className="lx-price-foot">
-              Running several brands? Multi brand workspaces are coming soon.{' '}
+              Running several brands? Pro gives you 3 workspaces and Agency 10, one per brand, with a switcher in the sidebar.{' '}
               <button type="button" className="pr-link" onClick={() => goToId('compare-plans')}>
                 Compare every plan
               </button>

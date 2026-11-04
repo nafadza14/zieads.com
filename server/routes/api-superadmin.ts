@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'crypto';
-import { supabaseAdmin } from '../supabaseServer.js';
+import { supabaseAdmin, listRealUsers } from '../supabaseServer.js';
 import { verifyPassword, hashPassword } from '../crypto.js';
 import { verifyTOTP, generateTOTPSecret } from '../totp.js';
 
@@ -542,7 +542,7 @@ superadminRouter.get('/overview', superadminAuthMiddleware, async (req, res) => 
     // 4. Recent Signups
     let recentSignups: any[] = [];
     try {
-      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const { data: authUsers } = await listRealUsers();
       recentSignups = (authUsers?.users || []).slice(0, 10).map((u: any) => ({
         id: u.id,
         email: u.email,
@@ -604,7 +604,7 @@ superadminRouter.get('/users', superadminAuthMiddleware, async (req, res) => {
 
   try {
     // 1. Fetch Users from Supabase Auth
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authData } = await listRealUsers();
     let users = authData?.users || [];
 
     // Filter by search (email)
@@ -995,7 +995,7 @@ superadminRouter.get('/billing/overview', superadminAuthMiddleware, async (req, 
 superadminRouter.get('/billing/transactions', superadminAuthMiddleware, async (req, res) => {
   // Returns Stripe transactions (simulated charges since no Stripe SDK configured)
   try {
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authData } = await listRealUsers();
     const emails = (authData?.users || []).map(u => u.email);
     const plans = ['Starter', 'Pro', 'Agency'];
     const amounts = [29, 79, 199];
@@ -1029,7 +1029,7 @@ superadminRouter.get('/credits/summary', superadminAuthMiddleware, async (req, r
     const today = new Date();
     today.setUTCHours(0,0,0,0);
 
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authUsers } = await listRealUsers();
     const { data: credits } = await supabaseAdmin.from('user_credits').select('*');
     
     const totalAiMessages = (credits || []).reduce((acc, curr) => acc + (curr.lifetime_ai_messages_sent || 0), 0);
@@ -1071,7 +1071,7 @@ superadminRouter.get('/credits/transactions', superadminAuthMiddleware, async (r
       .order('created_at', { ascending: false })
       .limit(30);
 
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authData } = await listRealUsers();
     const emailMap = new Map((authData?.users || []).map(u => [u.id, u.email]));
 
     const mapped = (txs || []).map(t => ({
@@ -1096,7 +1096,7 @@ superadminRouter.get('/skill-runs', superadminAuthMiddleware, async (req, res) =
       .order('created_at', { ascending: false })
       .limit(50);
 
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authData } = await listRealUsers();
     const emailMap = new Map((authData?.users || []).map(u => [u.id, u.email]));
 
     const mapped = (runs || []).map(r => ({
@@ -1128,7 +1128,7 @@ superadminRouter.get('/conversations', superadminAuthMiddleware, async (req, res
       .order('updated_at', { ascending: false })
       .limit(50);
 
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: authData } = await listRealUsers();
     const emailMap = new Map((authData?.users || []).map(u => [u.id, u.email]));
 
     const mapped = (convs || []).map(c => ({

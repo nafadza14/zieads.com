@@ -18,7 +18,7 @@ import {
 } from "../supabaseServer.js";
 import { runAgent, AGENT_INSTRUCTIONS, type AgentEvent } from "../agent/runtime.js";
 import { ALL_MODES, modeAccess } from "../../src/lib/analysisModes.js";
-import { getEffectivePlan } from "../supabaseServer.js";
+import { getEffectivePlan, billingUserOf } from "../supabaseServer.js";
 import { getBrandProfile, brandProfileToPrompt } from "../brandProfile.js";
 
 export const agentRouter = express.Router();
@@ -46,7 +46,7 @@ async function getUserPlanAndLimit(userId: string, req: any) {
       const { data: userPlan } = await supabaseAdmin
         .from("user_plan")
         .select("plan_id")
-        .eq("user_id", userId)
+        .eq("user_id", await billingUserOf(userId))
         .maybeSingle();
       plan = userPlan?.plan_id || "free";
     }

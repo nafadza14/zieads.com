@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import { supabaseAdmin, getUserIdFromRequest, isTestUser } from '../supabaseServer.js';
+// Plans and credits belong to the account, never to a workspace
+import { supabaseAdmin, getAccountUserIdFromRequest as getUserIdFromRequest, isTestUser } from '../supabaseServer.js';
 import {
   PLANS,
   OPERATION_COSTS,

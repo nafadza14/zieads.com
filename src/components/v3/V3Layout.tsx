@@ -28,6 +28,7 @@ import { useCreditStore } from '../../lib/creditStore';
 import { useDemoMode } from '../../lib/demoStore';
 import CreditBadge from '../CreditBadge';
 import SocialIcon from './SocialIcon';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { PLATFORMS, PLATFORM_COUNT } from '../../lib/platforms';
 import { useConnectedAccounts } from '../../lib/connectionsStore';
 import { sampleConnections } from '../../data/sample-data';
@@ -281,6 +282,8 @@ export default function V3Layout({ children }: Props) {
         <ZieAdsLogo size={26} />
         <span className="zd-brand-name"><ZieAdsWordmark /></span>
       </div>
+
+      <WorkspaceSwitcher onNavigate={() => setDrawerOpen(false)} />
 
       <div className="zd-side-cta">
         <button type="button" className="zd-create" onClick={() => handleNavClick('/composer')}>

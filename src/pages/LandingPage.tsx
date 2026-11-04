@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import LxNav from './landing/lx/LxNav';
 import LxFooter from './landing/lx/LxFooter';
-import { LxCompare, LxCta, LxFaq, LxFeatures, LxHero, LxHow, LxImpact, LxIntegrations, LxPricing, LxPromises, LxStrip, LxWhy } from './landing/lx/Sections';
+import { LxCta, LxFaq, LxFeatures, LxHero, LxHow, LxImpact, LxIntegrations, LxPricing, LxPromises, LxStrip, LxWhy } from './landing/lx/Sections';
 
 interface Props {
   onScanComplete: (data: any) => void;
@@ -38,7 +38,6 @@ export default function LandingPage({ onScanComplete }: Props) {
         <LxImpact />
         <LxPromises />
         <LxIntegrations />
-        <LxCompare />
         <LxPricing />
         <LxFaq />
         <LxCta />

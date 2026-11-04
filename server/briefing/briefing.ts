@@ -9,7 +9,7 @@
   active brand every day even when the AI model is unavailable. When the model is
   available it only rewrites the summary wording; it never adds numbers.
 */
-import { supabaseAdmin, getEffectivePlan } from "../supabaseServer.js";
+import { supabaseAdmin, getEffectivePlan, billingUserOf } from "../supabaseServer.js";
 import { computeOverview } from "../monitor/overview.js";
 import { reliabilityReport } from "../guardian/guardian.js";
 import { createAgentTask, logActivity } from "../activity.js";
@@ -302,7 +302,8 @@ async function emailBriefing(userId: string, b: Briefing) {
   const key = process.env.MAILGUN_API_KEY;
   const domain = process.env.MAILGUN_DOMAIN;
   if (!key || !domain) return;
-  const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+  // A brand workspace mails its owner
+  const { data } = await supabaseAdmin.auth.admin.getUserById(await billingUserOf(userId));
   const to = data?.user?.email;
   if (!to) return;
   const base = process.env.APP_URL || "https://zieads.com";

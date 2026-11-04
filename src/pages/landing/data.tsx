@@ -343,7 +343,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     q: 'Can I use ZieAds for several brands or clients?',
-    a: 'Pricing is per brand: every channel of one business counts as one brand. Today each workspace runs one brand. Multi brand workspaces for Pro and Agency are coming soon.',
+    a: 'Yes. Every brand gets its own workspace with its own accounts, calendar, inbox, comments, competitors and morning plan, and you switch between them in the sidebar. Free and Starter include one brand, Pro 3 and Agency 10. Pricing stays per brand, not per seat.',
   },
 ];
 
@@ -547,7 +547,7 @@ export const pricingPlans: PricingPlan[] = [
     tagline: 'For growing brands and client work.',
     price: '$79',
     period: '/month',
-    features: ['3 brands and 3 team seats, coming soon', 'Unlimited analytics history, 50 competitors', 'Full ads report', '20 routines', 'Saved replies, and DMs as platforms approve them'],
+    features: ['3 brands, each in its own workspace. 3 team seats, coming soon', 'Unlimited analytics history, 50 competitors', 'Full ads report', '20 routines', 'Saved replies, and DMs as platforms approve them'],
     cta: 'Go Pro',
     highlight: true,
   },
@@ -557,7 +557,7 @@ export const pricingPlans: PricingPlan[] = [
     tagline: 'Client reports in minutes. Approvals in one click.',
     price: '$199',
     period: '/month',
-    features: ['10 brands and 10 seats with roles, coming soon', '100 competitors per brand', 'Unlimited routines', 'White label reports, coming soon', 'Unlimited website audits'],
+    features: ['10 brands, each in its own workspace. 10 seats with roles, coming soon', '100 competitors per brand', 'Unlimited routines', 'White label reports, coming soon', 'Unlimited website audits'],
     cta: 'Choose Agency',
     highlight: false,
   },

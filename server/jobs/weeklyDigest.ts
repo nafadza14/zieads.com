@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "../supabaseServer.js";
+import { supabaseAdmin, billingUserOf } from "../supabaseServer.js";
 import { runQuickScan } from "../agents.js";
 import { scrapeUrl } from "../scraper.js";
 
@@ -96,7 +96,7 @@ export async function runWeeklyDigests() {
         );
 
         // Fetch user email from Supabase Auth
-        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(await billingUserOf(profile.id));
         const toEmail = userData?.user?.email;
         if (toEmail) {
           await sendScoreDropAlert({

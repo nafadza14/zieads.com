@@ -1,6 +1,6 @@
 -- ZieAds: every database change from November 2026 in one file.
 -- Safe to run more than once (IF NOT EXISTS everywhere). Paste all of it in Supabase, SQL Editor, Run.
--- Covers: 20261103_spec_update, 20261104_api_mcp_oauth, 20261106_more_networks.
+-- Covers: 20261103_spec_update, 20261104_api_mcp_oauth, 20261106_more_networks, 20261108_workspaces.
 
 -- ===== 20261103_spec_update =====
 -- ============================================================
@@ -310,6 +310,24 @@ ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS author_avatar TEXT;
 -- Post context and the ids each network needs to reply (Bluesky uri and cid, Telegram chat, YouTube thread)
 ALTER TABLE public.comments_inbox ADD COLUMN IF NOT EXISTS meta JSONB NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS comments_inbox_post ON public.comments_inbox (user_id, platform, platform_media_id);
+
+-- ===== 20261108_workspaces =====
+-- Workspaces: one per brand. Main workspace = the account itself (data_user_id = owner_id).
+-- Extra workspaces own their data through a hidden auth user, so every user_id scoped table is per brand.
+CREATE TABLE IF NOT EXISTS public.workspaces (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  data_user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  color TEXT,
+  position INT NOT NULL DEFAULT 0,
+  archived_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS workspaces_owner ON public.workspaces (owner_id, position);
+ALTER TABLE public.workspaces ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "workspaces_owner_read" ON public.workspaces;
+CREATE POLICY "workspaces_owner_read" ON public.workspaces FOR SELECT USING (auth.uid() = owner_id);
 
 -- Refresh the API schema cache so the new columns are visible right away
 NOTIFY pgrst, 'reload schema';

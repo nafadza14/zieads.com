@@ -16,6 +16,8 @@ import ScheduledAgentsSettings from './ScheduledAgentsSettings';
 import { api } from '../../lib/api';
 import { supabase } from '../../lib/supabaseClient';
 import { useCreditStore } from '../../lib/creditStore';
+import { clearWorkspace, refreshWorkspaces, switchWorkspace, useWorkspaces } from '../../lib/workspaceStore';
+import { CreateWorkspaceDialog, WorkspaceAvatar } from '../../components/v3/WorkspaceSwitcher';
 import './settings.css';
 
 export type SettingsSection = 'account' | 'brand-profile' | 'brands' | 'team' | 'billing' | 'notifications' | 'activity' | 'api' | 'automations' | 'privacy';
@@ -23,7 +25,7 @@ export type SettingsSection = 'account' | 'brand-profile' | 'brands' | 'team' | 
 const NAV: Array<{ id: SettingsSection | 'connections'; label: string; icon: ReactNode; sep?: boolean }> = [
   { id: 'account', label: 'Account', icon: <User size={15} /> },
   { id: 'brand-profile', label: 'Brand profile', icon: <BookUser size={15} /> },
-  { id: 'brands', label: 'Brands', icon: <Building2 size={15} /> },
+  { id: 'brands', label: 'Workspaces', icon: <Building2 size={15} /> },
   { id: 'team', label: 'Team and roles', icon: <Users size={15} /> },
   { id: 'billing', label: 'Plan and billing', icon: <CreditCard size={15} /> },
   { id: 'notifications', label: 'Briefing and alerts', icon: <Bell size={15} />, sep: true },
@@ -37,7 +39,7 @@ const NAV: Array<{ id: SettingsSection | 'connections'; label: string; icon: Rea
 const TITLES: Record<SettingsSection, [string, string]> = {
   account: ['Account', 'Your login details'],
   'brand-profile': ['Brand profile', 'What Zie knows about your business'],
-  brands: ['Brands', 'Plans are priced per brand'],
+  brands: ['Workspaces', 'One workspace per brand'],
   team: ['Team and roles', 'People who help run this brand'],
   billing: ['Plan and billing', 'Your plan and what it includes'],
   notifications: ['Briefing and alerts', 'When Zie briefs you and what it alerts on'],
@@ -110,50 +112,121 @@ function AccountPanel({ data }: { data: SettingsData }) {
   );
 }
 
-/* ── Brands ── */
+/* ── Workspaces: one per brand ── */
 function BrandsPanel({ data }: { data: SettingsData }) {
   const navigate = useNavigate();
+  const { state, active } = useWorkspaces();
+  const [creating, setCreating] = useState(false);
+  const [edit, setEdit] = useState<{ id: string; name: string } | null>(null);
+  const [del, setDel] = useState<{ id: string; name: string; confirm: string } | null>(null);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  if (!state) return <LoadingState text="Loading workspaces" />;
+  const full = state.workspaces.length >= state.limit;
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setErr('');
+    setMsg('');
+    try {
+      await fn();
+      await refreshWorkspaces();
+      setMsg(ok);
+    } catch (e: any) {
+      setErr(e.message);
+    }
+  };
   return (
     <div className="st-card">
-      <h3>Your brands</h3>
+      <h3>Workspaces</h3>
       <p>
-        Your {data.plan} plan includes {fmtLimit(data.limits.brands)} brand{data.limits.brands === 1 ? '' : 's'}. A brand covers every Instagram, Facebook, TikTok and LinkedIn account of one business.
+        One workspace per brand. Each has its own accounts, calendar, inbox, comments, competitors, brand profile and morning plan. Your {data.plan} plan includes {fmtLimit(state.limit)} brand{state.limit === 1 ? '' : 's'}, {state.workspaces.length} in use.
       </p>
       <table className="st-table">
         <thead>
           <tr>
             <th>Brand</th>
-            <th>Status</th>
+            <th>Accounts</th>
             <th />
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Main brand</td>
-            <td>
-              <Pill tone="good">Active</Pill>
-            </td>
-            <td style={{ textAlign: 'right' }}>
-              <Button size="sm" variant="secondary" onClick={() => navigate('/settings/brand-profile')}>
-                Edit profile
-              </Button>
-            </td>
-          </tr>
+          {state.workspaces.map((w) => (
+            <tr key={w.id}>
+              <td>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                  <WorkspaceAvatar ws={w} size={26} />
+                  {edit?.id === w.id ? (
+                    <input className="zd-input" style={{ height: 32, maxWidth: 220 }} aria-label="Workspace name" value={edit.name} maxLength={40} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+                  ) : (
+                    <strong>{w.name}</strong>
+                  )}
+                  {w.id === active?.id && <Pill tone="good">Active</Pill>}
+                  {w.is_main && <Pill>Main</Pill>}
+                </span>
+              </td>
+              <td>{w.accounts ? `${w.accounts} connected` : 'None yet'}</td>
+              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                {edit?.id === w.id ? (
+                  <>
+                    <Button size="sm" variant="ghost" onClick={() => setEdit(null)}>Cancel</Button>{' '}
+                    <Button size="sm" onClick={() => run(() => api(`/api/workspaces/${w.id}`, { method: 'PATCH', body: { name: edit.name } }), 'Workspace renamed.').then(() => setEdit(null))}>Save</Button>
+                  </>
+                ) : (
+                  <>
+                    {w.id !== active?.id && (
+                      <Button size="sm" variant="secondary" onClick={() => switchWorkspace(w.id, '/analyst')}>Open</Button>
+                    )}{' '}
+                    <Button size="sm" variant="ghost" onClick={() => setEdit({ id: w.id, name: w.name })}>Rename</Button>
+                    {!w.is_main && (
+                      <>
+                        {' '}
+                        <Button size="sm" variant="ghost" onClick={() => setDel({ id: w.id, name: w.name, confirm: '' })}>Delete</Button>
+                      </>
+                    )}
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
+      {del && (
+        <div className="st-danger" role="alertdialog" aria-labelledby="st-del-ws">
+          <p id="st-del-ws">
+            Deleting <strong>{del.name}</strong> removes its connected accounts, posts, comments, competitors and briefings for good. Type the name to confirm.
+          </p>
+          <input className="zd-input" style={{ maxWidth: 260 }} aria-label="Type the workspace name" value={del.confirm} onChange={(e) => setDel({ ...del, confirm: e.target.value })} />
+          <div className="st-actions">
+            <Button variant="ghost" onClick={() => setDel(null)}>Cancel</Button>
+            <Button
+              variant="danger"
+              disabled={del.confirm.trim().toLowerCase() !== del.name.toLowerCase()}
+              onClick={() =>
+                run(async () => {
+                  await api(`/api/workspaces/${del.id}`, { method: 'DELETE', body: { confirm: del.confirm } });
+                  if (del.id === active?.id) clearWorkspace();
+                }, 'Workspace deleted.').then(() => setDel(null))
+              }
+            >
+              Delete workspace
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="st-actions">
-        <Button variant="secondary" disabled title="Switching between brands ships with multi brand workspaces">
-          Add a brand
-        </Button>
-        {data.limits.brands <= 1 && (
-          <Button variant="ghost" onClick={() => navigate('/pricing')}>
-            Compare plans
+        {full ? (
+          <Button variant="secondary" onClick={() => navigate('/settings/billing')}>
+            {state.limit <= 1 ? 'Add brands on Pro or Agency' : 'Upgrade for more brands'}
           </Button>
+        ) : (
+          <Button onClick={() => setCreating(true)}>Create workspace</Button>
         )}
+        <Button variant="ghost" onClick={() => navigate('/settings/brand-profile')}>
+          Edit this brand's profile
+        </Button>
       </div>
-      <p className="st-msg" style={{ marginTop: 10 }}>
-        Adding a second brand opens with multi brand workspaces. Until then each login holds one brand.
-      </p>
+      {msg && <p className="st-msg">{msg}</p>}
+      {err && <p className="st-msg is-error">{err}</p>}
+      {creating && <CreateWorkspaceDialog onClose={() => setCreating(false)} />}
     </div>
   );
 }

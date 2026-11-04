@@ -76,13 +76,9 @@ async function startConnect(platform: string, userId: string): Promise<{ url?: s
 authRouter.get("/:platform/connect", async (req, res) => {
   const token = (req.query.token as string) || req.headers.authorization?.replace("Bearer ", "");
   if (!token) return res.status(401).json({ error: "Unauthorized: Missing authentication token" });
-  let userId: string | null = null;
-  try {
-    const { data, error } = await supabaseAdmin.auth.getUser(token);
-    if (!error && data?.user) userId = data.user.id;
-  } catch (err) {
-    console.error("[OAuth] Connection initiation auth check failed:", err);
-  }
+  // Same rules as every API call, including the active workspace (?workspace=)
+  req.headers.authorization = `Bearer ${token}`;
+  const userId = await getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized: Invalid session" });
   const r = await startConnect(req.params.platform, userId);
   if (!r.url) return res.status(r.status || 500).json({ error: r.error });

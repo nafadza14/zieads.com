@@ -104,6 +104,19 @@ const USER_TABLES = [
 
 export async function deleteAccountData(userId: string): Promise<{ tables: Record<string, number>; authDeleted: boolean }> {
   const tables: Record<string, number> = {};
+  // Extra brand workspaces go first: removing each hidden data user cascades to that brand's rows
+  try {
+    const { data: ws } = await supabaseAdmin.from("workspaces").select("data_user_id").eq("owner_id", userId);
+    for (const w of ws || []) {
+      if (w.data_user_id && w.data_user_id !== userId) {
+        for (const t of USER_TABLES) await safeDelete(t, (q) => q.eq(t === "team_members" ? "owner_id" : "user_id", w.data_user_id));
+        await supabaseAdmin.auth.admin.deleteUser(w.data_user_id).catch(() => undefined);
+      }
+    }
+    tables.workspaces = await safeDelete("workspaces", (q) => q.eq("owner_id", userId));
+  } catch {
+    /* no workspaces table */
+  }
   for (const t of USER_TABLES) {
     const col = t === "team_members" ? "owner_id" : "user_id";
     tables[t] = await safeDelete(t, (q) => q.eq(col, userId));

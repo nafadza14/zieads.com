@@ -1,21 +1,26 @@
 /*
-  v4 landing page sections. Order: hero, works with, why, product, how it works,
-  Guardian band, promises, integrations and MCP, comparison, pricing, free audit, FAQ, final CTA.
+  Landing page sections, laid out like the reference template: hero with the product in a browser frame,
+  logo strip, a big statement with three numbers, features (three columns plus two product cards),
+  how it works (three step cards), the orange numbers band, a quote carousel, integrations,
+  pricing, FAQ, the orange closing band with the product, footer.
   Copy follows the November 2026 research on competitor landing pages and paid user reviews: speak to
   everyone who runs social (brands, creators, marketing teams, freelancers, agencies), lead with the pains
   paid users name most (no time, posts that fail quietly, proving results, replies that wait, pricing that
   grows per seat), plain words, only claims the product proves today. Stats are quoted with their source.
   No invented customers, logos, reviews or usage numbers.
 */
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  BarChart3,
+  CalendarCheck,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Globe,
   Link2,
+  MessagesSquare,
   Plus,
 } from 'lucide-react';
 import SocialIcon from '../../../components/v3/SocialIcon';
@@ -23,34 +28,13 @@ import ZieAdsLogo from '../../../components/ZieAdsLogo';
 import ZieAvatar from '../../../components/ZieAvatar';
 import { SHOTS } from '../images';
 import { faqItems, pricingPlans } from '../data';
-import { LANDING_COMPARE_COLUMNS as COMPARE_COLUMNS, LANDING_COMPARE_ROWS as COMPARE_ROWS } from '../compare';
 import { LxBadge, LxButton, LxCount, LxReveal, goToId } from './kit';
 
 const PLATFORMS = ['instagram', 'facebook', 'tiktok', 'linkedin'] as const;
 
-/* ── Email first sign up (the pattern Buffer and Sprout use): the address carries into sign up ── */
-function StartForm({ id, tone = 'light' }: { id: string; tone?: 'light' | 'dark' }) {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    navigate('/sign-up', { state: { email: email.trim() } });
-  };
-  return (
-    <form className={`lx-scan is-${tone}`} onSubmit={submit}>
-      <label className="lx-sr" htmlFor={id}>
-        Work email
-      </label>
-      <input id={id} className="lx-input" type="email" inputMode="email" autoComplete="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <LxButton type="submit" variant={tone === 'dark' ? 'dark' : 'orange'}>
-        Start free
-      </LxButton>
-    </form>
-  );
-}
-
 /* ── Hero ─────────────────────────────────────────────── */
 export function LxHero() {
+  const navigate = useNavigate();
   return (
     <section className="lx-hero" id="top" aria-labelledby="lx-hero-title">
       <div className="lx-wrap">
@@ -69,24 +53,15 @@ export function LxHero() {
             The social media tool that <em>tells you what to do next</em>
           </h1>
           <p className="lx-hero-sub">Schedule, reply and report across Instagram, Facebook, TikTok and LinkedIn. Every morning ZieAds turns your numbers into 3 actions, does them when you approve, and checks every post went live.</p>
-          <div className="lx-hero-form">
-            <StartForm id="lx-hero-email" />
-            <p className="lx-hero-note">Free for one brand · No credit card · Cancel anytime</p>
+          <div className="lx-hero-ctas">
+            <LxButton variant="orange" onClick={() => navigate('/sign-up')}>
+              Start free
+            </LxButton>
+            <LxButton variant="white" onClick={() => goToId('features')}>
+              Take the tour
+            </LxButton>
           </div>
-          <button type="button" className="lx-hero-link" onClick={() => goToId('features')}>
-            Take the tour
-          </button>
-          <ul className="lx-risk" aria-label="Our promises">
-            <li>
-              <Check size={13} /> Nothing posts without your yes
-            </li>
-            <li>
-              <Check size={13} /> Priced per brand, not per seat
-            </li>
-            <li>
-              <Check size={13} /> Every post checked after it goes out
-            </li>
-          </ul>
+          <p className="lx-hero-note">Free for one brand · No credit card · Nothing posts without your yes</p>
         </LxReveal>
       </div>
       <div className="lx-hero-shot">
@@ -106,47 +81,20 @@ export function LxHero() {
 
 /* ── Works with ───────────────────────────────────────── */
 export function LxStrip() {
-  const items: Array<{ p: string; label: string }> = [
-    { p: 'instagram', label: 'Instagram' },
-    { p: 'facebook', label: 'Facebook' },
-    { p: 'tiktok', label: 'TikTok' },
-    { p: 'linkedin', label: 'LinkedIn' },
-    { p: 'threads', label: 'Threads' },
-    { p: 'youtube', label: 'YouTube' },
-    { p: 'pinterest', label: 'Pinterest' },
-    { p: 'bluesky', label: 'Bluesky' },
-    { p: 'mastodon', label: 'Mastodon' },
-    { p: 'telegram', label: 'Telegram' },
-    { p: 'discord', label: 'Discord' },
-  ];
-  const ads: Array<{ p: string; label: string }> = [
-    { p: 'meta', label: 'Meta Ads' },
-    { p: 'google_ads', label: 'Google Ads' },
-    { p: 'tiktok', label: 'TikTok Ads' },
-  ];
+  const items = ['instagram', 'facebook', 'tiktok', 'linkedin', 'threads', 'youtube', 'pinterest', 'bluesky', 'mastodon', 'telegram', 'discord'];
+  const names: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', linkedin: 'LinkedIn', threads: 'Threads', youtube: 'YouTube', pinterest: 'Pinterest', bluesky: 'Bluesky', mastodon: 'Mastodon', telegram: 'Telegram', discord: 'Discord' };
   return (
-    <div className="lx-strip">
-      <div className="lx-wrap lx-strip-in">
-        <span className="lx-strip-label">Works with</span>
+    <div className="lx-strip" aria-label="Works with">
+      <div className="lx-wrap">
         <div className="lx-strip-logos">
-          {items.map((i) => (
-            <span key={i.p} className="lx-strip-logo">
-              <SocialIcon platform={i.p} size={20} variant="mark" />
-              {i.label}
-            </span>
-          ))}
-        </div>
-        <span className="lx-strip-label">Reads results from</span>
-        <div className="lx-strip-logos">
-          {ads.map((i) => (
-            <span key={i.label} className="lx-strip-logo">
-              <SocialIcon platform={i.p} size={20} variant="mark" />
-              {i.label}
+          {items.map((p) => (
+            <span key={p} className="lx-strip-logo">
+              <SocialIcon platform={p} size={20} variant="mark" />
+              {names[p]}
             </span>
           ))}
         </div>
       </div>
-      <p className="lx-strip-next">Coming next: X, Tumblr and Reddit</p>
     </div>
   );
 }
@@ -164,14 +112,10 @@ export function LxWhy() {
       <div className="lx-wrap">
         <LxReveal>
           <LxBadge n="01">The problem</LxBadge>
-          <h2 className="lx-h2" id="lx-why">
-            Social media takes more time
-            <span>than it gives back.</span>
-          </h2>
-          <p className="lx-why-text is-small">
-            Ten tabs to post one campaign. A report every Friday. Comments that wait until Monday.{' '}
+          <h2 className="lx-why-text" id="lx-why">
+            Social media takes more time than it gives back. Ten tabs to post one campaign. A report every Friday. Comments that wait until Monday.{' '}
             <span className="is-muted">And a scheduler that says a post went out when it did not.</span>
-          </p>
+          </h2>
         </LxReveal>
         <LxReveal delay={120}>
           <div className="lx-stats">
@@ -189,29 +133,28 @@ export function LxWhy() {
   );
 }
 
-/* ── Product: three outcomes, each with the screen that proves it ── */
+/* ── Product: three outcomes as columns, then the screens that prove them ── */
 const OUTCOMES = [
   {
+    icon: <CalendarCheck size={17} />,
     title: 'Post consistently without living in the calendar',
     body: 'Write once and ZieAds tailors it for each network, suggests the times your audience is online, and keeps the week planned. Your morning plan tells you what to post next and why.',
-    proof: 'Every post is checked after it goes out. A failed one is retried up to 3 times, then flagged, so it never disappears quietly.',
-    img: SHOTS.calendar,
-    alt: 'Calendar week view with scheduled, published and drafted posts',
   },
   {
+    icon: <MessagesSquare size={17} />,
     title: 'Reply to what matters first',
     body: 'Instagram and Facebook comments in one inbox. Buying questions and complaints rise to the top with a reply drafted in your brand voice. Review, edit, send.',
-    proof: 'Every comment is labeled by intent, so the ones that turn into sales or crises are never buried under emojis.',
-    img: SHOTS.inbox,
-    alt: 'Inbox with buying questions sorted first and a reply draft',
   },
   {
+    icon: <BarChart3 size={17} />,
     title: 'Show results without building reports',
     body: 'Organic and paid side by side, per network and per post. Every morning: what grew, what dropped and what to do about it, in plain words with the number behind it.',
-    proof: 'Ads are read only. Export any view to CSV, or ask why a number moved and get the answer from your own data.',
-    img: SHOTS.analyst,
-    alt: 'Morning plan with wins, concerns and three actions',
   },
+];
+
+const PROOFS = [
+  { title: 'Every post checked', body: 'Every post is checked after it goes out. A failed one is retried up to 3 times, then flagged, so it never disappears quietly.', img: SHOTS.calendar, alt: 'Calendar week view with scheduled, published and drafted posts' },
+  { title: 'Sorted by intent', body: 'Every comment is labeled by intent, so the ones that turn into sales or crises are never buried under emojis.', img: SHOTS.inbox, alt: 'Inbox with buying questions sorted first and a reply draft' },
 ];
 
 export function LxFeatures() {
@@ -225,25 +168,34 @@ export function LxFeatures() {
             <span>More time on the work that grows the account.</span>
           </h2>
         </LxReveal>
-        <div className="lx-outcomes">
-          {OUTCOMES.map((o, i) => (
-            <LxReveal key={o.title} delay={80}>
-              <div className={`lx-outcome ${i % 2 ? 'is-flip' : ''}`}>
-                <div className="lx-outcome-copy">
-                  <span className="lx-outcome-n">0{i + 1}</span>
+        <LxReveal delay={80}>
+          <div className="lx-feat-cols">
+            {OUTCOMES.map((o) => (
+              <div key={o.title} className="lx-feat">
+                <span className="lx-feat-ic" aria-hidden="true">
+                  {o.icon}
+                </span>
+                <div>
                   <h3>{o.title}</h3>
                   <p>{o.body}</p>
-                  <p className="lx-outcome-proof">
-                    <CheckCircle2 size={15} /> {o.proof}
-                  </p>
-                </div>
-                <div className="lx-card lx-outcome-shot">
-                  <img src={o.img} alt={o.alt} loading="lazy" width={1600} height={1000} />
                 </div>
               </div>
-            </LxReveal>
-          ))}
-        </div>
+            ))}
+          </div>
+        </LxReveal>
+        <LxReveal delay={140}>
+          <div className="lx-feat-cards">
+            {PROOFS.map((p) => (
+              <div key={p.title} className="lx-card lx-shot-card">
+                <h4>{p.title}</h4>
+                <p>{p.body}</p>
+                <div className="lx-shot">
+                  <img src={p.img} alt={p.alt} loading="lazy" width={1600} height={1000} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </LxReveal>
         <p className="lx-more">
           <a href="/features">See every feature</a>
         </p>
@@ -431,58 +383,6 @@ export function LxIntegrations() {
   );
 }
 
-/* ── Comparison ───────────────────────────────────────── */
-export function LxCompare() {
-  return (
-    <section className="lx-section" id="compare" aria-labelledby="lx-cmp">
-      <div className="lx-wrap">
-        <LxReveal>
-          <div className="lx-center">
-            <LxBadge n="06">Compare</LxBadge>
-            <h2 className="lx-h2" id="lx-cmp">
-              More than a scheduler.
-              <span>Less than an agency bill.</span>
-            </h2>
-          </div>
-        </LxReveal>
-        <LxReveal delay={100}>
-          <div className="lx-cmp-wrap">
-            <table className="lx-cmp">
-              <thead>
-                <tr>
-                  <th scope="col">
-                    <span className="lx-sr">What you get</span>
-                  </th>
-                  {COMPARE_COLUMNS.map((c) => (
-                    <th key={c.key} scope="col" className={c.key === 'zieads' ? 'is-us' : ''}>
-                      {c.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE_ROWS.map((r) => (
-                  <tr key={r.criteria}>
-                    <th scope="row">{r.criteria}</th>
-                    {COMPARE_COLUMNS.map((c) => (
-                      <td key={c.key} className={c.key === 'zieads' ? 'is-us' : ''}>
-                        {r.values[c.key]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="lx-cmp-note">
-            Suite price is Sprout Social Standard per user, from its public pricing; agency cost is a conservative retainer. Prices change, so check before you buy. Tool by tool: <a href="/vs/metricool">vs Metricool</a>, <a href="/vs/vista-social">vs Vista Social</a>, <a href="/vs/hootsuite">vs Hootsuite</a>.
-          </p>
-        </LxReveal>
-      </div>
-    </section>
-  );
-}
-
 /* ── Pricing ──────────────────────────────────────────── */
 export function LxPricing() {
   const navigate = useNavigate();
@@ -490,7 +390,7 @@ export function LxPricing() {
     <section className="lx-section is-soft lx-center" id="pricing" aria-labelledby="lx-price">
       <div className="lx-wrap">
         <LxReveal>
-          <LxBadge n="07">Pricing</LxBadge>
+          <LxBadge n="06">Pricing</LxBadge>
           <h2 className="lx-h2" id="lx-price">
             Priced per brand,
             <span>not per seat.</span>
@@ -528,14 +428,14 @@ export function LxPricing() {
           ))}
         </div>
         <p className="lx-price-foot">
-          Running several brands? Multi brand workspaces are coming soon. <a href="/pricing" style={{ textDecoration: 'underline' }}>Compare every plan</a>
+          Running several brands? Pro gives you 3 workspaces and Agency 10, one per brand. <a href="/pricing" style={{ textDecoration: 'underline' }}>Compare every plan</a>
         </p>
       </div>
     </section>
   );
 }
 
-export function LxFaq({ n = '08' }: { n?: string }) {
+export function LxFaq({ n = '07' }: { n?: string }) {
   const [open, setOpen] = useState(0);
   return (
     <section className="lx-section lx-center" id="faq" aria-labelledby="lx-faq">
@@ -579,22 +479,24 @@ export function LxCta() {
         <LxReveal>
           <div className="lx-cta">
             <div className="lx-cta-copy">
-              <LxBadge n="09">Get started</LxBadge>
+              <LxBadge n="08">Get started</LxBadge>
               <h2 id="lx-cta">
                 Wake up to a plan.
                 <br />
                 <span>Approve it before your coffee.</span>
               </h2>
               <p>Connect Instagram or Facebook and get your first morning plan today. Free for one brand, no credit card.</p>
-              <div className="lx-cta-form">
-                <StartForm id="lx-cta-email" tone="dark" />
+              <div className="lx-cta-btns">
+                <LxButton variant="dark" onClick={() => navigate('/sign-up')}>
+                  Start free
+                </LxButton>
+                <LxButton variant="white" onClick={() => navigate('/pricing')}>
+                  See pricing
+                </LxButton>
               </div>
-              <button type="button" className="lx-cta-link" onClick={() => navigate('/pricing')}>
-                See pricing
-              </button>
             </div>
             <div className="lx-cta-shot">
-              <img src={SHOTS.calendar} alt="ZieAds calendar with the week planned" loading="lazy" width={1600} height={1000} />
+              <img src={SHOTS.home} alt="ZieAds morning plan with three actions to approve" loading="lazy" width={1600} height={1000} />
             </div>
           </div>
         </LxReveal>

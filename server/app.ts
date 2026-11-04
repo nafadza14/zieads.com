@@ -36,6 +36,7 @@ import { tasksRouter } from "./routes/api-tasks.js";
 import { briefingRouter } from "./routes/api-briefing.js";
 import { inboxRouter } from "./routes/api-inbox.js";
 import { commentsRouter } from "./routes/api-comments.js";
+import { workspacesRouter } from "./routes/api-workspaces.js";
 import { analyticsRouter } from "./routes/api-analytics.js";
 import { mcpRouter, mcpGet, mcpPost } from "./routes/api-mcp.js";
 import { socialRouter, telegramRouter } from "./routes/api-social.js";
@@ -44,7 +45,7 @@ import { oauthRouter, publicOrigin } from "./routes/api-oauth.js";
 import { restNotFound, restRouter } from "./routes/api-rest.js";
 import { scheduledAgentsRouter } from "./routes/api-scheduled-agents.js";
 import { SKILL_ROUTE_TO_OPERATION, OPERATION_COSTS } from "./creditConfig.js";
-import { supabaseAdmin } from "./supabaseServer.js";
+import { supabaseAdmin, billingUserOf } from "./supabaseServer.js";
 import { deepStripDashes } from "./utils/noEmDash.js";
 import { autofillBrandProfile, brandCompleteness, getBrandProfile, saveBrandProfile } from "./brandProfile.js";
 
@@ -142,6 +143,7 @@ app.use("/api/v1/credits", creditsRouter);
 app.use("/api/ads-library", adsLibraryRouter);
 
 // ─── AI Agent Chat ─────────────────────────────────────
+app.use("/api/workspaces", workspacesRouter);
 app.use("/api/agent", agentRouter);
 
 // ─── Superadmin Dashboard API ──────────────────────────
@@ -336,8 +338,8 @@ app.post("/api/audit", async (req, res) => {
       const isTest = await isTestUser(req);
       if (!isTest) {
         const [planRes, creditsRes] = await Promise.all([
-          supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
-          supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
+          supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', await billingUserOf(userId)).maybeSingle(),
+          supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', await billingUserOf(userId)).maybeSingle(),
         ]);
         const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
         if (remaining !== -1 && remaining < 3) {
@@ -403,8 +405,8 @@ app.post("/api/skill/:name", async (req, res) => {
       const isTest = await isTestUser(req);
       if (!isTest) {
         const [planRes, creditsRes] = await Promise.all([
-          supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', userId).maybeSingle(),
-          supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', userId).maybeSingle(),
+          supabaseAdmin.from('user_plan').select('plan_id').eq('user_id', await billingUserOf(userId)).maybeSingle(),
+          supabaseAdmin.from('user_credits').select('skill_run_monthly_remaining').eq('user_id', await billingUserOf(userId)).maybeSingle(),
         ]);
         const remaining = creditsRes.data?.skill_run_monthly_remaining ?? -1;
         if (remaining !== -1 && remaining < cost) {

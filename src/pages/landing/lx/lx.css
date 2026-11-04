@@ -115,13 +115,13 @@
 .lx-strip { padding: 34px 0; border-bottom: 1px solid var(--lx-line); }
 .lx-strip-in { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .lx-strip-label { font-size: 12.5px; color: var(--lx-faint); }
-.lx-strip-logos { display: flex; align-items: center; gap: 34px; flex-wrap: wrap; }
-.lx-strip-logo { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--lx-ink-2); filter: grayscale(1); opacity: 0.78; transition: filter 0.3s, opacity 0.3s; }
+.lx-strip-logos { display: flex; align-items: center; justify-content: space-between; gap: 14px 18px; flex-wrap: wrap; }
+.lx-strip-logo { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--lx-ink-2); filter: grayscale(1); opacity: 0.78; transition: filter 0.3s, opacity 0.3s; }
 .lx-strip-logo:hover { filter: none; opacity: 1; }
 @media (max-width: 760px) { .lx-strip-in { justify-content: center; text-align: center; } .lx-strip-logos { justify-content: center; gap: 20px; } }
 
 /* ── Why ──────────────────────────────────────────────── */
-.lx-why p.lx-why-text { font-size: clamp(21px, 2.5vw, 30px); line-height: 1.38; letter-spacing: -0.025em; font-weight: 550; max-width: 900px; margin: 22px auto 0; }
+.lx-why .lx-why-text { font-size: clamp(21px, 2.5vw, 30px); line-height: 1.38; letter-spacing: -0.025em; font-weight: 550; max-width: 900px; margin: 22px auto 0; }
 .lx-why-text .is-muted { color: var(--lx-faint); }
 .lx-why-logo { display: inline-flex; vertical-align: -6px; margin: 0 4px; }
 .lx-stats { display: grid; grid-template-columns: repeat(3, 1fr); max-width: 760px; margin: 56px auto 0; }
@@ -193,7 +193,7 @@
 .lx-int-list { list-style: none; padding: 0; margin: 22px 0 0; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; color: var(--lx-ink-2); }
 .lx-int-list li { display: flex; gap: 10px; align-items: flex-start; }
 .lx-int-list svg { flex-shrink: 0; margin-top: 2px; color: var(--lx-orange); }
-.lx-grid { position: relative; height: 380px; border-radius: 20px; background-color: #fff; background-image: linear-gradient(var(--lx-line) 1px, transparent 1px), linear-gradient(90deg, var(--lx-line) 1px, transparent 1px); background-size: 64px 64px; background-position: center; -webkit-mask-image: radial-gradient(70% 70% at 50% 50%, #000 55%, transparent 100%); mask-image: radial-gradient(70% 70% at 50% 50%, #000 55%, transparent 100%); }
+.lx-grid { position: relative; height: 380px; border-radius: 20px; }
 .lx-tile { position: absolute; width: 56px; height: 56px; border-radius: 15px; background: #fff; display: grid; place-items: center; box-shadow: 0 10px 26px rgba(17, 17, 17, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04); animation: lxFloat 6s ease-in-out infinite; }
 .lx-tile.is-text { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: var(--lx-ink); }
 .lx-tile.is-zie { width: 72px; height: 72px; border-radius: 20px; background: var(--lx-orange); box-shadow: 0 16px 34px rgba(242, 101, 34, 0.35); }
@@ -346,3 +346,10 @@
 
 /* Source under each research stat in The problem */
 .lx-stat .lx-stat-src { display: block; margin-top: 6px; font-size: 11.5px; color: var(--lx-faint); }
+
+/* Reference layout pass: hero buttons, feature columns aligned to the title, closing band buttons */
+.lx-hero-ctas .lx-btn { height: 44px; padding: 0 22px; }
+.lx-hero-note { margin-top: 16px; }
+.lx-feat-cols { margin-top: 44px; }
+.lx-feat h3 { line-height: 1.35; }
+.lx-cta-btns .lx-btn.is-white { border-color: transparent; }

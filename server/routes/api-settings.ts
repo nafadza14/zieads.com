@@ -11,7 +11,7 @@
   POST /api/client-errors            error reports from the ErrorBoundary (no auth)
 */
 import { Router } from "express";
-import { getUserIdFromRequest, supabaseAdmin, getEffectivePlan } from "../supabaseServer.js";
+import { getUserIdFromRequest, getAccountUserIdFromRequest, supabaseAdmin, getEffectivePlan } from "../supabaseServer.js";
 import { PLAN_LIMITS, withinLimit } from "../creditConfig.js";
 import { logActivity } from "../activity.js";
 import { deleteAccountData } from "../dataDeletion.js";
@@ -22,6 +22,7 @@ async function requireAuth(req: any, res: any, next: any) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   req.userId = userId;
+  req.accountId = (await getAccountUserIdFromRequest(req)) || userId;
   next();
 }
 
@@ -106,7 +107,7 @@ settingsRouter.post("/client-errors", async (req: any, res) => {
 
 settingsRouter.get("/settings", requireAuth, async (req: any, res) => {
   const [settings, plan] = await Promise.all([getUserSettings(req.userId), getEffectivePlan(req.userId)]);
-  const { data: user } = await supabaseAdmin.auth.admin.getUserById(req.userId);
+  const { data: user } = await supabaseAdmin.auth.admin.getUserById(req.accountId);
   res.json({
     success: true,
     settings,
@@ -220,8 +221,8 @@ settingsRouter.get("/settings/export", requireAuth, async (req: any, res) => {
 
 settingsRouter.post("/settings/delete-account", requireAuth, async (req: any, res) => {
   if (req.body?.confirm !== "DELETE") return res.status(400).json({ error: 'Type DELETE to confirm' });
-  const result = await deleteAccountData(req.userId);
-  console.log(`[deletion] account ${req.userId} deleted`, JSON.stringify(result.tables));
+  const result = await deleteAccountData(req.accountId);
+  console.log(`[deletion] account ${req.accountId} deleted`, JSON.stringify(result.tables));
   res.json({ success: true, authDeleted: result.authDeleted });
 });
 
