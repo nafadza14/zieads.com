@@ -620,7 +620,8 @@ export default function ComposerPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch('/api/v3/media/upload?skipLibrary=true', {
+      // Saved to the Media Library too, so the file can be reused and scheduled posts keep a stable copy
+      const res = await fetch('/api/v3/media/upload', {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData

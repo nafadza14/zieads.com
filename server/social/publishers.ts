@@ -82,7 +82,7 @@ async function fail(res: Response, name: string): Promise<never> {
   throw new PublishError(`${name} refused the post (${res.status}). ${typeof msg === "string" ? msg : JSON.stringify(msg)}`.trim(), res.status >= 500 || res.status === 429, reconnect);
 }
 
-async function download(url: string, maxBytes: number, name: string): Promise<{ buf: ArrayBuffer; type: string }> {
+export async function download(url: string, maxBytes: number, name: string): Promise<{ buf: ArrayBuffer; type: string }> {
   const res = await fetch(url);
   if (!res.ok) throw new PublishError(`Could not read the media file for ${name} (${res.status}).`, res.status >= 500);
   const len = Number(res.headers.get("content-length") || 0);

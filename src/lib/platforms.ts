@@ -95,7 +95,7 @@ export const PLATFORMS: Platform[] = [
     suggestions: ['mastodon.social', 'mastodon.online', 'mstdn.social', 'mas.to', 'fosstodon.org', 'techhub.social'],
   },
   { id: 'youtube', name: 'YouTube', what: 'Videos and Shorts with title, description and privacy', status: 'available', connect: 'oauth' },
-  { id: 'linkedin', name: 'LinkedIn', what: 'Your profile: text posts. Company Pages after LinkedIn review', status: 'available', tokenDays: 60, connect: 'oauth' },
+  { id: 'linkedin', name: 'LinkedIn', what: 'Your profile: text, images and video. Company Pages after LinkedIn review', status: 'available', tokenDays: 60, connect: 'oauth' },
   { id: 'tiktok', name: 'TikTok', what: 'Profile stats and videos, upload to your TikTok inbox', status: 'available', connect: 'oauth' },
   { id: 'pinterest', name: 'Pinterest', what: 'Image Pins to your boards, with a link', status: 'available', connect: 'oauth' },
   { id: 'tumblr', name: 'Tumblr', what: 'Posts to your blogs', status: 'soon' },

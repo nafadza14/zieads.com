@@ -44,7 +44,7 @@ export const RULES: Record<ValidatePlatform, PlatformRules> = {
   instagram: { captionMax: 2200, hashtagMax: 30, mediaRequired: true, mediaMax: 10, videoMaxSec: 900, videoMinSec: 3, ratioMin: 0.5625, ratioMax: 1.91, linksClickable: false, firstComment: true },
   facebook: { captionMax: 63206, mediaRequired: false, mediaMax: 10, videoMaxSec: 14400, linksClickable: true, firstComment: true },
   tiktok: { captionMax: 2200, mediaRequired: true, mediaMax: 1, videoMaxSec: 600, videoMinSec: 3, linksClickable: false, firstComment: false },
-  linkedin: { captionMax: 3000, mediaRequired: false, mediaMax: 9, videoMaxSec: 900, linksClickable: true, firstComment: true },
+  linkedin: { captionMax: 3000, mediaRequired: false, mediaMax: 20, videoMaxSec: 900, linksClickable: true, firstComment: true },
   threads: { captionMax: 500, mediaRequired: false, mediaMax: 10, videoMaxSec: 300, linksClickable: true, firstComment: false },
   // Pin description 500, title is taken from the first line; images only from ZieAds for now
   pinterest: { captionMax: 500, mediaRequired: true, mediaMax: 5, linksClickable: false, firstComment: false },

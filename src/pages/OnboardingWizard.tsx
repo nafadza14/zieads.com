@@ -99,7 +99,7 @@ export default function OnboardingWizard() {
     { id: "instagram", name: "Instagram", desc: "Publishing, insights, comments, briefings" },
     { id: "facebook", name: "Facebook", desc: "Page publishing, insights, comments, briefings" },
     { id: "tiktok", name: "TikTok", desc: "Upload to your TikTok inbox, profile stats" },
-    { id: "linkedin", name: "LinkedIn", desc: "Text posts to your profile" }
+    { id: "linkedin", name: "LinkedIn", desc: "Posts with images or video on your profile" }
   ];
 
   // Coming soon platforms are listed as text, no logos (CLAUDE.md icon rule)

@@ -5,8 +5,9 @@
   - Idempotency: a post that already has a platform id is never sent again.
   - Retries: up to 3 attempts with backoff (2, 4, 8 minutes), then status failed
     and a Guardian task that tells the user what happened and what to do.
-  - TikTok before the Direct Post audit and LinkedIn media posts use the push
+  - TikTok before the Direct Post audit uses the push
     reminder path: status needs_action and a task, never a fake "published".
+  - LinkedIn (text, images, video) lives in ./linkedin.ts.
   - Threads, Pinterest, YouTube, Bluesky, Mastodon, Telegram and Discord live in server/social/publishers.ts.
 */
 import crypto from "crypto";
@@ -19,6 +20,7 @@ import { validatePost, hasErrors, ValidatePlatform } from "../../src/lib/postVal
 import { createAgentTask, logActivity } from "../activity.js";
 import { PublishError, NeedsAction } from "./errors.js";
 import { NETWORK_PUBLISHERS } from "../social/publishers.js";
+import { publishLinkedIn } from "./linkedin.js";
 
 export const MAX_ATTEMPTS = 3;
 
@@ -160,32 +162,6 @@ async function publishTikTok(post: any): Promise<{ externalId: string; permalink
     throw new PublishError(`TikTok refused the upload (${code}). ${j.error?.message || ""}`.trim(), !reconnect, reconnect);
   }
   throw new NeedsAction(`The video is in your TikTok inbox as a draft (id ${j.data?.publish_id || "pending"}). Open TikTok, check the notification and post it.`);
-}
-
-/** LinkedIn member posts with w_member_social. Text and link only; media goes through the reminder. */
-async function publishLinkedIn(post: any) {
-  const conn = await getDecryptedToken(post.user_id, "linkedin");
-  if (!conn) throw new PublishError("LinkedIn is not connected. Reconnect it in Connections.", false, true);
-  if ((post.media_urls || []).length) throw new NeedsAction("LinkedIn posts with media are not automated yet. Post it from LinkedIn: the caption is ready to copy.");
-  const version = process.env.LINKEDIN_API_VERSION || "202609";
-  const res = await fetch("https://api.linkedin.com/rest/posts", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${conn.token}`, "Content-Type": "application/json", "LinkedIn-Version": version, "X-Restli-Protocol-Version": "2.0.0" },
-    body: JSON.stringify({
-      author: `urn:li:person:${conn.platformUserId}`,
-      commentary: post.caption || "",
-      visibility: "PUBLIC",
-      distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
-      lifecycleState: "PUBLISHED",
-      isReshareDisabledByAuthor: false,
-    }),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new PublishError(`LinkedIn refused the post (${res.status}). ${t.slice(0, 160)}`, res.status >= 500 || res.status === 429, res.status === 401);
-  }
-  const id = res.headers.get("x-restli-id") || res.headers.get("x-linkedin-id") || "";
-  return { externalId: id, permalink: id ? `https://www.linkedin.com/feed/update/${id}/` : undefined };
 }
 
 const DISPATCH: Record<string, (post: any) => Promise<{ externalId: string; permalink?: string }>> = {

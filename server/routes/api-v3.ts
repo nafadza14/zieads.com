@@ -460,6 +460,17 @@ apiV3Router.delete("/media/:id", requireAuth, async (req: any, res) => {
       return res.status(404).json({ error: "Media not found." });
     }
 
+    // A file a scheduled or draft post still points to stays: deleting it would break that post later
+    const { data: using } = await supabaseAdmin
+      .from("scheduled_posts")
+      .select("id")
+      .eq("user_id", req.userId)
+      .in("status", ["draft", "in_review", "approved", "scheduled", "publishing", "needs_action"])
+      .contains("media_urls", [media.blob_url]);
+    if ((using || []).length) {
+      return res.status(409).json({ error: "in_use", message: `This file is used by ${using!.length} upcoming or draft post${using!.length > 1 ? "s" : ""}. Remove it from ${using!.length > 1 ? "those posts" : "that post"} first.` });
+    }
+
     // Delete from Vercel Blob
     try {
       console.log(`[V3 Delete] Deleting Vercel Blob: ${media.blob_url}`);
