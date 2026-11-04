@@ -1,6 +1,6 @@
 /* v4 footer, shared by the landing page and every public page. Legal links stay one click away (P0-5). */
 import { Link } from 'react-router-dom';
-import ZieAdsLogo from '../../../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../../../components/ZieAdsLogo';
 
 export default function LxFooter() {
   return (
@@ -10,7 +10,7 @@ export default function LxFooter() {
           <div className="lx-foot-brand">
             <Link to="/" className="lx-brand" aria-label="ZieAds home">
               <ZieAdsLogo size={28} />
-              zieads
+              <ZieAdsWordmark />
             </Link>
             <p>The social media tool that tells you what to do next. Publishing, inbox, analytics and competitors, with a plan every morning.</p>
           </div>

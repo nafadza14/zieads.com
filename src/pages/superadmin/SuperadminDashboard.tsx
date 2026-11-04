@@ -8,7 +8,7 @@ import {
   ExternalLink, Lock, MoreVertical, AlertTriangle
 } from 'lucide-react';
 import ZIcon from '../../components/icons/ZIcon';
-import ZieAdsLogo from '../../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../../components/ZieAdsLogo';
 
 // Predefined list of predefined keys to manage
 const PREDEFINED_KEYS = [
@@ -669,10 +669,10 @@ export default function SuperadminDashboard() {
         {/* Sidebar Header / Logo */}
         <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
           <div className="lp-auth-logo-bg p-1.5 rounded-lg bg-[#27272A] border border-[#3F3F46]">
-            <ZieAdsLogo size={16} className="text-white" />
+            <ZieAdsLogo size={16} />
           </div>
           <div className="flex flex-col">
-            <span className="text-[15px] font-semibold text-white tracking-tight">zieads</span>
+            <span className="text-[15px] text-white"><ZieAdsWordmark /></span>
             <span className="text-[9px] font-mono font-bold tracking-widest text-[#B91C1C] uppercase mt-0.5 bg-[#FEF2F2] px-1 py-0.5 rounded leading-none w-fit">superadmin</span>
           </div>
         </div>

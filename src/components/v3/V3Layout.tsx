@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ZieAdsLogo from '../ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../ZieAdsLogo';
 import { 
    
   Calendar, 
@@ -279,7 +279,7 @@ export default function V3Layout({ children }: Props) {
     <>
       <div className="zd-brand" onClick={() => handleNavClick('/analyst')}>
         <ZieAdsLogo size={26} />
-        <span className="zd-brand-name">zieads</span>
+        <span className="zd-brand-name"><ZieAdsWordmark /></span>
       </div>
 
       <div className="zd-side-cta">
@@ -341,7 +341,7 @@ export default function V3Layout({ children }: Props) {
           <span />
           <span />
         </button>
-        <span className="zd-brand-name" style={{ fontSize: 17 }}>zieads</span>
+        <span className="zd-brand-name" style={{ fontSize: 17 }}><ZieAdsWordmark /></span>
         <ZieAdsLogo size={24} />
       </div>
 

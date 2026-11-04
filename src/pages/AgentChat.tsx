@@ -3,7 +3,7 @@ import { isUnlimited } from '../lib/limits';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {  PlayCircle, Send,  ArrowRight, ArrowLeft, Link2, Mic, MicOff, Square, Check, X, ChevronDown, TrendingUp, BarChart3, Radio, MessageCircle, CalendarDays, Crosshair, Sunrise, FileText, Globe, PenLine, ArrowUpRight, Plus, Play } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
-import ZieAdsLogo from '../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../components/ZieAdsLogo';
 import { 
   UilSearchAlt, UilBedDouble, UilChartDown, UilMoneyBill, UilEye, UilMedicalSquare, 
   UilFlask, UilAnalysis, UilCrosshairs, UilRocket, UilChat, UilBolt, UilArrowUp, UilArrowRight, UilPlay
@@ -774,7 +774,7 @@ export default function AgentChat() {
         <aside className={`za-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
           <div className="za-brand">
             <ZieAdsLogo size={24} />
-            <span className="za-brand-name">zieads</span>
+            <span className="za-brand-name"><ZieAdsWordmark /></span>
             <span className="za-brand-pill">AI Agent</span>
           </div>
 

@@ -417,7 +417,7 @@ export function LxIntegrations() {
         <LxReveal delay={120}>
           <div className="lx-grid" role="img" aria-label="ZieAds in the middle of Instagram, Facebook, TikTok, LinkedIn, Meta Ads, Google Ads, MCP and CSV import">
             <span className="lx-tile is-zie" style={{ left: 'calc(50% - 36px)', top: 'calc(50% - 36px)' }}>
-              <ZieAdsLogo size={44} />
+              <ZieAdsLogo size={44} tone="white" />
             </span>
             {TILES.map((t) => (
               <span key={t.key} className={`lx-tile ${t.text ? 'is-text' : ''}`} style={{ left: `calc(${t.x} - 28px)`, top: `calc(${t.y} - 28px)`, animationDelay: `${t.d}s` }}>

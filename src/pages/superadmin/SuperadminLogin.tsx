@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ZieAdsLogo from '../../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../../components/ZieAdsLogo';
 
 export default function SuperadminLogin() {
   const navigate = useNavigate();
@@ -128,7 +128,7 @@ export default function SuperadminLogin() {
               <div className="lp-auth-logo-bg p-2 rounded-xl">
                 <ZieAdsLogo size={20} className="text-gray-900" />
               </div>
-              <span className="lp-auth-logo-text text-[18px]">zieads</span>
+              <span className="lp-auth-logo-text text-[18px]"><ZieAdsWordmark /></span>
               <span className="text-[10px] font-mono tracking-wider font-semibold text-red-500 uppercase px-1.5 py-0.5 bg-red-500/10 rounded">superadmin</span>
             </div>
 

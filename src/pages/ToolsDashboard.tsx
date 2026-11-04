@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ZieAdsLogo from '../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../components/ZieAdsLogo';
 
 const SKILL_CATEGORIES = [
   {
@@ -95,7 +95,7 @@ export default function ToolsDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => navigate('/clients')}>
           <ZieAdsLogo size={28} />
           <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.03em', color: '#1e293b' }}>
-            zieads <span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: 6, color: '#64748b' }}>AGENCY</span>
+            <ZieAdsWordmark /> <span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: 6, color: '#64748b' }}>AGENCY</span>
           </span>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>

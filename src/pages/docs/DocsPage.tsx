@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ChevronRight, Menu, Search, X } from 'lucide-react';
-import ZieAdsLogo from '../../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../../components/ZieAdsLogo';
 import { DOCS, GROUPS, DocPage } from './pages';
 import './docs.css';
 
@@ -172,7 +172,7 @@ export default function DocsPage() {
           </button>
           <Link to="/docs" className="dc-brand">
             <ZieAdsLogo size={24} />
-            <span>zieads</span>
+            <span><ZieAdsWordmark /></span>
             <em>Docs</em>
           </Link>
           <SearchBox onPick={() => setMenu(false)} />

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ZieAdsLogo from '../../../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../../../components/ZieAdsLogo';
 
 /* Shared footer for every public page: landing, legal, data deletion, comparison pages.
    Privacy, Terms and Data Deletion must be one click away everywhere (spec P0-5). */
@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="footer-col footer-brand-col">
           <Link to="/" className="footer-brand" aria-label="ZieAds home">
             <ZieAdsLogo size={32} />
-            <span className="brand-name">zieads</span>
+            <span className="brand-name"><ZieAdsWordmark /></span>
           </Link>
           <p className="footer-tagline">Your AI social media manager. Briefs you every morning, executes when you approve.</p>
         </div>

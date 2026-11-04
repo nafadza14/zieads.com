@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
-import ZieAdsLogo from '../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../components/ZieAdsLogo';
 import { supabase } from '../lib/supabaseClient';
 import { api } from '../lib/api';
 import './landing/lx/lx.css';
@@ -80,7 +80,7 @@ export default function OAuthConsent() {
       <div className="oc-card">
         <div className="oc-brand">
           <ZieAdsLogo size={28} />
-          <span>zieads</span>
+          <span><ZieAdsWordmark /></span>
         </div>
 
         {err ? (

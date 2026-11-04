@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Globe, Lightbulb, Lock, Mail,  XCircle } from 'lucide-react';
 import ZIcon from '../components/icons/ZIcon';
-import ZieAdsLogo from '../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../components/ZieAdsLogo';
 import { TextRollButton } from './landing/ui';
 import './audit-flow.css';
 
@@ -102,7 +102,7 @@ export default function QuickScanResult({ scanData, onStartFullAudit }: Props) {
       <header className="zf-top">
         <button className="zf-brand" onClick={() => navigate('/')} aria-label="ZieAds home">
           <ZieAdsLogo size={28} />
-          <span>zieads</span>
+          <span><ZieAdsWordmark /></span>
         </button>
         <button className="zf-back" onClick={() => navigate('/')}>
           <ArrowLeft size={15} /> Scan another site

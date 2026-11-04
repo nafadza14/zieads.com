@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
-import ZieAdsLogo from '../../../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../../../components/ZieAdsLogo';
 import { LxButton } from './kit';
 
 export const NAV_LINKS = [
@@ -51,7 +51,7 @@ export default function LxNav() {
       <div className="lx-wrap lx-nav-in">
         <Link to="/" className="lx-brand" aria-label="ZieAds home">
           <ZieAdsLogo size={28} />
-          zieads
+          <ZieAdsWordmark />
         </Link>
         <nav className="lx-links" aria-label="Main">
           {NAV_LINKS.map((l) => (

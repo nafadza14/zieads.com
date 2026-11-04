@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import ZieAdsLogo from '../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../components/ZieAdsLogo';
 import SocialIcon from '../components/v3/SocialIcon';
 import './landing/landing-v2.css';
 import './landing/visuals.css';
@@ -107,7 +107,7 @@ export default function AuthPage() {
           <header className="za-auth-top">
             <button className="za-auth-brand" onClick={() => navigate('/')}>
               <ZieAdsLogo size={26} />
-              <span>zieads</span>
+              <span><ZieAdsWordmark /></span>
             </button>
             <button className="za-auth-back" onClick={() => navigate('/')}>
               <ArrowLeft size={14} /> Back to home

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, Check, Filter, Lightbulb, Palette, Search, Target, ArrowLeft } from 'lucide-react';
-import ZieAdsLogo from '../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../components/ZieAdsLogo';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/v3/ui';
 import './audit-flow.css';
@@ -173,7 +173,7 @@ export default function AuditProgress({ businessContext }: Props) {
       <header className="zf-top">
         <span className="zf-brand">
           <ZieAdsLogo size={28} />
-          <span>zieads</span>
+          <span><ZieAdsWordmark /></span>
         </span>
         <span className="zf-pill">
           <i className={`zf-live ${status === 'error' ? 'is-off' : ''}`} /> {status === 'error' ? 'Stopped' : status === 'done' ? 'Complete' : 'Live audit'}

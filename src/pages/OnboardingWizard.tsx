@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import ZieAdsLogo from '../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../components/ZieAdsLogo';
 import SocialIcon from '../components/v3/SocialIcon';
 import { 
   ArrowRight, 
@@ -425,7 +425,7 @@ export default function OnboardingWizard() {
       <header style={{ padding: '24px 8%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/')}>
           <ZieAdsLogo size={32} />
-          <span style={{ fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.02em' }}>zieads</span>
+          <span style={{ fontSize: '1rem', display: 'inline-flex' }}><ZieAdsWordmark /></span>
         </div>
       </header>
 

@@ -12,7 +12,7 @@ import {
   X, BotMessageSquare } from 'lucide-react';
 import ZIcon from '../../../components/icons/ZIcon';
 import ZieAvatar from '../../../components/ZieAvatar';
-import ZieAdsLogo from '../../../components/ZieAdsLogo';
+import ZieAdsLogo, { ZieAdsWordmark } from '../../../components/ZieAdsLogo';
 
 const FEATURES = [
   { id: 'free-audit-try', icon: <Search size={18} />, title: 'Free website audit', desc: 'Score your ads readiness in 3 minutes' },
@@ -122,7 +122,7 @@ export default function Navbar() {
       <div className="nav-inner">
         <button className="nav-brand zn-brand" onClick={() => (location.pathname === '/' ? window.scrollTo({ top: 0, behavior: 'smooth' }) : navigate('/'))} aria-label="ZieAds home">
           <ZieAdsLogo size={28} />
-          <span className="brand-name">zieads</span>
+          <span className="brand-name"><ZieAdsWordmark /></span>
         </button>
 
         {/* Desktop links */}
