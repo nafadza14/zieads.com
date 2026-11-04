@@ -1476,7 +1476,7 @@ export async function runAgent(
   const sumopodApiKey = process.env.SUMOPOD_API_KEY;
   if (sumopodApiKey) {
     try {
-      console.log(`[V0.2 Agent] Routing agent ${agentName} run to Sumopod (model: MiniMax-M2.7-highspeed)...`);
+      console.log(`[V0.2 Agent] Routing agent ${agentName} run to Sumopod...`);
       const responseText = await callSumopodAI(
         "You are ZieAds marketing audit assistant. You must respond in valid JSON format matching the schema requested by the user.",
         prompt

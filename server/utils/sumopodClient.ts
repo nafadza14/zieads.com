@@ -1,4 +1,22 @@
 import { NO_EM_DASH_RULE, stripDashes } from "./noEmDash.js";
+import { SUMOPOD_CHAT_URL, sumopodModel, isInvalidModel } from "./sumopodModel.js";
+
+/** One chat call to Sumopod. If the model name was retired, it re-reads the model list and retries once. */
+export async function sumopodChat(apiKey: string, body: Record<string, unknown>): Promise<{ data: any; model: string }> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const model = await sumopodModel(apiKey, attempt > 0);
+    const response = await fetch(SUMOPOD_CHAT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ ...body, model }),
+    });
+    if (response.ok) return { data: await response.json(), model };
+    const errText = await response.text();
+    if (attempt === 0 && isInvalidModel(response.status, errText)) continue;
+    throw new Error(`Sumopod API Error (${response.status}): ${errText}`);
+  }
+  throw new Error("Sumopod API Error: no model available for this key");
+}
 export class MockAnthropic {
   messages = {
     create: async (params: {
@@ -12,7 +30,6 @@ export class MockAnthropic {
         throw new Error("SUMOPOD_API_KEY environment variable is not configured.");
       }
       
-      const endpoint = "https://ai.sumopod.com/v1/chat/completions";
       
       const openAiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
       if (params.system) {
@@ -43,28 +60,7 @@ export class MockAnthropic {
         });
       }
 
-      console.log(`[Sumopod AI] Routing Claude API call to Sumopod (model: MiniMax-M2.7-highspeed)...`);
-      
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sumopodApiKey}`
-        },
-        body: JSON.stringify({
-          model: "MiniMax-M2.7-highspeed",
-          messages: openAiMessages,
-          max_tokens: params.max_tokens || 2048,
-          temperature: 0.7
-        })
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Sumopod API Error (${response.status}): ${errText}`);
-      }
-
-      const data: any = await response.json();
+      const { data, model } = await sumopodChat(sumopodApiKey, { messages: openAiMessages, max_tokens: params.max_tokens || 2048, temperature: 0.7 });
       const contentText = stripDashes(data.choices?.[0]?.message?.content || "");
 
       return {
@@ -77,7 +73,7 @@ export class MockAnthropic {
             text: contentText
           }
         ],
-        model: "MiniMax-M2.7-highspeed",
+        model,
         usage: {
           input_tokens: data.usage?.prompt_tokens || 0,
           output_tokens: data.usage?.completion_tokens || 0
@@ -93,34 +89,12 @@ export async function callSumopodAI(systemPrompt: string, userPrompt: string): P
     throw new Error("SUMOPOD_API_KEY environment variable is not configured.");
   }
   
-  const endpoint = "https://ai.sumopod.com/v1/chat/completions";
   
   const openAiMessages = [
     { role: "system", content: `${systemPrompt}\n\n${NO_EM_DASH_RULE}` },
     { role: "user", content: userPrompt }
   ];
 
-  console.log(`[Sumopod AI] Calling Sumopod directly (model: MiniMax-M2.7-highspeed)...`);
-  
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${sumopodApiKey}`
-    },
-    body: JSON.stringify({
-      model: "MiniMax-M2.7-highspeed",
-      messages: openAiMessages,
-      max_tokens: 4000,
-      temperature: 0.7
-    })
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Sumopod API Error (${response.status}): ${errText}`);
-  }
-
-  const data: any = await response.json();
+  const { data } = await sumopodChat(sumopodApiKey, { messages: openAiMessages, max_tokens: 4000, temperature: 0.7 });
   return stripDashes(data.choices?.[0]?.message?.content || "");
 }

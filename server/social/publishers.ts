@@ -6,7 +6,7 @@
 */
 import { PublishError, NeedsAction } from "../publish/errors.js";
 import { loadConnection, expiringSoon, LoadedConnection, updateMetadata } from "./store.js";
-import { refresh } from "./oauth.js";
+import { refresh, pinterestApi, pinterestSandbox } from "./oauth.js";
 import { bskySession, tg, telegramToken, CredentialError } from "./credentials.js";
 import { blueskySession } from "./bluesky-oauth.js";
 
@@ -173,10 +173,11 @@ export async function publishPinterest(post: any) {
     link: post.platform_options?.link || undefined,
     media_source: urls.length === 1 ? { source_type: "image_url", url: urls[0] } : { source_type: "multiple_image_urls", items: urls.slice(0, 5).map((url) => ({ url })) },
   };
-  const res = await fetch("https://api.pinterest.com/v5/pins", { method: "POST", headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const res = await fetch(`${pinterestApi()}/pins`, { method: "POST", headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!res.ok) return fail(res, "Pinterest");
   const j: any = await res.json();
-  return { externalId: j.id, permalink: `https://www.pinterest.com/pin/${j.id}/` };
+  // Sandbox Pins have no public page
+  return { externalId: j.id, permalink: pinterestSandbox() ? null : `https://www.pinterest.com/pin/${j.id}/` };
 }
 
 /* ── YouTube ────────────────────────────────────────────── */

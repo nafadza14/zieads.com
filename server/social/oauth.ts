@@ -26,7 +26,10 @@ export const ENV_NEEDED: Record<OAuthPlatform, string[]> = {
 };
 
 export const THREADS_SCOPES = ["threads_basic", "threads_content_publish", "threads_manage_replies", "threads_read_replies", "threads_manage_insights"];
-export const PINTEREST_SCOPES = ["boards:read", "pins:read", "pins:write", "user_accounts:read"];
+export const PINTEREST_SCOPES = ["boards:read", "boards:write", "pins:read", "pins:write", "user_accounts:read"];
+/** Trial access apps may only write to Pinterest's sandbox (Pins visible to the creator only). Set PINTEREST_SANDBOX=1 until Standard access is approved. */
+export const pinterestSandbox = () => /^(1|true|yes)$/i.test(process.env.PINTEREST_SANDBOX || "");
+export const pinterestApi = () => (pinterestSandbox() ? "https://api-sandbox.pinterest.com/v5" : "https://api.pinterest.com/v5");
 export const YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly", "https://www.googleapis.com/auth/youtube.force-ssl"];
 export const MASTODON_SCOPES = "read:accounts read:notifications read:statuses write:statuses write:media";
 
@@ -119,8 +122,13 @@ export async function exchange(p: OAuthPlatform, code: string, base: string, met
     );
     const H = { Authorization: `Bearer ${t.access_token}` };
     const me = await asJson(await fetch("https://api.pinterest.com/v5/user_account", { headers: H }), "Pinterest profile");
-    const boards = await asJson(await fetch("https://api.pinterest.com/v5/boards?page_size=100", { headers: H }), "Pinterest boards").catch(() => ({ items: [] }));
+    const boards = await asJson(await fetch(`${pinterestApi()}/boards?page_size=100`, { headers: H }), "Pinterest boards").catch(() => ({ items: [] }));
     const list = (boards.items || []).map((b: any) => ({ id: b.id, name: b.name }));
+    // The sandbox starts empty and has no app to make boards in, so ZieAds makes one
+    if (!list.length && pinterestSandbox()) {
+      const made = await asJson(await fetch(`${pinterestApi()}/boards`, { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ name: "ZieAds", privacy: "PUBLIC" }) }), "Pinterest sandbox board").catch(() => null);
+      if (made?.id) list.push({ id: made.id, name: made.name || "ZieAds" });
+    }
     return {
       platformUserId: me.id || me.username,
       username: me.username,
@@ -131,7 +139,7 @@ export async function exchange(p: OAuthPlatform, code: string, base: string, met
       refreshToken: t.refresh_token,
       expiresInSec: t.expires_in,
       scopes: t.scope || PINTEREST_SCOPES.join(","),
-      metadata: { boards: list, default_board_id: list[0]?.id || null },
+      metadata: { boards: list, default_board_id: list[0]?.id || null, sandbox: pinterestSandbox() },
     };
   }
 

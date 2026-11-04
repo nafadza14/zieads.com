@@ -11,6 +11,7 @@
     - Anthropic (ANTHROPIC_API_KEY) using native tool use
     - Sumopod / any OpenAI-compatible endpoint (SUMOPOD_API_KEY) using function calling
 */
+import { SUMOPOD_CHAT_URL, sumopodModel, isInvalidModel } from "../utils/sumopodModel.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { AGENT_TOOLS, TOOL_MAP, type ToolContext, type AgentArtifact } from "./tools.js";
 import { NO_EM_DASH_RULE, stripDashes, stripDashesChunk } from "../utils/noEmDash.js";
@@ -263,8 +264,10 @@ function toOpenAIContent(content: string | any[]) {
 async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): Promise<string> {
   const apiKey = process.env.SUMOPOD_API_KEY;
   if (!apiKey) throw new Error("SUMOPOD_API_KEY not set");
-  const endpoint = process.env.AGENT_OPENAI_ENDPOINT || "https://ai.sumopod.com/v1/chat/completions";
-  const model = process.env.AGENT_OPENAI_MODEL || "MiniMax-M2.7-highspeed";
+  const endpoint = process.env.AGENT_OPENAI_ENDPOINT || SUMOPOD_CHAT_URL;
+  // A custom endpoint uses AGENT_OPENAI_MODEL as given; Sumopod's model is checked against /v1/models
+  let model = process.env.AGENT_OPENAI_ENDPOINT ? process.env.AGENT_OPENAI_MODEL || "MiniMax-M2.7" : await sumopodModel(apiKey);
+  let retriedModel = false;
   const tools = AGENT_TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } }));
   const deadline = Date.now() + (opts.budgetMs ?? 50000);
   const maxRounds = opts.maxRounds ?? 5;
@@ -281,13 +284,24 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
     opts.emit({ type: "round_start", round });
     const writer = makeRoundWriter(opts, round);
 
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model, messages, tools, tool_choice: mustFinish ? "none" : "auto", parallel_tool_calls: true, max_tokens: 4096, temperature: 0.4, stream: true }),
-      signal: opts.signal,
-    });
-    if (!res.ok) throw new Error(`AI provider error (${res.status}): ${(await res.text()).slice(0, 300)}`);
+    const call = () =>
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model, messages, tools, tool_choice: mustFinish ? "none" : "auto", parallel_tool_calls: true, max_tokens: 4096, temperature: 0.4, stream: true }),
+        signal: opts.signal,
+      });
+    let res = await call();
+    if (!res.ok) {
+      const errText = await res.text();
+      // Sumopod retired the model name: read the model list again and retry once
+      if (!retriedModel && !process.env.AGENT_OPENAI_ENDPOINT && isInvalidModel(res.status, errText)) {
+        retriedModel = true;
+        model = await sumopodModel(apiKey, true);
+        res = await call();
+        if (!res.ok) throw new Error(`AI provider error (${res.status}): ${(await res.text()).slice(0, 300)}`);
+      } else throw new Error(`AI provider error (${res.status}): ${errText.slice(0, 300)}`);
+    }
 
     let rawContent = "";
     const calls: Array<{ id: string; name: string; args: string }> = [];
