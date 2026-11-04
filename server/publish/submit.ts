@@ -174,7 +174,14 @@ export async function submitPosts(userId: string, input: SubmitInput): Promise<S
       updated_at: new Date().toISOString(),
     };
     const { data, error } = await supabaseAdmin.from("scheduled_posts").insert(row).select().single();
-    if (error) return { ok: false, status: 500, error: error.message, posts };
+    if (error) {
+      // A column the code needs is missing: the database migrations were not run yet
+      const missing = /Could not find the '([^']+)' column|column "?([a-z_]+)"? .*does not exist/i.exec(error.message);
+      const msg = missing
+        ? `The database is missing the column ${missing[1] || missing[2]}. Run supabase/migrations/RUN_ALL_2026_11.sql in the Supabase SQL Editor, then try again.`
+        : error.message;
+      return { ok: false, status: 500, error: msg, posts };
+    }
     await supabaseAdmin.from("scheduled_posts").update({ idempotency_key: idempotencyKeyFor(data) }).eq("id", data.id);
     await logActivity(userId, "user", `post.${status}`, "scheduled_post", data.id, { platform: t.platform });
     posts.push({ id: data.id, platform: t.platform, status });
