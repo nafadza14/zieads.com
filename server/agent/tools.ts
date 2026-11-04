@@ -579,8 +579,14 @@ const scanWebsite: AgentTool = {
 
 // ─── Shared helpers for action tools ───────────────────────────────────────
 const cleanText = (v: any, max: number) => stripDashes(String(v ?? "").trim()).slice(0, max);
+/** Chinese, Japanese or Korean script that slipped into text meant for another language */
+const CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]+/g;
+export function assertNoForeignScript(texts: string[], what: string) {
+  const bad = texts.flatMap((t, i) => [...String(t || "").matchAll(CJK)].map((m) => `${what} ${i + 1}: "${m[0]}"`));
+  if (bad.length) throw new Error(`These parts are in Chinese, Japanese or Korean script by mistake: ${bad.slice(0, 6).join(", ")}. Rewrite the full text in the user's language only and call this tool again.`);
+}
 const cleanTags = (v: any) =>
-  Array.isArray(v) ? v.slice(0, 30).map((h: any) => String(h).replace(/^#/, "").replace(/\s+/g, "").trim()).filter(Boolean) : [];
+  typeof v === "string" ? cleanTags(v.split(/[\s,]+/)) : Array.isArray(v) ? v.slice(0, 30).map((h: any) => String(h).replace(/^#/, "").replace(/\s+/g, "").trim()).filter(Boolean) : [];
 
 /** Next free 9:00 local slot from tomorrow, used when the model gives no time */
 function defaultSlot(offsetMin: number, dayIndex: number) {
@@ -667,6 +673,7 @@ const createDraftPosts: AgentTool = {
       };
     });
     if (rows.some((r: any) => !r.caption)) throw new Error("Every post needs a caption");
+    assertNoForeignScript(rows.map((r: any) => r.caption), "post");
 
     const { data, error } = await supabaseAdmin.from("scheduled_posts").insert(rows).select("*");
     if (error) throw new Error(error.message);
@@ -808,6 +815,7 @@ const draftCommentReplies: AgentTool = {
   async run(input, { userId }) {
     const list = (Array.isArray(input?.replies) ? input.replies : []).slice(0, 25).filter((r: any) => r?.comment_id && r?.reply);
     if (!list.length) throw new Error("replies is required");
+    assertNoForeignScript(list.map((r: any) => r.reply), "reply");
     const ids = list.map((r: any) => String(r.comment_id));
     const { data: comments } = await supabaseAdmin.from("comments_inbox").select("id, platform, author_username, text, sentiment, status").eq("user_id", userId).in("id", ids);
     const byId = new Map((comments || []).map((c: any) => [c.id, c]));

@@ -12,6 +12,7 @@
     - Sumopod / any OpenAI-compatible endpoint (SUMOPOD_API_KEY) using function calling
 */
 import { SUMOPOD_CHAT_URL, sumopodModel, isInvalidModel } from "../utils/sumopodModel.js";
+import { ToolMarkupGate, parseTextToolCalls, stripToolMarkup, hasToolMarkup } from "./textToolCalls.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { AGENT_TOOLS, TOOL_MAP, type ToolContext, type AgentArtifact } from "./tools.js";
 import { NO_EM_DASH_RULE, stripDashes, stripDashesChunk } from "../utils/noEmDash.js";
@@ -305,12 +306,15 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
 
     let rawContent = "";
     const calls: Array<{ id: string; name: string; args: string }> = [];
+    // Tool calls written as text (MiniMax) never reach the chat
+    const gate = new ToolMarkupGate();
     const onDelta = (d: any) => {
       if (!d) return;
       if (typeof d.reasoning_content === "string") writer.thinking(d.reasoning_content);
       if (typeof d.content === "string" && d.content) {
         rawContent += d.content;
-        writer.push(d.content);
+        const safe = gate.push(d.content);
+        if (safe) writer.push(safe);
       }
       for (const tc of d.tool_calls || []) {
         const i = typeof tc.index === "number" ? tc.index : calls.length;
@@ -349,8 +353,14 @@ async function runOpenAICompatible(opts: RunAgentOptions, steps: AgentStep[]): P
       }
     }
 
+    const tail = gate.flush();
+    if (tail) writer.push(tail);
     const text = writer.end();
     const valid = calls.filter((c) => c && c.name);
+    if (!valid.length && hasToolMarkup(rawContent)) {
+      parseTextToolCalls(rawContent, AGENT_TOOLS).forEach((c, i) => valid.push({ id: `text_${round}_${i}`, name: c.name, args: JSON.stringify(c.args) }));
+      rawContent = stripToolMarkup(rawContent);
+    }
     opts.emit({ type: "round_end", round, tools: mustFinish ? 0 : valid.length });
     if (!valid.length || mustFinish) return text;
 
@@ -405,4 +415,6 @@ Rules
 6. After acting, tell the user what you made and that the cards below the answer let them edit, approve or send each item, or open it in Calendar, Composer, Inbox or Competitor Hunt. Never claim something was published or sent.
 7. For general strategy questions that need no data, answer directly without tools.
 8. Final answer: lead with the key finding using real numbers, then a short ranked action list. Use markdown tables when comparing. Reply in the user's language.
-9. ${NO_EM_DASH_RULE}`;
+9. Language: write every answer, caption and reply only in the user's language (Indonesian when they write Indonesian) with Latin letters. Never use Chinese, Japanese or Korean characters, and do not mix in English words when writing Indonesian unless they are common marketing terms. Numbered lists use "1. ", "2. ".
+10. Call tools only through the tool calling interface, never by writing tool call tags in your answer.
+11. ${NO_EM_DASH_RULE}`;
