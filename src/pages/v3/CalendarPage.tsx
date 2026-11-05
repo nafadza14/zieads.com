@@ -352,7 +352,9 @@ export default function CalendarPage() {
         setSelectedEvent(null);
         fetchEvents();
       } else if (action === 'retry') {
-        patchEvent(ev.id, { status: j.result?.status === 'retrying' ? 'scheduled' : j.result?.status || 'scheduled', error_message: null, permalink: j.result?.permalink });
+        const st = j.result?.status;
+        patchEvent(ev.id, { status: st === 'retrying' ? 'scheduled' : st || 'scheduled', error_message: st === 'published' ? null : j.result?.reason || null, permalink: j.result?.permalink });
+        if (st === 'retrying') setDraftError(`Still not out: ${j.result?.reason || 'unknown error'}`);
       } else if (action === 'mark-posted') {
         patchEvent(ev.id, { status: 'published', type: 'published', permalink: body.permalink || null });
       } else {
@@ -908,6 +910,8 @@ export default function CalendarPage() {
                     ? 'Waiting for your review'
                     : selectedEvent.status === 'published'
                     ? 'Published post'
+                    : selectedEvent.status === 'scheduled' && selectedEvent.error_message
+                    ? 'Retrying after an error'
                     : 'Scheduled post'}
                 </h3>
               </div>
@@ -929,7 +933,17 @@ export default function CalendarPage() {
               {selectedEvent.error_message && selectedEvent.status !== 'needs_action' && (
                 <div className="zca-error">
                   <AlertCircle size={14} style={{ flexShrink: 0 }} />
-                  <div><strong>Error:</strong> {selectedEvent.error_message}</div>
+                  <div>
+                    {selectedEvent.status === 'scheduled' ? (
+                      <>
+                        <strong>The last try did not go out:</strong> {selectedEvent.error_message} ZieAds tries again at the time above, or press Retry now.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Error:</strong> {selectedEvent.error_message}
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1024,9 +1038,9 @@ export default function CalendarPage() {
                     Approve
                   </Button>
                 )}
-                {['failed', 'approved'].includes(selectedEvent.status) && (
-                  <Button size="sm" variant="primary" icon={selectedEvent.status === 'failed' ? <RotateCcw size={13} /> : <Send size={13} />} loading={busyAction === 'retry'} onClick={() => postAction(selectedEvent, 'retry')}>
-                    {selectedEvent.status === 'failed' ? 'Retry now' : 'Publish now'}
+                {(['failed', 'approved'].includes(selectedEvent.status) || (selectedEvent.status === 'scheduled' && selectedEvent.error_message)) && (
+                  <Button size="sm" variant="primary" icon={selectedEvent.status === 'approved' ? <Send size={13} /> : <RotateCcw size={13} />} loading={busyAction === 'retry'} onClick={() => postAction(selectedEvent, 'retry')}>
+                    {selectedEvent.status === 'approved' ? 'Publish now' : 'Retry now'}
                   </Button>
                 )}
                 {selectedEvent.status === 'needs_action' && (

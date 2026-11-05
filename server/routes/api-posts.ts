@@ -141,7 +141,8 @@ postsRouter.post("/posts/:id/approve", requireAuth, async (req: any, res) => {
 postsRouter.post("/posts/:id/retry", requireAuth, async (req: any, res) => {
   const post = await ownPost(req.userId, req.params.id);
   if (!post) return res.status(404).json({ error: "Post not found" });
-  if (!["failed", "approved"].includes(post.status)) return res.status(400).json({ error: "Only failed or approved posts can be sent now" });
+  const retrying = post.status === "scheduled" && !!post.error_message;
+  if (!["failed", "approved"].includes(post.status) && !retrying) return res.status(400).json({ error: "Only failed, retrying or approved posts can be sent now" });
   await supabaseAdmin.from("scheduled_posts").update({ status: "scheduled", retry_count: 0, scheduled_for: new Date().toISOString(), error_message: null }).eq("id", post.id);
   const result = await publishScheduledPost(post.id);
   res.json({ success: result.status === "published" || result.status === "needs_action" || result.status === "retrying", result });

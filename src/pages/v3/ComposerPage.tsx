@@ -770,8 +770,14 @@ export default function ComposerPage() {
       const results = (j.posts || []).map((p: any) => ({ platform: p.platform, status: p.status, reason: p.result?.reason, permalink: p.result?.permalink }));
       setSubmitResults(results);
       const failed = results.filter((r: any) => r.status === 'failed');
-      if (failed.length) {
-        setComposerError(failed.map((f: any) => `${platformMeta(f.platform).name}: ${f.reason}`).join(' '));
+      const retrying = results.filter((r: any) => r.status === 'retrying');
+      if (failed.length || retrying.length) {
+        setComposerError(
+          [
+            ...failed.map((f: any) => `${platformMeta(f.platform).name}: ${f.reason}`),
+            ...retrying.map((f: any) => `${platformMeta(f.platform).name} did not go out yet: ${f.reason} It is saved on the calendar and ZieAds tries again in a few minutes.`),
+          ].join(' ')
+        );
       } else {
         setComposerSuccess(true);
         if (!results.some((r: any) => r.status === 'needs_action')) setTimeout(() => navigate('/calendar'), 1800);

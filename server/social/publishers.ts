@@ -82,8 +82,26 @@ async function fail(res: Response, name: string): Promise<never> {
   throw new PublishError(`${name} refused the post (${res.status}). ${typeof msg === "string" ? msg : JSON.stringify(msg)}`.trim(), res.status >= 500 || res.status === 429, reconnect);
 }
 
+/** fetch that names the step and the real cause when the network fails, instead of a bare "fetch failed" */
+export async function net(step: string, url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (e: any) {
+    const c = e?.cause;
+    const why = [c?.code, c?.message].filter(Boolean).join(" ") || e?.message || "network error";
+    let host = "";
+    try {
+      host = new URL(url).host;
+    } catch {
+      host = String(url).slice(0, 60);
+    }
+    throw new PublishError(`Network error while ${step} (${host}: ${why}). ZieAds will retry.`, true);
+  }
+}
+
 export async function download(url: string, maxBytes: number, name: string): Promise<{ buf: ArrayBuffer; type: string }> {
-  const res = await fetch(url);
+  if (!/^https?:\/\//.test(String(url))) throw new PublishError(`The media link for ${name} is not a web address. Attach the file again.`, false);
+  const res = await net(`reading the media file for ${name}`, url);
   if (!res.ok) throw new PublishError(`Could not read the media file for ${name} (${res.status}).`, res.status >= 500);
   const len = Number(res.headers.get("content-length") || 0);
   if (len && len > maxBytes) throw new PublishError(`The file is ${Math.round(len / 1e6)} MB. ${name} takes up to ${Math.round(maxBytes / 1e6)} MB from ZieAds.`, false);
@@ -203,7 +221,7 @@ export async function publishYouTube(post: any) {
     snippet: { title: o.title ? youtubeTitle(String(o.title)) : youtubeTitle(caption), description: [...caption].slice(0, 5000).join(""), categoryId: String(o.category_id || "22"), tags: Array.isArray(o.tags) ? o.tags.slice(0, 30) : undefined },
     status: { privacyStatus: privacy, selfDeclaredMadeForKids: !!o.made_for_kids },
   };
-  const init = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
+  const init = await net("starting the YouTube upload", "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
     method: "POST",
     headers: { Authorization: `Bearer ${c.token}`, "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": type.startsWith("video/") ? type : "video/*", "X-Upload-Content-Length": String(buf.byteLength) },
     body: JSON.stringify(meta),
@@ -211,7 +229,7 @@ export async function publishYouTube(post: any) {
   if (!init.ok) return fail(init, "YouTube");
   const location = init.headers.get("location");
   if (!location) throw new PublishError("YouTube did not start the upload. ZieAds will retry.", true);
-  const up = await fetch(location, { method: "PUT", headers: { "Content-Type": type.startsWith("video/") ? type : "video/*", "Content-Length": String(buf.byteLength) }, body: buf });
+  const up = await net("sending the video to YouTube", location, { method: "PUT", headers: { "Content-Type": type.startsWith("video/") ? type : "video/*" }, body: new Uint8Array(buf) });
   if (!up.ok) return fail(up, "YouTube");
   const j: any = await up.json();
   return { externalId: j.id, permalink: `https://www.youtube.com/watch?v=${j.id}` };
