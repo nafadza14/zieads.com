@@ -14,6 +14,7 @@ import {
   Button,
 } from '../../components/v3/ui';
 import { supabase } from '../../lib/supabaseClient';
+import { uploadMedia } from '../../lib/uploadMedia';
 import { useDemoMode } from '../../lib/demoStore';
 import { sampleConnections } from '../../data/sample-data';
 import {
@@ -616,31 +617,9 @@ export default function ComposerPage() {
 
     setUploadingMedia(true);
     try {
-      const token = (await supabase.auth.getSession()).data?.session?.access_token;
-      const formData = new FormData();
-      formData.append("file", file);
-
       // Saved to the Media Library too, so the file can be reused and scheduled posts keep a stable copy
-      const res = await fetch('/api/v3/media/upload', {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData
-      });
-
-      const j = await res.json();
-      if (!res.ok) {
-        throw new Error(j.error || "Upload failed");
-      }
-
-      if (j.success) {
-        const newMedia = {
-          id: j.data.id,
-          file_url: j.data.url,
-          file_name: j.data.file_name,
-          mime_type: j.data.mime_type
-        };
-        setMediaAttachments(prev => [...prev, newMedia]);
-      }
+      const m = await uploadMedia(file);
+      setMediaAttachments(prev => [...prev, { id: m.id, file_url: m.url, file_name: m.file_name, mime_type: m.mime_type }]);
     } catch (err: any) {
       alert("Upload failed: " + (err.message || "Unknown error"));
     } finally {

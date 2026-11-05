@@ -21,6 +21,7 @@ import { syncAll, syncComments, syncRecentPosts } from "../utils/sync-instagram.
 import { syncTikTokInsightsForUser } from "../utils/sync-tiktok.js";
 // @ts-ignore
 import { put, del } from "@vercel/blob";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 // @ts-ignore
 import sharp from "sharp";
 import multer from "multer";
@@ -263,6 +264,69 @@ const upload = multer({
 });
 
 // ─── Media Library & Uploads ─────────────────────────────────────────────────
+/*
+  Direct upload to Vercel Blob. Vercel functions accept at most 4.5 MB per request, so videos go from
+  the browser straight to Blob: GET /media/upload-prefix, then the client's upload() asks
+  /media/blob-token for a short lived token, then POST /media/register saves the file in the library.
+*/
+const MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime", "text/csv", "text/plain", "application/pdf"];
+const mediaPrefix = (userId: string) => `user-media/${userId}/`;
+
+apiV3Router.get("/media/upload-prefix", requireAuth, (req: any, res) => {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(501).json({ error: "Direct upload is not set up." });
+  res.json({ prefix: mediaPrefix(req.userId) });
+});
+
+apiV3Router.post("/media/blob-token", requireAuth, async (req: any, res) => {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(501).json({ error: "Direct upload is not set up." });
+  try {
+    const out = await handleUpload({
+      body: req.body as HandleUploadBody,
+      request: req,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+      onBeforeGenerateToken: async (pathname) => {
+        if (!pathname.startsWith(mediaPrefix(req.userId)) || pathname.includes("..")) throw new Error("This upload path is not allowed.");
+        return { allowedContentTypes: MEDIA_TYPES, maximumSizeInBytes: 500 * 1024 * 1024, addRandomSuffix: true };
+      },
+    });
+    res.json(out);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message || "Could not start the upload." });
+  }
+});
+
+apiV3Router.post("/media/register", requireAuth, async (req: any, res) => {
+  const { url, pathname, file_name, size, mime_type, width, height, duration_seconds } = req.body || {};
+  let host = "";
+  let urlPath = "";
+  try {
+    const u = new URL(String(url));
+    host = u.hostname;
+    urlPath = decodeURIComponent(u.pathname);
+  } catch {
+    /* checked below */
+  }
+  const ok =
+    host.endsWith(".public.blob.vercel-storage.com") &&
+    typeof pathname === "string" &&
+    pathname.startsWith(mediaPrefix(req.userId)) &&
+    urlPath === `/${pathname}` &&
+    MEDIA_TYPES.includes(String(mime_type));
+  if (!ok) return res.status(400).json({ error: "This file was not uploaded through ZieAds." });
+  const num = (v: any) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.round(Number(v)) : null);
+  const name = String(file_name || pathname.split("/").pop() || "file").slice(0, 200);
+  if (req.query.skipLibrary === "true") {
+    return res.json({ success: true, data: { id: `temp_${Date.now()}`, url, file_name: name, mime_type, width: num(width), height: num(height), duration_seconds: num(duration_seconds) } });
+  }
+  const { data: media, error } = await supabaseAdmin
+    .from("media_library")
+    .insert({ user_id: req.userId, blob_url: url, blob_pathname: pathname, file_name: name, file_size_bytes: num(size), mime_type, width: num(width), height: num(height), duration_seconds: num(duration_seconds) })
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, data: { id: media.id, url: media.blob_url, file_name: media.file_name, mime_type: media.mime_type, width: media.width, height: media.height, duration_seconds: media.duration_seconds } });
+});
+
 apiV3Router.post("/media/upload", requireAuth, upload.single("file"), async (req: any, res) => {
   try {
     const file = req.file;

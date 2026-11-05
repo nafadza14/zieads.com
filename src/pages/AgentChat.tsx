@@ -9,6 +9,7 @@ import {
   UilFlask, UilAnalysis, UilCrosshairs, UilRocket, UilChat, UilBolt, UilArrowUp, UilArrowRight, UilPlay
 } from '@iconscout/react-unicons';
 import { supabase } from '../lib/supabaseClient';
+import { uploadMedia } from '../lib/uploadMedia';
 import { useCreditStore } from '../lib/creditStore';
 import CreditBadge from '../components/CreditBadge';
 import FeatureGateModal from '../components/FeatureGateModal';
@@ -597,27 +598,8 @@ export default function AgentChat() {
 
     setUploadingFile(true);
     try {
-      const headers = await getAuthHeaders();
-      const authHeaders = { ...headers } as any;
-      delete authHeaders['Content-Type'];
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch('/api/v3/media/upload?skipLibrary=true', {
-        method: 'POST',
-        headers: authHeaders,
-        body: formData
-      });
-
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || 'Upload failed');
-
-      setAttachedFile({
-        name: file.name,
-        url: j.blob_url || j.url,
-        mimeType: file.type
-      });
+      const m = await uploadMedia(file, { skipLibrary: true });
+      setAttachedFile({ name: file.name, url: m.url, mimeType: file.type });
     } catch (err: any) {
       alert('Upload failed: ' + (err.message || 'Unknown error'));
     } finally {
