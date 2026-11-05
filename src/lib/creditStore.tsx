@@ -1,7 +1,7 @@
 /**
  * ZieAds Frontend Credit Store
  * React Context + Hook for managing credit state across the app.
- * Polls /api/v1/credits/balance every 30s; invalidates on user actions.
+ * Refreshes /api/v1/credits/balance every 5 minutes while the tab is visible; invalidates on user actions.
  */
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from './supabaseClient';
@@ -78,6 +78,7 @@ const CreditContext = createContext<CreditContextValue>({
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const CACHE_TTL_MS = 30_000;
+const POLL_MS = 5 * 60_000;
 
 export function CreditProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState<CreditBalance>(DEFAULT_BALANCE);
@@ -132,11 +133,19 @@ export function CreditProvider({ children }: { children: ReactNode }) {
     }
   }, [lastFetch, getAuthHeader]);
 
-  // Initial fetch + 30s polling
+  // Initial fetch, then a slow refresh only while the tab is visible, and right away when the user comes back.
+  // Every refresh is a server function call, so a background tab must not keep calling all day.
   useEffect(() => {
     fetchBalance(true);
-    const interval = setInterval(() => fetchBalance(true), CACHE_TTL_MS);
-    return () => clearInterval(interval);
+    const tick = () => {
+      if (document.visibilityState === 'visible') fetchBalance(true);
+    };
+    const interval = setInterval(tick, POLL_MS);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', tick);
+    };
   }, []);
 
   const refresh = useCallback(() => fetchBalance(true), [fetchBalance]);
