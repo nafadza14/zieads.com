@@ -4,7 +4,7 @@ import { NO_EM_DASH_RULE } from "../utils/noEmDash.js";
 import { computeOverview, type Period } from "../monitor/overview.js";
 import { syncCompetitorContent, proxied, mediaAllowed } from "../competitors/sync.js";
 import { discoveryConfigured, providerConfigured } from "../competitors/sources.js";
-import { createHmac } from "crypto";
+import { createHmac, randomBytes } from "crypto";
 import { getUserIdFromRequest, supabaseAdmin, getEffectivePlan } from "../supabaseServer.js";
 import { PLAN_LIMITS } from "../creditConfig.js";
 import {
@@ -272,9 +272,35 @@ const upload = multer({
 const MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime", "text/csv", "text/plain", "application/pdf"];
 const mediaPrefix = (userId: string) => `user-media/${userId}/`;
 
+const MEDIA_BUCKET = "post-attachments";
+let bucketReady = false;
+async function ensureMediaBucket() {
+  if (bucketReady) return;
+  const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+  if (!buckets?.some((b) => b.name === MEDIA_BUCKET)) await supabaseAdmin.storage.createBucket(MEDIA_BUCKET, { public: true });
+  bucketReady = true;
+}
+const supabaseMediaUrl = (path: string) => supabaseAdmin.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+
+// Vercel Blob when it is connected, otherwise Supabase Storage. Both are direct from the browser.
 apiV3Router.get("/media/upload-prefix", requireAuth, (req: any, res) => {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(501).json({ error: "Direct upload is not set up." });
-  res.json({ prefix: mediaPrefix(req.userId) });
+  res.json({ provider: process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "supabase", prefix: mediaPrefix(req.userId) });
+});
+
+// Supabase Storage: a one time signed upload URL for one file in the user's own folder
+apiV3Router.post("/media/signed-upload", requireAuth, async (req: any, res) => {
+  const { file_name, mime_type } = req.body || {};
+  if (!MEDIA_TYPES.includes(String(mime_type))) return res.status(415).json({ error: `Unsupported file type: ${mime_type || "unknown"}.` });
+  try {
+    await ensureMediaBucket();
+    const safe = String(file_name || "file").replace(/[^a-zA-Z0-9.-]/g, "_").slice(-120) || "file";
+    const path = `${mediaPrefix(req.userId)}${Date.now()}-${randomBytes(4).toString("hex")}-${safe}`;
+    const { data, error } = await supabaseAdmin.storage.from(MEDIA_BUCKET).createSignedUploadUrl(path);
+    if (error || !data) throw new Error(error?.message || "Could not start the upload.");
+    res.json({ bucket: MEDIA_BUCKET, path: data.path || path, token: data.token });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || "Could not start the upload." });
+  }
 });
 
 apiV3Router.post("/media/blob-token", requireAuth, async (req: any, res) => {
@@ -306,11 +332,13 @@ apiV3Router.post("/media/register", requireAuth, async (req: any, res) => {
   } catch {
     /* checked below */
   }
+  const fromSupabase = typeof pathname === "string" && String(url) === supabaseMediaUrl(pathname);
   const ok =
-    host.endsWith(".public.blob.vercel-storage.com") &&
+    (fromSupabase || host.endsWith(".public.blob.vercel-storage.com")) &&
     typeof pathname === "string" &&
     pathname.startsWith(mediaPrefix(req.userId)) &&
-    urlPath === `/${pathname}` &&
+    !pathname.includes("..") &&
+    (fromSupabase || urlPath === `/${pathname}`) &&
     MEDIA_TYPES.includes(String(mime_type));
   if (!ok) return res.status(400).json({ error: "This file was not uploaded through ZieAds." });
   const num = (v: any) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.round(Number(v)) : null);
