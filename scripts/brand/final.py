@@ -1,5 +1,5 @@
 """Run: pip install skia-python pillow; python3 scripts/brand/final.py (rsvg-convert needed).
-Final ZieAds identity (direction A, Zie Tile): master SVGs, small-size cut, web icons, TS path module."""
+Final ZieAds identity (direction B, Smiling Z): master SVGs, small-size cut, web icons, TS path module."""
 import os, sys, subprocess, json
 sys.path.insert(0, os.path.dirname(__file__))
 from geo import *
@@ -12,20 +12,27 @@ os.makedirs(BRAND, exist_ok=True)
 ORANGE, INK, WHITE = "#F26522", "#111111", "#FFFFFF"
 
 
-def symbol(small=False):
-    """256 canvas. Head: smooth squircle. Ears: ellipses leaning 15 deg outward. Smile: cut out arc.
-    The small cut (16 to 32 px) has fatter ears, a wider gap between them and a thicker smile."""
+def smiling_z(small=False):
+    """The Z whose bottom stroke is the smile. Diagonal at exactly 45 degrees, round caps and joins.
+    Centred a few units above the middle of the tile (optical centre). The small cut is bolder."""
+    p = path()
     if not small:
-        body = squircle(24, 96, 208, 144, 64)
-        e1 = ellipse(88, 80, 26, 66, angle=-15)
-        e2 = ellipse(168, 80, 26, 66, angle=15)
-        smile = arc_stroke(128, 132, 56, 55, 125, 18)
-    else:
-        body = squircle(16, 100, 224, 144, 60)
-        e1 = ellipse(80, 82, 34, 68, angle=-15)
-        e2 = ellipse(176, 82, 34, 68, angle=15)
-        smile = arc_stroke(128, 128, 64, 52, 128, 30)
-    return diff(union(body, e1, e2), smile)
+        p.moveTo(82, 78)
+        p.lineTo(176, 78)
+        p.lineTo(88, 166)
+        p.cubicTo(114, 190, 150, 190, 176, 166)
+        return stroke(p, 30)
+    p.moveTo(76, 76)
+    p.lineTo(180, 76)
+    p.lineTo(84, 172)
+    p.cubicTo(112, 198, 152, 198, 180, 172)
+    return stroke(p, 40)
+
+
+def symbol(small=False):
+    """Direction B, Smiling Z: an orange squircle tile with the Z cut out of it."""
+    tile = squircle(16, 16, 224, 224, 60) if not small else squircle(8, 8, 240, 240, 62)
+    return diff(tile, smiling_z(small))
 
 
 def fit(p, box=256, pad=12):
@@ -94,7 +101,8 @@ if __name__ == "__main__":
     os.remove(os.path.join(PUB, "favicon-48.png"))
 
     # App icon: orange full bleed, white Zie, smile cut through to orange (platforms add their own mask)
-    icon_sym = fit(symbol(False), pad=46)
+    # App icon: the platform draws its own rounded tile, so it is the white Z on orange, full bleed
+    icon_sym = fit(smiling_z(False), pad=64)
     app = with_bg(svg([(icon_sym, WHITE)], title="ZieAds"), 256, 256, ORANGE)
     save("zieads-app-icon.svg", app)
     tmp = os.path.join(BRAND, "zieads-app-icon.svg")
@@ -102,7 +110,7 @@ if __name__ == "__main__":
     png(tmp, os.path.join(PUB, "icon-192.png"), 192)
     png(tmp, os.path.join(PUB, "icon-512.png"), 512)
     # Maskable: more padding so circle masks never cut the ears
-    mask_sym = fit(symbol(False), pad=64)
+    mask_sym = fit(smiling_z(False), pad=80)
     save("zieads-app-icon-maskable.svg", with_bg(svg([(mask_sym, WHITE)], title="ZieAds"), 256, 256, ORANGE))
     png(os.path.join(BRAND, "zieads-app-icon-maskable.svg"), os.path.join(PUB, "icon-maskable-512.png"), 512)
 
@@ -127,8 +135,8 @@ if __name__ == "__main__":
     def rule(p):
         return "evenodd" if p.getFillType() == skia.PathFillType.kEvenOdd else "nonzero"
     ts = f"""/*
-  ZieAds logo geometry, generated from the master SVGs in public/brand (direction A, "Zie Tile":
-  the orange tile grows Zie's ears and the smile is cut out). Do not edit by hand.
+  ZieAds logo geometry, generated from the master SVGs in public/brand (direction B, "Smiling Z":
+  an orange tile with a Z cut out of it, whose bottom stroke is a smile). Do not edit by hand.
 */
 export const ZIE_SYMBOL = {{ viewBox: '0 0 256 256', fillRule: '{rule(sym)}' as const, d: '{to_d(sym)}' }};
 /** Thicker cut for 24 px and below */

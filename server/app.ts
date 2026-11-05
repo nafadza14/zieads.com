@@ -111,7 +111,11 @@ app.use((req, res, next) => {
 // Browsers asking for HTML get the app shell (the SPA renders the page); API and MCP clients get JSON.
 async function appShell(req: any, res: any, next: any) {
   try {
-    const r = await fetch(`${publicOrigin(req)}/index.html`);
+    // The prerendered page (real content for crawlers), else the plain app shell
+    const page = req.path.replace(/\/+$/, "") || "/api";
+    let r = await fetch(`${publicOrigin(req)}/_prerender${page}.html`);
+    if (!r.ok) r = await fetch(`${publicOrigin(req)}/app.html`);
+    if (!r.ok) r = await fetch(`${publicOrigin(req)}/index.html`);
     if (!r.ok) return next();
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=0, s-maxage=300");

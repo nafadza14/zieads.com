@@ -1,35 +1,36 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import QuickScanResult from './pages/QuickScanResult';
+const QuickScanResult = lazy(() => import('./pages/QuickScanResult'));
 import AuthPage from './pages/AuthPage';
-import OnboardingWizard from './pages/OnboardingWizard';
-import AuditProgress from './pages/AuditProgress';
-import ReportDashboard from './pages/ReportDashboard';
-import ClientDashboard from './pages/ClientDashboard';
+const OnboardingWizard = lazy(() => import('./pages/OnboardingWizard'));
+const AuditProgress = lazy(() => import('./pages/AuditProgress'));
+const ReportDashboard = lazy(() => import('./pages/ReportDashboard'));
+const ClientDashboard = lazy(() => import('./pages/ClientDashboard'));
 import PricingPage from './pages/PricingPage';
-import SkillReport from './pages/SkillReport';
-import AgentChat from './pages/AgentChat';
-import ConnectionsPage from './pages/v3/ConnectionsPage';
-import AnalystPage from './pages/v3/AnalystPage';
-import ComposerPage from './pages/v3/ComposerPage';
-import CalendarPage from './pages/v3/CalendarPage';
-import AnalyticsPage from './pages/v3/AnalyticsPage';
-import InboxPage from './pages/v3/InboxPage';
-import CommentsPage from './pages/v3/CommentsPage';
-import HuntPage from './pages/v3/HuntPage';
+const SkillReport = lazy(() => import('./pages/SkillReport'));
+const AgentChat = lazy(() => import('./pages/AgentChat'));
+const ConnectionsPage = lazy(() => import('./pages/v3/ConnectionsPage'));
+const AnalystPage = lazy(() => import('./pages/v3/AnalystPage'));
+const ComposerPage = lazy(() => import('./pages/v3/ComposerPage'));
+const CalendarPage = lazy(() => import('./pages/v3/CalendarPage'));
+const AnalyticsPage = lazy(() => import('./pages/v3/AnalyticsPage'));
+const InboxPage = lazy(() => import('./pages/v3/InboxPage'));
+const CommentsPage = lazy(() => import('./pages/v3/CommentsPage'));
+const HuntPage = lazy(() => import('./pages/v3/HuntPage'));
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
-import SuperadminLogin from './pages/superadmin/SuperadminLogin';
-import SuperadminDashboard from './pages/superadmin/SuperadminDashboard';
-import SettingsPage from './pages/settings/SettingsPage';
+const SuperadminLogin = lazy(() => import('./pages/superadmin/SuperadminLogin'));
+const SuperadminDashboard = lazy(() => import('./pages/superadmin/SuperadminDashboard'));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 import DataDeletionPage from './pages/DataDeletionPage';
 import VsPage from './pages/VsPage';
 import DocsPage from './pages/docs/DocsPage';
-import OAuthConsent from './pages/OAuthConsent';
+const OAuthConsent = lazy(() => import('./pages/OAuthConsent'));
 import { ApiPage, McpPage } from './pages/dev/DevPages';
 import FeaturesPage from './pages/FeaturesPage';
 import ErrorBoundary from './components/ErrorBoundary';
+import SeoHead from './seo/SeoHead';
 import { supabase } from './lib/supabaseClient';
 import { CreditProvider } from './lib/creditStore';
 
@@ -126,7 +127,10 @@ export default function App() {
   return (
     <Router>
       <TabTitle />
+      <SeoHead />
       <RouteBoundary>
+      {/* App pages load on demand so the public pages stay light */}
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fff' }} aria-busy="true" />}>
       <Routes>
         <Route path="/" element={<LandingPage onScanComplete={setScanData} />} />
         <Route path="/pricing" element={<PricingPage />} />
@@ -178,6 +182,7 @@ export default function App() {
         <Route path="/superadmin/login" element={<SuperadminLogin />} />
         <Route path="/superadmin" element={<SuperadminDashboard />} />
       </Routes>
+      </Suspense>
       </RouteBoundary>
     </Router>
   );

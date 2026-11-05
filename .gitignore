@@ -9,3 +9,4 @@ coverage/
 node_modules
 .vercel
 .collector-profile/
+dist-ssr

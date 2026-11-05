@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "prebuild": "node scripts/check-no-em-dash.mjs",
-    "build": "vite build",
+    "build": "vite build && vite build --ssr src/entry-prerender.tsx --outDir dist-ssr && node scripts/prerender.mjs",
     "check:dashes": "node scripts/check-no-em-dash.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",

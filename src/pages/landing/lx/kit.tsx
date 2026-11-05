@@ -76,7 +76,8 @@ export const goToId = (id: string) => {
 /** Counts up once when it scrolls into view, so the number lands with the section */
 export function LxCount({ to, prefix = '', suffix = '', duration = 1200 }: { to: number; prefix?: string; suffix?: string; duration?: number }) {
   const { ref, inView } = useInView<HTMLSpanElement>(0.4);
-  const [v, setV] = useState(0);
+  // The prerendered page shows the real number; the browser counts up from 0 when it scrolls into view
+  const [v, setV] = useState(() => (typeof window === 'undefined' ? to : 0));
   useEffect(() => {
     if (!inView) return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return setV(to);

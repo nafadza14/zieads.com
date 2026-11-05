@@ -44,8 +44,349 @@
       "destination": "/api"
     },
     {
+      "source": "/features",
+      "destination": "/features/index.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/pricing/index.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms/index.html"
+    },
+    {
+      "source": "/data-deletion",
+      "destination": "/data-deletion/index.html"
+    },
+    {
+      "source": "/vs/metricool",
+      "destination": "/vs/metricool/index.html"
+    },
+    {
+      "source": "/vs/vista-social",
+      "destination": "/vs/vista-social/index.html"
+    },
+    {
+      "source": "/vs/hootsuite",
+      "destination": "/vs/hootsuite/index.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs/index.html"
+    },
+    {
+      "source": "/docs/quickstart",
+      "destination": "/docs/quickstart/index.html"
+    },
+    {
+      "source": "/docs/authentication",
+      "destination": "/docs/authentication/index.html"
+    },
+    {
+      "source": "/docs/limits",
+      "destination": "/docs/limits/index.html"
+    },
+    {
+      "source": "/docs/mcp",
+      "destination": "/docs/mcp/index.html"
+    },
+    {
+      "source": "/docs/mcp/claude",
+      "destination": "/docs/mcp/claude/index.html"
+    },
+    {
+      "source": "/docs/mcp/chatgpt",
+      "destination": "/docs/mcp/chatgpt/index.html"
+    },
+    {
+      "source": "/docs/mcp/cursor",
+      "destination": "/docs/mcp/cursor/index.html"
+    },
+    {
+      "source": "/docs/mcp/claude-code",
+      "destination": "/docs/mcp/claude-code/index.html"
+    },
+    {
+      "source": "/docs/mcp/vscode",
+      "destination": "/docs/mcp/vscode/index.html"
+    },
+    {
+      "source": "/docs/mcp/other-clients",
+      "destination": "/docs/mcp/other-clients/index.html"
+    },
+    {
+      "source": "/docs/mcp/tools",
+      "destination": "/docs/mcp/tools/index.html"
+    },
+    {
+      "source": "/docs/mcp/oauth",
+      "destination": "/docs/mcp/oauth/index.html"
+    },
+    {
+      "source": "/docs/mcp/troubleshooting",
+      "destination": "/docs/mcp/troubleshooting/index.html"
+    },
+    {
+      "source": "/docs/api",
+      "destination": "/docs/api/index.html"
+    },
+    {
+      "source": "/docs/api/account",
+      "destination": "/docs/api/account/index.html"
+    },
+    {
+      "source": "/docs/api/briefing",
+      "destination": "/docs/api/briefing/index.html"
+    },
+    {
+      "source": "/docs/api/analytics",
+      "destination": "/docs/api/analytics/index.html"
+    },
+    {
+      "source": "/docs/api/posts",
+      "destination": "/docs/api/posts/index.html"
+    },
+    {
+      "source": "/docs/api/comments",
+      "destination": "/docs/api/comments/index.html"
+    },
+    {
+      "source": "/docs/api/competitors",
+      "destination": "/docs/api/competitors/index.html"
+    },
+    {
+      "source": "/docs/api/health",
+      "destination": "/docs/api/health/index.html"
+    },
+    {
+      "source": "/docs/guides/automations",
+      "destination": "/docs/guides/automations/index.html"
+    },
+    {
+      "source": "/docs/faq",
+      "destination": "/docs/faq/index.html"
+    },
+    {
+      "source": "/docs/changelog",
+      "destination": "/docs/changelog/index.html"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/app.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(llms.txt|llms-full.txt|sitemap.xml|robots.txt)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, s-maxage=3600"
+        }
+      ]
+    },
+    {
+      "source": "/analyst",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/agent",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/composer",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/calendar",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/analytics",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/comments",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/inbox",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/hunt",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/connections",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/settings",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/settings/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/onboarding",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/clients",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/audit/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/skill-report/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/superadmin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/superadmin/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/oauth/authorize",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/sign-in",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/sign-up",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/scan-result",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
     }
   ]
 }
