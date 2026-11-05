@@ -164,7 +164,7 @@ async function publishTikTok(post: any): Promise<{ externalId: string; permalink
   throw new NeedsAction(`The video is in your TikTok inbox as a draft (id ${j.data?.publish_id || "pending"}). Open TikTok, check the notification and post it.`);
 }
 
-const DISPATCH: Record<string, (post: any) => Promise<{ externalId: string; permalink?: string }>> = {
+const DISPATCH: Record<string, (post: any) => Promise<{ externalId: string; permalink?: string; warning?: string }>> = {
   instagram: publishInstagram,
   facebook: publishFacebook,
   tiktok: publishTikTok,
@@ -220,10 +220,10 @@ export async function publishScheduledPost(postId: string, opts: { allowStatuses
     const now = new Date().toISOString();
     await supabaseAdmin
       .from("scheduled_posts")
-      .update({ status: "published", published_at: now, platform_media_id: r.externalId, platform_permalink: r.permalink || null, error_message: null, updated_at: now })
+      .update({ status: "published", published_at: now, platform_media_id: r.externalId, platform_permalink: r.permalink || null, error_message: r.warning || null, updated_at: now })
       .eq("id", post.id);
     await logActivity(post.user_id, "agent", "post.published", "scheduled_post", post.id, { platform: post.platform, external_id: r.externalId, permalink: r.permalink });
-    return { status: "published", postId, externalId: r.externalId, permalink: r.permalink };
+    return { status: "published", postId, externalId: r.externalId, permalink: r.permalink, reason: r.warning };
   } catch (e: any) {
     const now = new Date();
     if (e instanceof NeedsAction) {

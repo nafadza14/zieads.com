@@ -5,6 +5,7 @@
   The pure helpers at the top are exported for tests.
 */
 import { PublishError, NeedsAction } from "../publish/errors.js";
+import sharp from "sharp";
 import { loadConnection, expiringSoon, LoadedConnection, updateMetadata } from "./store.js";
 import { refresh, pinterestApi, pinterestSandbox } from "./oauth.js";
 import { bskySession, tg, telegramToken, CredentialError } from "./credentials.js";
@@ -232,7 +233,39 @@ export async function publishYouTube(post: any) {
   const up = await net("sending the video to YouTube", location, { method: "PUT", headers: { "Content-Type": type.startsWith("video/") ? type : "video/*" }, body: new Uint8Array(buf) });
   if (!up.ok) return fail(up, "YouTube");
   const j: any = await up.json();
-  return { externalId: j.id, permalink: `https://www.youtube.com/watch?v=${j.id}` };
+  // Custom thumbnail: the video is already live, so a refused thumbnail is a note, never a failed post
+  let warning: string | undefined;
+  if (typeof o.thumbnail_url === "string" && o.thumbnail_url) {
+    try {
+      await setYouTubeThumbnail(c.token, j.id, o.thumbnail_url);
+    } catch (e: any) {
+      warning = `The video is live, but YouTube did not take the thumbnail: ${e.message}`;
+    }
+  }
+  return { externalId: j.id, permalink: `https://www.youtube.com/watch?v=${j.id}`, warning };
+}
+
+/** thumbnails.set: JPEG at 1280x720, under YouTube's 2 MB cap. Needs a verified channel (youtube.com/verify). */
+async function setYouTubeThumbnail(token: string, videoId: string, url: string) {
+  const { buf } = await download(url, 20 * 1024 * 1024, "YouTube thumbnail");
+  let jpeg = await sharp(Buffer.from(buf)).rotate().resize(1280, 720, { fit: "cover" }).jpeg({ quality: 88 }).toBuffer();
+  if (jpeg.byteLength > 2_000_000) jpeg = await sharp(jpeg).jpeg({ quality: 70 }).toBuffer();
+  const res = await net("setting the YouTube thumbnail", `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}&uploadType=media`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "image/jpeg" },
+    body: new Uint8Array(jpeg),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    let msg = t.slice(0, 200);
+    try {
+      msg = JSON.parse(t).error?.message || msg;
+    } catch {
+      /* keep the text */
+    }
+    if (res.status === 403) msg = "custom thumbnails need a verified channel. Verify it at youtube.com/verify, then set the thumbnail in YouTube Studio.";
+    throw new Error(msg || `status ${res.status}`);
+  }
 }
 
 /* ── Bluesky ────────────────────────────────────────────── */

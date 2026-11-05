@@ -63,6 +63,24 @@ import {
 import './composer.css';
 
 /* Platform brand marks (brand colors are allowed). */
+/** YouTube video categories (snippet.categoryId) */
+const YT_CATEGORIES: Array<[string, string]> = [
+  ['22', 'People and Blogs'],
+  ['26', 'Howto and Style'],
+  ['27', 'Education'],
+  ['24', 'Entertainment'],
+  ['28', 'Science and Technology'],
+  ['19', 'Travel and Events'],
+  ['17', 'Sports'],
+  ['10', 'Music'],
+  ['20', 'Gaming'],
+  ['23', 'Comedy'],
+  ['25', 'News and Politics'],
+  ['15', 'Pets and Animals'],
+  ['2', 'Autos and Vehicles'],
+  ['1', 'Film and Animation'],
+];
+
 const PLATFORM_META: Record<string, { icon: ReactNode; color: string; name: string }> = {
   instagram: { icon: <SocialIcon platform="instagram" size={16} />, color: '#ffffff', name: 'Instagram' },
   tiktok: { icon: <SocialIcon platform="tiktok" size={16} />, color: '#ffffff', name: 'TikTok' },
@@ -460,7 +478,8 @@ export default function ComposerPage() {
   const [tiktokOpts, setTiktokOpts] = useState<{ privacy: string; comment: boolean; duet: boolean; stitch: boolean; commercial: boolean; yourBrand: boolean; branded: boolean; musicConsent: boolean }>({ privacy: '', comment: false, duet: false, stitch: false, commercial: false, yourBrand: false, branded: false, musicConsent: false });
   const [tiktokCreator, setTiktokCreator] = useState<{ nickname?: string; privacy_options?: string[]; comment_disabled?: boolean; duet_disabled?: boolean; stitch_disabled?: boolean; max_video_post_duration_sec?: number; source?: string } | null>(null);
   // YouTube and Pinterest options: title and privacy for a video, board and link for a Pin
-  const [ytOpts, setYtOpts] = useState<{ title: string; privacy: string }>({ title: '', privacy: 'public' });
+  const [ytOpts, setYtOpts] = useState<{ title: string; privacy: string; madeForKids: '' | 'yes' | 'no'; category: string; tags: string; thumbnail: { url: string; name: string } | null }>({ title: '', privacy: 'public', madeForKids: '', category: '22', tags: '', thumbnail: null });
+  const [thumbBusy, setThumbBusy] = useState(false);
   const [pinOpts, setPinOpts] = useState<{ board_id: string; link: string }>({ board_id: '', link: '' });
   const [pinBoards, setPinBoards] = useState<Array<{ id: string; name: string }>>([]);
   const [scheduleDate, setScheduleDate] = useState('');
@@ -728,6 +747,10 @@ export default function ComposerPage() {
       setComposerError("Fix the problems listed under Checks before posting.");
       return;
     }
+    if (hasYouTube && !ytOpts.madeForKids && scheduleType !== 'draft') {
+      setComposerError("YouTube: choose the audience (made for kids or not) in YouTube settings.");
+      return;
+    }
     if (scheduleType === 'schedule' && (!scheduleDate || !scheduleTime)) {
       setComposerError("Pick a date and time.");
       return;
@@ -743,7 +766,17 @@ export default function ComposerPage() {
         const opts: Record<string, unknown> = {};
         if (publishMethod === 'manual_reminder') opts.manual = true;
         if (platform === 'tiktok') Object.assign(opts, { tiktok: tiktokOpts });
-        if (platform === 'youtube') Object.assign(opts, { privacy: ytOpts.privacy, ...(ytOpts.title.trim() ? { title: ytOpts.title.trim() } : {}) });
+        if (platform === 'youtube') {
+          const tags = ytOpts.tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30);
+          Object.assign(opts, {
+            privacy: ytOpts.privacy,
+            made_for_kids: ytOpts.madeForKids === 'yes',
+            category_id: ytOpts.category,
+            ...(ytOpts.title.trim() ? { title: ytOpts.title.trim() } : {}),
+            ...(tags.length ? { tags } : {}),
+            ...(ytOpts.thumbnail ? { thumbnail_url: ytOpts.thumbnail.url } : {}),
+          });
+        }
         if (platform === 'pinterest') Object.assign(opts, { ...(pinOpts.board_id ? { board_id: pinOpts.board_id } : {}), ...(pinOpts.link.trim() ? { link: pinOpts.link.trim() } : {}) });
         return {
           account_id: id,
@@ -1103,6 +1136,62 @@ export default function ComposerPage() {
                   <option value="unlisted">Unlisted</option>
                   <option value="private">Private</option>
                 </select>
+                <label className="zd-label" htmlFor="zco-yt-kids">Audience</label>
+                <select id="zco-yt-kids" className="zd-select zco-field" value={ytOpts.madeForKids} onChange={(e) => setYtOpts({ ...ytOpts, madeForKids: e.target.value as '' | 'yes' | 'no' })}>
+                  <option value="">Choose one (YouTube requires it)</option>
+                  <option value="no">No, it is not made for kids</option>
+                  <option value="yes">Yes, it is made for kids</option>
+                </select>
+                <label className="zd-label" htmlFor="zco-yt-cat">Category</label>
+                <select id="zco-yt-cat" className="zd-select zco-field" value={ytOpts.category} onChange={(e) => setYtOpts({ ...ytOpts, category: e.target.value })}>
+                  {YT_CATEGORIES.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <label className="zd-label" htmlFor="zco-yt-tags">Tags</label>
+                <input id="zco-yt-tags" className="zd-input zco-field" placeholder="skincare, serum, review" value={ytOpts.tags} onChange={(e) => setYtOpts({ ...ytOpts, tags: e.target.value })} />
+                <span className="zd-label">Thumbnail</span>
+                <div className="zco-yt-thumb">
+                  {ytOpts.thumbnail ? (
+                    <>
+                      <img src={ytOpts.thumbnail.url} alt="Video thumbnail" />
+                      <Button size="sm" variant="ghost" onClick={() => setYtOpts({ ...ytOpts, thumbnail: null })}>
+                        Remove
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        id="zco-yt-thumb-file"
+                        accept="image/jpeg,image/png,image/webp"
+                        style={{ display: 'none' }}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          if (!f) return;
+                          setThumbBusy(true);
+                          try {
+                            const m = await uploadMedia(f, { skipLibrary: true });
+                            setYtOpts((o) => ({ ...o, thumbnail: { url: m.url, name: f.name } }));
+                          } catch (err: any) {
+                            alert('Thumbnail upload failed: ' + (err.message || 'Unknown error'));
+                          } finally {
+                            setThumbBusy(false);
+                          }
+                        }}
+                      />
+                      <Button size="sm" variant="secondary" loading={thumbBusy} onClick={() => document.getElementById('zco-yt-thumb-file')?.click()}>
+                        Choose image
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <p className="zco-tt-note">
+                  Optional. 1280 x 720 works best; ZieAds crops and compresses it for YouTube. Custom thumbnails need a verified channel (youtube.com/verify). Without one, YouTube picks a frame once the video finishes processing.
+                </p>
               </Card>
             )}
 

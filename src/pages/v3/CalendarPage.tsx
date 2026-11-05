@@ -934,7 +934,11 @@ export default function CalendarPage() {
                 <div className="zca-error">
                   <AlertCircle size={14} style={{ flexShrink: 0 }} />
                   <div>
-                    {selectedEvent.status === 'scheduled' ? (
+                    {selectedEvent.status === 'published' ? (
+                      <>
+                        <strong>Note:</strong> {selectedEvent.error_message}
+                      </>
+                    ) : selectedEvent.status === 'scheduled' ? (
                       <>
                         <strong>The last try did not go out:</strong> {selectedEvent.error_message} ZieAds tries again at the time above, or press Retry now.
                       </>
