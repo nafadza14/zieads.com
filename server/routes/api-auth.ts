@@ -658,7 +658,7 @@ authRouter.get("/instagram/data-deletion/status", (req, res) => {
 
 // Facebook deauthorize: the person removed ZieAds from their Facebook apps
 authRouter.post("/facebook/deauthorize", async (req: any, res) => {
-  const data = parseMetaSignedRequest(req.body?.signed_request, process.env.FACEBOOK_APP_SECRET || "");
+  const data = process.env.FACEBOOK_APP_SECRET ? parseMetaSignedRequest(req.body?.signed_request, process.env.FACEBOOK_APP_SECRET) : null;
   if (!data?.user_id) return res.status(400).json({ error: "Invalid signature" });
   await supabaseAdmin
     .from("social_connections")
@@ -666,6 +666,31 @@ authRouter.post("/facebook/deauthorize", async (req: any, res) => {
     .eq("platform", "facebook")
     .contains("metadata", { fb_user_id: String(data.user_id) });
   return res.status(200).send("OK");
+});
+
+// Threads (its own app secret): uninstall and delete callbacks set in the Threads use case settings
+authRouter.post("/threads/deauthorize", async (req: any, res) => {
+  const data = process.env.THREADS_APP_SECRET ? parseMetaSignedRequest(req.body?.signed_request, process.env.THREADS_APP_SECRET) : null;
+  if (!data?.user_id) return res.status(400).json({ error: "Invalid signature" });
+  await supabaseAdmin
+    .from("social_connections")
+    .update({ is_active: false, status: "revoked", access_token: "DEAUTHORIZED_BY_PLATFORM", refresh_token: null, updated_at: new Date().toISOString() })
+    .eq("platform", "threads")
+    .eq("platform_user_id", String(data.user_id));
+  return res.status(200).send("OK");
+});
+
+authRouter.post("/threads/data-deletion", async (req: any, res) => {
+  const data = process.env.THREADS_APP_SECRET ? parseMetaSignedRequest(req.body?.signed_request, process.env.THREADS_APP_SECRET) : null;
+  if (!data?.user_id) return res.status(400).json({ error: "Invalid signature or missing user_id" });
+  try {
+    const { confirmationCode } = await handlePlatformDeletion("threads", String(data.user_id));
+    const base = process.env.OAUTH_REDIRECT_BASE_URL || "https://zieads.com";
+    return res.json({ url: `${base}/data-deletion?code=${confirmationCode}`, confirmation_code: confirmationCode });
+  } catch (e: any) {
+    console.error("[deletion] threads callback failed:", e.message);
+    return res.status(500).json({ error: "Deletion failed, please email privacy@zieads.com" });
+  }
 });
 
 // TikTok Webhooks for Deauthorization and Deletion (stubs returning 200 OK)

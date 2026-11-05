@@ -12,6 +12,7 @@ const PLATFORM_GROUPS: Record<string, string[]> = {
   meta: ["facebook", "instagram", "threads", "meta_ads"],
   facebook: ["facebook"],
   instagram: ["instagram"],
+  threads: ["threads"],
   tiktok: ["tiktok", "tiktok_ads"],
   linkedin: ["linkedin"],
 };
@@ -153,7 +154,7 @@ export function parseMetaSignedRequest(signedRequest: string, appSecret: string)
  * Handle a platform's data deletion callback: find which ZieAds users connected
  * that platform account, delete the data, record the request for the status page.
  */
-export async function handlePlatformDeletion(platform: "meta" | "tiktok" | "linkedin", platformUserId: string) {
+export async function handlePlatformDeletion(platform: "meta" | "threads" | "tiktok" | "linkedin", platformUserId: string) {
   const confirmationCode = crypto.randomBytes(9).toString("base64url");
   const platforms = PLATFORM_GROUPS[platform] || [platform];
   const { data: conns } = await supabaseAdmin
