@@ -8,6 +8,7 @@
   An account is a person who signs in. Extra brand workspaces have hidden data users; their numbers
   are rolled up into the owner account, and they never show as separate users.
 */
+import { blobToken } from "../utils/blobToken.js";
 import express from "express";
 import { supabaseAdmin } from "../supabaseServer.js";
 import { superadminAuthMiddleware } from "./api-superadmin.js";
@@ -518,7 +519,7 @@ insightsRouter.get("/insights/health", superadminAuthMiddleware, async (_req, re
       ["AI (Sumopod)", "SUMOPOD_API_KEY"], ["AI (Anthropic)", "ANTHROPIC_API_KEY"], ["File storage (Vercel Blob)", "BLOB_READ_WRITE_TOKEN"], ["Token encryption", "ENCRYPTION_KEY"],
       ["Meta (Facebook, Instagram)", "FACEBOOK_APP_ID"], ["Threads", "THREADS_APP_ID"], ["TikTok", "TIKTOK_CLIENT_KEY"], ["LinkedIn", "LINKEDIN_CLIENT_ID"], ["YouTube (Google)", "GOOGLE_CLIENT_ID"],
       ["Pinterest", "PINTEREST_APP_ID"], ["Discord", "DISCORD_CLIENT_ID"], ["Telegram bot", "TELEGRAM_BOT_TOKEN"], ["Bluesky sign in key", "BLUESKY_OAUTH_PRIVATE_JWK"], ["Cron secret", "CRON_SECRET"], ["Email (Mailgun)", "MAILGUN_API_KEY"],
-    ].map(([label, key]) => ({ label, key, set: env(key) }));
+    ].map(([label, key]) => ({ label, key, set: key === "BLOB_READ_WRITE_TOKEN" ? !!blobToken() : env(key) }));
     res.json({ success: true, data: { checked_at: iso(now), checks, keys } });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

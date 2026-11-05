@@ -22,6 +22,7 @@ import { syncTikTokInsightsForUser } from "../utils/sync-tiktok.js";
 // @ts-ignore
 import { put, del } from "@vercel/blob";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { blobToken } from "../utils/blobToken.js";
 // @ts-ignore
 import sharp from "sharp";
 import multer from "multer";
@@ -284,7 +285,7 @@ const supabaseMediaUrl = (path: string) => supabaseAdmin.storage.from(MEDIA_BUCK
 
 // Vercel Blob when it is connected, otherwise Supabase Storage. Both are direct from the browser.
 apiV3Router.get("/media/upload-prefix", requireAuth, (req: any, res) => {
-  res.json({ provider: process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "supabase", prefix: mediaPrefix(req.userId) });
+  res.json({ provider: blobToken() ? "blob" : "supabase", prefix: mediaPrefix(req.userId) });
 });
 
 // Supabase Storage: a one time signed upload URL for one file in the user's own folder
@@ -304,12 +305,12 @@ apiV3Router.post("/media/signed-upload", requireAuth, async (req: any, res) => {
 });
 
 apiV3Router.post("/media/blob-token", requireAuth, async (req: any, res) => {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(501).json({ error: "Direct upload is not set up." });
+  if (!blobToken()) return res.status(501).json({ error: "Direct upload is not set up." });
   try {
     const out = await handleUpload({
       body: req.body as HandleUploadBody,
       request: req,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token: blobToken(),
       onBeforeGenerateToken: async (pathname) => {
         if (!pathname.startsWith(mediaPrefix(req.userId)) || pathname.includes("..")) throw new Error("This upload path is not allowed.");
         return { allowedContentTypes: MEDIA_TYPES, maximumSizeInBytes: 500 * 1024 * 1024, addRandomSuffix: true };
@@ -394,12 +395,12 @@ apiV3Router.post("/media/upload", requireAuth, upload.single("file"), async (req
     const skipLibrary = req.query.skipLibrary === "true";
 
     // 1. Try Vercel Blob first if token is present
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+    if (blobToken()) {
       try {
         console.log(`[V3 Upload] Uploading ${file.originalname} to Vercel Blob...`);
         const blob = await put(blobPathname, file.buffer, {
           access: "public",
-          token: process.env.BLOB_READ_WRITE_TOKEN
+          token: blobToken()
         });
         fileUrl = blob.url;
         finalPathname = blob.pathname;
@@ -567,7 +568,7 @@ apiV3Router.delete("/media/:id", requireAuth, async (req: any, res) => {
     try {
       console.log(`[V3 Delete] Deleting Vercel Blob: ${media.blob_url}`);
       await del(media.blob_url, {
-        token: process.env.BLOB_READ_WRITE_TOKEN
+        token: blobToken()
       });
     } catch (blobErr: any) {
       console.warn("[Vercel Blob Delete Warning]", blobErr.message);
