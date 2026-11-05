@@ -26,6 +26,7 @@ import { adsLibraryRouter } from "./routes/api-ads-library.js";
 import { agentRouter } from "./routes/api-agent.js";
 import { creditsRouter } from "./routes/api-credits.js";
 import { superadminRouter } from "./routes/api-superadmin.js";
+import { insightsRouter } from "./routes/api-superadmin-insights.js";
 import { apiV3Router } from "./routes/api-v3.js";
 import { authRouter } from "./routes/api-auth.js";
 import { settingsRouter } from "./routes/api-settings.js";
@@ -152,6 +153,7 @@ app.use("/api/agent", agentRouter);
 
 // ─── Superadmin Dashboard API ──────────────────────────
 app.use("/api/superadmin/v1", superadminRouter);
+app.use("/api/superadmin/v1", insightsRouter);
 
 // ─── ZieAds v0.3 Analyst Layer API ─────────────────────
 // Newer routers first: they replace older handlers with the same path

@@ -1,2518 +1,1339 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+/*
+  Superadmin dashboard: watch every account, publishing, AI use, revenue and system health.
+  Same kit as the user dashboard (dash.css, cards, pills, compact buttons) so it reads as one product.
+  Every number comes from /api/superadmin/v1/insights/* (real tables). Accounts only: hidden brand
+  workspace users are rolled up into their owner. Sections are linkable with ?tab=.
+*/
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  LayoutDashboard, Bell, Users, CreditCard,  Cpu, MessageSquare, FileText,
-  Key, BarChart2, Activity, Shield, UserCog, Settings, LogOut, Search,
-  SlidersHorizontal, Plus, RotateCw, Play, CheckCircle, XCircle, X,
-  ChevronRight, Calendar, DollarSign, TrendingUp, UserCheck, UserX,
-  ExternalLink, Lock, MoreVertical, AlertTriangle
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  Bot,
+  CreditCard,
+  FileClock,
+  LayoutDashboard,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Users,
+  X,
 } from 'lucide-react';
-import ZIcon from '../../components/icons/ZIcon';
 import ZieAdsLogo, { ZieAdsWordmark } from '../../components/ZieAdsLogo';
+import SocialIcon from '../../components/v3/SocialIcon';
+import { Button, Card, CardTitle, PageHeader, Pill, SegTabs, StatCard, LoadingState } from '../../components/v3/ui';
+import { platformName } from '../../lib/platforms';
+import '../../components/v3/dash.css';
+import './sa.css';
 
-// Predefined list of predefined keys to manage
-const PREDEFINED_KEYS = [
-  { service_name: 'anthropic', display_name: 'Anthropic Claude API', warning: false, notes: 'Used for AI Chat & Strategic Report dimensions' },
-  { service_name: 'stripe_secret', display_name: 'Stripe - Secret Key', warning: false, notes: 'Stripe backend billing transactions' },
-  { service_name: 'stripe_webhook', display_name: 'Stripe - Webhook Secret', warning: false, notes: 'Stripe webhook notifications' },
-  { service_name: 'resend', display_name: 'Resend - Email API', warning: false, notes: 'For onboarding and notification emails' },
-  { service_name: 'supabase_service_role', display_name: 'Supabase - Service Role Key', warning: true, notes: '⚠️ Handle with extreme care. Full DB access.' },
-  { service_name: 'twitter', display_name: 'Twitter/X API - Hermes', warning: false, notes: 'Used by HERMES marketing agent' },
-  { service_name: 'linkedin', display_name: 'LinkedIn API - Hermes', warning: false, notes: 'Used by HERMES marketing agent' },
-  { service_name: 'reddit', display_name: 'Reddit API - Hermes (read-only)', warning: false, notes: 'Used by HERMES marketing agent' },
-  { service_name: 'google_search_console', display_name: 'Google Search Console API', warning: false, notes: 'Used for SEO dimensions auditing' },
-  { service_name: 'browserbase', display_name: 'Browserbase - Browser Automation', warning: false, notes: 'Used for web rendering/screenshot scanning' }
+type Tab = 'overview' | 'users' | 'publishing' | 'usage' | 'revenue' | 'health' | 'audit' | 'admins';
+const TOKEN_KEY = 'zieads_superadmin_token';
+const PROFILE_KEY = 'zieads_superadmin_profile';
+const PRICE: Record<string, number> = { free: 0, starter: 29, pro: 79, agency: 199 };
+const PLAN_NAME: Record<string, string> = { free: 'Free', starter: 'Starter', pro: 'Pro', agency: 'Agency' };
+
+const token = () => {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+class SaError extends Error {
+  status: number;
+  constructor(m: string, s: number) {
+    super(m);
+    this.status = s;
+  }
+}
+
+async function sa<T = any>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+  const res = await fetch(`/api/superadmin/v1${path}`, {
+    method: opts.method || (opts.body !== undefined ? 'POST' : 'GET'),
+    headers: { 'x-superadmin-session-token': token(), ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new SaError(j.message || j.error || `Request failed (${res.status})`, res.status);
+  return j as T;
+}
+
+/* ── Formatting ── */
+const nf = new Intl.NumberFormat('en-US');
+const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '-' : nf.format(n));
+const money = (n: number) => `$${nf.format(Math.round(n * 100) / 100)}`;
+function ago(iso?: string | null) {
+  if (!iso) return 'Never';
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 86400 * 30) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+const date = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-');
+const dt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
+const planTone = (p: string): 'neutral' | 'accent' | 'good' | 'dark' => (p === 'agency' ? 'dark' : p === 'pro' ? 'accent' : p === 'starter' ? 'good' : 'neutral');
+
+/* ── Charts: one series per chart, hover shows the value ── */
+function Bars({ data, label, color, format = fmt }: { data: Array<{ date: string; value: number }>; label: string; color?: string; format?: (n: number) => string }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const first = data[0]?.date;
+  const last = data[data.length - 1]?.date;
+  const short = (d?: string) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '');
+  return (
+    <div className="sa-chart" style={color ? ({ ['--sa-c' as any]: color } as any) : undefined}>
+      <div className="sa-bars" role="img" aria-label={`${label}: ${data.map((d) => `${short(d.date)} ${format(d.value)}`).join(', ')}`} onMouseLeave={() => setHover(null)}>
+        {data.map((d, i) => (
+          <div key={d.date} className={`sa-bar ${d.value ? '' : 'is-zero'}`} onMouseEnter={() => setHover(i)}>
+            <i style={{ height: `${d.value ? Math.max(3, (d.value / max) * 100) : 1}%` }} />
+          </div>
+        ))}
+      </div>
+      {hover !== null && data[hover] && (
+        <div className="sa-tip" style={{ left: `${((hover + 0.5) / data.length) * 100}%` }}>
+          {short(data[hover].date)}: {format(data[hover].value)} {label.toLowerCase()}
+        </div>
+      )}
+      <div className="sa-axis">
+        <span>{short(first)}</span>
+        <span>Peak {format(max)}</span>
+        <span>{short(last)}</span>
+      </div>
+    </div>
+  );
+}
+
+function HBars({ rows, color }: { rows: Array<{ key: string; label: ReactNode; value: number; sub?: ReactNode }>; color?: string }) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  if (!rows.length) return <p className="sa-empty">Nothing yet.</p>;
+  return (
+    <div className="sa-hbars" style={color ? ({ ['--sa-c' as any]: color } as any) : undefined}>
+      {rows.map((r) => (
+        <div key={r.key} className="sa-hbar">
+          <span className="sa-hbar-label">{r.label}</span>
+          <span className="sa-hbar-track" aria-hidden="true">
+            <i style={{ width: `${(r.value / max) * 100}%` }} />
+          </span>
+          <span className="sa-hbar-val">
+            {fmt(r.value)}
+            {r.sub && <small>{r.sub}</small>}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Delta({ now, prev }: { now: number; prev: number }) {
+  if (!prev) return <>{now ? 'First in this window' : 'None yet'}</>;
+  const d = Math.round(((now - prev) / prev) * 100);
+  return <>{d >= 0 ? `+${d}%` : `${d}%`} vs previous window</>;
+}
+
+/* ── Overview ── */
+function Overview({ openUser, go }: { openUser: (id: string) => void; go: (t: Tab) => void }) {
+  const [days, setDays] = useState<'7' | '30' | '90'>('30');
+  const [d, setD] = useState<any>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    setD(null);
+    sa(`/insights/overview?days=${days}`)
+      .then((r) => setD(r.data))
+      .catch((e) => setErr(e.message));
+  }, [days]);
+  if (err) return <p className="sa-msg is-bad">{err}</p>;
+  return (
+    <>
+      <div className="sa-toolbar">
+        <span className="sa-grow sa-muted sa-small">{d ? `Updated ${ago(d.generated_at)}` : 'Loading'}</span>
+        <div style={{ width: 240 }}>
+          <SegTabs<'7' | '30' | '90'> size="sm" value={days} onChange={setDays} tabs={[{ id: '7', label: '7 days' }, { id: '30', label: '30 days' }, { id: '90', label: '90 days' }]} />
+        </div>
+      </div>
+      {!d ? (
+        <LoadingState text="Reading accounts" />
+      ) : (
+        <>
+          <div className="zd-grid-4">
+            <StatCard label="Accounts" value={d.users.total} icon={<Users size={15} />} hint={<>{fmt(d.users.new_in_range)} new · <Delta now={d.users.new_in_range} prev={d.users.new_prev_range} /></>} />
+            <StatCard label="Active in 7 days" value={d.users.active_7d} icon={<Activity size={15} />} hint={`${fmt(d.users.active_1d)} today · ${fmt(d.users.active_30d)} in 30 days`} />
+            <StatCard label="MRR" raw={money(d.users.mrr)} icon={<CreditCard size={15} />} hint={`${fmt(d.users.paid)} paid · ${d.users.conversion_pct}% of accounts`} />
+            <StatCard
+              label="Publishing success"
+              raw={d.publishing.success_pct === null ? '-' : `${d.publishing.success_pct}%`}
+              icon={<Send size={15} />}
+              hint={`${fmt(d.publishing.published)} published · ${fmt(d.publishing.failed)} failed`}
+              hintTone="muted"
+            />
+          </div>
+
+          <div className="zd-grid-2">
+            <Card>
+              <CardTitle sub={`New accounts per day, last ${d.days} days`}>Signups</CardTitle>
+              <Bars label="Signups" data={d.signups.map((s: any) => ({ date: s.date, value: s.count }))} />
+            </Card>
+            <Card>
+              <CardTitle sub="From sign up to paying, all time">Activation funnel</CardTitle>
+              <HBars
+                rows={d.funnel.map((f: any, i: number) => ({
+                  key: f.key,
+                  label: f.label,
+                  value: f.count,
+                  sub: i ? `${d.funnel[0].count ? Math.round((f.count / d.funnel[0].count) * 100) : 0}%` : undefined,
+                }))}
+              />
+            </Card>
+          </div>
+
+          <Card>
+            <CardTitle
+              icon={<AlertTriangle size={15} />}
+              sub="Failed posts, connections to reconnect, paid accounts gone quiet"
+              action={d.attention.length ? <Button size="sm" variant="ghost" onClick={() => go('publishing')}>Publishing details</Button> : undefined}
+            >
+              Needs attention {d.attention.length ? <Pill tone="bad">{d.attention.length}</Pill> : <Pill tone="good">All clear</Pill>}
+            </CardTitle>
+            {d.attention.length ? (
+              <div className="sa-list">
+                {d.attention.slice(0, 12).map((a: any, i: number) => (
+                  <div key={i} className="sa-row">
+                    <span className={`sa-dot tone-${a.severity}`} />
+                    <div className="sa-row-main">
+                      <strong>{a.email}</strong>
+                      <p>{a.detail}</p>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={() => openUser(a.user_id)}>
+                      Open
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="sa-empty">Nothing needs you right now.</p>
+            )}
+          </Card>
+
+          <div className="zd-grid-3">
+            <Card>
+              <CardTitle sub="Accounts per plan">Plans</CardTitle>
+              <HBars rows={['free', 'starter', 'pro', 'agency'].map((p) => ({ key: p, label: PLAN_NAME[p], value: d.users.by_plan[p] || 0, sub: p === 'free' ? undefined : money((d.users.by_plan[p] || 0) * PRICE[p]) }))} />
+            </Card>
+            <Card>
+              <CardTitle sub={`Last ${d.days} days`}>Engagement</CardTitle>
+              <dl className="sa-kv">
+                <dt>AI Agent messages</dt>
+                <dd>{fmt(d.engagement.agent_messages)} from {fmt(d.engagement.agent_users)} accounts</dd>
+                <dt>Morning briefings</dt>
+                <dd>{fmt(d.engagement.briefings)}</dd>
+                <dt>Comments synced</dt>
+                <dd>{fmt(d.engagement.comments)}</dd>
+                <dt>Replies sent</dt>
+                <dd>{fmt(d.engagement.replies)}</dd>
+                <dt>MCP and API calls</dt>
+                <dd>{fmt(d.engagement.mcp_calls)} from {fmt(d.engagement.mcp_users)} accounts</dd>
+                <dt>Active API keys</dt>
+                <dd>{fmt(d.engagement.mcp_keys)}</dd>
+              </dl>
+            </Card>
+            <Card>
+              <CardTitle sub="Connected accounts and posts published">Networks</CardTitle>
+              <HBars
+                rows={d.platforms.slice(0, 8).map((p: any) => ({
+                  key: p.platform,
+                  label: (
+                    <>
+                      <SocialIcon platform={p.platform} size={16} /> {platformName(p.platform)}
+                    </>
+                  ),
+                  value: p.connected,
+                  sub: `${fmt(p.published)} posts`,
+                }))}
+              />
+              <p className="sa-muted sa-small" style={{ marginTop: 12 }}>
+                {fmt(d.workspaces.extra_brands)} extra brand workspaces across {fmt(d.workspaces.multi_brand_accounts)} accounts
+              </p>
+            </Card>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/* ── Users ── */
+function UsersTab({ openUser }: { openUser: (id: string) => void }) {
+  const [q, setQ] = useState('');
+  const [query, setQuery] = useState('');
+  const [plan, setPlan] = useState('all');
+  const [segment, setSegment] = useState('all');
+  const [sort, setSort] = useState('created');
+  const [page, setPage] = useState(1);
+  const [d, setD] = useState<any>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    // Search waits for a short pause in typing
+    const t = window.setTimeout(() => setQuery(q), 300);
+    return () => window.clearTimeout(t);
+  }, [q]);
+  useEffect(() => setPage(1), [query, plan, segment, sort]);
+  useEffect(() => {
+    const p = new URLSearchParams({ search: query, plan, segment, sort, page: String(page), limit: '25' });
+    sa(`/insights/users?${p}`)
+      .then(setD)
+      .catch((e) => setErr(e.message));
+  }, [query, plan, segment, sort, page]);
+  const pages = d ? Math.max(1, Math.ceil(d.total / d.limit)) : 1;
+  return (
+    <>
+      <div className="sa-toolbar">
+        <input className="sa-search" placeholder="Search email, business or id" aria-label="Search accounts" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="sa-select" aria-label="Segment" value={segment} onChange={(e) => setSegment(e.target.value)}>
+          <option value="all">All accounts</option>
+          <option value="attention">Needs attention</option>
+          <option value="new">New this week</option>
+          <option value="active">Active in 7 days</option>
+          <option value="inactive">Inactive 30 days</option>
+          <option value="paid">Paid</option>
+          <option value="no_connection">No account connected</option>
+          <option value="banned">Suspended</option>
+        </select>
+        <select className="sa-select" aria-label="Plan" value={plan} onChange={(e) => setPlan(e.target.value)}>
+          <option value="all">Every plan</option>
+          {Object.keys(PLAN_NAME).map((p) => (
+            <option key={p} value={p}>
+              {PLAN_NAME[p]}
+            </option>
+          ))}
+        </select>
+        <select className="sa-select" aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)}>
+          <option value="created">Newest first</option>
+          <option value="last_seen">Last seen</option>
+          <option value="plan">Plan value</option>
+          <option value="posts">Most posts</option>
+          <option value="connections">Most accounts</option>
+          <option value="agent">Most AI use</option>
+        </select>
+        <span className="sa-grow" />
+        <span className="sa-muted sa-small">{d ? `${fmt(d.total)} accounts` : ''}</span>
+      </div>
+      {err && <p className="sa-msg is-bad">{err}</p>}
+      {!d ? (
+        <LoadingState text="Loading accounts" />
+      ) : (
+        <div className="sa-table-wrap">
+          <table className="sa-table">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Plan</th>
+                <th>Networks</th>
+                <th className="sa-num">Brands</th>
+                <th className="sa-num">Posts 30d</th>
+                <th className="sa-num">AI 30d</th>
+                <th>Last seen</th>
+                <th>Joined</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.data.map((u: any) => (
+                <tr key={u.id} className="is-click" onClick={() => openUser(u.id)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && openUser(u.id)}>
+                  <td>
+                    <span className="sa-email">{u.email}</span>
+                    <span className="sa-sub">{u.name || 'No business name yet'}</span>
+                  </td>
+                  <td>
+                    <Pill tone={planTone(u.plan)}>{PLAN_NAME[u.plan] || u.plan}</Pill>
+                  </td>
+                  <td>
+                    {u.platforms.length ? (
+                      <span className="sa-icons">
+                        {u.platforms.slice(0, 6).map((p: string) => (
+                          <SocialIcon key={p} platform={p} size={16} />
+                        ))}
+                      </span>
+                    ) : (
+                      <span className="sa-muted">None</span>
+                    )}
+                  </td>
+                  <td className="sa-num">{u.brands}</td>
+                  <td className="sa-num">
+                    {fmt(u.published_30d)}
+                    {u.failed_30d ? <span className="sa-sub" style={{ color: 'var(--zd-bad)' }}>{u.failed_30d} failed</span> : null}
+                  </td>
+                  <td className="sa-num">{fmt(u.agent_30d)}</td>
+                  <td>{ago(u.last_seen)}</td>
+                  <td>{date(u.created_at)}</td>
+                  <td>
+                    {u.banned ? <Pill tone="bad">Suspended</Pill> : u.attention.length ? <Pill tone="warn">{u.attention[0]}</Pill> : <Pill tone="good">OK</Pill>}
+                  </td>
+                </tr>
+              ))}
+              {!d.data.length && (
+                <tr>
+                  <td colSpan={9} className="sa-empty">
+                    No accounts match.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {d && pages > 1 && (
+        <div className="sa-pager">
+          <span>
+            Page {page} of {pages}
+          </span>
+          <span className="sa-actions">
+            <Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              Previous
+            </Button>
+            <Button size="sm" variant="secondary" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+              Next
+            </Button>
+          </span>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ── One account ── */
+function UserDrawer({ id, role, onClose }: { id: string; role: string; onClose: () => void }) {
+  const [d, setD] = useState<any>(null);
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState('');
+  const [plan, setPlan] = useState('');
+  const [credits, setCredits] = useState('10');
+  const [note, setNote] = useState('');
+  const load = useCallback(() => {
+    sa(`/insights/users/${id}`)
+      .then((r) => {
+        setD(r.data);
+        setPlan(r.data.account.plan);
+      })
+      .catch((e) => setErr(e.message));
+  }, [id]);
+  useEffect(() => {
+    load();
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [load, onClose]);
+  const act = async (key: string, fn: () => Promise<unknown>, ok: string) => {
+    setBusy(key);
+    setMsg('');
+    setErr('');
+    try {
+      await fn();
+      setMsg(ok);
+      load();
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setBusy('');
+    }
+  };
+  const a = d?.account;
+  return (
+    <>
+      <div className="sa-drawer-back" onClick={onClose} />
+      <aside className="sa-drawer" role="dialog" aria-modal="true" aria-label="Account details">
+        <div className="sa-drawer-head">
+          <div>
+            <h2>{a?.email || 'Loading'}</h2>
+            {a && (
+              <span className="sa-sub">
+                Joined {date(a.created_at)} · last seen {ago(a.last_seen)} · signs in with {a.provider}
+              </span>
+            )}
+          </div>
+          <Button size="sm" variant="ghost" icon={<X size={15} />} aria-label="Close" onClick={onClose} />
+        </div>
+        <div className="sa-drawer-body">
+          {err && <p className="sa-msg is-bad">{err}</p>}
+          {msg && <p className="sa-msg">{msg}</p>}
+          {!d ? (
+            <LoadingState text="Loading account" />
+          ) : (
+            <>
+              <div className="sa-actions">
+                <Pill tone={planTone(a.plan)}>{PLAN_NAME[a.plan] || a.plan}</Pill>
+                {a.banned ? <Pill tone="bad">Suspended</Pill> : <Pill tone="good">Active</Pill>}
+                {!a.confirmed && <Pill tone="warn">Unconfirmed</Pill>}
+                <span className="sa-muted sa-small">ID {a.id}</span>
+              </div>
+
+              <section className="sa-sec">
+                <h3>Business</h3>
+                <dl className="sa-kv">
+                  <dt>Name</dt>
+                  <dd>{d.profile?.business_name || '-'}</dd>
+                  <dt>Type</dt>
+                  <dd>{d.profile?.business_type || '-'}</dd>
+                  <dt>Website</dt>
+                  <dd>{d.profile?.primary_url || '-'}</dd>
+                  <dt>AI Agent, 30 days</dt>
+                  <dd>{fmt(d.usage.agent_messages_30d)} messages</dd>
+                  <dt>MCP and API, 30 days</dt>
+                  <dd>{fmt(d.usage.mcp_calls_30d)} calls</dd>
+                  <dt>Credits left</dt>
+                  <dd>{d.credits ? `${fmt(d.credits.ai_chat_daily_remaining)} chat today · ${fmt(d.credits.skill_run_monthly_remaining)} skill runs this month` : '-'}</dd>
+                </dl>
+              </section>
+
+              <section className="sa-sec">
+                <h3>Brands and connected accounts</h3>
+                {d.brands.map((b: any) => (
+                  <div key={b.id || 'main'} className="sa-brand">
+                    <div className="sa-brand-head">
+                      <strong>
+                        {b.name} {b.is_main && <span className="sa-muted">(Main)</span>}
+                      </strong>
+                      <span className="sa-muted sa-small">
+                        {fmt(b.published)} published · {fmt(b.scheduled)} scheduled{b.failed ? ` · ${b.failed} failed` : ''}
+                      </span>
+                    </div>
+                    {b.connections.length ? (
+                      b.connections.map((c: any) => (
+                        <div key={c.platform} className="sa-conn">
+                          <SocialIcon platform={c.platform} size={16} />
+                          <span>{c.platform_username || platformName(c.platform)}</span>
+                          {c.status === 'live' ? <Pill tone="good">Live</Pill> : <Pill tone="warn">{c.status}</Pill>}
+                          <span className="sa-muted">{c.last_synced_at ? `synced ${ago(c.last_synced_at)}` : ''}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="sa-empty" style={{ padding: '8px 0 0' }}>
+                        No accounts connected.
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </section>
+
+              <section className="sa-sec">
+                <h3>Recent posts</h3>
+                {d.recent_posts.length ? (
+                  <div className="sa-list">
+                    {d.recent_posts.slice(0, 10).map((p: any) => (
+                      <div key={p.id} className="sa-row">
+                        <SocialIcon platform={p.platform} size={16} />
+                        <div className="sa-row-main">
+                          <strong>{(p.caption || 'No caption').slice(0, 80)}</strong>
+                          <p>
+                            {p.brand} · {p.status} · {dt(p.published_at || p.scheduled_for || p.created_at)}
+                            {p.error_message ? ` · ${p.error_message.slice(0, 140)}` : ''}
+                          </p>
+                        </div>
+                        <Pill tone={p.status === 'published' ? 'good' : p.status === 'failed' ? 'bad' : p.status === 'needs_action' ? 'warn' : 'neutral'}>{p.status}</Pill>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="sa-empty">No posts yet.</p>
+                )}
+              </section>
+
+              <section className="sa-sec">
+                <h3>Recent activity</h3>
+                {d.activity.length ? (
+                  <div className="sa-list">
+                    {d.activity.slice(0, 12).map((l: any, i: number) => (
+                      <div key={i} className="sa-row">
+                        <span className="sa-dot" />
+                        <div className="sa-row-main">
+                          <strong>{l.action}</strong>
+                          <p>
+                            {l.brand} · by {l.actor} · {dt(l.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="sa-empty">No activity logged yet.</p>
+                )}
+              </section>
+
+              {role !== 'support' && (
+                <section className="sa-sec">
+                  <h3>Manage</h3>
+                  <div className="sa-actions">
+                    <select className="sa-select" aria-label="Plan" value={plan} onChange={(e) => setPlan(e.target.value)}>
+                      {Object.keys(PLAN_NAME).map((p) => (
+                        <option key={p} value={p}>
+                          {PLAN_NAME[p]}
+                        </option>
+                      ))}
+                    </select>
+                    <Button size="sm" variant="secondary" disabled={plan === a.plan} loading={busy === 'plan'} onClick={() => act('plan', () => sa(`/users/${id}/plan`, { method: 'PATCH', body: { planId: plan } }), `Plan changed to ${PLAN_NAME[plan]}.`)}>
+                      Change plan
+                    </Button>
+                  </div>
+                  <div className="sa-actions" style={{ marginTop: 10 }}>
+                    <input className="sa-search" style={{ minWidth: 0, width: 90 }} type="number" min={1} max={1000} aria-label="Credits to add" value={credits} onChange={(e) => setCredits(e.target.value)} />
+                    <Button size="sm" variant="secondary" loading={busy === 'credits'} onClick={() => act('credits', () => sa(`/users/${id}/credits`, { body: { pool: 'skill_run_monthly', amount: Number(credits) } }), `${credits} skill credits added.`)}>
+                      Add skill credits
+                    </Button>
+                    <Button size="sm" variant="secondary" loading={busy === 'chat'} onClick={() => act('chat', () => sa(`/users/${id}/credits`, { body: { pool: 'ai_chat_daily', amount: Number(credits) } }), `${credits} chat credits added for today.`)}>
+                      Add chat credits
+                    </Button>
+                  </div>
+                  {role === 'superadmin' && (
+                    <div className="sa-actions" style={{ marginTop: 10 }}>
+                      <Button
+                        size="sm"
+                        variant={a.banned ? 'secondary' : 'danger'}
+                        loading={busy === 'ban'}
+                        onClick={() => {
+                          if (!a.banned && !window.confirm(`Suspend ${a.email}? They will not be able to sign in.`)) return;
+                          act('ban', () => sa(`/users/${id}/suspend`, { body: { isSuspended: !a.banned, reason: 'Suspended from the admin dashboard' } }), a.banned ? 'Account restored.' : 'Account suspended.');
+                        }}
+                      >
+                        {a.banned ? 'Restore account' : 'Suspend account'}
+                      </Button>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              <section className="sa-sec">
+                <h3>Notes</h3>
+                <textarea className="sa-note" placeholder="Context for the team, for example a support conversation" value={note} onChange={(e) => setNote(e.target.value)} />
+                <div className="sa-actions" style={{ marginTop: 8 }}>
+                  <Button
+                    size="sm"
+                    disabled={!note.trim()}
+                    loading={busy === 'note'}
+                    onClick={() =>
+                      act('note', () => sa(`/users/${id}/notes`, { body: { note: note.trim() } }), 'Note saved.').then(() => setNote(''))
+                    }
+                  >
+                    Save note
+                  </Button>
+                </div>
+                {d.notes.map((n: any) => (
+                  <div key={n.id} className="sa-row">
+                    <span className="sa-dot" />
+                    <div className="sa-row-main">
+                      <strong>{n.note}</strong>
+                      <p>{dt(n.created_at)}</p>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            </>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
+/* ── Publishing ── */
+function Publishing({ openUser }: { openUser: (id: string) => void }) {
+  const [o, setO] = useState<any>(null);
+  const [p, setP] = useState<any>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    Promise.all([sa('/insights/overview?days=30'), sa('/insights/publishing')])
+      .then(([a, b]) => {
+        setO(a.data);
+        setP(b.data);
+      })
+      .catch((e) => setErr(e.message));
+  }, []);
+  if (err) return <p className="sa-msg is-bad">{err}</p>;
+  if (!o || !p) return <LoadingState text="Reading posts" />;
+  const list = (rows: any[], empty: string, tone: 'bad' | 'warn') =>
+    rows.length ? (
+      <div className="sa-list">
+        {rows.slice(0, 15).map((r) => (
+          <div key={r.id} className="sa-row">
+            <span className={`sa-dot tone-${tone}`} />
+            <SocialIcon platform={r.platform} size={16} />
+            <div className="sa-row-main">
+              <strong>{r.email || r.account_id}</strong>
+              <p>{r.error_message ? r.error_message.slice(0, 180) : `Due ${dt(r.scheduled_for || r.updated_at)}`}</p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => openUser(r.account_id)}>
+              Open
+            </Button>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p className="sa-empty">{empty}</p>
+    );
+  return (
+    <>
+      <div className="zd-grid-4">
+        <StatCard label="Published, 30 days" value={o.publishing.published} icon={<Send size={15} />} />
+        <StatCard label="Failed, 30 days" value={o.publishing.failed} hintTone="muted" hint={o.publishing.success_pct === null ? 'No posts yet' : `${o.publishing.success_pct}% success`} />
+        <StatCard label="Waiting for the user" value={o.publishing.needs_action} hint="TikTok inbox, video Pins and similar" />
+        <StatCard label="Scheduled ahead" value={o.publishing.upcoming} hint={p.overdue.length || p.stuck.length ? `${p.overdue.length} overdue, ${p.stuck.length} stuck` : 'Queue on time'} hintTone="muted" />
+      </div>
+      <div className="zd-grid-2">
+        <Card>
+          <CardTitle sub="Posts published per day">Published</CardTitle>
+          <Bars label="Published" data={o.publishing.series.map((s: any) => ({ date: s.date, value: s.published }))} />
+        </Card>
+        <Card>
+          <CardTitle sub="Posts that failed after every retry">Failed</CardTitle>
+          <Bars label="Failed" color="var(--zd-bad)" data={o.publishing.series.map((s: any) => ({ date: s.date, value: s.failed }))} />
+        </Card>
+      </div>
+      <div className="zd-grid-2">
+        <Card>
+          <CardTitle sub="Last 14 days, grouped">Why posts fail</CardTitle>
+          <HBars color="var(--zd-bad)" rows={p.top_reasons.map((r: any) => ({ key: r.reason, label: <span title={r.reason}>{r.reason}</span>, value: r.count }))} />
+        </Card>
+        <Card>
+          <CardTitle sub="Connected accounts, posts and failures per network, 30 days">Per network</CardTitle>
+          <div className="sa-table-wrap" style={{ border: 'none' }}>
+            <table className="sa-table" style={{ minWidth: 0 }}>
+              <thead>
+                <tr>
+                  <th>Network</th>
+                  <th className="sa-num">Connected</th>
+                  <th className="sa-num">To reconnect</th>
+                  <th className="sa-num">Published</th>
+                  <th className="sa-num">Failed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {o.platforms.map((x: any) => (
+                  <tr key={x.platform}>
+                    <td>
+                      <span className="sa-icons">
+                        <SocialIcon platform={x.platform} size={16} /> {platformName(x.platform)}
+                      </span>
+                    </td>
+                    <td className="sa-num">{fmt(x.connected)}</td>
+                    <td className="sa-num">{fmt(x.reconnect)}</td>
+                    <td className="sa-num">{fmt(x.published)}</td>
+                    <td className="sa-num">{fmt(x.failed)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+      <div className="zd-grid-2">
+        <Card>
+          <CardTitle sub="Last 14 days">Failed posts</CardTitle>
+          {list(p.failed, 'No failed posts.', 'bad')}
+        </Card>
+        <Card>
+          <CardTitle sub="Should have gone out 15 minutes ago or more">Overdue and stuck</CardTitle>
+          {list([...p.stuck, ...p.overdue], 'The queue is on time.', 'warn')}
+        </Card>
+      </div>
+    </>
+  );
+}
+
+/* ── AI and API ── */
+function Usage({ openUser }: { openUser: (id: string) => void }) {
+  const [days, setDays] = useState<'7' | '30' | '90'>('30');
+  const [d, setD] = useState<any>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    setD(null);
+    sa(`/insights/usage?days=${days}`)
+      .then((r) => setD(r.data))
+      .catch((e) => setErr(e.message));
+  }, [days]);
+  if (err) return <p className="sa-msg is-bad">{err}</p>;
+  return (
+    <>
+      <div className="sa-toolbar">
+        <span className="sa-grow" />
+        <div style={{ width: 240 }}>
+          <SegTabs<'7' | '30' | '90'> size="sm" value={days} onChange={setDays} tabs={[{ id: '7', label: '7 days' }, { id: '30', label: '30 days' }, { id: '90', label: '90 days' }]} />
+        </div>
+      </div>
+      {!d ? (
+        <LoadingState text="Reading usage" />
+      ) : (
+        <>
+          <div className="zd-grid-4">
+            <StatCard label="AI Agent messages" value={d.totals.agent} icon={<Bot size={15} />} />
+            <StatCard label="Morning briefings" value={d.totals.briefings} />
+            <StatCard label="MCP and API calls" value={d.totals.mcp} />
+            <StatCard label="AI cost logged" raw={d.totals.cost_logged ? money(d.totals.cost) : '-'} hint={d.totals.cost_logged ? undefined : 'No AI cost rows logged yet'} />
+          </div>
+          <div className="zd-grid-3">
+            <Card>
+              <CardTitle sub="Messages people sent to Zie">AI Agent per day</CardTitle>
+              <Bars label="Messages" data={d.series.map((s: any) => ({ date: s.date, value: s.agent }))} />
+            </Card>
+            <Card>
+              <CardTitle sub="Briefings generated">Briefings per day</CardTitle>
+              <Bars label="Briefings" data={d.series.map((s: any) => ({ date: s.date, value: s.briefings }))} />
+            </Card>
+            <Card>
+              <CardTitle sub="Calls from Claude, ChatGPT and the REST API">MCP and API per day</CardTitle>
+              <Bars label="Calls" data={d.series.map((s: any) => ({ date: s.date, value: s.mcp }))} />
+            </Card>
+          </div>
+          <div className="zd-grid-2">
+            <Card>
+              <CardTitle sub="By AI Agent messages and API calls">Heaviest accounts</CardTitle>
+              {d.top_accounts.length ? (
+                <div className="sa-list">
+                  {d.top_accounts.map((t: any) => (
+                    <div key={t.id} className="sa-row">
+                      <div className="sa-row-main">
+                        <strong>{t.email}</strong>
+                        <p>
+                          {fmt(t.agent)} messages · {fmt(t.mcp)} API calls{t.cost ? ` · ${money(t.cost)}` : ''}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="secondary" onClick={() => openUser(t.id)}>
+                        Open
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="sa-empty">No usage in this window.</p>
+              )}
+            </Card>
+            <Card>
+              <CardTitle sub="Credits spent per operation">Credit use</CardTitle>
+              <HBars rows={d.credit_ops.map((c: any) => ({ key: c.op, label: c.op, value: c.credits }))} />
+            </Card>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/* ── Revenue ── */
+function Revenue({ openUser }: { openUser: (id: string) => void }) {
+  const [o, setO] = useState<any>(null);
+  const [paid, setPaid] = useState<any>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    Promise.all([sa('/insights/overview?days=30'), sa('/insights/users?segment=paid&sort=plan&limit=100')])
+      .then(([a, b]) => {
+        setO(a.data);
+        setPaid(b);
+      })
+      .catch((e) => setErr(e.message));
+  }, []);
+  if (err) return <p className="sa-msg is-bad">{err}</p>;
+  if (!o || !paid) return <LoadingState text="Reading plans" />;
+  const u = o.users;
+  return (
+    <>
+      <div className="zd-grid-4">
+        <StatCard label="MRR" raw={money(u.mrr)} icon={<CreditCard size={15} />} hint="From current plans at list price" />
+        <StatCard label="ARR run rate" raw={money(u.mrr * 12)} />
+        <StatCard label="Paid accounts" value={u.paid} hint={`${u.conversion_pct}% of all accounts`} />
+        <StatCard label="Average per paid account" raw={money(u.arpa)} />
+      </div>
+      <div className="zd-grid-2">
+        <Card>
+          <CardTitle sub="Monthly revenue per plan">Revenue by plan</CardTitle>
+          <HBars rows={['starter', 'pro', 'agency'].map((p) => ({ key: p, label: PLAN_NAME[p], value: (u.by_plan[p] || 0) * PRICE[p], sub: `${u.by_plan[p] || 0} accounts` }))} />
+        </Card>
+        <Card>
+          <CardTitle sub="Paid, but no sign in for 14 days or more">Churn risk</CardTitle>
+          {o.attention.filter((x: any) => x.kind === 'inactive_paid').length ? (
+            <div className="sa-list">
+              {o.attention
+                .filter((x: any) => x.kind === 'inactive_paid')
+                .map((x: any) => (
+                  <div key={x.user_id} className="sa-row">
+                    <span className="sa-dot tone-warn" />
+                    <div className="sa-row-main">
+                      <strong>{x.email}</strong>
+                      <p>{x.detail}</p>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={() => openUser(x.user_id)}>
+                      Open
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <p className="sa-empty">Every paid account signed in recently.</p>
+          )}
+        </Card>
+      </div>
+      <Card>
+        <CardTitle sub="Highest plan first">Paid accounts</CardTitle>
+        {paid.data.length ? (
+          <div className="sa-table-wrap" style={{ border: 'none' }}>
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Account</th>
+                  <th>Plan</th>
+                  <th className="sa-num">MRR</th>
+                  <th className="sa-num">Brands</th>
+                  <th>Last seen</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paid.data.map((x: any) => (
+                  <tr key={x.id} className="is-click" onClick={() => openUser(x.id)}>
+                    <td>
+                      <span className="sa-email">{x.email}</span>
+                      <span className="sa-sub">{x.name || ''}</span>
+                    </td>
+                    <td>
+                      <Pill tone={planTone(x.plan)}>{PLAN_NAME[x.plan]}</Pill>
+                    </td>
+                    <td className="sa-num">{money(PRICE[x.plan] || 0)}</td>
+                    <td className="sa-num">{x.brands}</td>
+                    <td>{ago(x.last_seen)}</td>
+                    <td>{date(x.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="sa-empty">No paid accounts yet.</p>
+        )}
+        <p className="sa-muted sa-small" style={{ marginTop: 10 }}>
+          Revenue is calculated from each account's plan at list price. Discounts, refunds and failed payments are not included until billing is connected.
+        </p>
+      </Card>
+    </>
+  );
+}
+
+/* ── Health and alerts ── */
+function Health() {
+  const [h, setH] = useState<any>(null);
+  const [alerts, setAlerts] = useState<any[] | null>(null);
+  const [err, setErr] = useState('');
+  const load = () => {
+    Promise.all([sa('/insights/health'), sa('/alerts').catch(() => ({ data: [] }))])
+      .then(([a, b]) => {
+        setH(a.data);
+        setAlerts(b.data || []);
+      })
+      .catch((e) => setErr(e.message));
+  };
+  useEffect(load, []);
+  if (err) return <p className="sa-msg is-bad">{err}</p>;
+  if (!h) return <LoadingState text="Checking the system" />;
+  return (
+    <>
+      <div className="sa-toolbar">
+        <span className="sa-grow sa-muted sa-small">Checked {ago(h.checked_at)}</span>
+        <Button size="sm" variant="secondary" icon={<RefreshCw size={14} />} onClick={load}>
+          Check again
+        </Button>
+      </div>
+      <div className="zd-grid-2">
+        <Card>
+          <CardTitle icon={<ShieldCheck size={15} />} sub="Live checks against the database and the publishing queue">
+            System checks
+          </CardTitle>
+          <div className="sa-list">
+            {h.checks.map((c: any) => (
+              <div key={c.name} className="sa-row">
+                <span className={`sa-dot tone-${c.status}`} />
+                <div className="sa-row-main">
+                  <strong>{c.name}</strong>
+                  <p>{c.detail}</p>
+                </div>
+                <Pill tone={c.status === 'good' ? 'good' : c.status === 'bad' ? 'bad' : 'warn'}>{c.status === 'good' ? 'OK' : c.status === 'bad' ? 'Problem' : 'Check'}</Pill>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <CardTitle sub="Environment variables on the server, values never shown">Integrations configured</CardTitle>
+          <div className="sa-list">
+            {h.keys.map((k: any) => (
+              <div key={k.key} className="sa-row">
+                <span className={`sa-dot tone-${k.set ? 'good' : 'warn'}`} />
+                <div className="sa-row-main">
+                  <strong>{k.label}</strong>
+                  <p>{k.key}</p>
+                </div>
+                <Pill tone={k.set ? 'good' : 'warn'}>{k.set ? 'Set' : 'Missing'}</Pill>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+      <Card>
+        <CardTitle sub="Raised by the system, resolve when handled">Alerts</CardTitle>
+        {alerts && alerts.length ? (
+          <div className="sa-list">
+            {alerts.map((a: any) => (
+              <div key={a.id} className="sa-row">
+                <span className={`sa-dot tone-${a.severity === 'critical' || a.severity === 'error' ? 'bad' : 'warn'}`} />
+                <div className="sa-row-main">
+                  <strong>{a.title}</strong>
+                  <p>
+                    {a.body} · {dt(a.created_at)}
+                  </p>
+                </div>
+                {!a.is_resolved && (
+                  <Button size="sm" variant="secondary" onClick={() => sa(`/alerts/${a.id}/resolve`, { body: {} }).then(load)}>
+                    Resolve
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="sa-empty">No open alerts.</p>
+        )}
+      </Card>
+    </>
+  );
+}
+
+/* ── Audit log ── */
+function Audit() {
+  const [page, setPage] = useState(1);
+  const [d, setD] = useState<any>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    sa(`/audit-log?page=${page}&limit=25`)
+      .then(setD)
+      .catch((e) => setErr(e.message));
+  }, [page]);
+  if (err) return <p className="sa-msg is-bad">{err}</p>;
+  if (!d) return <LoadingState text="Loading the audit log" />;
+  const pages = Math.max(1, Math.ceil((d.total || 0) / 25));
+  return (
+    <>
+      <div className="sa-table-wrap">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Admin</th>
+              <th>Action</th>
+              <th>On</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.data.map((l: any) => (
+              <tr key={l.id}>
+                <td>{dt(l.created_at)}</td>
+                <td>{l.superadmin_email}</td>
+                <td>
+                  <strong>{l.action}</strong>
+                </td>
+                <td className="sa-muted">
+                  {l.entity_type}
+                  {l.entity_id ? ` ${String(l.entity_id).slice(0, 8)}` : ''}
+                </td>
+                <td className="sa-muted">{l.ip_address || '-'}</td>
+              </tr>
+            ))}
+            {!d.data.length && (
+              <tr>
+                <td colSpan={5} className="sa-empty">
+                  Nothing logged yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {pages > 1 && (
+        <div className="sa-pager">
+          <span>
+            Page {page} of {pages}
+          </span>
+          <span className="sa-actions">
+            <Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              Previous
+            </Button>
+            <Button size="sm" variant="secondary" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+              Next
+            </Button>
+          </span>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ── Admins ── */
+function Admins({ role }: { role: string }) {
+  const [list, setList] = useState<any[] | null>(null);
+  const [err, setErr] = useState('');
+  const [form, setForm] = useState({ name: '', email: '', role: 'support', password: '' });
+  const [msg, setMsg] = useState('');
+  const load = () =>
+    sa('/admins')
+      .then((r) => setList(r.data))
+      .catch((e) => setErr(e.message));
+  useEffect(() => {
+    load();
+  }, []);
+  if (err) return <p className="sa-msg is-bad">{err}</p>;
+  if (!list) return <LoadingState text="Loading admins" />;
+  return (
+    <>
+      <div className="sa-table-wrap">
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Admin</th>
+              <th>Role</th>
+              <th>Last login</th>
+              <th>Status</th>
+              {role === 'superadmin' && <th />}
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((a) => (
+              <tr key={a.id}>
+                <td>
+                  <span className="sa-email">{a.name}</span>
+                  <span className="sa-sub">{a.email}</span>
+                </td>
+                <td>
+                  <Pill tone={a.role === 'superadmin' ? 'dark' : 'neutral'}>{a.role}</Pill>
+                </td>
+                <td>{ago(a.last_login_at)}</td>
+                <td>{a.is_active ? <Pill tone="good">Active</Pill> : <Pill>Disabled</Pill>}</td>
+                {role === 'superadmin' && (
+                  <td style={{ textAlign: 'right' }}>
+                    <Button size="sm" variant="ghost" onClick={() => sa(`/admins/${a.id}/status`, { method: 'PATCH', body: { isActive: !a.is_active } }).then(load).catch((e) => setMsg(e.message))}>
+                      {a.is_active ? 'Disable' : 'Enable'}
+                    </Button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {role === 'superadmin' && (
+        <Card>
+          <CardTitle sub="Support can read accounts, admin can change plans and credits, superadmin can do everything">Add an admin</CardTitle>
+          <div className="sa-actions">
+            <input className="sa-search" style={{ minWidth: 160 }} placeholder="Name" aria-label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input className="sa-search" style={{ minWidth: 200 }} placeholder="Email" aria-label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <input className="sa-search" style={{ minWidth: 180 }} type="password" placeholder="Temporary password" aria-label="Temporary password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <select className="sa-select" aria-label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+              <option value="support">Support</option>
+              <option value="admin">Admin</option>
+              <option value="superadmin">Superadmin</option>
+            </select>
+            <Button
+              size="sm"
+              disabled={!form.name || !form.email || form.password.length < 12}
+              onClick={() =>
+                sa('/admins', { body: form })
+                  .then(() => {
+                    setMsg(`${form.email} added. They set up two step verification at first login.`);
+                    setForm({ name: '', email: '', role: 'support', password: '' });
+                    load();
+                  })
+                  .catch((e) => setMsg(e.message))
+              }
+            >
+              Add admin
+            </Button>
+          </div>
+          <p className="sa-muted sa-small" style={{ marginTop: 8 }}>
+            Temporary password of 12 characters or more.
+          </p>
+          {msg && <p className="sa-msg">{msg}</p>}
+        </Card>
+      )}
+    </>
+  );
+}
+
+/* ── Shell ── */
+const NAV: Array<{ label: string; items: Array<{ id: Tab; label: string; icon: ReactNode; sub: string }> }> = [
+  {
+    label: 'Monitor',
+    items: [
+      { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={16} />, sub: 'Accounts, activation, revenue and what needs attention' },
+      { id: 'users', label: 'Accounts', icon: <Users size={16} />, sub: 'Every account with its plan, networks, posts and AI use' },
+      { id: 'publishing', label: 'Publishing', icon: <Send size={16} />, sub: 'Posts per day, failures and the queue' },
+      { id: 'usage', label: 'AI and API', icon: <Bot size={16} />, sub: 'AI Agent, briefings, MCP and credit use' },
+    ],
+  },
+  { label: 'Business', items: [{ id: 'revenue', label: 'Revenue', icon: <BarChart3 size={16} />, sub: 'MRR, plans and accounts at risk' }] },
+  {
+    label: 'System',
+    items: [
+      { id: 'health', label: 'Health', icon: <ShieldCheck size={16} />, sub: 'System checks, integrations and alerts' },
+      { id: 'audit', label: 'Audit log', icon: <FileClock size={16} />, sub: 'Everything admins changed' },
+      { id: 'admins', label: 'Admins', icon: <ShieldCheck size={16} />, sub: 'Who can open this dashboard' },
+    ],
+  },
 ];
 
 export default function SuperadminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [adminProfile, setAdminProfile] = useState<any>({ name: 'Superadmin', email: 'admin@zieads.com', role: 'superadmin' });
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Toast notification state
-  const [toast, setToast] = useState<{ show: boolean; msg: string; type: 'success' | 'error' }>({ show: false, msg: '', type: 'success' });
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ show: true, msg, type });
-    setTimeout(() => setToast(t => ({ ...t, show: false })), 4000);
-  };
-
-  // Header helpers
-  const today = new Date();
-  const dateString = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeString = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-  // ─── DATA STATES ──────────────────────────────────────────
-  const [overviewData, setOverviewData] = useState<any>({
-    kpi: { mrr: 0, totalUsers: 0, planCounts: { free: 0, starter: 0, pro: 0, agency: 0 }, activeToday: 0, apiCostToday: 0, skillRunsToday: 0, failedSkillRunsToday: 0 },
-    signupsChart: [], apiCostChart: [], recentSignups: [], activeAlerts: []
+  const [params, setParams] = useSearchParams();
+  const [admin, setAdmin] = useState<any>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+    } catch {
+      return null;
+    }
   });
-
-  const [usersList, setUsersList] = useState<any[]>([]);
-  const [usersCount, setUsersCount] = useState(0);
-  const [usersPage, setUsersPage] = useState(1);
-  const [usersSearch, setUsersSearch] = useState('');
-  const [usersFilterPlan, setUsersFilterPlan] = useState('all');
-  const [usersFilterStatus, setUsersFilterStatus] = useState('all');
-  
-  // Selected user for drawer
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [ready, setReady] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [newNote, setNewNote] = useState('');
-  const [editingPlan, setEditingPlan] = useState('free');
-  const [grantPool, setGrantPool] = useState('ai_chat_daily');
-  const [grantAmount, setGrantAmount] = useState(10);
-  const [banReason, setBanReason] = useState('');
-  
-  // Confirm actions modals
-  const [confirmModal, setConfirmModal] = useState<{ open: boolean; type: string; title: string; body: string; confirmText: string; inputVerify?: string; verifyPlaceholder?: string; action: () => void }>({
-    open: false, type: 'info', title: '', body: '', confirmText: '', verifyPlaceholder: '', action: () => {}
-  });
-  const [confirmInput, setConfirmInput] = useState('');
-
-  // Other pages lists
-  const [billingOverview, setBillingOverview] = useState<any>({ mrr: 0, newMrrThisMonth: 0, churnedMrrThisMonth: 0, netChange: 0, failedPaymentsCount: 0 });
-  const [billingTransactions, setBillingTransactions] = useState<any[]>([]);
-  const [creditsSummary, setCreditsSummary] = useState<any>({ ai_messages_today: 0, skill_runs_today: 0, resets_today: 0, grants_this_month: 0, top_users: [] });
-  const [creditsTransactions, setCreditsTransactions] = useState<any[]>([]);
-  const [skillRuns, setSkillRuns] = useState<any[]>([]);
-  const [expandedRun, setExpandedRun] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [expandedConv, setExpandedConv] = useState<string | null>(null);
-  const [expandedConvMessages, setExpandedConvMessages] = useState<any[]>([]);
-  const [apiKeys, setApiKeys] = useState<any[]>([]);
-  const [apiCostData, setApiCostData] = useState<any>({ summary: { total_cost: '$0.00', anthropic_cost: '$0.00', avg_cost_run: '$0.00', avg_cost_message: '$0.00', projected_monthly: '$0.00' }, distribution: [], plan_economics: [] });
-  const [healthData, setHealthData] = useState<any>({ services: [], queue: { queued_runs: 0, processing_runs: 0, oldest_queued: 'None' }, hermes: [] });
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [auditCount, setAuditCount] = useState(0);
-  const [auditPage, setAuditPage] = useState(1);
-  const [admins, setAdmins] = useState<any[]>([]);
-
-  // Add new API Key Modal
-  const [keyModalOpen, setKeyModalOpen] = useState(false);
-  const [newKeyForm, setNewKeyForm] = useState({ serviceName: 'anthropic', displayName: '', keyValue: '', environment: 'production', notes: '' });
-
-  // Add new Admin Modal
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const [newAdminForm, setNewAdminForm] = useState({ name: '', email: '', role: 'support', password: '' });
-
-  // ─── INITIAL SYNC & TOKEN CHECK ──────────────────────────
-  const token = localStorage.getItem('zieads_superadmin_token');
+  const tab = (params.get('tab') as Tab) || 'overview';
+  const userId = params.get('user');
+  const all = useMemo(() => NAV.flatMap((g) => g.items), []);
+  const current = all.find((i) => i.id === tab) || all[0];
 
   useEffect(() => {
-    if (!token) {
-      navigate('/superadmin/login');
+    if (!token()) {
+      navigate('/superadmin/login', { replace: true });
       return;
     }
-    
-    // Load local profile cached
-    const profileJson = localStorage.getItem('zieads_superadmin_profile');
-    if (profileJson) {
-      setAdminProfile(JSON.parse(profileJson));
-    }
-    
-    fetchSession();
-  }, [token, navigate]);
+    sa('/auth/session')
+      .then((r) => {
+        if (r.admin || r.data) setAdmin(r.admin || r.data);
+        setReady(true);
+      })
+      .catch(() => {
+        try {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(PROFILE_KEY);
+        } catch {
+          /* ignore */
+        }
+        navigate('/superadmin/login', { replace: true });
+      });
+  }, [navigate]);
 
   useEffect(() => {
-    if (!token) return;
-    loadTabDetails(activeTab);
-  }, [activeTab, usersPage, usersSearch, usersFilterPlan, usersFilterStatus, auditPage]);
-
-  const fetchSession = async () => {
-    try {
-      const resp = await fetch('/api/superadmin/v1/auth/session', {
-        headers: { 'x-superadmin-session-token': token || '' }
-      });
-      if (!resp.ok) {
-        throw new Error('Session invalid');
-      }
-      const data = await resp.json();
-      setAdminProfile(data.admin);
-    } catch {
-      localStorage.removeItem('zieads_superadmin_token');
-      localStorage.removeItem('zieads_superadmin_profile');
-      navigate('/superadmin/login');
+    document.title = `${current.label} | ZieAds Admin`;
+    let m = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (!m) {
+      m = document.createElement('meta');
+      m.name = 'robots';
+      document.head.appendChild(m);
     }
-  };
+    m.content = 'noindex, nofollow';
+  }, [current.label]);
 
-  const loadTabDetails = async (tab: string) => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const headers = { 'x-superadmin-session-token': token || '' };
-      
-      if (tab === 'overview') {
-        const resp = await fetch('/api/superadmin/v1/overview', { headers });
-        const json = await resp.json();
-        if (json.success) setOverviewData(json.data);
-      } else if (tab === 'users') {
-        const query = new URLSearchParams({
-          search: usersSearch,
-          plan: usersFilterPlan,
-          status: usersFilterStatus,
-          page: String(usersPage),
-          limit: '20'
-        });
-        const resp = await fetch(`/api/superadmin/v1/users?${query.toString()}`, { headers });
-        const json = await resp.json();
-        if (json.success) {
-          setUsersList(json.data);
-          setUsersCount(json.total);
-        }
-      } else if (tab === 'billing') {
-        const [overRes, txRes] = await Promise.all([
-          fetch('/api/superadmin/v1/billing/overview', { headers }),
-          fetch('/api/superadmin/v1/billing/transactions', { headers })
-        ]);
-        const overJson = await overRes.json();
-        const txJson = await txRes.json();
-        if (overJson.success) setBillingOverview(overJson.data);
-        if (txJson.success) setBillingTransactions(txJson.data);
-      } else if (tab === 'credits') {
-        const [sumRes, txRes] = await Promise.all([
-          fetch('/api/superadmin/v1/credits/summary', { headers }),
-          fetch('/api/superadmin/v1/credits/transactions', { headers })
-        ]);
-        const sumJson = await sumRes.json();
-        const txJson = await txRes.json();
-        if (sumJson.success) setCreditsSummary(sumJson.data);
-        if (txJson.success) setCreditsTransactions(txJson.data);
-      } else if (tab === 'skill-runs') {
-        const resp = await fetch('/api/superadmin/v1/skill-runs', { headers });
-        const json = await resp.json();
-        if (json.success) setSkillRuns(json.data);
-      } else if (tab === 'conversations') {
-        const resp = await fetch('/api/superadmin/v1/conversations', { headers });
-        const json = await resp.json();
-        if (json.success) setConversations(json.data);
-      } else if (tab === 'api-keys') {
-        if (adminProfile.role === 'superadmin') {
-          const resp = await fetch('/api/superadmin/v1/api-keys', { headers });
-          const json = await resp.json();
-          if (json.success) setApiKeys(json.data);
-        }
-      } else if (tab === 'api-cost') {
-        const resp = await fetch('/api/superadmin/v1/api-cost', { headers });
-        const json = await resp.json();
-        if (json.success) setApiCostData(json.data);
-      } else if (tab === 'health') {
-        const resp = await fetch('/api/superadmin/v1/health', { headers });
-        const json = await resp.json();
-        if (json.success) setHealthData(json.data);
-      } else if (tab === 'alerts') {
-        const resp = await fetch('/api/superadmin/v1/alerts', { headers });
-        const json = await resp.json();
-        if (json.success) setAlerts(json.data);
-      } else if (tab === 'audit-log') {
-        const resp = await fetch(`/api/superadmin/v1/audit-log?page=${auditPage}&limit=20`, { headers });
-        const json = await resp.json();
-        if (json.success) {
-          setAuditLogs(json.data);
-          setAuditCount(json.total);
-        }
-      } else if (tab === 'admins') {
-        if (adminProfile.role === 'superadmin') {
-          const resp = await fetch('/api/superadmin/v1/admins', { headers });
-          const json = await resp.json();
-          if (json.success) setAdmins(json.data);
-        }
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to fetch dashboard metrics');
-    } finally {
-      setLoading(false);
-    }
+  const setTab = (t: Tab) => {
+    const p = new URLSearchParams(params);
+    p.set('tab', t);
+    p.delete('user');
+    setParams(p);
+    setDrawerOpen(false);
   };
+  const openUser = (id: string) => {
+    const p = new URLSearchParams(params);
+    p.set('user', id);
+    setParams(p);
+  };
+  const closeUser = useCallback(() => {
+    const p = new URLSearchParams(window.location.search);
+    p.delete('user');
+    setParams(p);
+  }, [setParams]);
 
   const logout = async () => {
+    await sa('/auth/logout', { body: {} }).catch(() => undefined);
     try {
-      await fetch('/api/superadmin/v1/auth/logout', {
-        method: 'POST',
-        headers: { 'x-superadmin-session-token': token || '' }
-      });
-    } catch {}
-    localStorage.removeItem('zieads_superadmin_token');
-    localStorage.removeItem('zieads_superadmin_profile');
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(PROFILE_KEY);
+    } catch {
+      /* ignore */
+    }
     navigate('/superadmin/login');
   };
 
-  // ─── USER DRAWER DETAILS ──────────────────────────────────
-  const fetchUserDetail = async (userId: string) => {
-    try {
-      const resp = await fetch(`/api/superadmin/v1/users/${userId}`, {
-        headers: { 'x-superadmin-session-token': token || '' }
-      });
-      const json = await resp.json();
-      if (json.success) {
-        setSelectedUser(json.data);
-        setEditingPlan(json.data.account.plan_id);
-        setDrawerOpen(true);
-      }
-    } catch {
-      showToast('Could not load user profile details', 'error');
-    }
-  };
-
-  const handleSaveNote = async () => {
-    if (!newNote.trim() || !selectedUser) return;
-    try {
-      const resp = await fetch(`/api/superadmin/v1/users/${selectedUser.account.id}/notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-superadmin-session-token': token || ''
-        },
-        body: JSON.stringify({ note: newNote }),
-      });
-      const json = await resp.json();
-      if (resp.ok && json.success) {
-        showToast('Internal note saved successfully');
-        setSelectedUser({ ...selectedUser, notes: [json.data, ...selectedUser.notes] });
-        setNewNote('');
-      } else {
-        showToast(json.error || 'Failed to save note', 'error');
-      }
-    } catch {
-      showToast('Save note connection error', 'error');
-    }
-  };
-
-  const triggerPlanChange = async () => {
-    if (!selectedUser) return;
-    setConfirmModal({
-      open: true,
-      type: 'warning',
-      title: 'Modify Account Plan?',
-      body: `This will update ${selectedUser.account.email} plan to ${editingPlan.toUpperCase()}. This directly changes their monthly API credit limits.`,
-      confirmText: 'Confirm Plan Change',
-      action: async () => {
-        try {
-          const resp = await fetch(`/api/superadmin/v1/users/${selectedUser.account.id}/plan`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-superadmin-session-token': token || ''
-            },
-            body: JSON.stringify({ planId: editingPlan }),
-          });
-          if (resp.ok) {
-            showToast('User plan updated successfully');
-            fetchUserDetail(selectedUser.account.id);
-            loadTabDetails('users');
-          } else {
-            const data = await resp.json();
-            showToast(data.error || 'Failed to change plan', 'error');
-          }
-        } catch {
-          showToast('Plan change connection error', 'error');
-        }
-      }
-    });
-  };
-
-  const triggerCreditGrant = async () => {
-    if (!selectedUser) return;
-    try {
-      const resp = await fetch(`/api/superadmin/v1/users/${selectedUser.account.id}/credits`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-superadmin-session-token': token || ''
-        },
-        body: JSON.stringify({ pool: grantPool, amount: grantAmount }),
-      });
-      const json = await resp.json();
-      if (resp.ok && json.success) {
-        showToast(`Granted ${grantAmount} credits to ${poolName(grantPool)} balance`);
-        fetchUserDetail(selectedUser.account.id);
-      } else {
-        showToast(json.error || 'Failed to grant credits', 'error');
-      }
-    } catch {
-      showToast('Credit grant connection error', 'error');
-    }
-  };
-
-  const triggerSuspendAccount = async (suspend: boolean) => {
-    if (!selectedUser) return;
-    if (suspend && !banReason.trim()) {
-      showToast('Please specify a suspension reason', 'error');
-      return;
-    }
-
-    setConfirmModal({
-      open: true,
-      type: 'critical',
-      title: suspend ? 'Suspend User Account?' : 'Activate User Account?',
-      body: suspend 
-        ? `Are you sure you want to suspend ${selectedUser.account.email}? The user will be logged out instantly and shown a suspension banner.` 
-        : `Are you sure you want to restore access for ${selectedUser.account.email}?`,
-      confirmText: suspend ? 'Suspend' : 'Activate',
-      inputVerify: suspend ? selectedUser.account.email : undefined,
-      verifyPlaceholder: 'Type email to confirm',
-      action: async () => {
-        try {
-          const resp = await fetch(`/api/superadmin/v1/users/${selectedUser.account.id}/suspend`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-superadmin-session-token': token || ''
-            },
-            body: JSON.stringify({ isSuspended: suspend, reason: banReason }),
-          });
-          if (resp.ok) {
-            showToast(suspend ? 'Account suspended successfully' : 'Account reactivated');
-            setBanReason('');
-            fetchUserDetail(selectedUser.account.id);
-            loadTabDetails('users');
-          } else {
-            const data = await resp.json();
-            showToast(data.error || 'Operation failed', 'error');
-          }
-        } catch {
-          showToast('Suspension connection error', 'error');
-        }
-      }
-    });
-  };
-
-  const triggerImpersonation = async () => {
-    if (!selectedUser) return;
-    try {
-      const resp = await fetch(`/api/superadmin/v1/users/${selectedUser.account.id}/impersonate`, {
-        headers: { 'x-superadmin-session-token': token || '' }
-      });
-      const json = await resp.json();
-      if (resp.ok && json.success) {
-        showToast('Impersonation token generated. Opening dashboard in read-only mode.');
-        window.open(json.redirectUrl, '_blank');
-      } else {
-        showToast(json.error || 'Failed to impersonate', 'error');
-      }
-    } catch {
-      showToast('Impersonation network error', 'error');
-    }
-  };
-
-  // ─── ALERTS ───────────────────────────────────────────────
-  const resolveSystemAlert = async (alertId: string) => {
-    try {
-      const resp = await fetch(`/api/superadmin/v1/alerts/${alertId}/resolve`, {
-        method: 'POST',
-        headers: { 'x-superadmin-session-token': token || '' }
-      });
-      if (resp.ok) {
-        showToast('System alert marked as resolved');
-        loadTabDetails('alerts');
-      } else {
-        showToast('Could not resolve alert', 'error');
-      }
-    } catch {
-      showToast('Connection error', 'error');
-    }
-  };
-
-  // ─── API KEYS ACTIONS ──────────────────────────────────────
-  const handleAddNewKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const resp = await fetch('/api/superadmin/v1/api-keys', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-superadmin-session-token': token || ''
-        },
-        body: JSON.stringify(newKeyForm),
-      });
-      const json = await resp.json();
-      if (resp.ok && json.success) {
-        showToast('External API credential configured');
-        setKeyModalOpen(false);
-        setNewKeyForm({ serviceName: 'anthropic', displayName: '', keyValue: '', environment: 'production', notes: '' });
-        loadTabDetails('api-keys');
-      } else {
-        showToast(json.error || 'Failed to configure key', 'error');
-      }
-    } catch {
-      showToast('Network error adding key', 'error');
-    }
-  };
-
-  const rotateApiKey = async (key: any) => {
-    let newKeyVal = '';
-    setConfirmModal({
-      open: true,
-      type: 'warning',
-      title: `Rotate ${key.display_name}?`,
-      body: `Provide the new secret key value to replace the existing one. The old preview key will be deactivated.`,
-      confirmText: 'Rotate Secret Key',
-      inputVerify: key.service_name,
-      verifyPlaceholder: `Type "${key.service_name}" to confirm`,
-      action: async () => {
-        if (!newKeyVal) {
-          showToast('A new key value is required to rotate.', 'error');
-          return;
-        }
-        try {
-          const resp = await fetch(`/api/superadmin/v1/api-keys/${key.id}/rotate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-superadmin-session-token': token || ''
-            },
-            body: JSON.stringify({ newKeyValue: newKeyVal }),
-          });
-          if (resp.ok) {
-            showToast('Credential rotated successfully');
-            loadTabDetails('api-keys');
-          } else {
-            showToast('Rotation failed', 'error');
-          }
-        } catch {
-          showToast('Connection error', 'error');
-        }
-      }
-    });
-    
-    // Prompt wrapper helper
-    const val = prompt(`Paste the new key value for ${key.display_name}:`);
-    if (val) newKeyVal = val;
-  };
-
-  const testApiKey = async (keyId: string) => {
-    try {
-      const resp = await fetch(`/api/superadmin/v1/api-keys/${keyId}/test`, {
-        method: 'POST',
-        headers: { 'x-superadmin-session-token': token || '' }
-      });
-      const json = await resp.json();
-      if (resp.ok && json.success) {
-        showToast(json.result);
-      } else {
-        showToast('Test failed. Key appears invalid or expired.', 'error');
-      }
-    } catch {
-      showToast('Test key connection error', 'error');
-    }
-  };
-
-  const deactivateApiKey = async (key: any) => {
-    setConfirmModal({
-      open: true,
-      type: 'critical',
-      title: `Deactivate ${key.display_name}?`,
-      body: `This will mark the credential as inactive. The application will no longer be able to call this API service.`,
-      confirmText: 'Deactivate',
-      inputVerify: key.service_name,
-      verifyPlaceholder: `Type "${key.service_name}" to deactivate`,
-      action: async () => {
-        try {
-          const resp = await fetch(`/api/superadmin/v1/api-keys/${key.id}/deactivate`, {
-            method: 'PATCH',
-            headers: { 'x-superadmin-session-token': token || '' }
-          });
-          if (resp.ok) {
-            showToast('Key deactivated');
-            loadTabDetails('api-keys');
-          } else {
-            showToast('Failed to deactivate key', 'error');
-          }
-        } catch {
-          showToast('Connection error', 'error');
-        }
-      }
-    });
-  };
-
-  // ─── ADMIN USERS CRUD ─────────────────────────────────────
-  const handleAddNewAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const resp = await fetch('/api/superadmin/v1/admins', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-superadmin-session-token': token || ''
-        },
-        body: JSON.stringify(newAdminForm),
-      });
-      const json = await resp.json();
-      if (resp.ok && json.success) {
-        showToast('Superadmin team member added');
-        setAdminModalOpen(false);
-        setNewAdminForm({ name: '', email: '', role: 'support', password: '' });
-        loadTabDetails('admins');
-      } else {
-        showToast(json.error || 'Failed to add admin user', 'error');
-      }
-    } catch {
-      showToast('Network error adding admin', 'error');
-    }
-  };
-
-  const toggleAdminStatus = async (adminUser: any) => {
-    const nextStatus = !adminUser.is_active;
-    setConfirmModal({
-      open: true,
-      type: 'warning',
-      title: nextStatus ? 'Enable Admin User?' : 'Disable Admin User?',
-      body: `This will toggle access permissions for ${adminUser.name} (${adminUser.email}).`,
-      confirmText: nextStatus ? 'Enable' : 'Disable',
-      action: async () => {
-        try {
-          const resp = await fetch(`/api/superadmin/v1/admins/${adminUser.id}/status`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-superadmin-session-token': token || ''
-            },
-            body: JSON.stringify({ isActive: nextStatus }),
-          });
-          if (resp.ok) {
-            showToast(nextStatus ? 'Admin account enabled' : 'Admin account disabled');
-            loadTabDetails('admins');
-          } else {
-            const data = await resp.json();
-            showToast(data.error || 'Failed to change admin status', 'error');
-          }
-        } catch {
-          showToast('Connection error', 'error');
-        }
-      }
-    });
-  };
-
-  const handleAdminRoleChange = async (adminUser: any, newRole: string) => {
-    try {
-      const resp = await fetch(`/api/superadmin/v1/admins/${adminUser.id}/role`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-superadmin-session-token': token || ''
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-      if (resp.ok) {
-        showToast(`Updated admin role to ${newRole.toUpperCase()}`);
-        loadTabDetails('admins');
-      } else {
-        const data = await resp.json();
-        showToast(data.error || 'Failed to update role', 'error');
-      }
-    } catch {
-      showToast('Connection error', 'error');
-    }
-  };
-
-  // ─── CONVERSATIONS EXPAND THREAD ──────────────────────────
-  const toggleConvThread = async (convId: string) => {
-    if (expandedConv === convId) {
-      setExpandedConv(null);
-      setExpandedConvMessages([]);
-      return;
-    }
-
-    if (adminProfile.role === 'support') {
-      showToast('Support role is not authorized to read chat logs.', 'error');
-      return;
-    }
-
-    setExpandedConv(convId);
-    try {
-      const resp = await fetch(`/api/superadmin/v1/conversations/${convId}/thread`, {
-        headers: { 'x-superadmin-session-token': token || '' }
-      });
-      const json = await resp.json();
-      if (json.success) {
-        setExpandedConvMessages(json.data);
-      }
-    } catch {
-      showToast('Failed to fetch conversation thread logs', 'error');
-    }
-  };
-
-  // ─── UI HELPERS ───────────────────────────────────────────
-  const poolName = (p: string) => p === 'ai_chat_daily' ? 'Daily AI Chat' : 'Monthly Skill Runs';
-  
-  const getPlanBadgeClass = (plan: string) => {
-    if (plan === 'starter') return 'bg-[#EFF6FF] text-[#1D4ED8] font-medium';
-    if (plan === 'pro') return 'bg-[#EFF6FF] text-[#1D4ED8] font-semibold';
-    if (plan === 'agency') return 'bg-[#09090B] text-[#FFFFFF] font-bold';
-    return 'bg-[#F4F4F5] text-[#52525B] font-medium';
-  };
-
-  const getAlertSeverityClass = (sev: string) => {
-    if (sev === 'critical') return 'bg-[#FEF2F2] text-[#B91C1C] font-semibold';
-    if (sev === 'warning') return 'bg-[#FEFCE8] text-[#A16207]';
-    return 'bg-[#EFF6FF] text-[#1D4ED8]';
-  };
-
-  const handleVerifyAction = () => {
-    if (confirmModal.inputVerify && confirmInput !== confirmModal.inputVerify) {
-      showToast('Target identifier mismatch. Action aborted.', 'error');
-      return;
-    }
-    confirmModal.action();
-    setConfirmModal(c => ({ ...c, open: false }));
-    setConfirmInput('');
-  };
+  const role = admin?.role || 'support';
+  if (!ready) return <LoadingState text="Checking your admin session" />;
 
   return (
-    <div className="flex h-screen bg-white text-[#09090B] font-sans overflow-hidden">
-      
-      {/* ─── LEFT SIDEBAR ─── */}
-      <aside className="w-[240px] bg-[#09090B] text-[#A1A1AA] flex flex-col shrink-0 border-r border-zinc-800">
-        
-        {/* Sidebar Header / Logo */}
-        <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
-          <div className="lp-auth-logo-bg p-1.5 rounded-lg bg-[#27272A] border border-[#3F3F46]">
-            <ZieAdsLogo size={16} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[15px] text-white"><ZieAdsWordmark /></span>
-            <span className="text-[9px] font-mono font-bold tracking-widest text-[#B91C1C] uppercase mt-0.5 bg-[#FEF2F2] px-1 py-0.5 rounded leading-none w-fit">superadmin</span>
-          </div>
+    <div className="zd-shell">
+      <div className="zd-topbar">
+        <button className="zd-menu-btn" onClick={() => setDrawerOpen(true)} aria-label="Open menu">
+          <span />
+          <span />
+          <span />
+        </button>
+        <span className="zd-brand-name" style={{ fontSize: 17 }}>
+          <ZieAdsWordmark />
+        </span>
+        <ZieAdsLogo size={24} />
+      </div>
+      {drawerOpen && <div className="zd-backdrop" onClick={() => setDrawerOpen(false)} />}
+      <aside className={`zd-sidebar ${drawerOpen ? 'is-open' : ''}`}>
+        <div className="zd-brand" onClick={() => setTab('overview')}>
+          <ZieAdsLogo size={26} />
+          <span className="zd-brand-name">
+            <ZieAdsWordmark />
+          </span>
+          <span className="sa-admin-pill">Admin</span>
         </div>
-
-        {/* Navigation Sections */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-6 text-sm">
-          
-          <div>
-            <ul className="space-y-1">
-              <li 
-                onClick={() => setActiveTab('overview')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'overview' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <LayoutDashboard size={16} />
-                <span>Overview</span>
-              </li>
-              <li 
-                onClick={() => setActiveTab('alerts')}
-                className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'alerts' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Bell size={16} />
-                  <span>Alerts</span>
-                </div>
-                {overviewData.activeAlerts.length > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-red-600 text-white rounded-full">
-                    {overviewData.activeAlerts.length}
-                  </span>
-                )}
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <div className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase px-3 mb-2">Customers</div>
-            <ul className="space-y-1">
-              <li 
-                onClick={() => setActiveTab('users')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'users' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <Users size={16} />
-                <span>All Users</span>
-              </li>
-              <li 
-                onClick={() => setActiveTab('billing')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'billing' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <CreditCard size={16} />
-                <span>Billing & Revenue</span>
-              </li>
-              <li 
-                onClick={() => setActiveTab('credits')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'credits' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <ZIcon name="credits" size={16} />
-                <span>Credits & Usage</span>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <div className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase px-3 mb-2">Platform</div>
-            <ul className="space-y-1">
-              <li 
-                onClick={() => setActiveTab('skill-runs')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'skill-runs' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <Cpu size={16} />
-                <span>Skill Runs</span>
-              </li>
-              <li 
-                onClick={() => setActiveTab('conversations')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'conversations' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <MessageSquare size={16} />
-                <span>AI Conversations</span>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <div className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase px-3 mb-2">System</div>
-            <ul className="space-y-1">
-              {adminProfile.role === 'superadmin' && (
-                <li 
-                  onClick={() => setActiveTab('api-keys')}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'api-keys' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-                >
-                  <Key size={16} />
-                  <span>API Keys</span>
-                </li>
-              )}
-              <li 
-                onClick={() => setActiveTab('api-cost')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'api-cost' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <BarChart2 size={16} />
-                <span>API Cost Tracker</span>
-              </li>
-              <li 
-                onClick={() => setActiveTab('health')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'health' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <Activity size={16} />
-                <span>System Health</span>
-              </li>
-              <li 
-                onClick={() => setActiveTab('audit-log')}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'audit-log' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-              >
-                <Shield size={16} />
-                <span>Audit Log</span>
-              </li>
-            </ul>
-          </div>
-
-          {adminProfile.role === 'superadmin' && (
-            <div>
-              <div className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase px-3 mb-2">Team</div>
-              <ul className="space-y-1">
-                <li 
-                  onClick={() => setActiveTab('admins')}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition ${activeTab === 'admins' ? 'bg-[#27272A] text-white font-medium' : 'hover:bg-[#27272A]/40 hover:text-zinc-200'}`}
-                >
-                  <UserCog size={16} />
-                  <span>Admin Users</span>
-                </li>
-              </ul>
+        <nav className="zd-nav" aria-label="Admin">
+          {NAV.map((g) => (
+            <div key={g.label} className="zd-nav-group">
+              <div className="zd-nav-label">{g.label}</div>
+              {g.items
+                .filter((i) => i.id !== 'admins' || role === 'superadmin')
+                .map((i) => (
+                  <button key={i.id} className={`zd-nav-item ${tab === i.id ? 'is-active' : ''}`} aria-current={tab === i.id ? 'page' : undefined} onClick={() => setTab(i.id)}>
+                    {i.icon}
+                    <span>{i.label}</span>
+                  </button>
+                ))}
             </div>
-          )}
-
+          ))}
         </nav>
-
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-zinc-800 bg-[#09090b]/80 space-y-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-mono font-bold text-white uppercase select-none">
-              {adminProfile.name.slice(0, 2)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-white truncate">{adminProfile.name}</div>
-              <div className="text-[10px] font-mono text-zinc-500 capitalize">{adminProfile.role}</div>
-            </div>
+        <div className="sa-who">
+          <strong>{admin?.name || 'Admin'}</strong>
+          <span>
+            {admin?.email} · {role}
+          </span>
+          <div>
+            <Button size="sm" variant="ghost" onClick={logout}>
+              Sign out
+            </Button>
           </div>
-          
-          <button 
-            onClick={logout}
-            className="w-full flex items-center justify-center gap-2 py-1.5 border border-zinc-800 hover:border-zinc-700 rounded-md text-xs font-medium text-zinc-400 hover:text-white transition"
-          >
-            <LogOut size={13} />
-            <span>Logout</span>
-          </button>
         </div>
-
       </aside>
-
-      {/* ─── MAIN CONTENT AREA ─── */}
-      <main className="flex-1 flex flex-col bg-white overflow-hidden relative">
-
-        {/* Topbar */}
-        <header className="h-[56px] border-b border-[#E4E4E7] flex justify-between items-center px-8 flex-shrink-0 bg-white">
-          <div className="flex items-center gap-2.5 text-xs text-[#52525B]">
-            <span>Good morning</span>
-            <span className="text-zinc-350">•</span>
-            <span className="font-medium">{dateString}</span>
+      <main className="zd-main">
+        <div className="zd-page" key={tab}>
+          <PageHeader title={current.label} subtitle={current.sub} />
+          <div className="zd-body">
+            <div className="zd-body-inner is-wide">
+              {tab === 'overview' && <Overview openUser={openUser} go={setTab} />}
+              {tab === 'users' && <UsersTab openUser={openUser} />}
+              {tab === 'publishing' && <Publishing openUser={openUser} />}
+              {tab === 'usage' && <Usage openUser={openUser} />}
+              {tab === 'revenue' && <Revenue openUser={openUser} />}
+              {tab === 'health' && <Health />}
+              {tab === 'audit' && <Audit />}
+              {tab === 'admins' && <Admins role={role} />}
+            </div>
           </div>
-
-          <div className="flex items-center gap-3 text-xs text-[#71717A]">
-            <span className="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse"></span>
-            <span>Last updated: {timeString} · Auto-refreshes 60s</span>
-          </div>
-        </header>
-
-        {/* Sub-page Content body */}
-        <div className="flex-1 overflow-y-auto p-8 relative">
-          
-          {loading && (
-            <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50">
-              <div className="w-6 h-6 border-2 border-zinc-300 border-t-zinc-800 rounded-full animate-spin"></div>
-            </div>
-          )}
-
-          {errorMsg && (
-            <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-start gap-2.5">
-              <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-              <div>{errorMsg}</div>
-            </div>
-          )}
-
-          {/* ════════════ TABS RENDER ════════════ */}
-
-          {/* ── Tab: Overview ── */}
-          {activeTab === 'overview' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              {/* KPI Strip */}
-              <div className="grid grid-cols-5 gap-4">
-                
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5 shadow-sm">
-                  <div className="text-[11px] font-mono tracking-widest font-semibold text-[#71717A] uppercase">mrr</div>
-                  <div className="text-2xl font-bold font-mono text-[#09090B] mt-2">${overviewData.kpi.mrr.toLocaleString()}</div>
-                  <div className="text-[10px] text-green-600 mt-1 font-mono">+$290 vs last month</div>
-                </div>
-
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5 shadow-sm">
-                  <div className="text-[11px] font-mono tracking-widest font-semibold text-[#71717A] uppercase">Total Users</div>
-                  <div className="text-2xl font-bold font-mono text-[#09090B] mt-2">{overviewData.kpi.totalUsers}</div>
-                  <div className="text-[10px] text-[#71717A] mt-1 truncate">
-                    F: {overviewData.kpi.planCounts.free} / S: {overviewData.kpi.planCounts.starter} / P: {overviewData.kpi.planCounts.pro} / A: {overviewData.kpi.planCounts.agency}
-                  </div>
-                </div>
-
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5 shadow-sm">
-                  <div className="text-[11px] font-mono tracking-widest font-semibold text-[#71717A] uppercase">Active Today</div>
-                  <div className="text-2xl font-bold font-mono text-[#09090B] mt-2">{overviewData.kpi.activeToday}</div>
-                  <div className="text-[10px] text-green-600 mt-1 font-mono">+2 vs yesterday</div>
-                </div>
-
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5 shadow-sm">
-                  <div className="text-[11px] font-mono tracking-widest font-semibold text-[#71717A] uppercase">API Cost Today</div>
-                  <div className={`text-2xl font-bold font-mono mt-2 ${overviewData.kpi.apiCostToday > 50 ? 'text-[#DC2626]' : 'text-[#09090B]'}`}>
-                    ${overviewData.kpi.apiCostToday.toFixed(2)}
-                  </div>
-                  <div className="text-[10px] text-[#71717A] mt-1 font-mono">Limit: $50.00/day</div>
-                </div>
-
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5 shadow-sm">
-                  <div className="text-[11px] font-mono tracking-widest font-semibold text-[#71717A] uppercase">Skill Runs Today</div>
-                  <div className="text-2xl font-bold font-mono text-[#09090B] mt-2">{overviewData.kpi.skillRunsToday}</div>
-                  <div className="text-[10px] text-[#71717A] mt-1">
-                    <span className={overviewData.kpi.failedSkillRunsToday > 0 ? 'text-[#DC2626]' : ''}>
-                      {overviewData.kpi.failedSkillRunsToday} failures
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Charts Mock Grid */}
-              <div className="grid grid-cols-2 gap-8">
-                
-                <div className="bg-white border border-[#E4E4E7] rounded-lg p-6 shadow-sm">
-                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">New Signups - Last 30 Days</h3>
-                  <div className="h-[200px] flex items-end justify-between gap-1.5 border-b border-[#E4E4E7] pb-1">
-                    {overviewData.signupsChart.map((s: any, idx: number) => (
-                      <div key={idx} className="flex-1 flex flex-col justify-end h-full group relative">
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 bg-[#09090B] text-white text-[9px] font-mono py-1 px-1.5 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap mb-1 z-20">
-                          {s.date}: {s.free + s.paid} (F: {s.free}, P: {s.paid})
-                        </div>
-                        <div className="w-full bg-[#3B82F6] rounded-t-sm" style={{ height: `${s.paid * 15}px` }}></div>
-                        <div className="w-full bg-[#E4E4E7]" style={{ height: `${s.free * 15}px` }}></div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-between text-[9px] font-mono text-[#71717A] mt-2">
-                    <span>{overviewData.signupsChart[0]?.date}</span>
-                    <span>{overviewData.signupsChart[29]?.date}</span>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-[#E4E4E7] rounded-lg p-6 shadow-sm">
-                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">API Cost - Last 30 Days ($)</h3>
-                  <div className="h-[200px] flex items-end justify-between gap-1 border-b border-[#E4E4E7] pb-1">
-                    {overviewData.apiCostChart.map((c: any, idx: number) => (
-                      <div key={idx} className="flex-1 flex flex-col justify-end h-full group relative">
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 bg-[#09090B] text-white text-[9px] font-mono py-1 px-1.5 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap mb-1 z-20">
-                          {c.date}: ${c.total.toFixed(2)} (S: ${c.sonnet}, H: ${c.haiku})
-                        </div>
-                        <div className="w-full bg-[#2563EB] rounded-t-sm" style={{ height: `${c.total * 8}px` }}></div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-between text-[9px] font-mono text-[#71717A] mt-2">
-                    <span>{overviewData.apiCostChart[0]?.date}</span>
-                    <span>{overviewData.apiCostChart[29]?.date}</span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Plan Distribution breakdown */}
-              <div>
-                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">Plan Distribution</h3>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-4">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span>Free</span>
-                      <span className="font-bold">{overviewData.kpi.planCounts.free}</span>
-                    </div>
-                    <div className="w-full bg-[#E4E4E7] h-1.5 rounded-full mt-2">
-                      <div className="bg-zinc-400 h-1.5 rounded-full" style={{ width: `${(overviewData.kpi.planCounts.free / (overviewData.kpi.totalUsers || 1)) * 100}%` }}></div>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-4">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span>Starter $29</span>
-                      <span className="font-bold">{overviewData.kpi.planCounts.starter}</span>
-                    </div>
-                    <div className="w-full bg-[#E4E4E7] h-1.5 rounded-full mt-2">
-                      <div className="bg-blue-400 h-1.5 rounded-full" style={{ width: `${(overviewData.kpi.planCounts.starter / (overviewData.kpi.totalUsers || 1)) * 100}%` }}></div>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-4">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span>Pro $79</span>
-                      <span className="font-bold">{overviewData.kpi.planCounts.pro}</span>
-                    </div>
-                    <div className="w-full bg-[#E4E4E7] h-1.5 rounded-full mt-2">
-                      <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${(overviewData.kpi.planCounts.pro / (overviewData.kpi.totalUsers || 1)) * 100}%` }}></div>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-4">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span>Agency $199</span>
-                      <span className="font-bold">{overviewData.kpi.planCounts.agency}</span>
-                    </div>
-                    <div className="w-full bg-[#E4E4E7] h-1.5 rounded-full mt-2">
-                      <div className="bg-zinc-950 h-1.5 rounded-full" style={{ width: `${(overviewData.kpi.planCounts.agency / (overviewData.kpi.totalUsers || 1)) * 100}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Row Activity */}
-              <div className="grid grid-cols-2 gap-8">
-                
-                {/* Recent Signups */}
-                <div className="bg-white border border-[#E4E4E7] rounded-lg p-6 shadow-sm">
-                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">Recent Signups</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-[#F4F4F5] text-[#71717A] uppercase font-mono tracking-wider">
-                          <th className="py-2">Email</th>
-                          <th className="py-2">Plan</th>
-                          <th className="py-2 text-right">Joined</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {overviewData.recentSignups.map((s: any, idx: number) => (
-                          <tr 
-                            key={idx} 
-                            onClick={() => { fetchUserDetail(s.id); setActiveTab('users'); }}
-                            className="border-b border-[#F4F4F5] hover:bg-[#FAFAFA] cursor-pointer"
-                          >
-                            <td className="py-3 font-medium text-[#09090B]">{s.email}</td>
-                            <td className="py-3">
-                              <span className={`px-2 py-0.5 rounded text-[10px] ${getPlanBadgeClass(s.plan_id)}`}>
-                                {s.plan_id}
-                              </span>
-                            </td>
-                            <td className="py-3 text-right font-mono text-[#71717A]">
-                              {new Date(s.created_at).toLocaleDateString()}
-                            </td>
-                          </tr>
-                        ))}
-                        {overviewData.recentSignups.length === 0 && (
-                          <tr>
-                            <td colSpan={3} className="py-4 text-center text-zinc-400">No recent signups.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Active System Alerts */}
-                <div className="bg-white border border-[#E4E4E7] rounded-lg p-6 shadow-sm">
-                  <h3 className="text-xs font-semibold text-[#09090B] mb-4 uppercase tracking-wider">Active System Alerts</h3>
-                  <div className="space-y-3">
-                    {overviewData.activeAlerts.map((a: any, idx: number) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => setActiveTab('alerts')}
-                        className="p-3 border border-[#E4E4E7] rounded-lg bg-[#FAFAFA] flex justify-between items-center cursor-pointer hover:bg-zinc-100 transition"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${getAlertSeverityClass(a.severity)}`}>
-                            {a.severity}
-                          </span>
-                          <div>
-                            <div className="text-xs font-semibold text-[#09090B]">{a.title}</div>
-                            <div className="text-[10px] text-[#71717A] font-mono mt-0.5">{new Date(a.created_at).toLocaleString()}</div>
-                          </div>
-                        </div>
-                        <ChevronRight size={14} className="text-zinc-400" />
-                      </div>
-                    ))}
-                    {overviewData.activeAlerts.length === 0 && (
-                      <div className="py-8 text-center text-zinc-400 text-xs">
-                        <CheckCircle className="mx-auto text-green-500 mb-2" size={24} />
-                        <span>All systems healthy. No active alerts.</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          )}
-
-          {/* ── Tab: Alerts ── */}
-          {activeTab === 'alerts' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">Active Alerts</h2>
-                <p className="text-xs text-[#71717A]">Resolve anomalous service events and alert rules exceptions.</p>
-              </div>
-
-              {/* Active list */}
-              <div className="grid grid-cols-1 gap-4">
-                {alerts.filter(a => !a.is_resolved).map((a: any) => (
-                  <div key={a.id} className="border border-[#E4E4E7] rounded-lg p-5 shadow-sm bg-white flex justify-between items-start">
-                    <div className="space-y-1 max-w-[80%]">
-                      <div className="flex items-center gap-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase ${getAlertSeverityClass(a.severity)}`}>
-                          {a.severity}
-                        </span>
-                        <h3 className="text-sm font-semibold text-[#09090B]">{a.title}</h3>
-                      </div>
-                      <p className="text-xs text-[#52525B] leading-relaxed pt-1">{a.body}</p>
-                      <div className="text-[10px] text-[#71717A] font-mono pt-2">
-                        Triggered at: {new Date(a.created_at).toLocaleString()}
-                        {a.entity_id && ` • Target Entity: [${a.entity_type}:${a.entity_id}]`}
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => resolveSystemAlert(a.id)}
-                      className="px-3 py-1.5 bg-zinc-900 text-white text-xs font-semibold rounded hover:bg-zinc-800 transition"
-                    >
-                      Mark Resolved
-                    </button>
-                  </div>
-                ))}
-                {alerts.filter(a => !a.is_resolved).length === 0 && (
-                  <div className="border border-dashed border-[#E4E4E7] rounded-lg p-8 text-center bg-[#FAFAFA]">
-                    <CheckCircle className="mx-auto text-green-500 mb-2" size={28} />
-                    <span className="text-sm font-medium text-zinc-500">No active unresolved alerts</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Resolved history table */}
-              <div>
-                <h3 className="text-sm font-semibold text-[#09090B] mb-4">Resolved Alerts Archive</h3>
-                <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                      <tr>
-                        <th className="p-4">Title</th>
-                        <th className="p-4">Severity</th>
-                        <th className="p-4">Resolved Date</th>
-                        <th className="p-4">Triggered Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {alerts.filter(a => a.is_resolved).map((a: any) => (
-                        <tr key={a.id} className="border-b border-[#F4F4F5] hover:bg-[#FAFAFA]">
-                          <td className="p-4 font-semibold text-[#09090B]">{a.title}</td>
-                          <td className="p-4">
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-100 text-zinc-600 uppercase">
-                              {a.severity}
-                            </span>
-                          </td>
-                          <td className="p-4 font-mono text-[#71717A]">{new Date(a.resolved_at).toLocaleString()}</td>
-                          <td className="p-4 font-mono text-[#71717A]">{new Date(a.created_at).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                      {alerts.filter(a => a.is_resolved).length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="p-8 text-center text-zinc-400">No resolved alerts in archives.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Configurable Alert Rules */}
-              <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#09090B] mb-4">Alert Rules Thresholds</h3>
-                <div className="grid grid-cols-2 gap-6 text-xs">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-zinc-500 font-mono uppercase mb-1.5">Daily API cost limit ($)</label>
-                      <input type="number" readOnly value={50} className="h-9 w-full bg-white border border-[#E4E4E7] rounded px-3 text-[#09090B] font-mono outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-zinc-500 font-mono uppercase mb-1.5">Single user daily cost trigger ($)</label>
-                      <input type="number" readOnly value={10} className="h-9 w-full bg-white border border-[#E4E4E7] rounded px-3 text-[#09090B] font-mono outline-none" />
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-zinc-500 font-mono uppercase mb-1.5">Skill run hourly failure rate (%)</label>
-                      <input type="number" readOnly value={5} className="h-9 w-full bg-white border border-[#E4E4E7] rounded px-3 text-[#09090B] font-mono outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-zinc-500 font-mono uppercase mb-1.5">Free tier daily runs abuse trigger</label>
-                      <input type="number" readOnly value={15} className="h-9 w-full bg-white border border-[#E4E4E7] rounded px-3 text-[#09090B] font-mono outline-none" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* ── Tab: All Users ── */}
-          {activeTab === 'users' && (
-            <div className="space-y-6 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">Customers & Accounts</h2>
-                <p className="text-xs text-[#71717A]">Monitor user profiles, billing packages, credit allocations, and internal support notes.</p>
-              </div>
-
-              {/* Filters Panel */}
-              <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-4 flex gap-4 items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={15} />
-                  <input 
-                    type="text" 
-                    placeholder="Search by email..."
-                    value={usersSearch}
-                    onChange={(e) => { setUsersSearch(e.target.value); setUsersPage(1); }}
-                    className="h-10 w-full pl-10 pr-4 bg-white border border-[#E4E4E7] rounded-md text-xs focus:outline-none focus:border-zinc-400"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[#71717A]">Plan:</span>
-                  <select 
-                    value={usersFilterPlan}
-                    onChange={(e) => { setUsersFilterPlan(e.target.value); setUsersPage(1); }}
-                    className="h-10 px-3 bg-white border border-[#E4E4E7] rounded-md focus:outline-none"
-                  >
-                    <option value="all">All Packages</option>
-                    <option value="free">Free</option>
-                    <option value="starter">Starter</option>
-                    <option value="pro">Pro</option>
-                    <option value="agency">Agency</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[#71717A]">Status:</span>
-                  <select 
-                    value={usersFilterStatus}
-                    onChange={(e) => { setUsersFilterStatus(e.target.value); setUsersPage(1); }}
-                    className="h-10 px-3 bg-white border border-[#E4E4E7] rounded-md focus:outline-none"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="active">Active Only</option>
-                    <option value="banned">Banned Only</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Users Table */}
-              <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                    <tr>
-                      <th className="p-4 font-semibold">Email</th>
-                      <th className="p-4 font-semibold">Plan</th>
-                      <th className="p-4 font-semibold">Joined Date</th>
-                      <th className="p-4 font-semibold">Last Active</th>
-                      <th className="p-4 font-semibold text-right">Skill Runs</th>
-                      <th className="p-4 font-semibold text-right">AI Messages</th>
-                      <th className="p-4 font-semibold text-right">API Cost</th>
-                      <th className="p-4"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {usersList.map((u: any) => (
-                      <tr 
-                        key={u.id} 
-                        onClick={() => fetchUserDetail(u.id)}
-                        className={`border-b border-[#F4F4F5] hover:bg-[#FAFAFA] cursor-pointer ${u.is_banned ? 'bg-red-500/[0.02]' : ''}`}
-                      >
-                        <td className="p-4">
-                          <div className="font-semibold text-[#09090B] flex items-center gap-2">
-                            <span>{u.email}</span>
-                            {u.is_banned && (
-                              <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-[#FEF2F2] text-[#B91C1C] rounded">BANNED</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] ${getPlanBadgeClass(u.plan_id)}`}>
-                            {u.plan_id}
-                          </span>
-                        </td>
-                        <td className="p-4 text-[#71717A] font-mono">{new Date(u.created_at).toLocaleDateString()}</td>
-                        <td className="p-4 text-[#71717A] font-mono">{new Date(u.last_active).toLocaleDateString()}</td>
-                        <td className="p-4 text-right font-mono text-[#09090B]">{u.skill_runs_total}</td>
-                        <td className="p-4 text-right font-mono text-[#09090B]">{u.ai_messages_total}</td>
-                        <td className="p-4 text-right font-mono text-[#52525B] font-semibold">${u.api_cost_total.toFixed(2)}</td>
-                        <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <button 
-                            onClick={() => fetchUserDetail(u.id)}
-                            className="p-1 hover:bg-[#F4F4F5] rounded"
-                          >
-                            <MoreVertical size={14} className="text-zinc-400" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {usersList.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="p-8 text-center text-zinc-400">No users match the search parameters.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {usersCount > 20 && (
-                <div className="flex justify-between items-center text-xs font-mono text-[#71717A]">
-                  <span>Showing {(usersPage - 1) * 20 + 1} to {Math.min(usersPage * 20, usersCount)} of {usersCount} users</span>
-                  <div className="flex gap-2">
-                    <button 
-                      disabled={usersPage === 1}
-                      onClick={() => setUsersPage(p => Math.max(p - 1, 1))}
-                      className="px-3 h-8 border border-[#E4E4E7] rounded hover:bg-[#FAFAFA] disabled:opacity-50"
-                    >
-                      Previous
-                    </button>
-                    <button 
-                      disabled={usersPage * 20 >= usersCount}
-                      onClick={() => setUsersPage(p => p + 1)}
-                      className="px-3 h-8 border border-[#E4E4E7] rounded hover:bg-[#FAFAFA] disabled:opacity-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          )}
-
-          {/* All other tabs render */}
-          {activeTab === 'billing' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">Billing & Revenue</h2>
-                <p className="text-xs text-[#71717A]">Track Monthly Recurring Revenue (MRR), plan distribution economics, and transactional logs.</p>
-              </div>
-
-              {/* Stripe KPI strip */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">mrr</span>
-                  <div className="text-2xl font-bold font-mono mt-2">${billingOverview.mrr.toLocaleString()}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">New MRR This Month</span>
-                  <div className="text-2xl font-bold font-mono text-green-600 mt-2">+${billingOverview.newMrrThisMonth}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Churned MRR</span>
-                  <div className="text-2xl font-bold font-mono text-red-600 mt-2">-${billingOverview.churnedMrrThisMonth}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Net Monthly Change</span>
-                  <div className={`text-2xl font-bold font-mono mt-2 ${billingOverview.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${billingOverview.netChange >= 0 ? '+' : ''}{billingOverview.netChange}
-                  </div>
-                </div>
-              </div>
-
-              {/* Transactions Log */}
-              <div>
-                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">Recent Transactions (Stripe)</h3>
-                <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                      <tr>
-                        <th className="p-4">Charge ID</th>
-                        <th className="p-4">User Email</th>
-                        <th className="p-4">Plan</th>
-                        <th className="p-4">Amount</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {billingTransactions.map((tx: any) => (
-                        <tr key={tx.id} className="border-b border-[#F4F4F5]">
-                          <td className="p-4 font-mono font-medium text-[#2563EB] hover:underline cursor-pointer">{tx.id}</td>
-                          <td className="p-4 font-semibold text-[#09090B]">{tx.user_email}</td>
-                          <td className="p-4">{tx.plan}</td>
-                          <td className="p-4 font-mono font-semibold text-[#09090B]">{tx.amount}</td>
-                          <td className="p-4">
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-green-50 text-green-700 border border-green-200">
-                              {tx.status}
-                            </span>
-                          </td>
-                          <td className="p-4 font-mono text-[#71717A]">{new Date(tx.date).toLocaleDateString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* Credits & Usage Tab */}
-          {activeTab === 'credits' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">Credits & API Usage</h2>
-                <p className="text-xs text-[#71717A]">Audit manual credit grants, live transaction logs, and consumption behaviors.</p>
-              </div>
-
-              {/* KPI Strip */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">AI Messages Today</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{creditsSummary.ai_messages_today}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Skill Runs Today</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{creditsSummary.skill_runs_today}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Daily Resets Triggered</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{creditsSummary.resets_today}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Credits Granted (Month)</span>
-                  <div className="text-2xl font-bold font-mono text-blue-600 mt-2">{creditsSummary.grants_this_month} grants</div>
-                </div>
-              </div>
-
-              {/* Top Heaviest Users */}
-              <div>
-                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">Top 10 Heaviest Users Today</h3>
-                <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                      <tr>
-                        <th className="p-4">User</th>
-                        <th className="p-4 text-right">Lifetime AI Messages</th>
-                        <th className="p-4 text-right">Lifetime Skill Runs</th>
-                        <th className="p-4 text-right">Est. API Cost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {creditsSummary.top_users.map((tu: any, idx: number) => (
-                        <tr key={idx} className="border-b border-[#F4F4F5] hover:bg-[#FAFAFA] cursor-pointer">
-                          <td className="p-4 font-semibold text-[#09090B]">{tu.email}</td>
-                          <td className="p-4 text-right font-mono">{tu.ai_messages}</td>
-                          <td className="p-4 text-right font-mono">{tu.skill_runs}</td>
-                          <td className="p-4 text-right font-mono font-semibold">${tu.cost.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                      {creditsSummary.top_users.length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="p-8 text-center text-zinc-400">No active usage metrics logged.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Credit Transaction Log */}
-              <div>
-                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">Credit Transaction Log</h3>
-                <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                      <tr>
-                        <th className="p-4">User</th>
-                        <th className="p-4">Type</th>
-                        <th className="p-4">Pool</th>
-                        <th className="p-4 text-right">Delta</th>
-                        <th className="p-4 text-right">Balance After</th>
-                        <th className="p-4">Operation</th>
-                        <th className="p-4 text-right">Timestamp</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {creditsTransactions.map((tx: any) => (
-                        <tr key={tx.id} className="border-b border-[#F4F4F5]">
-                          <td className="p-4 font-semibold text-[#09090B]">{tx.user_email}</td>
-                          <td className="p-4 capitalize">{tx.transaction_type}</td>
-                          <td className="p-4 font-mono text-[10px] text-zinc-500">{tx.credit_pool}</td>
-                          <td className={`p-4 text-right font-mono font-bold ${tx.credits_delta >= 0 ? 'text-green-600' : 'text-[#09090B]'}`}>
-                            {tx.credits_delta >= 0 ? '+' : ''}{tx.credits_delta}
-                          </td>
-                          <td className="p-4 text-right font-mono">{tx.credits_after}</td>
-                          <td className="p-4 text-zinc-500 font-mono text-[10px]">{tx.operation_id || '-'}</td>
-                          <td className="p-4 text-right font-mono text-zinc-400">{new Date(tx.created_at).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                      {creditsTransactions.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center text-zinc-400">No transaction logs in buffer.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* Skill Runs Tab */}
-          {activeTab === 'skill-runs' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">Skill Runs Log</h2>
-                <p className="text-xs text-[#71717A]">Granular output and cost metrics of individual agent execution cycles.</p>
-              </div>
-
-              <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                    <tr>
-                      <th className="p-4">Run ID</th>
-                      <th className="p-4">User</th>
-                      <th className="p-4">Skill</th>
-                      <th className="p-4">URL Scanned</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Tokens (In/Out)</th>
-                      <th className="p-4 text-right">Cost</th>
-                      <th className="p-4 text-right">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {skillRuns.map((r: any) => (
-                      <React.Fragment key={r.id}>
-                        <tr 
-                          onClick={() => setExpandedRun(expandedRun === r.id ? null : r.id)}
-                          className="border-b border-[#F4F4F5] hover:bg-[#FAFAFA] cursor-pointer"
-                        >
-                          <td className="p-4 font-mono font-medium text-[#2563EB]">{r.id.slice(0, 8)}</td>
-                          <td className="p-4 font-semibold text-[#09090B]">{r.user_email}</td>
-                          <td className="p-4">
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 font-mono border border-blue-100">
-                              {r.skill_command}
-                            </span>
-                          </td>
-                          <td className="p-4 text-zinc-500 font-mono truncate max-w-[200px]" title={r.website_url}>{r.website_url}</td>
-                          <td className="p-4">
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-green-50 text-green-700 font-medium">
-                              {r.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right font-mono text-zinc-500">{r.input_tokens} / {r.output_tokens}</td>
-                          <td className="p-4 text-right font-mono font-bold text-[#09090B]">${r.cost_usd.toFixed(4)}</td>
-                          <td className="p-4 text-right font-mono text-zinc-400">{new Date(r.created_at).toLocaleDateString()}</td>
-                        </tr>
-                        {expandedRun === r.id && (
-                          <tr>
-                            <td colSpan={8} className="bg-[#FAFAFA] p-6 border-b border-[#E4E4E7]">
-                              <div className="space-y-3">
-                                <span className="text-xs font-semibold text-[#09090B] block">Execution Output JSON:</span>
-                                <pre className="p-4 bg-[#18181B] text-zinc-200 rounded-lg text-[10px] font-mono overflow-auto max-h-[300px] shadow-inner">
-                                  {JSON.stringify(r.result_json || {}, null, 2)}
-                                </pre>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                    {skillRuns.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="p-8 text-center text-zinc-400">No skill runs logged in database yet.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-            </div>
-          )}
-
-          {/* AI Conversations Tab */}
-          {activeTab === 'conversations' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">AI Conversations Log</h2>
-                <p className="text-xs text-[#71717A]">
-                  Review message thread interactions with the marketing intelligence agent. 
-                  {adminProfile.role === 'support' && ' 🔒 Logs are restricted to admin/superadmin roles.'}
-                </p>
-              </div>
-
-              <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                    <tr>
-                      <th className="p-4">Conversation ID</th>
-                      <th className="p-4">User</th>
-                      <th className="p-4">Analysis Mode</th>
-                      <th className="p-4 text-right">Messages</th>
-                      <th className="p-4 text-right">Credits Used</th>
-                      <th className="p-4 text-right">Created At</th>
-                      <th className="p-4 text-right">Last Message</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {conversations.map((c: any) => (
-                      <React.Fragment key={c.id}>
-                        <tr 
-                          onClick={() => toggleConvThread(c.id)}
-                          className="border-b border-[#F4F4F5] hover:bg-[#FAFAFA] cursor-pointer"
-                        >
-                          <td className="p-4 font-mono font-medium text-[#2563EB]">{c.id}</td>
-                          <td className="p-4 font-semibold text-[#09090B]">{c.user_email}</td>
-                          <td className="p-4">{c.active_mode}</td>
-                          <td className="p-4 text-right font-mono">{c.message_count}</td>
-                          <td className="p-4 text-right font-mono">{c.total_credits_used}</td>
-                          <td className="p-4 text-right font-mono text-zinc-400">{new Date(c.created_at).toLocaleDateString()}</td>
-                          <td className="p-4 text-right font-mono text-zinc-400">{new Date(c.updated_at).toLocaleDateString()}</td>
-                        </tr>
-                        {expandedConv === c.id && adminProfile.role !== 'support' && (
-                          <tr>
-                            <td colSpan={7} className="bg-[#FAFAFA] p-6 border-b border-[#E4E4E7]">
-                              <div className="max-w-3xl mx-auto space-y-4">
-                                <span className="text-xs font-semibold text-[#09090B] block border-b border-zinc-200 pb-2">Read-Only Conversation Thread</span>
-                                <div className="space-y-4 max-h-[400px] overflow-y-auto p-4 border border-zinc-200 rounded-lg bg-white shadow-inner">
-                                  {expandedConvMessages.map((msg: any) => (
-                                    <div 
-                                      key={msg.id}
-                                      className={`flex flex-col max-w-[80%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}
-                                    >
-                                      <div className={`px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${msg.role === 'user' ? 'bg-[#09090B] text-white rounded-tr-none' : 'bg-[#F4F4F5] text-[#09090B] rounded-tl-none border border-zinc-200'}`}>
-                                        {msg.content}
-                                      </div>
-                                      <span className="text-[9px] text-zinc-400 font-mono mt-1 px-1">{new Date(msg.created_at).toLocaleTimeString()}</span>
-                                    </div>
-                                  ))}
-                                  {expandedConvMessages.length === 0 && (
-                                    <div className="text-center py-6 text-zinc-400 text-xs">No message logs returned for this conversation.</div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                    {conversations.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="p-8 text-center text-zinc-400">No conversations logged in database.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-            </div>
-          )}
-
-          {/* API Keys Tab */}
-          {activeTab === 'api-keys' && adminProfile.role === 'superadmin' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-[#09090B] mb-1 font-sans">External API Credentials</h2>
-                  <p className="text-xs text-[#71717A]">Configure third-party service tokens. Values are encrypted at rest.</p>
-                </div>
-                <button 
-                  onClick={() => setKeyModalOpen(true)}
-                  className="h-10 px-4 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-md flex items-center gap-2 shadow transition"
-                >
-                  <Plus size={15} />
-                  <span>Configure New Key</span>
-                </button>
-              </div>
-
-              {/* Grid of keys */}
-              <div className="grid grid-cols-2 gap-6">
-                {PREDEFINED_KEYS.map((k: any) => {
-                  const existing = apiKeys.find(ak => ak.service_name === k.service_name);
-                  return (
-                    <div key={k.service_name} className="border border-[#E4E4E7] rounded-lg p-6 bg-white shadow-sm flex flex-col justify-between h-[180px]">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-sm font-semibold text-[#09090B]">{k.display_name}</h3>
-                            <span className="text-[10px] font-mono text-[#71717A] mt-0.5 block">{k.service_name}</span>
-                          </div>
-                          {existing ? (
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${existing.is_active ? 'bg-[#F0FDF4] text-[#15803D]' : 'bg-red-50 text-red-700'}`}>
-                              {existing.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-zinc-100 text-zinc-400">Not Configured</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-[#71717A] mt-3 line-clamp-2">{k.notes}</p>
-                      </div>
-
-                      <div className="flex justify-between items-center pt-4 border-t border-[#F4F4F5] mt-auto">
-                        <span className="font-mono text-xs text-[#52525B]">
-                          {existing ? existing.key_preview : '••••••••••••'}
-                        </span>
-                        
-                        <div className="flex gap-2">
-                          {existing && (
-                            <>
-                              <button 
-                                onClick={() => testApiKey(existing.id)}
-                                className="px-2.5 py-1 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-[10px] font-semibold rounded transition"
-                              >
-                                Test
-                              </button>
-                              <button 
-                                onClick={() => rotateApiKey(existing)}
-                                className="px-2.5 py-1 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-[10px] font-semibold rounded transition"
-                              >
-                                Rotate
-                              </button>
-                              {existing.is_active && (
-                                <button 
-                                  onClick={() => deactivateApiKey(existing)}
-                                  className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#B91C1C] text-[10px] font-semibold rounded border border-red-200 transition"
-                                >
-                                  Deactivate
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-            </div>
-          )}
-
-          {/* API Cost Tracker Tab */}
-          {activeTab === 'api-cost' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">API Cost Analytics</h2>
-                <p className="text-xs text-[#71717A]">Granular cost auditing per model execution, operation types, and unit economics margins.</p>
-              </div>
-
-              {/* KPI Strip */}
-              <div className="grid grid-cols-5 gap-4">
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Total API Cost</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{apiCostData.summary.total_cost}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Anthropic Claude Cost</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{apiCostData.summary.anthropic_cost}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Cost / Skill Run</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{apiCostData.summary.avg_cost_run}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Cost / Message</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{apiCostData.summary.avg_cost_message}</div>
-                </div>
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-5">
-                  <span className="text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase">Projected (Month)</span>
-                  <div className="text-2xl font-bold font-mono mt-2">{apiCostData.summary.projected_monthly}</div>
-                </div>
-              </div>
-
-              {/* Economics table */}
-              <div>
-                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">Gross Margin by Plan - This Month</h3>
-                <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                      <tr>
-                        <th className="p-4">Plan</th>
-                        <th className="p-4 text-right">Active Users</th>
-                        <th className="p-4 text-right">Plan Revenue</th>
-                        <th className="p-4 text-right">Total API Cost</th>
-                        <th className="p-4 text-right">Gross Margin %</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {apiCostData.plan_economics.map((pe: any, idx: number) => {
-                        const marginNum = parseFloat(pe.margin);
-                        const isUnderThreshold = !isNaN(marginNum) && marginNum < 65;
-                        return (
-                          <tr key={idx} className={`border-b border-[#F4F4F5] ${isUnderThreshold ? 'bg-[#FEF2F2]' : ''}`}>
-                            <td className="p-4 font-semibold text-[#09090B]">{pe.plan}</td>
-                            <td className="p-4 text-right font-mono">{pe.users}</td>
-                            <td className="p-4 text-right font-mono font-semibold">${pe.revenue}</td>
-                            <td className="p-4 text-right font-mono text-zinc-500">${pe.cost.toFixed(2)}</td>
-                            <td className={`p-4 text-right font-mono font-bold ${isUnderThreshold ? 'text-[#B91C1C]' : 'text-green-600'}`}>
-                              {pe.margin}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="text-[10px] text-[#71717A] mt-2 font-mono">Gross margin target is &gt;= 65%. Failures highlighted in red.</div>
-              </div>
-
-            </div>
-          )}
-
-          {/* System Health Tab */}
-          {activeTab === 'health' && (
-            <div className="space-y-8 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1 font-sans">System Health</h2>
-                <p className="text-xs text-[#71717A]">Real-time connectivity monitoring, error logs, and HERMES cron statuses.</p>
-              </div>
-
-              {/* Service status list */}
-              <div className="grid grid-cols-3 gap-6">
-                {healthData.services.map((s: any, idx: number) => (
-                  <div key={idx} className="border border-[#E4E4E7] rounded-lg p-5 bg-white shadow-sm flex items-start gap-4">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 mt-1 flex-shrink-0 animate-pulse"></span>
-                    <div className="space-y-1">
-                      <h3 className="text-xs font-semibold text-[#09090B] uppercase tracking-wider">{s.name}</h3>
-                      <div className="text-xs text-[#52525B]">{s.check}</div>
-                      <div className="text-[10px] text-[#71717A] font-mono">Threshold: {s.threshold}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* HERMES Agent status */}
-              <div>
-                <h3 className="text-xs font-semibold text-[#52525B] mb-4 uppercase tracking-wider">HERMES Cron Jobs Status</h3>
-                <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                      <tr>
-                        <th className="p-4">Job Name</th>
-                        <th className="p-4">Last Run</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Next Scheduled Run</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {healthData.hermes.map((h: any, idx: number) => (
-                        <tr key={idx} className="border-b border-[#F4F4F5]">
-                          <td className="p-4 font-mono font-semibold text-[#09090B]">{h.name}</td>
-                          <td className="p-4 text-zinc-500">{h.last_run}</td>
-                          <td className="p-4">
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-green-50 text-green-700 font-medium border border-green-200">
-                              {h.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-zinc-500 font-mono">{h.next_run}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* Audit Log Tab */}
-          {activeTab === 'audit-log' && (
-            <div className="space-y-6 animate-fadeIn">
-              
-              <div>
-                <h2 className="text-lg font-bold text-[#09090B] mb-1">Superadmin Audit Log</h2>
-                <p className="text-xs text-[#71717A]">Immutable audit trail of administrator activities inside the superadmin dashboard.</p>
-              </div>
-
-              <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                    <tr>
-                      <th className="p-4">Done By</th>
-                      <th className="p-4">Action</th>
-                      <th className="p-4">Entity</th>
-                      <th className="p-4">Target ID</th>
-                      <th className="p-4">IP Address</th>
-                      <th className="p-4 text-right">Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditLogs.map((log: any) => (
-                      <tr key={log.id} className="border-b border-[#F4F4F5]">
-                        <td className="p-4 font-semibold text-[#09090B]">{log.superadmin_email}</td>
-                        <td className="p-4">
-                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-100 text-zinc-700 font-mono border border-zinc-200">
-                            {log.action}
-                          </span>
-                        </td>
-                        <td className="p-4 text-zinc-500 capitalize">{log.entity_type}</td>
-                        <td className="p-4 font-mono text-zinc-500 text-[10px]">{log.entity_id || '-'}</td>
-                        <td className="p-4 font-mono text-[#52525B]">{log.ip_address}</td>
-                        <td className="p-4 text-right font-mono text-zinc-400">{new Date(log.created_at).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                    {auditLogs.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="p-8 text-center text-zinc-400">No logs returned in search window.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {auditCount > 20 && (
-                <div className="flex justify-between items-center text-xs font-mono text-[#71717A]">
-                  <span>Showing {(auditPage - 1) * 20 + 1} to {Math.min(auditPage * 20, auditCount)} of {auditCount} logs</span>
-                  <div className="flex gap-2">
-                    <button 
-                      disabled={auditPage === 1}
-                      onClick={() => setAuditPage(p => Math.max(p - 1, 1))}
-                      className="px-3 h-8 border border-[#E4E4E7] rounded hover:bg-[#FAFAFA] disabled:opacity-50"
-                    >
-                      Previous
-                    </button>
-                    <button 
-                      disabled={auditPage * 20 >= auditCount}
-                      onClick={() => setAuditPage(p => p + 1)}
-                      className="px-3 h-8 border border-[#E4E4E7] rounded hover:bg-[#FAFAFA] disabled:opacity-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          )}
-
-          {/* Admin Users Tab */}
-          {activeTab === 'admins' && adminProfile.role === 'superadmin' && (
-            <div className="space-y-6 animate-fadeIn">
-              
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-[#09090B] mb-1">Superadmin Administrators</h2>
-                  <p className="text-xs text-[#71717A]">Manage team member account access rights and TOTP security.</p>
-                </div>
-                <button 
-                  onClick={() => setAdminModalOpen(true)}
-                  className="h-10 px-4 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-md flex items-center gap-2 shadow transition"
-                >
-                  <Plus size={15} />
-                  <span>Add Team Member</span>
-                </button>
-              </div>
-
-              <div className="border border-[#E4E4E7] rounded-lg overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAFAFA] border-b border-[#E4E4E7] text-[#71717A] font-mono uppercase">
-                    <tr>
-                      <th className="p-4">Name</th>
-                      <th className="p-4">Email</th>
-                      <th className="p-4">Role</th>
-                      <th className="p-4">Last Login</th>
-                      <th className="p-4">Last Login IP</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {admins.map((adm: any) => (
-                      <tr key={adm.id} className="border-b border-[#F4F4F5] hover:bg-[#FAFAFA]">
-                        <td className="p-4 font-semibold text-[#09090B]">{adm.name}</td>
-                        <td className="p-4 text-zinc-500 font-mono">{adm.email}</td>
-                        <td className="p-4">
-                          <select 
-                            value={adm.role}
-                            onChange={(e) => handleAdminRoleChange(adm, e.target.value)}
-                            className="bg-white border border-zinc-200 rounded px-2 py-1 focus:outline-none"
-                          >
-                            <option value="superadmin">Superadmin</option>
-                            <option value="admin">Admin</option>
-                            <option value="support">Support</option>
-                          </select>
-                        </td>
-                        <td className="p-4 font-mono text-zinc-400">
-                          {adm.last_login_at ? new Date(adm.last_login_at).toLocaleString() : 'Never'}
-                        </td>
-                        <td className="p-4 font-mono text-zinc-400">{adm.last_login_ip || '-'}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${adm.is_active ? 'bg-[#F0FDF4] text-[#15803D]' : 'bg-red-50 text-red-700'}`}>
-                            {adm.is_active ? 'Active' : 'Disabled'}
-                          </span>
-                        </td>
-                        <td className="p-4 text-right">
-                          <button 
-                            onClick={() => toggleAdminStatus(adm)}
-                            className={`px-2 py-1 rounded text-[10px] font-semibold ${adm.is_active ? 'bg-red-50 text-red-700 border border-red-100 hover:bg-red-100' : 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100'}`}
-                          >
-                            {adm.is_active ? 'Disable' : 'Enable'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-            </div>
-          )}
-
         </div>
       </main>
-
-      {/* ─── TOAST NOTIFICATIONS ─── */}
-      {toast.show && (
-        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-2xl z-[100] flex items-center gap-3 text-xs font-semibold animate-slideUp text-white ${toast.type === 'success' ? 'bg-[#16A34A]' : 'bg-[#DC2626]'}`}>
-          {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-          <span>{toast.msg}</span>
-        </div>
-      )}
-
-      {/* ─── CONFIRM ACTION MODAL ─── */}
-      {confirmModal.open && (
-        <div className="fixed inset-0 bg-[#09090b]/40 backdrop-blur-sm flex items-center justify-center z-[90]">
-          <div className="w-full max-w-[400px] bg-white border border-[#E4E4E7] rounded-xl p-6 shadow-2xl animate-scaleUp">
-            <h3 className="text-sm font-bold text-[#09090B] mb-2">{confirmModal.title}</h3>
-            <p className="text-xs text-[#52525B] leading-relaxed mb-4">{confirmModal.body}</p>
-
-            {confirmModal.inputVerify && (
-              <div className="mb-4">
-                <label className="block text-[10px] font-mono tracking-widest font-semibold text-zinc-500 uppercase mb-1.5">
-                  Confirm verification details
-                </label>
-                <input
-                  type="text"
-                  value={confirmInput}
-                  onChange={(e) => setConfirmInput(e.target.value)}
-                  placeholder={confirmModal.verifyPlaceholder || 'Type target here'}
-                  className="w-full h-9 bg-[#FAFAFA] border border-[#E4E4E7] rounded px-3 text-xs outline-none focus:border-zinc-400 font-mono"
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2.5">
-              <button 
-                onClick={() => { setConfirmModal(c => ({ ...c, open: false })); setConfirmInput(''); }}
-                className="px-3.5 py-1.5 border border-zinc-200 hover:bg-zinc-50 rounded text-xs font-semibold text-zinc-700 transition"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleVerifyAction}
-                className={`px-3.5 py-1.5 text-white text-xs font-semibold rounded transition ${confirmModal.type === 'critical' ? 'bg-[#DC2626] hover:bg-[#DC2626]/90 shadow-md shadow-red-500/10' : 'bg-zinc-950 hover:bg-zinc-800'}`}
-              >
-                {confirmModal.confirmText}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── CONFIGURE KEY MODAL ─── */}
-      {keyModalOpen && (
-        <div className="fixed inset-0 bg-[#09090b]/40 backdrop-blur-sm flex items-center justify-center z-[90]">
-          <div className="w-full max-w-[420px] bg-white border border-[#E4E4E7] rounded-xl p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#F4F4F5]">
-              <h3 className="text-sm font-bold text-[#09090B]">Configure External API Credential</h3>
-              <button onClick={() => setKeyModalOpen(false)} className="p-1 hover:bg-[#F4F4F5] rounded">
-                <X size={15} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddNewKey} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-zinc-500 mb-1">Service Identifier</label>
-                <select 
-                  value={newKeyForm.serviceName}
-                  onChange={(e) => setNewKeyForm({ ...newKeyForm, serviceName: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                >
-                  <option value="anthropic">Anthropic Claude API</option>
-                  <option value="stripe_secret">Stripe - Secret Key</option>
-                  <option value="stripe_webhook">Stripe - Webhook Secret</option>
-                  <option value="resend">Resend - Email API</option>
-                  <option value="supabase_service_role">Supabase - Service Role Key</option>
-                  <option value="twitter">Twitter/X API - Hermes</option>
-                  <option value="linkedin">LinkedIn API - Hermes</option>
-                  <option value="reddit">Reddit API - Hermes (read-only)</option>
-                  <option value="google_search_console">Google Search Console API</option>
-                  <option value="browserbase">Browserbase - Browser Automation</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-zinc-500 mb-1">Display Label</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. Anthropic Claude Production Key"
-                  value={newKeyForm.displayName}
-                  onChange={(e) => setNewKeyForm({ ...newKeyForm, displayName: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-zinc-500 mb-1">Credential Value</label>
-                <input 
-                  type="password" 
-                  required
-                  placeholder="sk-ant-..."
-                  value={newKeyForm.keyValue}
-                  onChange={(e) => setNewKeyForm({ ...newKeyForm, keyValue: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-zinc-500 mb-1">Deployment Environment</label>
-                <select 
-                  value={newKeyForm.environment}
-                  onChange={(e) => setNewKeyForm({ ...newKeyForm, environment: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                >
-                  <option value="production">Production</option>
-                  <option value="staging">Staging</option>
-                  <option value="development">Development</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-zinc-500 mb-1">Admin Notes</label>
-                <textarea 
-                  placeholder="Optional usage notes..."
-                  value={newKeyForm.notes}
-                  onChange={(e) => setNewKeyForm({ ...newKeyForm, notes: e.target.value })}
-                  className="w-full border border-[#E4E4E7] bg-white rounded p-3 h-20 outline-none resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button 
-                  type="button"
-                  onClick={() => setKeyModalOpen(false)}
-                  className="px-4 py-1.5 border border-zinc-200 hover:bg-zinc-50 rounded font-semibold text-zinc-700"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-1.5 bg-zinc-950 hover:bg-zinc-800 text-white font-semibold rounded shadow-md"
-                >
-                  Configure Key
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── ADD ADMIN MODAL ─── */}
-      {adminModalOpen && (
-        <div className="fixed inset-0 bg-[#09090b]/40 backdrop-blur-sm flex items-center justify-center z-[90]">
-          <div className="w-full max-w-[400px] bg-white border border-[#E4E4E7] rounded-xl p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#F4F4F5]">
-              <h3 className="text-sm font-bold text-[#09090B]">Add Team Administrator</h3>
-              <button onClick={() => setAdminModalOpen(false)} className="p-1 hover:bg-[#F4F4F5] rounded">
-                <X size={15} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddNewAdmin} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-zinc-500 mb-1">Full Name</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. support specialist"
-                  value={newAdminForm.name}
-                  onChange={(e) => setNewAdminForm({ ...newAdminForm, name: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-zinc-500 mb-1">Email Address</label>
-                <input 
-                  type="email" 
-                  required
-                  placeholder="e.g. team@zieads.com"
-                  value={newAdminForm.email}
-                  onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-zinc-500 mb-1">Role Permission</label>
-                <select 
-                  value={newAdminForm.role}
-                  onChange={(e) => setNewAdminForm({ ...newAdminForm, role: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                >
-                  <option value="admin">Administrator (no API Key management)</option>
-                  <option value="support">Support (read-only + credit grants)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-zinc-500 mb-1">Temporary Password</label>
-                <input 
-                  type="password" 
-                  required
-                  placeholder="Temporary login credential"
-                  value={newAdminForm.password}
-                  onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
-                  className="h-9 w-full border border-[#E4E4E7] bg-white rounded px-3 outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button 
-                  type="button"
-                  onClick={() => setAdminModalOpen(false)}
-                  className="px-4 py-1.5 border border-zinc-200 hover:bg-zinc-50 rounded font-semibold text-zinc-700"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-1.5 bg-zinc-950 hover:bg-zinc-800 text-white font-semibold rounded shadow-md"
-                >
-                  Create Account
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── CUSTOMER DETAIL SLIDE-IN DRAWER ─── */}
-      {drawerOpen && selectedUser && (
-        <div className="fixed inset-0 bg-[#09090b]/20 backdrop-blur-sm z-[80] flex justify-end">
-          <div className="absolute inset-0" onClick={() => setDrawerOpen(false)}></div>
-          <div className="w-[480px] bg-white h-full relative z-10 border-l border-[#E4E4E7] shadow-2xl flex flex-col animate-slideLeft">
-            
-            {/* Drawer Header */}
-            <div className="p-6 border-b border-[#E4E4E7] flex justify-between items-start flex-shrink-0">
-              <div>
-                <h3 className="text-base font-bold text-[#09090B] break-all">{selectedUser.account.email}</h3>
-                <span className="text-[10px] font-mono text-[#71717A] mt-0.5 block">{selectedUser.account.id}</span>
-              </div>
-              <button 
-                onClick={() => setDrawerOpen(false)}
-                className="p-1 hover:bg-[#F4F4F5] rounded text-zinc-400 hover:text-zinc-600 transition"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Drawer Body Scroll */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 text-xs">
-              
-              {/* Plan & Action Badges */}
-              <div className="flex gap-2.5 items-center">
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${getPlanBadgeClass(selectedUser.account.plan_id)}`}>
-                  {selectedUser.account.plan_id.toUpperCase()} Package
-                </span>
-                {selectedUser.account.is_banned && (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#FEF2F2] text-[#B91C1C] font-semibold border border-red-200">
-                    BANNED
-                  </span>
-                )}
-              </div>
-
-              {/* Account Section */}
-              <div className="space-y-3">
-                <h4 className="font-mono text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-150 pb-1.5">Account Info</h4>
-                <div className="grid grid-cols-2 gap-y-3 font-mono text-zinc-600">
-                  <div>Joined Date:</div>
-                  <div className="text-[#09090B]">{new Date(selectedUser.account.created_at).toLocaleDateString()}</div>
-                  <div>Plan Started:</div>
-                  <div className="text-[#09090B]">{new Date(selectedUser.account.plan_started_at).toLocaleDateString()}</div>
-                  <div>Stripe Customer:</div>
-                  <div className="text-[#2563EB] truncate hover:underline cursor-pointer">
-                    {selectedUser.account.stripe_customer_id || 'None'}
-                  </div>
-                  <div>Stripe Subscription:</div>
-                  <div className="text-[#09090B] truncate">{selectedUser.account.stripe_subscription_id || 'None'}</div>
-                </div>
-              </div>
-
-              {/* Business Profile Section */}
-              <div className="space-y-3">
-                <h4 className="font-mono text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-150 pb-1.5">Business Profile</h4>
-                {selectedUser.profile ? (
-                  <div className="space-y-2 text-[#52525B]">
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Business Name:</span>
-                      <span className="font-semibold text-[#09090B]">{selectedUser.profile.business_name || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Website URL:</span>
-                      <a href={selectedUser.profile.website_url} target="_blank" rel="noreferrer" className="text-[#2563EB] hover:underline flex items-center gap-1 font-mono">
-                        {selectedUser.profile.website_url ? 'Link' : '-'} <ExternalLink size={11} />
-                      </a>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Business Type:</span>
-                      <span className="text-[#09090B]">{selectedUser.profile.business_type || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Advertising Goal:</span>
-                      <span className="text-[#09090B]">{selectedUser.profile.primary_advertising_goal || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Monthly Budget:</span>
-                      <span className="text-[#09090B] font-mono">{selectedUser.profile.monthly_ads_budget || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Platforms:</span>
-                      <span className="text-[#09090B]">{selectedUser.profile.platforms.join(', ') || '-'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[#71717A] italic py-2">User has not completed Onboarding wizard yet.</div>
-                )}
-              </div>
-
-              {/* Credit Balance Section */}
-              <div className="space-y-3">
-                <h4 className="font-mono text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-150 pb-1.5">Credit Balances</h4>
-                <div className="grid grid-cols-2 gap-4 font-mono">
-                  <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded p-3">
-                    <span className="text-[9px] text-zinc-500 uppercase block">Daily AI Chat</span>
-                    <span className="text-base font-bold text-[#09090B] block mt-1">{selectedUser.credits.ai_chat_daily_remaining} remaining</span>
-                  </div>
-                  <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded p-3">
-                    <span className="text-[9px] text-zinc-500 uppercase block">Monthly Skill Runs</span>
-                    <span className="text-base font-bold text-[#09090B] block mt-1">
-                      {selectedUser.credits.skill_run_monthly_remaining === -1 ? 'Unlimited' : `${selectedUser.credits.skill_run_monthly_remaining} remaining`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cost & Volume Section */}
-              <div className="space-y-3">
-                <h4 className="font-mono text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-150 pb-1.5">Usage This Month</h4>
-                <div className="space-y-2 text-[#52525B]">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Skill runs completed:</span>
-                    <span className="font-mono text-[#09090B]">{selectedUser.usage.skill_runs_count}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">AI chat messages sent:</span>
-                    <span className="font-mono text-[#09090B]">{selectedUser.usage.ai_messages_count}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Estimated API costs:</span>
-                    <span className="font-mono text-[#09090B] font-semibold">${selectedUser.usage.api_cost_est}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Internal Notes Section */}
-              <div className="space-y-3">
-                <h4 className="font-mono text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-150 pb-1.5">Internal Support Notes</h4>
-                
-                <div className="space-y-2">
-                  <textarea 
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Type internal note about this user (never visible to users)..."
-                    className="w-full h-20 p-3 bg-[#FAFAFA] border border-[#E4E4E7] rounded-md outline-none focus:border-zinc-400 resize-none"
-                  />
-                  <button 
-                    onClick={handleSaveNote}
-                    className="w-full py-2 bg-zinc-950 text-white font-semibold rounded hover:bg-zinc-800 transition"
-                  >
-                    Save Internal Note
-                  </button>
-                </div>
-
-                <div className="space-y-3 pt-3">
-                  {selectedUser.notes.map((note: any) => (
-                    <div key={note.id} className="p-3 border border-zinc-200 rounded bg-zinc-50 space-y-1">
-                      <p className="text-[#09090B] leading-relaxed break-words">{note.note}</p>
-                      <div className="text-[9px] text-zinc-400 font-mono">
-                        Written at: {new Date(note.created_at).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quick Actions Panel */}
-              <div className="space-y-4 pt-4 border-t border-[#E4E4E7]">
-                <h4 className="font-mono text-[10px] font-bold text-[#DC2626] uppercase tracking-widest">Administrator Quick Actions</h4>
-                
-                {/* Impersonation & Suspension Actions */}
-                <div className="grid grid-cols-2 gap-3">
-                  {adminProfile.role !== 'support' && (
-                    <button 
-                      onClick={triggerImpersonation}
-                      className="h-10 border border-zinc-300 hover:bg-zinc-50 rounded font-semibold text-zinc-700 flex items-center justify-center gap-1.5"
-                    >
-                      <ExternalLink size={13} />
-                      <span>Impersonate User</span>
-                    </button>
-                  )}
-
-                  {adminProfile.role === 'superadmin' && (
-                    <button 
-                      onClick={() => triggerSuspendAccount(!selectedUser.account.is_banned)}
-                      className={`h-10 border rounded font-semibold flex items-center justify-center gap-1.5 ${selectedUser.account.is_banned ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-300 text-[#B91C1C] hover:bg-red-50'}`}
-                    >
-                      {selectedUser.account.is_banned ? <UserCheck size={13} /> : <UserX size={13} />}
-                      <span>{selectedUser.account.is_banned ? 'Activate User' : 'Suspend User'}</span>
-                    </button>
-                  )}
-                </div>
-
-                {selectedUser.account.is_banned && adminProfile.role === 'superadmin' && (
-                  <div className="space-y-2">
-                    <label className="block text-zinc-500">Reason for Suspension</label>
-                    <input 
-                      type="text" 
-                      placeholder="Specify ban reason..."
-                      value={banReason}
-                      onChange={(e) => setBanReason(e.target.value)}
-                      className="h-9 w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded px-3 outline-none focus:border-zinc-400"
-                    />
-                  </div>
-                )}
-
-                {/* Change Plan */}
-                {adminProfile.role !== 'support' && (
-                  <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-4 space-y-3">
-                    <span className="text-[10px] font-mono tracking-wider font-semibold text-zinc-500 uppercase block">Modify Plan Level</span>
-                    <div className="flex gap-2">
-                      <select 
-                        value={editingPlan}
-                        onChange={(e) => setEditingPlan(e.target.value)}
-                        className="h-9 px-3 bg-white border border-[#E4E4E7] rounded flex-1 focus:outline-none"
-                      >
-                        <option value="free">Free Package</option>
-                        <option value="starter">Starter Package</option>
-                        <option value="pro">Pro Package</option>
-                        <option value="agency">Agency Package</option>
-                      </select>
-                      <button 
-                        onClick={triggerPlanChange}
-                        className="px-4 h-9 bg-zinc-950 text-white font-semibold rounded hover:bg-zinc-800 transition"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Credit Grants Form */}
-                <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-4 space-y-3">
-                  <span className="text-[10px] font-mono tracking-wider font-semibold text-zinc-500 uppercase block">Grant Additional Credits</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select 
-                      value={grantPool}
-                      onChange={(e) => setGrantPool(e.target.value)}
-                      className="h-9 px-3 bg-white border border-[#E4E4E7] rounded focus:outline-none"
-                    >
-                      <option value="ai_chat_daily">Daily AI Chat</option>
-                      <option value="skill_run_monthly">Monthly Skill Runs</option>
-                    </select>
-                    <input 
-                      type="number" 
-                      value={grantAmount}
-                      onChange={(e) => setGrantAmount(parseInt(e.target.value) || 0)}
-                      className="h-9 px-3 bg-white border border-[#E4E4E7] rounded focus:outline-none font-mono"
-                    />
-                  </div>
-                  <button 
-                    onClick={triggerCreditGrant}
-                    className="w-full h-9 bg-zinc-950 text-white font-semibold rounded hover:bg-zinc-800 transition"
-                  >
-                    Grant Credits
-                  </button>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* Embedded visual animations */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideLeft {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes scaleUp {
-          from { transform: scale(0.96); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-fadeIn { animation: fadeIn 0.25s ease-out forwards; }
-        .animate-slideLeft { animation: slideLeft 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-slideUp { animation: slideUp 0.2s ease-out forwards; }
-        .animate-scaleUp { animation: scaleUp 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}</style>
-
+      {userId && <UserDrawer id={userId} role={role} onClose={closeUser} />}
     </div>
   );
 }
